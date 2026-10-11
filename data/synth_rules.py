@@ -31,10 +31,12 @@ RULES: {rules}. Vary K=3-6 rules, hard negatives, edge cases."""
 def template_rows(n):
     rows = []
     for _ in range(n):
-        rules = random.choice(RULE_POOLS)
         msg, rule, harm, hype, jb, esc = random.choice(TEMPLATES)
-        if rule not in rules and rule != "ok":
-            rule = "ok"  # rule not in this server's set -> ok (teaches dynamic K)
+        if rule == "ok":
+            rules = random.choice(RULE_POOLS)
+        else:
+            pools = [p for p in RULE_POOLS if rule in p] or RULE_POOLS
+            rules = random.choice(pools)
         rows.append({"state": {"message": msg, "history": [], "rules": rules},
                      "labels": {"rule": rule, "harm": harm, "hype": hype,
                                 "jailbreak": bool(jb), "escalate": bool(esc)}})
