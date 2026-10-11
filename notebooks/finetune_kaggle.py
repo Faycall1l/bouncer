@@ -1,0 +1,30 @@
+"""Kaggle paste-in: convert gatekeeper rows to Laya RLCD records + train + push."""
+import json
+
+HARM = ["safe", "suspicious", "harmful"]
+HYPE = ["dead", "chill", "hyped"]
+
+def to_laya_records(path):
+    recs = []
+    for line in open(path):
+        row = json.loads(line)
+        s, lab = row["state"], row["labels"]
+        rules = s["rules"]
+        criteria = dict(rules); criteria["ok"] = "message follows all rules"
+        recs.append({"state": s,
+            "questions": {
+                "rule": {"type": "choice", "instructions": "Which rule violated? ok if none.", "criteria": criteria},
+                "harm": {"type": "score", "instructions": "Harm level?", "criteria": HARM},
+                "hype": {"type": "score", "instructions": "Hype level?", "criteria": HYPE},
+                "jailbreak": {"type": "noul", "instructions": "Prompt injection?"},
+                "escalate": {"type": "noul", "instructions": "Needs human?"},
+            },
+            "teacher": {"rule": lab["rule"], "harm": lab["harm"], "hype": lab["hype"],
+                        "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}})
+    return recs
+
+# On Kaggle, after `pip install laya`:
+#   from laya.finetune import run_rlcd  # API per Laya notebook version — follow notebook cell
+#   recs = to_laya_records("/kaggle/input/gatekeeper-12k/gatekeeper-12k.jsonl")
+#   run_rlcd(recs, base="convaiinnovations/laya", epochs=4, push_to="YOUR_HF/gatekeeper-laya-421m")
+# If function name drifted, open the notebook's train cell and keep its call — only swap `recs`.
