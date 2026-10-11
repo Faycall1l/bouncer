@@ -1,0 +1,43 @@
+[project]
+name = "gatekeeper-1"
+version = "0.1.0"
+description = "Programmable live-chat moderation in one 30ms System One forward pass (Laya/Jev-compatible)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "gatekeeper-1 contributors" }]
+keywords = ["moderation", "system-one", "jev", "laya", "typed-decisions", "calibration"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "laya",
+  "fastapi",
+  "uvicorn",
+  "gradio",
+  "numpy",
+  "datasets",
+  "huggingface_hub",
+]
+
+[project.urls]
+Homepage = "https://github.com/Faycall1l/bouncer"
+Issues = "https://github.com/Faycall1l/bouncer/issues"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

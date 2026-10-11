@@ -1,0 +1,22 @@
+"""FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
+from fastapi import FastAPI
+from pydantic import BaseModel
+from . import moderate, build_questions, get_router
+
+app = FastAPI(title="gatekeeper-1")
+
+class ModReq(BaseModel):
+    message: str
+    rules: dict[str, str]
+    context: list[str] = []
+    threshold: float = 0.85
+
+@app.post("/predict")
+def predict(req: ModReq):
+    return moderate(req.message, req.rules, req.context, req.threshold)
+
+# Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
+@app.post("/v1/systemone")
+def systemone(body: dict):
+    r = get_router()
+    return r.predict(body.get("state", {}), body.get("questions", {}))
