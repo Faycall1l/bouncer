@@ -108,6 +108,10 @@ class ModReq(BaseModel):
     threshold: float = 0.85
     lang: str | None = None
 
+    model_config = {"json_schema_extra": {"examples": [  # T063
+        {"message": "FREE NITRO http://x.gg", "rules": {"no-spam": "no ads or links"},
+         "threshold": 0.85}]}}
+
 
 def _clean(res: dict) -> dict:
     res = dict(res)

@@ -67,7 +67,7 @@
 - [x] T060 server: Dockerfile (cpu, slim)
 - [x] T061 ops: docker-compose with server + demo
 - [x] T062 ops: `.dockerignore`
-- [ ] T063 server: openapi examples on /predict
+- [x] T063 server: openapi examples on /predict
 - [ ] T064 server: max body size guard (413)
 - [x] T065 server: latency header `X-Bouncer-ms`
 
