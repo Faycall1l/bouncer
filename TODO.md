@@ -1,0 +1,221 @@
+# BOUNCER — 200 TODOs to impressive. Tick + push per box.
+
+## P1 Core engine (`src/gatekeeper/`)
+- [x] T001 config: `GateConfig` dataclass (thresholds, timeouts, max_rules, history_n)
+- [ ] T002 config: per-action thresholds (delete vs escalate) instead of one float
+- [ ] T003 config: per-rule severity map (rule_id -> low|high)
+- [ ] T004 rules: validate rule ids (slug, <=24 chars, unique)
+- [ ] T005 rules: validate rule text (non-empty, <=280 chars)
+- [ ] T006 rules: cap rule count (default 12, error message lists offender)
+- [ ] T007 rules: `ok` reserved id rejected with clear error
+- [ ] T008 presets: gaming server rule pack
+- [ ] T009 presets: study/homework rule pack
+- [ ] T010 presets: support-ticket rule pack
+- [ ] T011 presets: stream-chat (twitch-style) rule pack
+- [ ] T012 presets: `list_presets()` + preset descriptions
+- [ ] T013 normalize: lowercase/whitespace/unicode-fold before predict
+- [ ] T014 normalize: caps-flood detector (ratio + flag, no model call)
+- [ ] T015 normalize: emoji-flood detector (count + flag)
+- [ ] T016 normalize: link extractor (urls listed for rules to cite)
+- [ ] T017 fastpath: obvious-ok short messages skip model when all rules need links/insults
+- [ ] T018 history: sliding window of last N messages into state
+- [ ] T019 history: per-user message counts in state
+- [ ] T020 batch: `moderate_batch()` shares one Router, keeps order
+- [ ] T021 batch: `moderate_batch()` chunks to bound forward-pass padding
+- [ ] T022 async: `amoderate()` via asyncio.to_thread
+- [ ] T023 cache: LRU on (message, rules-hash) with TTL
+- [ ] T024 cache: cache stats hit/miss counters
+- [ ] T025 timeout: router call wrapped with timeout + escalate-on-timeout
+- [ ] T026 retries: one retry on inference exception, then escalate
+- [ ] T027 stats: in-memory counters per action/rule
+- [ ] T028 stats: `get_stats()` + `reset_stats()`
+- [ ] T029 audit: JSONL audit log (msg hash, rule, conf, action, latency)
+- [ ] T030 audit: log rotation by size
+
+## P2 Decision quality
+- [ ] T031 gate: three-way action (allow/flag/delete) + escalate path
+- [ ] T032 gate: high-severity rules delete at lower threshold
+- [ ] T033 gate: jailbreak_p>0.8 always deletes regardless of rule answer
+- [ ] T034 gate: escalate_p>0.7 forces human review even if confident
+- [ ] T035 explain: human-readable reason string per decision
+- [ ] T036 explain: cite which rule text фрагмент matched (return rule text)
+- [ ] T037 explain: include runner-up rule + margin when conf<0.9
+- [ ] T038 conf: expose full rule distribution, not just top-1
+- [ ] T039 conf: expose harm/hype full distributions
+- [ ] T040 conf: abstention flag when top2 margin<0.15
+- [ ] T041 multilingual: pass-through lang hint to Router
+- [ ] T042 multilingual: smoke test messages in 3 languages (fixtures only)
+- [ ] T043 edge: empty message -> allow with reason
+- [ ] T044 edge: overlong message truncation with marker
+- [ ] T045 edge: rules with overlapping text warn user
+
+## P3 Server (`serve.py`, ops)
+- [ ] T046 server: `GET /health` with model + uptime
+- [ ] T047 server: `GET /version`
+- [ ] T048 server: `GET /models` (routed checkpoints)
+- [ ] T049 server: `POST /predict` validates rules via T004-T007
+- [ ] T050 server: `POST /predict/batch` endpoint
+- [ ] T051 server: `/v1/systemone` passthrough kept + tested
+- [ ] T052 server: request-id middleware + echo header
+- [ ] T053 server: optional API key auth via env `BOUNCER_KEY`
+- [ ] T054 server: per-IP rate limit (slow path, stdlib)
+- [ ] T055 server: CORS middleware on
+- [ ] T056 server: structured JSON access log
+- [ ] T057 server: `GET /stats` exposes counters
+- [ ] T058 server: `GET /presets` serves rule packs
+- [ ] T059 server: graceful Router preload on startup
+- [ ] T060 server: Dockerfile (cpu, slim)
+- [ ] T061 ops: docker-compose with server + demo
+- [ ] T062 ops: `.dockerignore`
+- [ ] T063 server: openapi examples on /predict
+- [ ] T064 server: max body size guard (413)
+- [ ] T065 server: latency header `X-Bouncer-ms`
+
+## P4 CLI + adapters
+- [ ] T066 cli: `bouncer check "msg" --rules rules.json`
+- [ ] T067 cli: `bouncer check --preset gaming`
+- [ ] T068 cli: `bouncer serve` launches API
+- [ ] T069 cli: `bouncer demo` launches Gradio
+- [ ] T070 cli: stdin pipe mode (`cat chat.log | bouncer watch`)
+- [ ] T071 cli: `--threshold` and `--json` flags
+- [ ] T072 cli: exit codes (0 allow, 2 delete, 3 escalate)
+- [ ] T073 discord: bot stub (on_message -> moderate -> delete/flag)
+- [ ] T074 discord: `!bouncer rules` prints active pack
+- [ ] T075 discord: env-based token, no hardcode
+- [ ] T076 twitch: IRC stub via stdlib socket (read chat, flag only)
+- [ ] T077 twitch: never sends password to logs
+- [ ] T078 slack: webhook receiver stub
+- [ ] T079 adapter: generic webhook POST forwarder (allow/delete events)
+- [ ] T080 adapters README with setup per platform
+
+## P5 Demo app (`app/`)
+- [ ] T081 demo: server-preset dropdown (gaming/study/support/stream)
+- [ ] T082 demo: editable rules box with live validation errors
+- [ ] T083 demo: threshold slider 0.5-0.99
+- [ ] T084 demo: action badge (green/yellow/red)
+- [ ] T085 demo: rule distribution bar chart (native gradio)
+- [ ] T086 demo: harm/hype/jailbreak meters
+- [ ] T087 demo: latency readout per call
+- [ ] T088 demo: 6 one-click example messages
+- [ ] T089 demo: history panel (last 10 decisions)
+- [ ] T090 demo: confusion-style gate explainer text
+- [ ] T091 demo: dark theme + title/branding
+- [ ] T092 demo: `requirements.txt` for Spaces
+- [ ] T093 demo: Space-ready README header
+- [ ] T094 demo: queue + concurrency settings
+- [ ] T095 demo: flag-for-review button appends to review queue file
+
+## P6 Eval + Kaggle (`eval/`, `kaggle/`)
+- [ ] T096 eval: zero-shot rule_acc on examples.jsonl (needs weights; script ready)
+- [ ] T097 eval: gate@0.85 precision report
+- [ ] T098 eval: per-rule breakdown table
+- [ ] T099 eval: latency p50/p95 measurement
+- [ ] T100 eval: save JSON report to `eval/reports/`
+- [ ] T101 eval: ECE computation already in script — wire to report
+- [ ] T102 kaggle: CPU zero-shot eval kernel (no quota needed)
+- [ ] T103 kaggle: eval kernel committed + pushed
+- [ ] T104 eval: confusion pairs (ok vs be-kind) counted
+- [ ] T105 eval: overconfidence audit (conf>=0.9 but wrong)
+- [ ] T106 bench: 1-question vs 5-question latency comparison script
+- [ ] T107 bench: batch-size sweep script (1/4/8/16)
+- [ ] T108 docs: BENCHMARKS.md with zero-shot table (fill after kernel)
+- [ ] T109 docs: honest-limits section (template data, 3 rules)
+- [ ] T110 eval: multilingual spot-check fixtures (5 langs)
+
+## P7 Tests (`tests/`)
+- [ ] T111 test: config defaults sane
+- [ ] T112 test: rule validation rejects bad ids
+- [ ] T113 test: rule validation rejects empty text
+- [ ] T114 test: rule validation rejects >12 rules
+- [ ] T115 test: `ok` id rejected
+- [ ] T116 test: presets load + each has >=3 rules
+- [ ] T117 test: caps-flood detector triggers
+- [ ] T118 test: emoji-flood detector triggers
+- [ ] T119 test: link extractor finds urls
+- [ ] T120 test: gate allow path (stub router, high conf ok)
+- [ ] T121 test: gate delete path (stub router, high conf violation)
+- [ ] T122 test: gate escalate path (low conf)
+- [ ] T123 test: jailbreak override deletes
+- [ ] T124 test: escalate_p override forces review
+- [ ] T125 test: high-severity rule lower threshold
+- [ ] T126 test: abstention on small margin
+- [ ] T127 test: empty message allows
+- [ ] T128 test: batch keeps order
+- [ ] T129 test: cache hit returns same + counts hit
+- [ ] T130 test: audit log writes JSONL line
+- [ ] T131 test: explain string mentions rule
+- [ ] T132 test: server /health schema (TestClient, no weights)
+- [ ] T133 test: server rejects bad rules with 422
+- [ ] T134 test: CLI exit codes
+- [ ] T135 test: version string consistent everywhere
+
+## P8 Docs
+- [ ] T136 docs: README badges (ci, license, python)
+- [ ] T137 docs: 30-second quickstart with zero-shot example
+- [ ] T138 docs: rule-writing guide (good vs bad rule text)
+- [ ] T139 docs: threshold-tuning guide (gate@0.85 curve explainer)
+- [ ] T140 docs: architecture diagram (mermaid)
+- [ ] T141 docs: API reference section (/predict, /batch, /systemone)
+- [ ] T142 docs: adapters setup matrix
+- [ ] T143 docs: FAQ (why not regex? why not LLM? cost?)
+- [ ] T144 docs: honest-limits mirrored from BENCHMARKS
+- [ ] T145 docs: CONTRIBUTING.md
+- [ ] T146 docs: CHANGELOG.md started (0.1.0)
+- [ ] T147 docs: rule preset catalogue with examples
+- [ ] T148 docs: latency/cost comparison table vs LLM moderation
+- [ ] T149 docs: screenshots placeholder + demo gif script
+- [ ] T150 docs: glossary (choice/score/noul/System One)
+
+## P9 Packaging + repo hygiene
+- [ ] T151 pkg: `__all__` + version single-sourced
+- [ ] T152 pkg: console script `bouncer=` entry point
+- [ ] T153 pkg: extras split (server, demo, discord)
+- [ ] T154 pkg: python>=3.10 classifier matrix in CI (3.10/3.11/3.12)
+- [ ] T155 pkg: ruff clean on whole repo
+- [ ] T156 pkg: pre-commit config (ruff + trailing whitespace)
+- [ ] T157 repo: issue templates (bug / rule-pack request)
+- [ ] T158 repo: PR template
+- [ ] T159 repo: SECURITY.md (no secrets, token handling)
+- [ ] T160 repo: FUNDING? no — skip, CODEOWNERS instead
+- [ ] T161 ci: pytest + ruff already — add import smoke job
+- [ ] T162 ci: cache pip in workflow
+- [ ] T163 pkg: LICENSE headers check (Apache short form per file)
+- [ ] T164 pkg: `requirements-demo.txt` pinned for Spaces
+- [ ] T165 repo: gitattributes (jsonl text, lock diff)
+- [ ] T166 docs: repo topics/description set via gh
+- [ ] T167 pkg: sdist builds (`pipx run build` smoke)
+- [ ] T168 changelog: 0.1.0 entry dated
+
+## P10 Impressive extras
+- [ ] T169 extra: `bouncer watch` live tail mode with colors
+- [ ] T170 extra: review-queue file + `bouncer review` list command
+- [ ] T171 extra: stats sparkline in CLI (`bouncer stats`)
+- [ ] T172 extra: export audit to CSV (`bouncer export`)
+- [ ] T173 extra: rule-pack share format (yaml-ish json + `bouncer pack show`)
+- [ ] T174 extra: `bouncer pack lint rules.json` validator
+- [ ] T175 extra: demo: side-by-side vs regex baseline accuracy
+- [ ] T176 extra: demo: cost ticker (decisions per $ vs GPT-4o-mini)
+- [ ] T177 extra: fasting: warmup call on serve startup
+- [ ] T178 extra: prometheus-style `/metrics` text endpoint
+- [ ] T179 extra: graceful shutdown drains in-flight
+- [ ] T180 extra: request coalescing for identical concurrent messages
+- [ ] T181 extra: per-user strike counter (3 flags -> suggest ban)
+- [ ] T182 extra: strike decay (halve every hour)
+- [ ] T183 extra: appeal helper text generator (template, no LLM)
+- [ ] T184 extra: announcement mode (pin-friendly summary line)
+- [ ] T185 extra: quiet-hours config (escalate instead of delete at night?)
+- [ ] T186 extra: language detect note in explain (script guess)
+- [ ] T187 extra: demo video script (60s tour)
+- [ ] T188 extra: awesome-list PR draft (link System Onelandscape)
+- [ ] T189 extra: HN Show draft in docs/drafts/
+- [ ] T190 extra: tweet-thread draft in docs/drafts/
+- [ ] T191 i18n: Spanish preset pack
+- [ ] T192 i18n: French preset pack
+- [ ] T193 i18n: Arabic preset pack (rtl-safe fixtures)
+- [ ] T194 perf: orjson fastpath if installed (optional import)
+- [ ] T195 perf: slots on dataclasses
+- [ ] T196 perf: avoid re-serializing state twice
+- [ ] T197 robust: structured errors with codes (E_RULES, E_MODEL, E_TIMEOUT)
+- [ ] T198 robust: error codes documented in README
+- [ ] T199 final: full test suite green
+- [ ] T200 final: tag v0.1.0 + GitHub release notes
