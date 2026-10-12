@@ -17,3 +17,12 @@ def validate_rule_ids(rules: dict) -> None:
     for rid in rules:
         if not isinstance(rid, str) or not ID_RE.match(rid):
             raise RuleError(f"E_RULES_ID: bad rule id {rid!r} (use a-z, 0-9, dash, <=24 chars)")
+
+
+def validate_rule_text(rules: dict, max_chars: int = 280) -> None:
+    """T005: rule text non-empty, bounded."""
+    for rid, text in rules.items():
+        if not isinstance(text, str) or not text.strip():
+            raise RuleError(f"E_RULES_TEXT: rule {rid!r} has empty text")
+        if len(text) > max_chars:
+            raise RuleError(f"E_RULES_TEXT: rule {rid!r} exceeds {max_chars} chars")
