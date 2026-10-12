@@ -118,7 +118,7 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
 
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
-             router=None) -> dict:
+             lang: str | None = None, router=None) -> dict:
     cfg = config or GateConfig()
     if threshold is not None:  # back-compat single float sets both gates
         cfg.allow_threshold = cfg.delete_threshold = threshold
@@ -145,6 +145,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
             u = h.split(":", 1)[0].strip()[:32]
             turns[u] = turns.get(u, 0) + 1
     state = {"message": msg, "history": hist, "rules": rules, "user_turns": turns}
+    if lang:
+        state["lang_hint"] = lang  # T041: nudge multilingual routing
     try:
         out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
     except TimeoutError as e:
