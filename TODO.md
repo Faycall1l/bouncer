@@ -35,7 +35,7 @@
 ## P2 Decision quality
 - [x] T031 gate: three-way action (allow/flag/delete) + escalate path
 - [x] T032 gate: high-severity rules delete at lower threshold
-- [ ] T033 gate: jailbreak_p>0.8 always deletes regardless of rule answer
+- [x] T033 gate: jailbreak_p>0.8 always deletes regardless of rule answer
 - [ ] T034 gate: escalate_p>0.7 forces human review even if confident
 - [x] T035 explain: human-readable reason string per decision
 - [ ] T036 explain: cite which rule text фрагмент matched (return rule text)
