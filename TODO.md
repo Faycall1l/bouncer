@@ -17,7 +17,7 @@
 - [x] T014 normalize: caps-flood detector (ratio + flag, no model call)
 - [x] T015 normalize: emoji-flood detector (count + flag)
 - [x] T016 normalize: link extractor (urls listed for rules to cite)
-- [ ] T017 fastpath: obvious-ok short messages skip model when all rules need links/insults
+- [x] T017 fastpath: obvious-ok short messages skip model when all rules need links/insults
 - [ ] T018 history: sliding window of last N messages into state
 - [ ] T019 history: per-user message counts in state
 - [x] T020 batch: `moderate_batch()` shares one Router, keeps order

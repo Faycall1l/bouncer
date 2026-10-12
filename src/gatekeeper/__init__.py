@@ -11,7 +11,18 @@ from typing import TYPE_CHECKING
 from .config import GateConfig
 from .rules import RuleError, validate_rules
 from .presets import get_preset, list_presets
-from .normalize import clean_text
+from .normalize import clean_text, extract_links
+
+
+def _fastpath_allow(msg: str, rules: dict) -> dict | None:
+    """T017: all rules about links/ads but message has none -> allow without a model call."""
+    if extract_links(msg):
+        return None
+    if all(any(w in t.lower() for w in ("link", "url", "promo", "ad")) for t in rules.values()):
+        return {"action": "allow", "rule": "ok", "confidence": 0.9, "harm": "safe",
+                "harm_dist": [], "rule_dist": {"ok": 0.9}, "jailbreak_p": 0.0,
+                "escalate_p": 0.1, "abstained": False, "reason": "fastpath: no links"}
+    return None
 
 if TYPE_CHECKING:
     from laya import Router
@@ -95,6 +106,9 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         return {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
                 "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
                 "escalate_p": 0.0, "abstained": False, "reason": "empty message"}
+    fp = _fastpath_allow(msg, rules)  # T017
+    if fp is not None:
+        return fp
     r = router or get_router()
     state = {"message": msg, "history": (context or [])[-cfg.history_n:], "rules": rules}
     out = r.predict(state, build_questions(rules))
