@@ -139,7 +139,7 @@
 - [x] T124 test: escalate_p override forces review
 - [x] T125 test: high-severity rule lower threshold
 - [x] T126 test: abstention on small margin
-- [ ] T127 test: empty message allows
+- [x] T127 test: empty message allows
 - [ ] T128 test: batch keeps order
 - [ ] T129 test: cache hit returns same + counts hit
 - [ ] T130 test: audit log writes JSONL line
