@@ -140,7 +140,7 @@
 - [x] T125 test: high-severity rule lower threshold
 - [x] T126 test: abstention on small margin
 - [x] T127 test: empty message allows
-- [ ] T128 test: batch keeps order
+- [x] T128 test: batch keeps order
 - [ ] T129 test: cache hit returns same + counts hit
 - [ ] T130 test: audit log writes JSONL line
 - [ ] T131 test: explain string mentions rule

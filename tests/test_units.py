@@ -125,6 +125,49 @@ def test_empty_allows():  # T127
     assert moderate("   ", {"plain-chat": "normal talk"})["action"] == "allow"
 
 
+def test_batch_order():  # T128
+    from gatekeeper import moderate_batch
+    seen = []
+
+    class Seq(Stub):
+        def predict(self, state, questions):
+            seen.append(state["message"])
+            return super().predict(state, questions)
+
+    out = moderate_batch(["alpha msg", "beta msg", "gamma msg"],
+                         {"plain-chat": "normal talk"}, router=Seq())
+    assert seen == ["alpha msg", "beta msg", "gamma msg"] and len(out) == 3
+
+
+def test_cache_hit():  # T129
+    from gatekeeper import moderate
+    from gatekeeper.cache import CACHE
+    st = Stub()
+    rules = {"plain-chat": "normal talk"}
+    moderate("repeat after me please", rules, router=st)
+    r2 = moderate("repeat after me please", rules, router=st)
+    assert r2.get("cached") is True and CACHE.stats()["hits"] >= 1
+
+
+def test_audit_writes(tmp_path, monkeypatch):  # T130
+    import json as _json
+    p = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BOUNCER_AUDIT", str(p))
+    import importlib
+    import gatekeeper.audit as _au
+    importlib.reload(_au)
+    _au.log_decision("hello", "ok", 0.9, "allow", 3.0)
+    row = _json.loads(p.read_text().splitlines()[0])
+    assert row["action"] == "allow" and len(row["msg"]) == 16
+
+
+def test_explain_mentions_rule():  # T131
+    from gatekeeper.explain import explain
+    s = explain({"action": "delete", "rule": "no-spam", "confidence": 0.9,
+                 "rule_dist": {"no-spam": 0.9}}, {"no-spam": "no ads"})
+    assert "no-spam" in s and "no ads" in s
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)
