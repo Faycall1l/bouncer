@@ -102,7 +102,7 @@
 - [x] T091 demo: dark theme + title/branding
 - [ ] T092 demo: `requirements.txt` for Spaces
 - [ ] T093 demo: Space-ready README header
-- [ ] T094 demo: queue + concurrency settings
+- [x] T094 demo: queue + concurrency settings
 - [x] T095 demo: flag-for-review button appends to review queue file
 
 ## P6 Eval + Kaggle (`eval/`, `kaggle/`)
