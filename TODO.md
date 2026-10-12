@@ -178,7 +178,7 @@
 - [ ] T159 repo: SECURITY.md (no secrets, token handling)
 - [ ] T160 repo: FUNDING? no — skip, CODEOWNERS instead
 - [x] T161 ci: pytest + ruff already — add import smoke job
-- [ ] T162 ci: cache pip in workflow
+- [x] T162 ci: cache pip in workflow
 - [ ] T163 pkg: LICENSE headers check (Apache short form per file)
 - [ ] T164 pkg: `requirements-demo.txt` pinned for Spaces
 - [ ] T165 repo: gitattributes (jsonl text, lock diff)
