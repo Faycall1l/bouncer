@@ -72,7 +72,7 @@
 - [ ] T065 server: latency header `X-Bouncer-ms`
 
 ## P4 CLI + adapters
-- [ ] T066 cli: `bouncer check "msg" --rules rules.json`
+- [x] T066 cli: `bouncer check "msg" --rules rules.json`
 - [ ] T067 cli: `bouncer check --preset gaming`
 - [ ] T068 cli: `bouncer serve` launches API
 - [ ] T069 cli: `bouncer demo` launches Gradio
