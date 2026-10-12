@@ -10,10 +10,15 @@ _PATH = os.environ.get("BOUNCER_AUDIT", "bouncer-audit.jsonl")
 _MAX_BYTES = 5 * 1024 * 1024
 
 
-def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: float) -> None:
-    """T029: one JSON line per decision; rotates at 5MB (T030 trims below)."""
+def _maybe_rotate() -> None:
+    """T030: size-based rotation keeps one backup generation."""
     if os.path.exists(_PATH) and os.path.getsize(_PATH) > _MAX_BYTES:
         os.replace(_PATH, _PATH + ".1")
+
+
+def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: float) -> None:
+    """T029: one JSON line per decision; rotates at 5MB (T030 trims below)."""
+    _maybe_rotate()
     h = hashlib.sha256(msg.encode()).hexdigest()[:16]
     with open(_PATH, "a") as f:
         f.write(json.dumps({"t": int(time.time()), "msg": h, "rule": rule,

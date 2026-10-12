@@ -30,7 +30,7 @@
 - [x] T027 stats: in-memory counters per action/rule
 - [x] T028 stats: `get_stats()` + `reset_stats()`
 - [x] T029 audit: JSONL audit log (msg hash, rule, conf, action, latency)
-- [ ] T030 audit: log rotation by size
+- [x] T030 audit: log rotation by size
 
 ## P2 Decision quality
 - [ ] T031 gate: three-way action (allow/flag/delete) + escalate path
