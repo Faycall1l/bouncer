@@ -69,6 +69,38 @@ def models():
     return {"checkpoints": ["english", "multilingual", "typed-decisions"],
             "presets": sorted(list_presets())}
 
+
+@app.get("/stats")  # T057
+def stats():
+    from .stats import get_stats
+    from .cache import CACHE
+    return {"decisions": get_stats(), "cache": CACHE.stats()}
+
+
+@app.get("/presets")  # T058
+def presets():
+    from . import get_preset, list_presets
+    return {n: get_preset(n) for n in list_presets()}
+
+
+@app.get("/metrics")  # T178: prometheus-style text
+def metrics():
+    from fastapi.responses import PlainTextResponse
+    from .stats import get_stats
+    s = get_stats()["actions"]
+    lines = [f'bouncer_decisions_total{{action="{k}"}} {v}' for k, v in s.items()]
+    return PlainTextResponse("\n".join(lines) + "\n")
+
+
+@app.on_event("startup")  # T059+T177: preload + warmup
+def _startup():
+    try:
+        from . import get_router
+        r = get_router()
+        r.predict({"message": "warmup"}, {"q": {"type": "noul", "instructions": "warmup?"}})
+    except Exception:
+        pass
+
 class ModReq(BaseModel):
     message: str
     rules: dict[str, str]
