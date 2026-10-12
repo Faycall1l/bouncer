@@ -176,7 +176,7 @@
 - [x] T157 repo: issue templates (bug / rule-pack request)
 - [x] T158 repo: PR template
 - [x] T159 repo: SECURITY.md (no secrets, token handling)
-- [ ] T160 repo: FUNDING? no — skip, CODEOWNERS instead
+- [x] T160 repo: FUNDING? no — skip, CODEOWNERS instead
 - [x] T161 ci: pytest + ruff already — add import smoke job
 - [x] T162 ci: cache pip in workflow
 - [ ] T163 pkg: LICENSE headers check (Apache short form per file)
