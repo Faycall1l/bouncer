@@ -154,7 +154,7 @@
 - [x] T137 docs: 30-second quickstart with zero-shot example
 - [x] T138 docs: rule-writing guide (good vs bad rule text)
 - [x] T139 docs: threshold-tuning guide (gate@0.85 curve explainer)
-- [ ] T140 docs: architecture diagram (mermaid)
+- [x] T140 docs: architecture diagram (mermaid)
 - [ ] T141 docs: API reference section (/predict, /batch, /systemone)
 - [ ] T142 docs: adapters setup matrix
 - [ ] T143 docs: FAQ (why not regex? why not LLM? cost?)
