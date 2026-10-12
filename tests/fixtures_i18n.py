@@ -7,6 +7,8 @@ CASES = [
     ("es", "hola a todos, buen juego", {"charla": "conversacion normal sin spam"}),
     ("fr", "bon jeu tout le monde", {"discussion": "conversation normale"}),
     ("de", "gutes spiel leute", {"chat": "normale unterhaltung"}),
+    ("ar", "مباراة رائعة يا شباب", {"دردشة": "محادثة عادية"}),
+    ("zh", "大家打得不错", {"聊天": "正常聊天"}),
 ]
 
 for lang, msg, rules in CASES:

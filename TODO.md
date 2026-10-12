@@ -120,7 +120,7 @@
 - [x] T107 bench: batch-size sweep script (1/4/8/16)
 - [ ] T108 docs: BENCHMARKS.md with zero-shot table (fill after kernel)
 - [ ] T109 docs: honest-limits section (template data, 3 rules)
-- [ ] T110 eval: multilingual spot-check fixtures (5 langs)
+- [x] T110 eval: multilingual spot-check fixtures (5 langs)
 
 ## P7 Tests (`tests/`)
 - [x] T111 test: config defaults sane
