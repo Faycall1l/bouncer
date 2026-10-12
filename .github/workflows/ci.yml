@@ -1,12 +1,21 @@
 name: ci
 on: [push, pull_request]
 jobs:
-  test:
+  test:  # T154: 3.10/3.11/3.12 matrix; T162: pip cache
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: { python-version: ["3.10", "3.11", "3.12"] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python-version }}", cache: "pip" }
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: pytest -q
+  smoke:  # T161: import check without weights/deps
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install -e ".[dev]"
-      - run: ruff check src tests
-      - run: pytest -q
+      - run: PYTHONPATH=src python -c "import gatekeeper; print(gatekeeper.__version__)"
