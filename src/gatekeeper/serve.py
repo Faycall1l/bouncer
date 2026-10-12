@@ -1,12 +1,20 @@
 """FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
 import time
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from . import moderate, build_questions, get_router
 from . import __version__
 
 app = FastAPI(title="bouncer")
 _START = time.time()
+
+_KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared key
+
+
+def _auth(request) -> None:
+    if _KEY and request.headers.get("X-API-Key") != _KEY:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="bad API key")
 
 
 @app.middleware("http")  # T052+T056+T065: request id, access log, latency header
@@ -58,7 +66,9 @@ def _clean(res: dict) -> dict:
 
 
 @app.post("/predict")
-def predict(req: ModReq):
+def predict(req: ModReq, request: Request):
+    from fastapi import HTTPException
+    _auth(request)
     from fastapi import HTTPException
     from .rules import RuleError
     from .explain import explain
