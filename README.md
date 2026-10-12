@@ -43,6 +43,14 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 | LLM judge (5 calls) | ~$0.50–2.50 | seconds |
 | regex | $0 | instant, blind to phrasing |
 
+## Error codes (T198)
+
+| code | meaning | HTTP |
+|---|---|---|
+| `E_RULES_EMPTY/ID/TEXT/COUNT/RESERVED` | bad rule-set (see message) | 422 |
+| `E_MODEL` | inference failed twice → escalated | 200 + action=escalate |
+| 429/413 | rate limited / body too long | as numbered |
+
 ## Quickstart (30 seconds, zero-shot — no training)
 
 ```bash
