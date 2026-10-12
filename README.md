@@ -1,4 +1,8 @@
-# Gatekeeper-1 — programmable live-chat mod in one 30ms pass
+# 🛡️ bouncer — programmable live-chat mod in one 30ms pass
+
+[![ci](https://github.com/Faycall1l/bouncer/actions/workflows/ci.yml/badge.svg)](https://github.com/Faycall1l/bouncer/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-Apache--2.0-green)
+![python](https://img.shields.io/badge/python-3.10%2B-blue)
 
 Per-server rules in, typed decisions out. No retrain per community.
 

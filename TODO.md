@@ -150,7 +150,7 @@
 - [x] T135 test: version string consistent everywhere
 
 ## P8 Docs
-- [ ] T136 docs: README badges (ci, license, python)
+- [x] T136 docs: README badges (ci, license, python)
 - [ ] T137 docs: 30-second quickstart with zero-shot example
 - [ ] T138 docs: rule-writing guide (good vs bad rule text)
 - [ ] T139 docs: threshold-tuning guide (gate@0.85 curve explainer)
