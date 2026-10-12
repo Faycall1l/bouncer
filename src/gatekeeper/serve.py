@@ -1,9 +1,22 @@
 """FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
+import time
 from fastapi import FastAPI
 from pydantic import BaseModel
 from . import moderate, build_questions, get_router
+from . import __version__
 
-app = FastAPI(title="gatekeeper-1")
+app = FastAPI(title="bouncer")
+_START = time.time()
+
+
+@app.get("/health")  # T046
+def health():
+    try:
+        get_router()
+        model = "loaded"
+    except Exception as e:  # noqa: BLE001
+        model = f"error: {e}"
+    return {"ok": True, "model": model, "uptime_s": round(time.time() - _START, 1)}
 
 class ModReq(BaseModel):
     message: str

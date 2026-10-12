@@ -50,7 +50,7 @@
 - [x] T045 edge: rules with overlapping text warn user
 
 ## P3 Server (`serve.py`, ops)
-- [ ] T046 server: `GET /health` with model + uptime
+- [x] T046 server: `GET /health` with model + uptime
 - [ ] T047 server: `GET /version`
 - [ ] T048 server: `GET /models` (routed checkpoints)
 - [ ] T049 server: `POST /predict` validates rules via T004-T007
