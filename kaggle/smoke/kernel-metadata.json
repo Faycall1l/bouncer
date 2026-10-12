@@ -1,0 +1,1 @@
+{"id": "faycal00/bouncer-smoke", "title": "bouncer-smoke", "code_file": "smoke.py", "language": "python", "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_internet": true, "dataset_sources": ["faycal00/gatekeeper-chatmix-12k"], "competition_sources": [], "kernel_sources": []}
