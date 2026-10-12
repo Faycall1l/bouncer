@@ -112,7 +112,7 @@
 - [ ] T099 eval: latency p50/p95 measurement
 - [x] T100 eval: save JSON report to `eval/reports/`
 - [ ] T101 eval: ECE computation already in script — wire to report
-- [ ] T102 kaggle: CPU zero-shot eval kernel (no quota needed)
+- [x] T102 kaggle: CPU zero-shot eval kernel (no quota needed)
 - [ ] T103 kaggle: eval kernel committed + pushed
 - [x] T104 eval: confusion pairs (ok vs be-kind) counted
 - [x] T105 eval: overconfidence audit (conf>=0.9 but wrong)
