@@ -17,3 +17,15 @@ def explain(res: dict, rules: dict) -> str:
     if res.get("abstained"):
         base += " [abstained: low margin]"
     return base
+
+
+def appeal_text(res: dict) -> str:
+    """T183: copy-paste appeal helper (template, no LLM)."""
+    return (f"Your message was {res['action']}d for '{res['rule']}' "
+            f"(confidence {res['confidence']:.0%}). "
+            "If this looks wrong, reply APPEAL and a human reviews it within a day.")
+
+
+def announce_line(res: dict) -> str:
+    """T184: pin-friendly one-liner for mod channels."""
+    return f"[{res['action'].upper()}] {res['rule']} @ {res['confidence']:.0%}"

@@ -201,7 +201,7 @@
 - [x] T180 extra: request coalescing for identical concurrent messages
 - [x] T181 extra: per-user strike counter (3 flags -> suggest ban)
 - [x] T182 extra: strike decay (halve every hour)
-- [ ] T183 extra: appeal helper text generator (template, no LLM)
+- [x] T183 extra: appeal helper text generator (template, no LLM)
 - [ ] T184 extra: announcement mode (pin-friendly summary line)
 - [ ] T185 extra: quiet-hours config (escalate instead of delete at night?)
 - [ ] T186 extra: language detect note in explain (script guess)
