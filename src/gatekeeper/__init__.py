@@ -134,6 +134,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     if hit is not None:
         return dict(hit, cached=True)
     r = router or get_router()
+    import time as _t
+    t0 = _t.time()
     hist = [clean_text(h, 500) for h in (context or [])[-cfg.history_n:]]  # T018: bounded clean window
     turns: dict = {}  # T019: per-user turn counts from "user: text" lines
     for h in context or []:
@@ -148,8 +150,15 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     a = out["answers"]
     res = _decide(a, cfg)
     res["harm_dist"] = a["harm"].get("probabilities", [])
+    res["hype"] = a["hype"]["score"]  # T039
+    res["hype_dist"] = a["hype"].get("probabilities", [])  # T039
     res["rule_dist"] = a["rule"].get("probabilities", {})  # T038: full distribution
+    res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
     res["raw"] = a
+    from .stats import record
+    from .audit import log_decision
+    record(res["action"], res["rule"])
+    log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"])
     CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
     return res
 

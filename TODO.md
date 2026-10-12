@@ -41,7 +41,7 @@
 - [ ] T036 explain: cite which rule text фрагмент matched (return rule text)
 - [ ] T037 explain: include runner-up rule + margin when conf<0.9
 - [x] T038 conf: expose full rule distribution, not just top-1
-- [ ] T039 conf: expose harm/hype full distributions
+- [x] T039 conf: expose harm/hype full distributions
 - [x] T040 conf: abstention flag when top2 margin<0.15
 - [ ] T041 multilingual: pass-through lang hint to Router
 - [ ] T042 multilingual: smoke test messages in 3 languages (fixtures only)
