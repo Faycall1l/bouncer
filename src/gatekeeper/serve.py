@@ -18,6 +18,11 @@ def health():
         model = f"error: {e}"
     return {"ok": True, "model": model, "uptime_s": round(time.time() - _START, 1)}
 
+
+@app.get("/version")  # T047
+def version():
+    return {"name": "bouncer", "version": __version__}
+
 class ModReq(BaseModel):
     message: str
     rules: dict[str, str]
