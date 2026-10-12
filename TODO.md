@@ -172,7 +172,7 @@
 - [x] T153 pkg: extras split (server, demo, discord)
 - [x] T154 pkg: python>=3.10 classifier matrix in CI (3.10/3.11/3.12)
 - [x] T155 pkg: ruff clean on whole repo
-- [ ] T156 pkg: pre-commit config (ruff + trailing whitespace)
+- [x] T156 pkg: pre-commit config (ruff + trailing whitespace)
 - [ ] T157 repo: issue templates (bug / rule-pack request)
 - [ ] T158 repo: PR template
 - [ ] T159 repo: SECURITY.md (no secrets, token handling)
