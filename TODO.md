@@ -97,7 +97,7 @@
 - [x] T086 demo: harm/hype/jailbreak meters
 - [x] T087 demo: latency readout per call
 - [x] T088 demo: 6 one-click example messages
-- [ ] T089 demo: history panel (last 10 decisions)
+- [x] T089 demo: history panel (last 10 decisions)
 - [x] T090 demo: confusion-style gate explainer text
 - [x] T091 demo: dark theme + title/branding
 - [ ] T092 demo: `requirements.txt` for Spaces
