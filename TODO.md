@@ -114,7 +114,7 @@
 - [ ] T101 eval: ECE computation already in script — wire to report
 - [ ] T102 kaggle: CPU zero-shot eval kernel (no quota needed)
 - [ ] T103 kaggle: eval kernel committed + pushed
-- [ ] T104 eval: confusion pairs (ok vs be-kind) counted
+- [x] T104 eval: confusion pairs (ok vs be-kind) counted
 - [ ] T105 eval: overconfidence audit (conf>=0.9 but wrong)
 - [ ] T106 bench: 1-question vs 5-question latency comparison script
 - [ ] T107 bench: batch-size sweep script (1/4/8/16)

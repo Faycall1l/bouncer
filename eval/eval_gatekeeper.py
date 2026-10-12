@@ -16,6 +16,8 @@ if __name__ == "__main__":
     rows = [json.loads(l) for l in open(path)][:500]
     r = get_router()
     ok, confs, golds, lat, gated_ok, gated_n = 0, [], [], [], 0, 0
+    from collections import Counter
+    conf_pairs, overconf = Counter(), 0  # T104+T105
     t0 = time.time()
     for row in rows:
         s, lab = row["state"], row["labels"]
@@ -23,13 +25,20 @@ if __name__ == "__main__":
         out = r.predict(s, build_questions(s["rules"]))["answers"]
         lat.append((time.time()-t)*1000)
         pred = out["rule"]["choice"]; conf = float(out["rule"]["confidence"])
-        ok += pred == lab["rule"]; confs.append(conf); golds.append(pred == lab["rule"])
+        good = pred == lab["rule"]
+        ok += good; confs.append(conf); golds.append(good)
+        if not good:
+            conf_pairs[(lab["rule"], pred)] += 1
+        if conf >= 0.9 and not good:
+            overconf += 1
         if conf >= 0.85:
-            gated_n += 1; gated_ok += pred == lab["rule"]
+            gated_n += 1; gated_ok += good
     lat.sort()
     report = {"n": len(rows), "rule_acc": round(ok / len(rows), 3),  # T100: JSON report
               "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),
-              "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n}}
+              "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
+              "top_confusions": [[list(k), v] for k, v in conf_pairs.most_common(5)],
+              "overconfident_errors": overconf}
     import os
     os.makedirs("eval/reports", exist_ok=True)
     with open("eval/reports/zero-shot.json", "w") as f:
