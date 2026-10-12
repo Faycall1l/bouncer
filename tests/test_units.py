@@ -47,6 +47,14 @@ def test_presets():  # T116
         assert len(get_preset(name)) >= 3, name
 
 
+def test_detectors():  # T117+T118+T119
+    from gatekeeper.normalize import caps_flood, emoji_flood, extract_links
+    assert caps_flood("STOP DOING THAT RIGHT NOW OK")
+    assert not caps_flood("Good game all")
+    assert emoji_flood("🔥" * 12)
+    assert extract_links("click http://x.gg/abc now") == ["http://x.gg/abc"]
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)

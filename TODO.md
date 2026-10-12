@@ -129,7 +129,7 @@
 - [x] T114 test: rule validation rejects >12 rules
 - [x] T115 test: `ok` id rejected
 - [x] T116 test: presets load + each has >=3 rules
-- [ ] T117 test: caps-flood detector triggers
+- [x] T117 test: caps-flood detector triggers
 - [ ] T118 test: emoji-flood detector triggers
 - [ ] T119 test: link extractor finds urls
 - [ ] T120 test: gate allow path (stub router, high conf ok)
