@@ -13,7 +13,7 @@
 - [x] T010 presets: support-ticket rule pack
 - [x] T011 presets: stream-chat (twitch-style) rule pack
 - [x] T012 presets: `list_presets()` + preset descriptions
-- [ ] T013 normalize: lowercase/whitespace/unicode-fold before predict
+- [x] T013 normalize: lowercase/whitespace/unicode-fold before predict
 - [ ] T014 normalize: caps-flood detector (ratio + flag, no model call)
 - [ ] T015 normalize: emoji-flood detector (count + flag)
 - [ ] T016 normalize: link extractor (urls listed for rules to cite)
