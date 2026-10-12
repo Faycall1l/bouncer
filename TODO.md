@@ -33,7 +33,7 @@
 - [x] T030 audit: log rotation by size
 
 ## P2 Decision quality
-- [ ] T031 gate: three-way action (allow/flag/delete) + escalate path
+- [x] T031 gate: three-way action (allow/flag/delete) + escalate path
 - [ ] T032 gate: high-severity rules delete at lower threshold
 - [ ] T033 gate: jailbreak_p>0.8 always deletes regardless of rule answer
 - [ ] T034 gate: escalate_p>0.7 forces human review even if confident

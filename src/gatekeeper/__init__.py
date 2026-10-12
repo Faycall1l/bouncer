@@ -103,6 +103,8 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
         action = "escalate"
     elif rule != "ok" and conf >= _delete_bar(cfg, rule):
         action = "delete"
+    elif rule != "ok" and conf >= _delete_bar(cfg, rule) - 0.15:
+        action = "flag"  # T031: suspected violation, visible but needs review
     elif rule == "ok" and conf >= cfg.allow_threshold and esc < 0.5:
         action = "allow"
     else:
