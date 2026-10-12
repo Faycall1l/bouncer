@@ -101,7 +101,7 @@
 - [x] T090 demo: confusion-style gate explainer text
 - [x] T091 demo: dark theme + title/branding
 - [x] T092 demo: `requirements.txt` for Spaces
-- [ ] T093 demo: Space-ready README header
+- [x] T093 demo: Space-ready README header
 - [x] T094 demo: queue + concurrency settings
 - [x] T095 demo: flag-for-review button appends to review queue file
 
