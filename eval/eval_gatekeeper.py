@@ -27,5 +27,11 @@ if __name__ == "__main__":
         if conf >= 0.85:
             gated_n += 1; gated_ok += pred == lab["rule"]
     lat.sort()
-    print(f"n={len(rows)} rule_acc={ok/len(rows):.3f} ECE={ece(confs,golds):.3f} "
-          f"p50={lat[len(lat)//2]:.0f}ms gate@0.85: {gated_ok}/{gated_n}={gated_ok/max(1,gated_n):.3f}")
+    report = {"n": len(rows), "rule_acc": round(ok / len(rows), 3),  # T100: JSON report
+              "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),
+              "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n}}
+    import os
+    os.makedirs("eval/reports", exist_ok=True)
+    with open("eval/reports/zero-shot.json", "w") as f:
+        json.dump(report, f, indent=2)
+    print(json.dumps(report, indent=2))
