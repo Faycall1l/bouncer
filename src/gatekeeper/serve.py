@@ -124,6 +124,8 @@ def predict(req: ModReq, request: Request):
     from fastapi import HTTPException
     _rate(request)
     _auth(request)
+    if len(req.message) > 8000:  # T064
+        raise HTTPException(status_code=413, detail="message too long")
     from fastapi import HTTPException
     from .rules import RuleError
     from .explain import explain
