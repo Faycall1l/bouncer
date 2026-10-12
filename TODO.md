@@ -180,7 +180,7 @@
 - [x] T161 ci: pytest + ruff already — add import smoke job
 - [x] T162 ci: cache pip in workflow
 - [x] T163 pkg: LICENSE headers check (Apache short form per file)
-- [ ] T164 pkg: `requirements-demo.txt` pinned for Spaces
+- [x] T164 pkg: `requirements-demo.txt` pinned for Spaces
 - [ ] T165 repo: gitattributes (jsonl text, lock diff)
 - [ ] T166 docs: repo topics/description set via gh
 - [ ] T167 pkg: sdist builds (`pipx run build` smoke)
