@@ -31,13 +31,21 @@ STREAM = {
     "chill": "no caps flood, emoji walls, or copypasta storms",
 }
 
-PRESETS = {"gaming": GAMING, "study": STUDY, "support": SUPPORT, "stream": STREAM}
+ES = {  # T191
+    "sin-spam": "sin anuncios, enlaces, autopromoción ni regalos de cripto",
+    "se-amable": "sin insultos, odio ni acoso a jugadores",
+    "sin-spoilers": "sin spoilers sin etiqueta",
+}
+
+PRESETS = {"gaming": GAMING, "study": STUDY, "support": SUPPORT, "stream": STREAM,
+           "es": ES}
 
 DESCRIPTIONS = {
     "gaming": "clan / lobby chat: cheats, kindness, spam, spoilers",
     "study": "homework group: on-topic, hints-not-answers, kindness",
     "support": "help desk: no PII, on-topic, kindness",
     "stream": "twitch-style chat: spam, kindness, spoilers, flood",
+    "es": "juego en español: spam, amabilidad, spoilers",
 }
 
 
