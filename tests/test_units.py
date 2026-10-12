@@ -73,6 +73,14 @@ def test_allow_path():  # T120
     assert r["action"] == "allow"
 
 
+def test_delete_path():  # T121
+    from gatekeeper import moderate
+    r = moderate("click my link", {"no-spam": "no links or ads"},
+                 router=Stub(choice="no-spam", conf=0.95, harm="harmful",
+                             probs={"no-spam": 0.95, "ok": 0.05}))
+    assert r["action"] == "delete"
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)
