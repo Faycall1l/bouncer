@@ -146,7 +146,7 @@
 - [x] T131 test: explain string mentions rule
 - [x] T132 test: server /health schema (TestClient, no weights)
 - [x] T133 test: server rejects bad rules with 422
-- [ ] T134 test: CLI exit codes
+- [x] T134 test: CLI exit codes
 - [ ] T135 test: version string consistent everywhere
 
 ## P8 Docs
