@@ -161,7 +161,7 @@
 - [x] T144 docs: honest-limits mirrored from BENCHMARKS
 - [x] T145 docs: CONTRIBUTING.md
 - [x] T146 docs: CHANGELOG.md started (0.1.0)
-- [ ] T147 docs: rule preset catalogue with examples
+- [x] T147 docs: rule preset catalogue with examples
 - [ ] T148 docs: latency/cost comparison table vs LLM moderation
 - [ ] T149 docs: screenshots placeholder + demo gif script
 - [ ] T150 docs: glossary (choice/score/noul/System One)
