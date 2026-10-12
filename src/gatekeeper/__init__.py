@@ -12,6 +12,7 @@ from .config import GateConfig
 from .rules import RuleError, validate_rules
 from .presets import get_preset, list_presets
 from .normalize import clean_text, extract_links
+from .cache import CACHE  # T023/T024 decision cache
 
 
 def _fastpath_allow(msg: str, rules: dict) -> dict | None:
@@ -109,6 +110,10 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     fp = _fastpath_allow(msg, rules)  # T017
     if fp is not None:
         return fp
+    key = CACHE.key(msg, rules, cfg.delete_threshold)  # T024: cached decisions count stats
+    hit = CACHE.get(key)
+    if hit is not None:
+        return dict(hit, cached=True)
     r = router or get_router()
     hist = [clean_text(h, 500) for h in (context or [])[-cfg.history_n:]]  # T018: bounded clean window
     turns: dict = {}  # T019: per-user turn counts from "user: text" lines
@@ -123,6 +128,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["harm_dist"] = a["harm"].get("probabilities", [])
     res["rule_dist"] = a["rule"].get("probabilities", {})  # T038: full distribution
     res["raw"] = a
+    CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
     return res
 
 

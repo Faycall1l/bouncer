@@ -24,7 +24,7 @@
 - [x] T021 batch: `moderate_batch()` chunks to bound forward-pass padding
 - [x] T022 async: `amoderate()` via asyncio.to_thread
 - [x] T023 cache: LRU on (message, rules-hash) with TTL
-- [ ] T024 cache: cache stats hit/miss counters
+- [x] T024 cache: cache stats hit/miss counters
 - [ ] T025 timeout: router call wrapped with timeout + escalate-on-timeout
 - [ ] T026 retries: one retry on inference exception, then escalate
 - [x] T027 stats: in-memory counters per action/rule
