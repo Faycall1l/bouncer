@@ -143,7 +143,7 @@
 - [x] T128 test: batch keeps order
 - [x] T129 test: cache hit returns same + counts hit
 - [x] T130 test: audit log writes JSONL line
-- [ ] T131 test: explain string mentions rule
+- [x] T131 test: explain string mentions rule
 - [x] T132 test: server /health schema (TestClient, no weights)
 - [x] T133 test: server rejects bad rules with 422
 - [ ] T134 test: CLI exit codes
