@@ -99,7 +99,7 @@
 - [x] T088 demo: 6 one-click example messages
 - [ ] T089 demo: history panel (last 10 decisions)
 - [x] T090 demo: confusion-style gate explainer text
-- [ ] T091 demo: dark theme + title/branding
+- [x] T091 demo: dark theme + title/branding
 - [ ] T092 demo: `requirements.txt` for Spaces
 - [ ] T093 demo: Space-ready README header
 - [ ] T094 demo: queue + concurrency settings

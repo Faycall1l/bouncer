@@ -38,7 +38,7 @@ def launch():  # T069 target; polished by T081-T095
                   f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
         return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"], bars, meters, f"{r.get('latency_ms', '?')} ms"
 
-    with gr.Blocks(title="bouncer") as app:
+    with gr.Blocks(title="bouncer", theme=gr.themes.Soft()) as app:  # T091
         gr.Markdown("# 🛡️ bouncer — programmable mod, 30ms")
         gr.Markdown("> allow ≥0.85 & calm · flag = suspected · delete = confident violation · "  # T090
                    "escalate = unsure/stakes. Tune the slider: higher = fewer auto-actions, fewer mistakes.")
