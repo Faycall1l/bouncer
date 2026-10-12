@@ -81,7 +81,7 @@
 - [x] T072 cli: exit codes (0 allow, 2 delete, 3 escalate)
 - [x] T073 discord: bot stub (on_message -> moderate -> delete/flag)
 - [x] T074 discord: `!bouncer rules` prints active pack
-- [ ] T075 discord: env-based token, no hardcode
+- [x] T075 discord: env-based token, no hardcode
 - [ ] T076 twitch: IRC stub via stdlib socket (read chat, flag only)
 - [ ] T077 twitch: never sends password to logs
 - [ ] T078 slack: webhook receiver stub
