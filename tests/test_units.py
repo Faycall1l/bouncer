@@ -104,12 +104,12 @@ def test_escalate_override():  # T124
 
 def test_severity_threshold():  # T125
     from gatekeeper import moderate, GateConfig
-    kw = dict(choice="no-spam", conf=0.75, harm="suspicious",
-              probs={"no-spam": 0.75, "ok": 0.6})
-    plain = moderate("win free stuff now", {"no-spam": "no promos or giveaways"},
+    kw = dict(choice="no-scams", conf=0.75, harm="suspicious",
+              probs={"no-scams": 0.75, "ok": 0.6})
+    plain = moderate("win free stuff now", {"no-scams": "no scams, frauds, or rigged giveaways"},
                      router=Stub(**kw))
-    sev = moderate("win free stuff now", {"no-spam": "no promos or giveaways"},
-                   config=GateConfig(severity={"no-spam": "high"}), router=Stub(**kw))
+    sev = moderate("win free stuff now", {"no-scams": "no scams, frauds, or rigged giveaways"},
+                   config=GateConfig(severity={"no-scams": "high"}), router=Stub(**kw))
     assert (plain["action"], sev["action"]) == ("flag", "delete")
 
 
