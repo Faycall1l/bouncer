@@ -7,8 +7,9 @@ def test_build_questions_dynamic_k():
     assert q["jailbreak"]["type"] == "noul"
 
 def test_build_questions_rejects_empty():
+    from gatekeeper.rules import RuleError, validate_rules
     try:
-        build_questions({})
-    except ValueError:
+        validate_rules({})
+    except RuleError:
         return
-    raise AssertionError("expected ValueError")
+    raise AssertionError("expected RuleError")
