@@ -141,7 +141,7 @@
 - [x] T126 test: abstention on small margin
 - [x] T127 test: empty message allows
 - [x] T128 test: batch keeps order
-- [ ] T129 test: cache hit returns same + counts hit
+- [x] T129 test: cache hit returns same + counts hit
 - [ ] T130 test: audit log writes JSONL line
 - [ ] T131 test: explain string mentions rule
 - [x] T132 test: server /health schema (TestClient, no weights)
