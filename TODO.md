@@ -134,7 +134,7 @@
 - [x] T119 test: link extractor finds urls
 - [x] T120 test: gate allow path (stub router, high conf ok)
 - [x] T121 test: gate delete path (stub router, high conf violation)
-- [ ] T122 test: gate escalate path (low conf)
+- [x] T122 test: gate escalate path (low conf)
 - [ ] T123 test: jailbreak override deletes
 - [ ] T124 test: escalate_p override forces review
 - [ ] T125 test: high-severity rule lower threshold
