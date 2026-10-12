@@ -35,7 +35,17 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 * 3 tasks, 1 forward pass (~33ms T4). Classical = 3 models.
 * Calibrated confidence → automate top-50% @ 90%+ precision, escalate rest. Classical softmax lies.
 
-## Quickstart
+## Quickstart (30 seconds, zero-shot — no training)
+
+```bash
+pip install -e .
+python -c "
+from gatekeeper import moderate, get_preset
+print(moderate('FREE NITRO http://x.gg', get_preset('gaming')))
+"
+# bouncer check "you all suck" --preset gaming
+# bouncer serve  # API on :8000
+```
 
 ```bash
 pip install laya fastapi uvicorn gradio

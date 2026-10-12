@@ -151,7 +151,7 @@
 
 ## P8 Docs
 - [x] T136 docs: README badges (ci, license, python)
-- [ ] T137 docs: 30-second quickstart with zero-shot example
+- [x] T137 docs: 30-second quickstart with zero-shot example
 - [ ] T138 docs: rule-writing guide (good vs bad rule text)
 - [ ] T139 docs: threshold-tuning guide (gate@0.85 curve explainer)
 - [ ] T140 docs: architecture diagram (mermaid)
