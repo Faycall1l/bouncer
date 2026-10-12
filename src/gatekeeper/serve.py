@@ -56,6 +56,20 @@ def predict(req: ModReq):
     res["reason"] = explain(res, req.rules)
     return _clean(res)
 
+
+class BatchReq(BaseModel):
+    messages: list[str]
+    rules: dict[str, str]
+    threshold: float = 0.85
+
+
+@app.post("/predict/batch")  # T050
+def predict_batch(req: BatchReq):
+    from . import moderate_batch
+    from .config import GateConfig
+    cfg = GateConfig(allow_threshold=req.threshold, delete_threshold=req.threshold)
+    return [_clean(r) for r in moderate_batch(req.messages, req.rules, config=cfg)]
+
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
 @app.post("/v1/systemone")
 def systemone(body: dict):

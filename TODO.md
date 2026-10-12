@@ -54,7 +54,7 @@
 - [x] T047 server: `GET /version`
 - [x] T048 server: `GET /models` (routed checkpoints)
 - [x] T049 server: `POST /predict` validates rules via T004-T007
-- [ ] T050 server: `POST /predict/batch` endpoint
+- [x] T050 server: `POST /predict/batch` endpoint
 - [ ] T051 server: `/v1/systemone` passthrough kept + tested
 - [ ] T052 server: request-id middleware + echo header
 - [ ] T053 server: optional API key auth via env `BOUNCER_KEY`
