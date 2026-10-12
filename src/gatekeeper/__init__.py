@@ -111,7 +111,12 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         return fp
     r = router or get_router()
     hist = [clean_text(h, 500) for h in (context or [])[-cfg.history_n:]]  # T018: bounded clean window
-    state = {"message": msg, "history": hist, "rules": rules}
+    turns: dict = {}  # T019: per-user turn counts from "user: text" lines
+    for h in context or []:
+        if ":" in h:
+            u = h.split(":", 1)[0].strip()[:32]
+            turns[u] = turns.get(u, 0) + 1
+    state = {"message": msg, "history": hist, "rules": rules, "user_turns": turns}
     out = r.predict(state, build_questions(rules))
     a = out["answers"]
     res = _decide(a, cfg)

@@ -19,7 +19,7 @@
 - [x] T016 normalize: link extractor (urls listed for rules to cite)
 - [x] T017 fastpath: obvious-ok short messages skip model when all rules need links/insults
 - [x] T018 history: sliding window of last N messages into state
-- [ ] T019 history: per-user message counts in state
+- [x] T019 history: per-user message counts in state
 - [x] T020 batch: `moderate_batch()` shares one Router, keeps order
 - [ ] T021 batch: `moderate_batch()` chunks to bound forward-pass padding
 - [ ] T022 async: `amoderate()` via asyncio.to_thread
