@@ -35,10 +35,26 @@ class ModReq(BaseModel):
     rules: dict[str, str]
     context: list[str] = []
     threshold: float = 0.85
+    lang: str | None = None
+
+
+def _clean(res: dict) -> dict:
+    res = dict(res)
+    res.pop("raw", None)
+    return res
+
 
 @app.post("/predict")
 def predict(req: ModReq):
-    return moderate(req.message, req.rules, req.context, req.threshold)
+    from fastapi import HTTPException
+    from .rules import RuleError
+    from .explain import explain
+    try:
+        res = moderate(req.message, req.rules, req.context, threshold=req.threshold, lang=req.lang)
+    except RuleError as e:
+        raise HTTPException(status_code=422, detail=str(e))  # T049: rule errors are 422
+    res["reason"] = explain(res, req.rules)
+    return _clean(res)
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
 @app.post("/v1/systemone")
