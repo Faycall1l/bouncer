@@ -163,7 +163,7 @@
 - [x] T146 docs: CHANGELOG.md started (0.1.0)
 - [x] T147 docs: rule preset catalogue with examples
 - [x] T148 docs: latency/cost comparison table vs LLM moderation
-- [ ] T149 docs: screenshots placeholder + demo gif script
+- [x] T149 docs: screenshots placeholder + demo gif script
 - [ ] T150 docs: glossary (choice/score/noul/System One)
 
 ## P9 Packaging + repo hygiene
