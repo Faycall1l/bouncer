@@ -41,6 +41,19 @@ def validate_reserved(rules: dict) -> None:
         raise RuleError("E_RULES_RESERVED: 'ok' is reserved (means no violation)")
 
 
+def warn_overlapping(rules: dict) -> list:
+    """T045: rule texts sharing rare words confuse the scorer; return warnings."""
+    toks = {rid: set(t.lower() for t in text.split() if len(t) > 4) for rid, text in rules.items()}
+    warns = []
+    ids = list(rules)
+    for i in range(len(ids)):
+        for j in range(i + 1, len(ids)):
+            shared = toks[ids[i]] & toks[ids[j]]
+            if len(shared) >= 3:
+                warns.append(f"{ids[i]} ~ {ids[j]} share {sorted(shared)[:4]}")
+    return warns
+
+
 def validate_rules(rules: dict, max_rules: int = 12, max_chars: int = 280) -> dict:
     """Full pass; returns the rules unchanged for chaining."""
     validate_rule_ids(rules)

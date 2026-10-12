@@ -47,7 +47,7 @@
 - [x] T042 multilingual: smoke test messages in 3 languages (fixtures only)
 - [x] T043 edge: empty message -> allow with reason
 - [x] T044 edge: overlong message truncation with marker
-- [ ] T045 edge: rules with overlapping text warn user
+- [x] T045 edge: rules with overlapping text warn user
 
 ## P3 Server (`serve.py`, ops)
 - [ ] T046 server: `GET /health` with model + uptime
