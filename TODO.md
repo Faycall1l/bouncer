@@ -111,7 +111,7 @@
 - [x] T098 eval: per-rule breakdown table
 - [x] T099 eval: latency p50/p95 measurement
 - [x] T100 eval: save JSON report to `eval/reports/`
-- [ ] T101 eval: ECE computation already in script — wire to report
+- [x] T101 eval: ECE computation already in script — wire to report
 - [x] T102 kaggle: CPU zero-shot eval kernel (no quota needed)
 - [x] T103 kaggle: eval kernel committed + pushed
 - [x] T104 eval: confusion pairs (ok vs be-kind) counted
