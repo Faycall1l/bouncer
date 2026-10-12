@@ -34,3 +34,8 @@ def emoji_flood(msg: str, max_run: int = 5, max_total: int = 10) -> bool:
         run = run + 1 if not (c.isalnum() or c.isspace()) else 0
         best = max(best, run)
     return best >= max_run
+
+
+def extract_links(msg: str) -> list:
+    """T016: urls for rules/no-spam to cite and for the audit trail."""
+    return URL_RE.findall(msg)
