@@ -1,0 +1,10 @@
+---
+name: bug
+about: wrong decision, crash, or bad latency
+title: "[bug] "
+labels: bug
+body:
+  - type: textarea
+    attributes: { label: "message + rules", description: "paste input (redact PII)" }
+  - type: textarea
+    attributes: { label: "got vs want" }

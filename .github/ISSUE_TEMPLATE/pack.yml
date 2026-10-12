@@ -1,0 +1,8 @@
+---
+name: rule-pack request
+about: propose a new preset pack
+title: "[pack] "
+labels: pack
+body:
+  - type: textarea
+    attributes: { label: "rules (id: text per line)" }
