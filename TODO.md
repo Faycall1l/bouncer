@@ -21,7 +21,7 @@
 - [x] T018 history: sliding window of last N messages into state
 - [x] T019 history: per-user message counts in state
 - [x] T020 batch: `moderate_batch()` shares one Router, keeps order
-- [ ] T021 batch: `moderate_batch()` chunks to bound forward-pass padding
+- [x] T021 batch: `moderate_batch()` chunks to bound forward-pass padding
 - [ ] T022 async: `amoderate()` via asyncio.to_thread
 - [ ] T023 cache: LRU on (message, rules-hash) with TTL
 - [ ] T024 cache: cache stats hit/miss counters

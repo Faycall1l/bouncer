@@ -127,7 +127,10 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
 
 
 def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfig | None = None,
-                   router=None) -> list[dict]:
-    """T020: sequential batch sharing one Router; order preserved. (T021 chunks later.)"""
+                   router=None, chunk: int = 8) -> list[dict]:
+    """T020+T021: shared Router, chunked to bound padding; order preserved."""
     r = router or get_router()
-    return [moderate(m, rules, config=config, router=r) for m in messages]
+    out = []
+    for i in range(0, len(messages), chunk):
+        out.extend(moderate(m, rules, config=config, router=r) for m in messages[i:i + chunk])
+    return out
