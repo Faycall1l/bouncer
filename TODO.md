@@ -183,7 +183,7 @@
 - [x] T164 pkg: `requirements-demo.txt` pinned for Spaces
 - [x] T165 repo: gitattributes (jsonl text, lock diff)
 - [x] T166 docs: repo topics/description set via gh
-- [ ] T167 pkg: sdist builds (`pipx run build` smoke)
+- [x] T167 pkg: sdist builds (`pipx run build` smoke)
 - [ ] T168 changelog: 0.1.0 entry dated
 
 ## P10 Impressive extras
