@@ -76,7 +76,7 @@
 - [x] T067 cli: `bouncer check --preset gaming`
 - [x] T068 cli: `bouncer serve` launches API
 - [x] T069 cli: `bouncer demo` launches Gradio
-- [ ] T070 cli: stdin pipe mode (`cat chat.log | bouncer watch`)
+- [x] T070 cli: stdin pipe mode (`cat chat.log | bouncer watch`)
 - [ ] T071 cli: `--threshold` and `--json` flags
 - [ ] T072 cli: exit codes (0 allow, 2 delete, 3 escalate)
 - [ ] T073 discord: bot stub (on_message -> moderate -> delete/flag)

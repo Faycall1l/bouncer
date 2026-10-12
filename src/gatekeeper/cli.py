@@ -25,6 +25,29 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
     return {"allow": 0, "delete": 2, "flag": 2, "escalate": 3}[res["action"]]
 
 
+COLORS = {"allow": "\033[32m", "flag": "\033[33m", "delete": "\033[31m", "escalate": "\033[37m"}
+RESET = "\033[0m"
+
+
+def cmd_watch(args) -> int:
+    from gatekeeper import moderate, GateConfig
+    rules = _load_rules(args)
+    cfg = GateConfig(allow_threshold=args.threshold, delete_threshold=args.threshold)
+    for line in sys.stdin:
+        line = line.rstrip("\n")
+        if not line.strip():
+            continue
+        try:
+            res = moderate(line, rules, config=cfg)
+        except Exception as e:  # noqa: BLE001
+            print(f"error: {e}", file=sys.stderr)
+            continue
+        c = COLORS.get(res["action"], "")
+        print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {line[:120]}",
+              flush=True)
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="bouncer")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -42,6 +65,11 @@ def main(argv=None) -> int:
                                                            host=a.host, port=a.port), 0)[1])
     d = sub.add_parser("demo")  # T069
     d.set_defaults(fn=lambda a: (_demo(), 0))
+    w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail
+    w.add_argument("--rules", default="rules.json")
+    w.add_argument("--preset")
+    w.add_argument("--threshold", type=float, default=0.85)
+    w.set_defaults(fn=cmd_watch)
     args = p.parse_args(argv)
     return args.fn(args)
 
