@@ -10,6 +10,21 @@ _START = time.time()
 
 _KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared key
 
+_BUCKETS: dict = {}  # T054: >60 req/min per IP -> 429
+
+
+def _rate(request: Request) -> None:
+    if request is None:
+        return
+    ip = request.client.host if request.client else "?"
+    now = time.time()
+    hits = [t for t in _BUCKETS.get(ip, []) if now - t < 60]
+    hits.append(now)
+    _BUCKETS[ip] = hits[-60:]
+    if len(hits) > 60:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=429, detail="rate limited")
+
 
 def _auth(request) -> None:
     if _KEY and request.headers.get("X-API-Key") != _KEY:
@@ -68,6 +83,7 @@ def _clean(res: dict) -> dict:
 @app.post("/predict")
 def predict(req: ModReq, request: Request):
     from fastapi import HTTPException
+    _rate(request)
     _auth(request)
     from fastapi import HTTPException
     from .rules import RuleError
