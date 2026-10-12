@@ -52,7 +52,7 @@
 ## P3 Server (`serve.py`, ops)
 - [x] T046 server: `GET /health` with model + uptime
 - [x] T047 server: `GET /version`
-- [ ] T048 server: `GET /models` (routed checkpoints)
+- [x] T048 server: `GET /models` (routed checkpoints)
 - [ ] T049 server: `POST /predict` validates rules via T004-T007
 - [ ] T050 server: `POST /predict/batch` endpoint
 - [ ] T051 server: `/v1/systemone` passthrough kept + tested

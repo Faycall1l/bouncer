@@ -23,6 +23,13 @@ def health():
 def version():
     return {"name": "bouncer", "version": __version__}
 
+
+@app.get("/models")  # T048
+def models():
+    from . import list_presets
+    return {"checkpoints": ["english", "multilingual", "typed-decisions"],
+            "presets": sorted(list_presets())}
+
 class ModReq(BaseModel):
     message: str
     rules: dict[str, str]
