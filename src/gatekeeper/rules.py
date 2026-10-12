@@ -26,3 +26,25 @@ def validate_rule_text(rules: dict, max_chars: int = 280) -> None:
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} has empty text")
         if len(text) > max_chars:
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} exceeds {max_chars} chars")
+
+
+def validate_rule_count(rules: dict, max_rules: int = 12) -> None:
+    """T006: bounded label space keeps options distinguishable (see Banking77 lesson)."""
+    if len(rules) > max_rules:
+        extra = sorted(rules)[max_rules:]
+        raise RuleError(f"E_RULES_COUNT: {len(rules)} rules > {max_rules}; drop e.g. {extra}")
+
+
+def validate_reserved(rules: dict) -> None:
+    """T007: `ok` is the built-in none-violated label."""
+    if "ok" in rules:
+        raise RuleError("E_RULES_RESERVED: 'ok' is reserved (means no violation)")
+
+
+def validate_rules(rules: dict, max_rules: int = 12, max_chars: int = 280) -> dict:
+    """Full pass; returns the rules unchanged for chaining."""
+    validate_rule_ids(rules)
+    validate_rule_text(rules, max_chars)
+    validate_rule_count(rules, max_rules)
+    validate_reserved(rules)
+    return rules
