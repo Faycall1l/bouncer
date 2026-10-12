@@ -144,11 +144,12 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
 
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
-             lang: str | None = None, router=None) -> dict:
+             lang: str | None = None, router=None, _prevalidated: bool = False) -> dict:
     cfg = config or GateConfig()
     if threshold is not None:  # back-compat single float sets both gates
         cfg.allow_threshold = cfg.delete_threshold = threshold
-    validate_rules(rules, cfg.max_rules, cfg.max_rule_chars)
+    if not _prevalidated:
+        validate_rules(rules, cfg.max_rules, cfg.max_rule_chars)
     msg = clean_text(message, cfg.max_msg_chars)
     if not msg:  # T043: nothing to judge
         return {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
@@ -219,10 +220,13 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
 def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfig | None = None,
                    router=None, chunk: int = 8) -> list[dict]:
     """T020+T021: shared Router, chunked to bound padding; order preserved."""
+    cfg = config or GateConfig()
+    validate_rules(rules, cfg.max_rules, cfg.max_rule_chars)  # T196: once, not per message
     r = router or get_router()
     out = []
     for i in range(0, len(messages), chunk):
-        out.extend(moderate(m, rules, config=config, router=r) for m in messages[i:i + chunk])
+        out.extend(moderate(m, rules, config=config, router=r, _prevalidated=True)
+                   for m in messages[i:i + chunk])
     return out
 
 

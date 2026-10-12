@@ -213,8 +213,8 @@
 - [x] T192 i18n: French preset pack
 - [x] T193 i18n: Arabic preset pack (rtl-safe fixtures)
 - [x] T194 perf: orjson fastpath if installed (optional import)
-- [ ] T195 perf: slots on dataclasses
-- [ ] T196 perf: avoid re-serializing state twice
+- [x] T195 perf: slots on dataclasses
+- [x] T196 perf: avoid re-serializing state twice
 - [ ] T197 robust: structured errors with codes (E_RULES, E_MODEL, E_TIMEOUT)
 - [ ] T198 robust: error codes documented in README
 - [ ] T199 final: full test suite green
