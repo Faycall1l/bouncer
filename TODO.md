@@ -103,7 +103,7 @@
 - [ ] T092 demo: `requirements.txt` for Spaces
 - [ ] T093 demo: Space-ready README header
 - [ ] T094 demo: queue + concurrency settings
-- [ ] T095 demo: flag-for-review button appends to review queue file
+- [x] T095 demo: flag-for-review button appends to review queue file
 
 ## P6 Eval + Kaggle (`eval/`, `kaggle/`)
 - [ ] T096 eval: zero-shot rule_acc on examples.jsonl (needs weights; script ready)
