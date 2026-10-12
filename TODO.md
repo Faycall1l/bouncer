@@ -132,7 +132,7 @@
 - [x] T117 test: caps-flood detector triggers
 - [x] T118 test: emoji-flood detector triggers
 - [x] T119 test: link extractor finds urls
-- [ ] T120 test: gate allow path (stub router, high conf ok)
+- [x] T120 test: gate allow path (stub router, high conf ok)
 - [ ] T121 test: gate delete path (stub router, high conf violation)
 - [ ] T122 test: gate escalate path (low conf)
 - [ ] T123 test: jailbreak override deletes

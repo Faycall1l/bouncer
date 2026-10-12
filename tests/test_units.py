@@ -55,6 +55,24 @@ def test_detectors():  # T117+T118+T119
     assert extract_links("click http://x.gg/abc now") == ["http://x.gg/abc"]
 
 
+class Stub:
+    def __init__(self, choice="ok", conf=0.95, probs=None, harm="safe",
+                 jail=0.0, esc=0.0):
+        self.a = {"rule": {"choice": choice, "confidence": conf,
+                           "probabilities": probs or {choice: conf}},
+                  "harm": {"score": harm}, "hype": {"score": "chill"},
+                  "jailbreak": {"noul": jail}, "escalate": {"noul": esc}}
+
+    def predict(self, state, questions):
+        return {"answers": self.a}
+
+
+def test_allow_path():  # T120
+    from gatekeeper import moderate
+    r = moderate("good game all", {"plain-chat": "normal talk"}, router=Stub())
+    assert r["action"] == "allow"
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)
