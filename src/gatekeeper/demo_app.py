@@ -36,6 +36,9 @@ def launch():  # T069 target; polished by T081-T095
                          sorted(dist.items(), key=lambda kv: -kv[1])[:8])
         meters = (f"harm={r['harm']} jail={r['jailbreak_p']:.2f} "  # T086
                   f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
+        from gatekeeper.normalize import extract_links, caps_flood  # T175: regex baseline
+        base = "delete" if extract_links(msg) else ("flag" if caps_flood(msg) else "allow")
+        meters += f"\nregex-baseline={base} agree={base == r['action']}"
         return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"], bars, meters, f"{r.get('latency_ms', '?')} ms"
 
     with gr.Blocks(title="bouncer", theme=gr.themes.Soft()) as app:  # T091

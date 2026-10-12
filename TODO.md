@@ -193,7 +193,7 @@
 - [x] T172 extra: export audit to CSV (`bouncer export`)
 - [x] T173 extra: rule-pack share format (yaml-ish json + `bouncer pack show`)
 - [x] T174 extra: `bouncer pack lint rules.json` validator
-- [ ] T175 extra: demo: side-by-side vs regex baseline accuracy
+- [x] T175 extra: demo: side-by-side vs regex baseline accuracy
 - [ ] T176 extra: demo: cost ticker (decisions per $ vs GPT-4o-mini)
 - [x] T177 extra: fasting: warmup call on serve startup
 - [x] T178 extra: prometheus-style `/metrics` text endpoint
