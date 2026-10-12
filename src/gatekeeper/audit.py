@@ -7,6 +7,15 @@ import json
 import os
 import time
 
+try:  # T194: orjson fastpath when installed
+    import orjson as _oj
+
+    def _dump(d: dict) -> str:
+        return _oj.dumps(d).decode()
+except ImportError:
+    def _dump(d: dict) -> str:
+        return json.dumps(d)
+
 _PATH = os.environ.get("BOUNCER_AUDIT", "bouncer-audit.jsonl")
 _MAX_BYTES = 5 * 1024 * 1024
 
@@ -22,6 +31,6 @@ def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: floa
     _maybe_rotate()
     h = hashlib.sha256(msg.encode()).hexdigest()[:16]
     with open(_PATH, "a") as f:
-        f.write(json.dumps({"t": int(time.time()), "msg": h, "rule": rule,
-                            "conf": round(conf, 3), "action": action,
-                            "ms": round(latency_ms, 1)}) + "\n")
+        f.write(_dump({"t": int(time.time()), "msg": h, "rule": rule,
+                       "conf": round(conf, 3), "action": action,
+                       "ms": round(latency_ms, 1)}) + "\n")

@@ -212,7 +212,7 @@
 - [x] T191 i18n: Spanish preset pack
 - [x] T192 i18n: French preset pack
 - [x] T193 i18n: Arabic preset pack (rtl-safe fixtures)
-- [ ] T194 perf: orjson fastpath if installed (optional import)
+- [x] T194 perf: orjson fastpath if installed (optional import)
 - [ ] T195 perf: slots on dataclasses
 - [ ] T196 perf: avoid re-serializing state twice
 - [ ] T197 robust: structured errors with codes (E_RULES, E_MODEL, E_TIMEOUT)
