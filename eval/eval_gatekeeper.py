@@ -18,6 +18,7 @@ if __name__ == "__main__":
     ok, confs, golds, lat, gated_ok, gated_n = 0, [], [], [], 0, 0
     from collections import Counter
     conf_pairs, overconf = Counter(), 0  # T104+T105
+    per_rule, per_rule_ok = Counter(), Counter()  # T098
     t0 = time.time()
     for row in rows:
         s, lab = row["state"], row["labels"]
@@ -27,6 +28,7 @@ if __name__ == "__main__":
         pred = out["rule"]["choice"]; conf = float(out["rule"]["confidence"])
         good = pred == lab["rule"]
         ok += good; confs.append(conf); golds.append(good)
+        per_rule[lab["rule"]] += 1; per_rule_ok[lab["rule"]] += good  # T098
         if not good:
             conf_pairs[(lab["rule"], pred)] += 1
         if conf >= 0.9 and not good:
@@ -38,7 +40,8 @@ if __name__ == "__main__":
               "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),
               "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
               "top_confusions": [[list(k), v] for k, v in conf_pairs.most_common(5)],
-              "overconfident_errors": overconf}
+              "overconfident_errors": overconf,
+              "per_rule": {k: [per_rule_ok[k], per_rule[k]] for k in per_rule}}
     import os
     os.makedirs("eval/reports", exist_ok=True)
     with open("eval/reports/zero-shot.json", "w") as f:
