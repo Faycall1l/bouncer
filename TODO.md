@@ -184,7 +184,7 @@
 - [x] T165 repo: gitattributes (jsonl text, lock diff)
 - [x] T166 docs: repo topics/description set via gh
 - [x] T167 pkg: sdist builds (`pipx run build` smoke)
-- [ ] T168 changelog: 0.1.0 entry dated
+- [x] T168 changelog: 0.1.0 entry dated
 
 ## P10 Impressive extras
 - [x] T169 extra: `bouncer watch` live tail mode with colors
