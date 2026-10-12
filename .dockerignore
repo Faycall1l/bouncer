@@ -1,0 +1,8 @@
+# T062
+__pycache__
+*.pyc
+.venv
+.git
+hf-cache/
+*.jsonl
+.env
