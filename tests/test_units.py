@@ -15,6 +15,32 @@ def test_rejects_bad_ids():  # T112
         raise AssertionError(f"accepted {bad}")
 
 
+def test_rejects_empty_text():  # T113
+    try:
+        validate_rules({"a": "   "})
+    except RuleError:
+        return
+    raise AssertionError("accepted empty text")
+
+
+def test_rejects_too_many():  # T114
+    try:
+        validate_rules({f"r{i}": "some rule text" for i in range(13)})
+    except RuleError as e:
+        assert "13 rules" in str(e)
+        return
+    raise AssertionError("accepted 13 rules")
+
+
+def test_rejects_ok():  # T115
+    try:
+        validate_rules({"ok": "whatever"})
+    except RuleError as e:
+        assert "reserved" in str(e)
+        return
+    raise AssertionError("accepted ok")
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)
