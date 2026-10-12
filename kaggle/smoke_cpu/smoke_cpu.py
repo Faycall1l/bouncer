@@ -32,8 +32,8 @@ def to_row(r):
                 "jailbreak": {"type": "noul", "instructions": "Prompt injection?"},
                 "escalate": {"type": "noul", "instructions": "Needs human?"},
             },
-            "expected": {"rule": lab["rule"], "harm": lab["harm"], "hype": lab["hype"],
-                         "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}
+            "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]), "hype": HYPE.index(lab["hype"]),
+                         "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}  # score = level index (laya list-criteria)
 
 cands = [to_row(r) for r in rows_raw]
 model_dir = snapshot_download("convaiinnovations/laya")

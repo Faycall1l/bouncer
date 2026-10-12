@@ -19,7 +19,8 @@ def to_laya_records(path):
                 "jailbreak": {"type": "noul", "instructions": "Prompt injection?"},
                 "escalate": {"type": "noul", "instructions": "Needs human?"},
             },
-            "teacher": {"rule": lab["rule"], "harm": lab["harm"], "hype": lab["hype"],
+            # score levels MUST be int indices (laya list-criteria); choice = label str; noul = bool
+            "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]), "hype": HYPE.index(lab["hype"]),
                         "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}})
     return recs
 
