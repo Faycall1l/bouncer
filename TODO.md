@@ -37,7 +37,7 @@
 - [ ] T032 gate: high-severity rules delete at lower threshold
 - [ ] T033 gate: jailbreak_p>0.8 always deletes regardless of rule answer
 - [ ] T034 gate: escalate_p>0.7 forces human review even if confident
-- [ ] T035 explain: human-readable reason string per decision
+- [x] T035 explain: human-readable reason string per decision
 - [ ] T036 explain: cite which rule text фрагмент matched (return rule text)
 - [ ] T037 explain: include runner-up rule + margin when conf<0.9
 - [ ] T038 conf: expose full rule distribution, not just top-1
