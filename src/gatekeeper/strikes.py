@@ -1,6 +1,7 @@
 """Per-user strikes: 3 flags -> suggest ban. Decay halves hourly. No deps."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import time
 
 _strikes: dict = {}

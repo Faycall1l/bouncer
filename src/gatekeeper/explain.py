@@ -1,6 +1,8 @@
 """Human-readable reasons for every decision (no LLM needed)."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
+
 
 def explain(res: dict, rules: dict) -> str:
     """T035: one-line reason citing the rule text; T036 includes text, T037 runner-up."""

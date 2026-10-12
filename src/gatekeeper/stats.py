@@ -1,6 +1,7 @@
 """In-memory decision counters. No deps, no weights."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import threading
 
 _lock = threading.Lock()

@@ -1,6 +1,7 @@
 """JSONL audit trail: hash of message (never raw text by default), decision, latency."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import hashlib
 import json
 import os

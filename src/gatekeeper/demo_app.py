@@ -1,6 +1,8 @@
 """Gradio demo: preset dropdown, editable rules, threshold, action badge, dists, latency."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
+
 
 def parse_rules(text: str) -> dict:
     d = {}

@@ -1,6 +1,7 @@
 """Cheap pre-model signals: normalization + flood/link detectors (no weights needed)."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import re
 import unicodedata
 

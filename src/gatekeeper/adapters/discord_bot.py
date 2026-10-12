@@ -1,6 +1,7 @@
 """Discord adapter stub (T073-T075). `pip install -e .[discord]` then run this module."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import os
 
 

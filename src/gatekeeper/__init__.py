@@ -1,5 +1,10 @@
-"""Bouncer: programmable live-chat mod over a System One router. One forward pass."""
+"""Bouncer: programmable live-chat mod over a System One router. One forward pass.
+
+Apache-2.0. See LICENSE.
+"""
 from __future__ import annotations
+
+# Apache-2.0. See LICENSE.
 
 __version__ = "0.1.0"
 __all__ = [

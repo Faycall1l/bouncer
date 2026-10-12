@@ -1,6 +1,7 @@
 """`bouncer` CLI: check/serve/demo/watch/stats/review/pack. Exit codes: 0 allow, 2 delete/flag, 3 escalate."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import argparse
 import json
 import sys

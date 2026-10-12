@@ -1,6 +1,7 @@
 """Rule-set validation. Error codes: E_RULES_* (see README)."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import re
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,23}$")

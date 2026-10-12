@@ -3,6 +3,7 @@ Usage: TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adap
 """
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import os
 import socket
 import sys

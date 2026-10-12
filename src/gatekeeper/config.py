@@ -1,6 +1,7 @@
 """Shared configuration for bouncer decisions."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 from dataclasses import dataclass, field
 
 

@@ -179,7 +179,7 @@
 - [x] T160 repo: FUNDING? no — skip, CODEOWNERS instead
 - [x] T161 ci: pytest + ruff already — add import smoke job
 - [x] T162 ci: cache pip in workflow
-- [ ] T163 pkg: LICENSE headers check (Apache short form per file)
+- [x] T163 pkg: LICENSE headers check (Apache short form per file)
 - [ ] T164 pkg: `requirements-demo.txt` pinned for Spaces
 - [ ] T165 repo: gitattributes (jsonl text, lock diff)
 - [ ] T166 docs: repo topics/description set via gh

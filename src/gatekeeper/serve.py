@@ -1,3 +1,4 @@
+# Apache-2.0. See LICENSE.
 """FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
 import time
 

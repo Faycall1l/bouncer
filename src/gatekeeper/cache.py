@@ -1,6 +1,7 @@
 """TTL LRU for repeat messages (spam waves hit the same text). No deps."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import hashlib
 import time
 from collections import OrderedDict

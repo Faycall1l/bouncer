@@ -1,6 +1,7 @@
 """Review queue: escalations/flags awaiting humans. JSONL, gitignored."""
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import json
 import os
 

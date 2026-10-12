@@ -3,6 +3,7 @@ POST {"message": ..., "rules"?} -> decision; optional forward of delete/flag eve
 """
 from __future__ import annotations
 
+# Apache-2.0. See LICENSE.
 import json
 import os
 import urllib.request
