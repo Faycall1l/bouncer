@@ -88,6 +88,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     a = out["answers"]
     res = _decide(a, cfg)
     res["harm_dist"] = a["harm"].get("probabilities", [])
+    res["rule_dist"] = a["rule"].get("probabilities", {})  # T038: full distribution
     res["raw"] = a
     return res
 
