@@ -86,7 +86,7 @@
 - [x] T077 twitch: never sends password to logs
 - [x] T078 slack: webhook receiver stub
 - [x] T079 adapter: generic webhook POST forwarder (allow/delete events)
-- [ ] T080 adapters README with setup per platform
+- [x] T080 adapters README with setup per platform
 
 ## P5 Demo app (`app/`)
 - [ ] T081 demo: server-preset dropdown (gaming/study/support/stream)
