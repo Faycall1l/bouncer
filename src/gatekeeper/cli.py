@@ -35,8 +35,20 @@ def main(argv=None) -> int:
     c.add_argument("--threshold", type=float, default=0.85)
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
+    s = sub.add_parser("serve")  # T068
+    s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--port", type=int, default=8000)
+    s.set_defaults(fn=lambda a: (__import__("uvicorn").run("gatekeeper.serve:app",
+                                                           host=a.host, port=a.port), 0)[1])
+    d = sub.add_parser("demo")  # T069
+    d.set_defaults(fn=lambda a: (_demo(), 0))
     args = p.parse_args(argv)
     return args.fn(args)
+
+
+def _demo():
+    from gatekeeper.demo_app import launch
+    launch()
 
 
 if __name__ == "__main__":

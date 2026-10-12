@@ -74,7 +74,7 @@
 ## P4 CLI + adapters
 - [x] T066 cli: `bouncer check "msg" --rules rules.json`
 - [x] T067 cli: `bouncer check --preset gaming`
-- [ ] T068 cli: `bouncer serve` launches API
+- [x] T068 cli: `bouncer serve` launches API
 - [ ] T069 cli: `bouncer demo` launches Gradio
 - [ ] T070 cli: stdin pipe mode (`cat chat.log | bouncer watch`)
 - [ ] T071 cli: `--threshold` and `--json` flags
