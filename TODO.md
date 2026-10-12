@@ -118,8 +118,8 @@
 - [x] T105 eval: overconfidence audit (conf>=0.9 but wrong)
 - [x] T106 bench: 1-question vs 5-question latency comparison script
 - [x] T107 bench: batch-size sweep script (1/4/8/16)
-- [ ] T108 docs: BENCHMARKS.md with zero-shot table (fill after kernel)
-- [ ] T109 docs: honest-limits section (template data, 3 rules)
+- [x] T108 docs: BENCHMARKS.md with zero-shot table (fill after kernel)
+- [x] T109 docs: honest-limits section (template data, 3 rules)
 - [x] T110 eval: multilingual spot-check fixtures (5 langs)
 
 ## P7 Tests (`tests/`)
