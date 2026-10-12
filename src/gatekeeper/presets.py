@@ -21,3 +21,32 @@ SUPPORT = {
     "be-kind": "no abuse toward agents or other customers",
     "no-spam": "no ads, links, or repeated reposts",
 }
+
+STREAM = {
+    "no-spam": "no link dumps, self-promo, or bot spam",
+    "be-kind": "no hate, harassment, or backseating abuse toward the streamer",
+    "no-spoiler": "no game spoilers or ending leaks",
+    "chill": "no caps flood, emoji walls, or copypasta storms",
+}
+
+PRESETS = {"gaming": GAMING, "study": STUDY, "support": SUPPORT, "stream": STREAM}
+
+DESCRIPTIONS = {
+    "gaming": "clan / lobby chat: cheats, kindness, spam, spoilers",
+    "study": "homework group: on-topic, hints-not-answers, kindness",
+    "support": "help desk: no PII, on-topic, kindness",
+    "stream": "twitch-style chat: spam, kindness, spoilers, flood",
+}
+
+
+def get_preset(name: str) -> dict:
+    """T012: preset by name (KeyError lists valid names)."""
+    try:
+        return dict(PRESETS[name])
+    except KeyError:
+        raise KeyError(f"unknown preset {name!r}; pick from {sorted(PRESETS)}")
+
+
+def list_presets() -> dict:
+    """T012: name -> description."""
+    return dict(DESCRIPTIONS)
