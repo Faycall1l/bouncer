@@ -26,7 +26,7 @@
 - [x] T023 cache: LRU on (message, rules-hash) with TTL
 - [x] T024 cache: cache stats hit/miss counters
 - [x] T025 timeout: router call wrapped with timeout + escalate-on-timeout
-- [ ] T026 retries: one retry on inference exception, then escalate
+- [x] T026 retries: one retry on inference exception, then escalate
 - [x] T027 stats: in-memory counters per action/rule
 - [x] T028 stats: `get_stats()` + `reset_stats()`
 - [x] T029 audit: JSONL audit log (msg hash, rule, conf, action, latency)
