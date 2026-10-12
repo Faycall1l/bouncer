@@ -164,7 +164,7 @@
 - [x] T147 docs: rule preset catalogue with examples
 - [x] T148 docs: latency/cost comparison table vs LLM moderation
 - [x] T149 docs: screenshots placeholder + demo gif script
-- [ ] T150 docs: glossary (choice/score/noul/System One)
+- [x] T150 docs: glossary (choice/score/noul/System One)
 
 ## P9 Packaging + repo hygiene
 - [ ] T151 pkg: `__all__` + version single-sourced
