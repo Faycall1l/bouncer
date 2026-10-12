@@ -157,7 +157,7 @@
 - [x] T140 docs: architecture diagram (mermaid)
 - [x] T141 docs: API reference section (/predict, /batch, /systemone)
 - [x] T142 docs: adapters setup matrix
-- [ ] T143 docs: FAQ (why not regex? why not LLM? cost?)
+- [x] T143 docs: FAQ (why not regex? why not LLM? cost?)
 - [ ] T144 docs: honest-limits mirrored from BENCHMARKS
 - [ ] T145 docs: CONTRIBUTING.md
 - [ ] T146 docs: CHANGELOG.md started (0.1.0)
