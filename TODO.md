@@ -199,7 +199,7 @@
 - [x] T178 extra: prometheus-style `/metrics` text endpoint
 - [x] T179 extra: graceful shutdown drains in-flight
 - [x] T180 extra: request coalescing for identical concurrent messages
-- [ ] T181 extra: per-user strike counter (3 flags -> suggest ban)
+- [x] T181 extra: per-user strike counter (3 flags -> suggest ban)
 - [ ] T182 extra: strike decay (halve every hour)
 - [ ] T183 extra: appeal helper text generator (template, no LLM)
 - [ ] T184 extra: announcement mode (pin-friendly summary line)
