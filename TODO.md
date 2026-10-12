@@ -85,7 +85,7 @@
 - [x] T076 twitch: IRC stub via stdlib socket (read chat, flag only)
 - [x] T077 twitch: never sends password to logs
 - [x] T078 slack: webhook receiver stub
-- [ ] T079 adapter: generic webhook POST forwarder (allow/delete events)
+- [x] T079 adapter: generic webhook POST forwarder (allow/delete events)
 - [ ] T080 adapters README with setup per platform
 
 ## P5 Demo app (`app/`)
