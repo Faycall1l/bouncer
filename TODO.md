@@ -80,7 +80,7 @@
 - [x] T071 cli: `--threshold` and `--json` flags
 - [x] T072 cli: exit codes (0 allow, 2 delete, 3 escalate)
 - [x] T073 discord: bot stub (on_message -> moderate -> delete/flag)
-- [ ] T074 discord: `!bouncer rules` prints active pack
+- [x] T074 discord: `!bouncer rules` prints active pack
 - [ ] T075 discord: env-based token, no hardcode
 - [ ] T076 twitch: IRC stub via stdlib socket (read chat, flag only)
 - [ ] T077 twitch: never sends password to logs
