@@ -134,3 +134,9 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
     for i in range(0, len(messages), chunk):
         out.extend(moderate(m, rules, config=config, router=r) for m in messages[i:i + chunk])
     return out
+
+
+async def amoderate(message: str, rules: dict[str, str], **kw) -> dict:
+    """T022: async wrapper for bots/servers."""
+    import asyncio
+    return await asyncio.to_thread(moderate, message, rules, **kw)
