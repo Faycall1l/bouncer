@@ -15,10 +15,11 @@ class TTLCache:
         self.hits = self.misses = 0
 
     @staticmethod
-    def key(message: str, rules: dict, threshold: float) -> str:
+    def key(message: str, rules: dict, threshold: float, severity: dict | None = None) -> str:
         h = hashlib.sha256(message.encode()).hexdigest()[:16]
         rh = hashlib.sha256(repr(sorted(rules.items())).encode()).hexdigest()[:8]
-        return f"{h}:{rh}:{threshold}"
+        sh = hashlib.sha256(repr(sorted((severity or {}).items())).encode()).hexdigest()[:8]
+        return f"{h}:{rh}:{threshold}:{sh}"
 
     def get(self, k: str):
         now = time.time()
