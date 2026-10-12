@@ -27,8 +27,8 @@
 - [ ] T024 cache: cache stats hit/miss counters
 - [ ] T025 timeout: router call wrapped with timeout + escalate-on-timeout
 - [ ] T026 retries: one retry on inference exception, then escalate
-- [ ] T027 stats: in-memory counters per action/rule
-- [ ] T028 stats: `get_stats()` + `reset_stats()`
+- [x] T027 stats: in-memory counters per action/rule
+- [x] T028 stats: `get_stats()` + `reset_stats()`
 - [ ] T029 audit: JSONL audit log (msg hash, rule, conf, action, latency)
 - [ ] T030 audit: log rotation by size
 
