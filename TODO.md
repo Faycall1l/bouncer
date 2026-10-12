@@ -38,7 +38,7 @@
 - [x] T033 gate: jailbreak_p>0.8 always deletes regardless of rule answer
 - [x] T034 gate: escalate_p>0.7 forces human review even if confident
 - [x] T035 explain: human-readable reason string per decision
-- [ ] T036 explain: cite which rule text фрагмент matched (return rule text)
+- [x] T036 explain: cite matched rule text in reason
 - [ ] T037 explain: include runner-up rule + margin when conf<0.9
 - [x] T038 conf: expose full rule distribution, not just top-1
 - [x] T039 conf: expose harm/hype full distributions
