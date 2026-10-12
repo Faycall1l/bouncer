@@ -197,7 +197,7 @@
 - [ ] T176 extra: demo: cost ticker (decisions per $ vs GPT-4o-mini)
 - [x] T177 extra: fasting: warmup call on serve startup
 - [x] T178 extra: prometheus-style `/metrics` text endpoint
-- [ ] T179 extra: graceful shutdown drains in-flight
+- [x] T179 extra: graceful shutdown drains in-flight
 - [ ] T180 extra: request coalescing for identical concurrent messages
 - [ ] T181 extra: per-user strike counter (3 flags -> suggest ban)
 - [ ] T182 extra: strike decay (halve every hour)

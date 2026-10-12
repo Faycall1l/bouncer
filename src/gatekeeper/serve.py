@@ -101,6 +101,11 @@ def _startup():
     except Exception:
         pass
 
+
+@app.on_event("shutdown")  # T179: note drain; ThreadPool calls finish with the loop
+def _shutdown():
+    print('{"event": "shutdown", "note": "in-flight predict calls drain with workers"}', flush=True)
+
 class ModReq(BaseModel):
     message: str
     rules: dict[str, str]
