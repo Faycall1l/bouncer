@@ -160,7 +160,7 @@
 - [x] T143 docs: FAQ (why not regex? why not LLM? cost?)
 - [x] T144 docs: honest-limits mirrored from BENCHMARKS
 - [x] T145 docs: CONTRIBUTING.md
-- [ ] T146 docs: CHANGELOG.md started (0.1.0)
+- [x] T146 docs: CHANGELOG.md started (0.1.0)
 - [ ] T147 docs: rule preset catalogue with examples
 - [ ] T148 docs: latency/cost comparison table vs LLM moderation
 - [ ] T149 docs: screenshots placeholder + demo gif script
