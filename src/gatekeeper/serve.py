@@ -1,10 +1,11 @@
 """FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
 import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware  # T055
 from pydantic import BaseModel
-from . import moderate, build_questions, get_router
-from . import __version__
+
+from . import __version__, get_router, moderate
 
 app = FastAPI(title="bouncer")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
@@ -72,8 +73,8 @@ def models():
 
 @app.get("/stats")  # T057
 def stats():
-    from .stats import get_stats
     from .cache import CACHE
+    from .stats import get_stats
     return {"decisions": get_stats(), "cache": CACHE.stats()}
 
 
@@ -86,6 +87,7 @@ def presets():
 @app.get("/metrics")  # T178: prometheus-style text
 def metrics():
     from fastapi.responses import PlainTextResponse
+
     from .stats import get_stats
     s = get_stats()["actions"]
     lines = [f'bouncer_decisions_total{{action="{k}"}} {v}' for k, v in s.items()]
@@ -98,8 +100,8 @@ def _startup():
         from . import get_router
         r = get_router()
         r.predict({"message": "warmup"}, {"q": {"type": "noul", "instructions": "warmup?"}})
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001 — weights may be absent; first real call loads
+        print(f"warmup skipped: {e}", flush=True)
 
 
 @app.on_event("shutdown")  # T179: note drain; ThreadPool calls finish with the loop
@@ -132,8 +134,9 @@ def predict(req: ModReq, request: Request):
     if len(req.message) > 8000:  # T064
         raise HTTPException(status_code=413, detail="message too long")
     from fastapi import HTTPException
-    from .rules import RuleError
+
     from .explain import explain
+    from .rules import RuleError
     try:
         res = moderate(req.message, req.rules, req.context, threshold=req.threshold, lang=req.lang)
     except RuleError as e:

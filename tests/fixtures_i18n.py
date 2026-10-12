@@ -1,5 +1,6 @@
 """T042: multilingual smoke fixtures (state-building only; weights needed for scores)."""
 import sys
+
 sys.path.insert(0, "src")
 from gatekeeper import build_questions
 

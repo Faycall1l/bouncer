@@ -1,5 +1,6 @@
 """Unit tests, no weights. One stub router shared."""
 import sys
+
 sys.path.insert(0, "src")
 
 from gatekeeper import GateConfig
@@ -103,9 +104,9 @@ def test_escalate_override():  # T124
 
 
 def test_severity_threshold():  # T125
-    from gatekeeper import moderate, GateConfig
-    kw = dict(choice="no-scams", conf=0.75, harm="suspicious",
-              probs={"no-scams": 0.75, "ok": 0.6})
+    from gatekeeper import GateConfig, moderate
+    kw = {"choice": "no-scams", "conf": 0.75, "harm": "suspicious",
+          "probs": {"no-scams": 0.75, "ok": 0.6}}
     plain = moderate("win free stuff now", {"no-scams": "no scams, frauds, or rigged giveaways"},
                      router=Stub(**kw))
     sev = moderate("win free stuff now", {"no-scams": "no scams, frauds, or rigged giveaways"},
@@ -154,6 +155,7 @@ def test_audit_writes(tmp_path, monkeypatch):  # T130
     p = tmp_path / "audit.jsonl"
     monkeypatch.setenv("BOUNCER_AUDIT", str(p))
     import importlib
+
     import gatekeeper.audit as _au
     importlib.reload(_au)
     _au.log_decision("hello", "ok", 0.9, "allow", 3.0)
@@ -170,8 +172,10 @@ def test_explain_mentions_rule():  # T131
 
 def test_version_consistent():  # T135
     import re
+
     import gatekeeper
-    proj = open("pyproject.toml").read()
+    with open("pyproject.toml") as f:
+        proj = f.read()
     m = re.search(r'version = "([^"]+)"', proj)
     assert m and m.group(1) == gatekeeper.__version__
 

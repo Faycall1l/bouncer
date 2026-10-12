@@ -14,7 +14,7 @@ def redact(s: str) -> str:  # T077
 
 
 def run():
-    from gatekeeper import moderate, get_preset
+    from gatekeeper import get_preset, moderate
     rules = get_preset("stream")
     host, port = "irc.chat.twitch.tv", 6667
     nick, chan = os.environ["TWITCH_NICK"], os.environ["TWITCH_CHAN"]

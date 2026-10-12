@@ -6,7 +6,8 @@ import os
 
 def run(token: str | None = None, preset: str = "gaming"):
     import discord  # optional dep; ImportError message tells the extra
-    from gatekeeper import moderate, get_preset
+
+    from gatekeeper import get_preset, moderate
 
     rules = get_preset(preset)
     intents = discord.Intents.default()

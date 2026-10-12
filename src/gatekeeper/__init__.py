@@ -2,20 +2,31 @@
 from __future__ import annotations
 
 __version__ = "0.1.0"
-__all__ = ["get_router", "build_questions", "moderate", "moderate_batch",
-           "GateConfig", "validate_rules", "RuleError", "get_preset", "list_presets",
-           "DEFAULT_HARM", "DEFAULT_HYPE"]
+__all__ = [
+    "DEFAULT_HARM",
+    "DEFAULT_HYPE",
+    "GateConfig",
+    "RuleError",
+    "build_questions",
+    "get_preset",
+    "get_router",
+    "list_presets",
+    "moderate",
+    "moderate_batch",
+    "validate_rules",
+]
 
 from typing import TYPE_CHECKING
 
-from .config import GateConfig
-from .rules import RuleError, validate_rules
-from .presets import get_preset, list_presets
-from .normalize import clean_text, extract_links
 from .cache import CACHE  # T023/T024 decision cache
+from .config import GateConfig
+from .normalize import clean_text, extract_links
+from .presets import get_preset, list_presets
+from .rules import RuleError, validate_rules
 
 _INFLIGHT: dict = {}  # T180: key -> [event, result]
 import threading as _th
+
 _FLY_LOCK = _th.Lock()
 
 
@@ -30,7 +41,7 @@ def _fastpath_allow(msg: str, rules: dict) -> dict | None:
     return None
 
 if TYPE_CHECKING:
-    from laya import Router
+    from laya import Router  # noqa: F401 — annotation-only import
 
 _router = None
 
@@ -187,8 +198,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["rule_dist"] = a["rule"].get("probabilities", {})  # T038: full distribution
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
     res["raw"] = a
-    from .stats import record
     from .audit import log_decision
+    from .stats import record
     record(res["action"], res["rule"])
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"])
     CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})

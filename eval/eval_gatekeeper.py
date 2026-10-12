@@ -1,6 +1,10 @@
 """Eval: accuracy(rule), MAE(harm/hype), ECE, gate precision@0.85, p50 latency."""
-import json, time, sys
-from gatekeeper import get_router, build_questions
+import json
+import sys
+import time
+
+from gatekeeper import build_questions, get_router
+
 
 def ece(probs, golds, n=10):
     import numpy as np
@@ -13,7 +17,8 @@ def ece(probs, golds, n=10):
 
 if __name__ == "__main__":
     path = sys.argv[1] if len(sys.argv) > 1 else "data/gatekeeper-12k.jsonl"
-    rows = [json.loads(l) for l in open(path)][:500]
+    with open(path) as f:
+        rows = [json.loads(line) for line in f][:500]
     r = get_router()
     ok, confs, golds, lat, gated_ok, gated_n = 0, [], [], [], 0, 0
     from collections import Counter

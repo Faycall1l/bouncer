@@ -1,14 +1,21 @@
 """T102: zero-shot base-Laya eval on gatekeeper data, CPU. Prints JSON report."""
-import subprocess, sys
+import subprocess
+import sys
+
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U",
                 "laya>=0.1.6", "transformers>=4.48.0", "huggingface_hub"], check=True)
 
-import json, glob, random, time
+import glob
+import json
+import random
+import time
 from collections import Counter
+
 from laya import Router
 
 paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
-rows = [json.loads(l) for l in open(paths[0])]
+with open(paths[0]) as f:
+    rows = [json.loads(line) for line in f]
 random.seed(11); random.shuffle(rows)
 rows = rows[:200]
 

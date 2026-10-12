@@ -1,11 +1,12 @@
 """T106+T107: latency scripts (need weights). 1-vs-5 questions; batch-size sweep."""
-import sys, time
+import sys
+import time
 
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 20
 
 
 def bench(n_q=5, batch=1):
-    from gatekeeper import get_router, build_questions
+    from gatekeeper import build_questions, get_router
     r = get_router()
     rules = {"be-kind": "no insults", "no-spam": "no ads"}
     qs = build_questions(rules)

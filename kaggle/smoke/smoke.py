@@ -1,18 +1,25 @@
 """Smoke kernel: validates gatekeeper rows against laya.train before the long run.
 Fast (~15 min): pip install, build items via items_from_rows, 20-step single-GPU smoke train.
 """
-import subprocess, sys
+import subprocess
+import sys
+
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U",
                 "laya>=0.1.6", "transformers>=4.48.0", "datasets>=3.0.0",
                 "safetensors", "huggingface_hub", "accelerate"], check=True)
 
-import os, json, glob, random
+import glob
+import json
+import os
+import random
+
 import torch
 
 # --- 1. load gatekeeper rows ---
 paths = glob.glob("/kaggle/input/gatekeeper-chatmix-12k/*.jsonl")
 assert paths, "dataset missing"
-rows_raw = [json.loads(l) for l in open(paths[0])]
+with open(paths[0]) as f:
+    rows_raw = [json.loads(line) for line in f]
 random.seed(7); random.shuffle(rows_raw)
 rows_raw = rows_raw[:1500]
 
@@ -38,14 +45,15 @@ cands = [to_row(r) for r in rows_raw]
 
 # --- 2. base model + items ---
 from huggingface_hub import snapshot_download
-from transformers import AutoTokenizer
 from laya.agent import _fix_tokenizer_config
 from laya.train import items_from_rows
+from transformers import AutoTokenizer
 
 model_dir = snapshot_download("convaiinnovations/laya")
 _fix_tokenizer_config(model_dir)
 tok = AutoTokenizer.from_pretrained(os.path.join(model_dir, "tokenizer"))
-cfg = json.load(open(os.path.join(model_dir, "rl_agent_config.json")))
+with open(os.path.join(model_dir, "rl_agent_config.json")) as f:
+    cfg = json.load(f)
 items, skipped = items_from_rows(tok, cands, cfg["max_len"], cfg["head_max_len"])
 print(f"ITEMS={len(items)} SKIPPED={skipped}")
 assert len(items) > 6000, "too few items — format mismatch?"
@@ -55,9 +63,9 @@ if not torch.cuda.is_available():
     print("NO_GPU — format validation passed, train smoke skipped")
     sys.exit(0)
 
-from safetensors.torch import load_file
 from laya.common import build_model, collate_items
 from laya.train import encode_item, rlcd_loss
+from safetensors.torch import load_file
 
 cfg["gradient_checkpointing"] = True
 model = build_model(cfg, encoder_dir=os.path.join(model_dir, "encoder"))

@@ -13,7 +13,8 @@ def parse_rules(text: str) -> dict:
 
 def launch():  # T069 target; polished by T081-T095
     import gradio as gr
-    from gatekeeper import moderate, get_preset, list_presets
+
+    from gatekeeper import get_preset, list_presets, moderate
     from gatekeeper.explain import explain
 
     names = sorted(list_presets())
@@ -21,7 +22,7 @@ def launch():  # T069 target; polished by T081-T095
 
     def run(msg, preset, rules_t, thr):
         rules = parse_rules(rules_t) or get_preset(preset)
-        from gatekeeper.rules import validate_rules, RuleError
+        from gatekeeper.rules import RuleError, validate_rules
         try:
             validate_rules(rules)
         except RuleError as e:  # T082: live validation errors
@@ -36,7 +37,7 @@ def launch():  # T069 target; polished by T081-T095
                          sorted(dist.items(), key=lambda kv: -kv[1])[:8])
         meters = (f"harm={r['harm']} jail={r['jailbreak_p']:.2f} "  # T086
                   f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
-        from gatekeeper.normalize import extract_links, caps_flood  # T175: regex baseline
+        from gatekeeper.normalize import caps_flood, extract_links  # T175: regex baseline
         base = "delete" if extract_links(msg) else ("flag" if caps_flood(msg) else "allow")
         meters += f"\nregex-baseline={base} agree={base == r['action']}"
         return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"], bars, meters, f"{r.get('latency_ms', '?')} ms"

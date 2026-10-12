@@ -1,8 +1,10 @@
 """Server tests with a stub router (no weights). T051/T132/T133."""
 import sys
+
 sys.path.insert(0, "src")
 
 from fastapi.testclient import TestClient
+
 import gatekeeper
 from gatekeeper import serve
 
@@ -22,6 +24,17 @@ class Stub:
 
 gatekeeper._router = Stub()
 client = TestClient(serve.app)
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _stub_router():
+    gatekeeper._router = Stub()
+    from gatekeeper.cache import CACHE
+    CACHE._d.clear()
+    yield
 
 
 def test_health():  # T132

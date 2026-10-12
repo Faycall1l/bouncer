@@ -1,5 +1,6 @@
 """CLI tests with stubbed router (no weights). T134."""
 import sys
+
 sys.path.insert(0, "src")
 
 import gatekeeper

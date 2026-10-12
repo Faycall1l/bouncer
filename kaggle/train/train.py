@@ -2,12 +2,19 @@
 Needs GPU quota (30h/week). Rolling checkpoint per epoch + HF push via HF_TOKEN secret.
 Smoke-validated: 7500/7500 items build clean (bouncer-smoke-cpu v6).
 """
-import subprocess, sys
+import subprocess
+import sys
+
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U",
                 "laya>=0.1.6", "transformers>=4.48.0", "datasets>=3.0.0",
                 "safetensors", "huggingface_hub", "accelerate"], check=True)
 
-import os, json, glob, random, math, time
+import glob
+import json
+import os
+import random
+import time
+
 import torch
 
 assert torch.cuda.is_available(), "needs GPU — wait for quota reset"
@@ -17,7 +24,8 @@ device = torch.device("cuda")
 HARM = ["safe", "suspicious", "harmful"]
 HYPE = ["dead", "chill", "hyped"]
 paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
-rows_raw = [json.loads(l) for l in open(paths[0])]
+with open(paths[0]) as f:
+    rows_raw = [json.loads(line) for line in f]
 random.seed(7); random.shuffle(rows_raw)
 train_rows, test_rows = rows_raw[:1500], rows_raw[1500:2000]
 
@@ -36,14 +44,15 @@ def to_row(r):
                          "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}
 
 from huggingface_hub import snapshot_download
-from transformers import AutoTokenizer
 from laya.agent import _fix_tokenizer_config
 from laya.train import items_from_rows
+from transformers import AutoTokenizer
 
 model_dir = snapshot_download("convaiinnovations/laya")
 _fix_tokenizer_config(model_dir)
 tok = AutoTokenizer.from_pretrained(os.path.join(model_dir, "tokenizer"))
-cfg = json.load(open(os.path.join(model_dir, "rl_agent_config.json")))
+with open(os.path.join(model_dir, "rl_agent_config.json")) as f:
+    cfg = json.load(f)
 cfg.update({"gradient_checkpointing": True, "max_tokens_per_batch": 4096,
             "max_len": 1024, "head_max_len": 256})
 OUT = "/kaggle/working/bouncer-421m"
@@ -53,10 +62,17 @@ items, skipped = items_from_rows(tok, [to_row(r) for r in train_rows],
 print(f"ITEMS={len(items)} SKIPPED={skipped}", flush=True)
 
 # --- single-GPU RLCD (same canonical fns as train_ddp.py) ---
-from safetensors.torch import load_file
-from laya.common import build_model, collate_items
 from laya.calibrate import fit_temperature_map
-from laya.train import encode_item, rlcd_loss, save_checkpoint, sigma_at, split_calibration, calibration_records
+from laya.common import build_model, collate_items
+from laya.train import (
+    calibration_records,
+    encode_item,
+    rlcd_loss,
+    save_checkpoint,
+    sigma_at,
+    split_calibration,
+)
+from safetensors.torch import load_file
 
 model = build_model(cfg, encoder_dir=os.path.join(model_dir, "encoder"))
 model.load_state_dict(load_file(os.path.join(model_dir, "model.safetensors")), strict=True)
@@ -76,9 +92,10 @@ t0 = time.time()
 
 for epoch in range(EPOCHS):
     random.seed(42 + epoch); random.shuffle(train_items)
-    sigma, acc, eloss, nb = sigma_at(epoch, EPOCHS, 0.4, 0.1), 0, 0.0, 0
+    sigma, eloss, nb = sigma_at(epoch, EPOCHS, 0.4, 0.1), 0.0, 0
     opt.zero_grad(set_to_none=True)
-    for b in range(0, len(train_items), MICRO):
+    for step, b in enumerate(range(0, len(train_items), MICRO)):
+        acc = step + 1
         chunk = train_items[b:b + MICRO]
         enc = [encode_item(tok, it, cfg["max_len"], cfg["head_max_len"]) for it in chunk]
         bt = collate_items([enc], tok.pad_token_id)
@@ -88,7 +105,7 @@ for epoch in range(EPOCHS):
         loss = rlcd_loss(logits.float(), bt["target"].to(device), bt["marker_mask"].to(device),
                          bt["qtype"].to(device), sigma, samples=4, w_sph=0.75, w_rps=1.0)
         scaler.scale(loss / ACCUM).backward()
-        acc += 1; eloss += float(loss); nb += 1
+        eloss += float(loss); nb += 1
         if acc % ACCUM == 0 or (b + MICRO) >= len(train_items):
             scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -109,13 +126,14 @@ try:
     if fit["temperature_by_options"]:
         cfg["temperature_by_options"] = fit["temperature_by_options"]
     print("TEMPS:", [round(t, 3) for t in fit["temperature"]], flush=True)
-except Exception as e:
+except Exception as e:  # noqa: BLE001 — keep base temps on fit failure
     print("temp fallback:", e, flush=True)
 cfg.update({"fine_tuned": True, "model_name": "bouncer-421m"})
 save_checkpoint(model, tok, cfg, OUT)
 
 # --- quick eval on held-out 500 ---
 import laya
+
 agent = laya.Agent(OUT, device="cuda")
 ok = gated_ok = gated_n = 0
 for r in test_rows:
@@ -132,7 +150,7 @@ print(f"TEST n={len(test_rows)} rule_acc={ok/len(test_rows):.3f} gate@0.85={gate
 try:
     from kaggle_secrets import UserSecretsClient
     token = UserSecretsClient().get_secret("HF_TOKEN")
-except Exception:
+except Exception:  # noqa: BLE001 — no secrets in this env
     token = None
 if token:
     from huggingface_hub import HfApi

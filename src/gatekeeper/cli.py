@@ -13,9 +13,8 @@ def _load_rules(args) -> dict:
     with open(args.rules) as f:
         return json.load(f)
 
-
 def cmd_check(args) -> int:  # T066+T067+T071+T072
-    from gatekeeper import moderate, GateConfig
+    from gatekeeper import GateConfig, moderate
     from gatekeeper.explain import explain
     rules = _load_rules(args)
     cfg = GateConfig(allow_threshold=args.threshold, delete_threshold=args.threshold)
@@ -30,7 +29,7 @@ RESET = "\033[0m"
 
 
 def cmd_watch(args) -> int:
-    from gatekeeper import moderate, GateConfig
+    from gatekeeper import GateConfig, moderate
     rules = _load_rules(args)
     cfg = GateConfig(allow_threshold=args.threshold, delete_threshold=args.threshold)
     for line in sys.stdin:
@@ -56,24 +55,26 @@ def cmd_review(args) -> int:
 
 
 def cmd_stats(args) -> int:
-    from gatekeeper.stats import get_stats
     from gatekeeper.cache import CACHE
+    from gatekeeper.stats import get_stats
     print(json.dumps({"decisions": get_stats(), "cache": CACHE.stats()}, indent=2))
     return 0
 
 
 def cmd_export(args) -> int:
     import csv
+
     from gatekeeper.audit import _PATH
     n = 0
     with open(args.out, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["t", "msg", "rule", "conf", "action", "ms"])
         if __import__("os").path.exists(_PATH):
-            for line in open(_PATH):
-                d = json.loads(line)
-                w.writerow([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]])
-                n += 1
+            with open(_PATH) as af:
+                for line in af:
+                    d = json.loads(line)
+                    w.writerow([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]])
+                    n += 1
     print(f"exported {n} rows -> {args.out}")
     return 0
 
@@ -81,7 +82,11 @@ def cmd_export(args) -> int:
 def cmd_pack(args) -> int:
     from gatekeeper import get_preset
     from gatekeeper.rules import validate_rules, warn_overlapping
-    rules = json.load(open(args.rules)) if args.rules else get_preset(args.preset)
+    if args.rules:
+        with open(args.rules) as f:
+            rules = json.load(f)
+    else:
+        rules = get_preset(args.preset)
     if args.action == "show":
         print(json.dumps(rules, indent=2, ensure_ascii=False))
     else:
