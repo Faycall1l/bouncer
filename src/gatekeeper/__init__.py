@@ -91,6 +91,10 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         cfg.allow_threshold = cfg.delete_threshold = threshold
     validate_rules(rules, cfg.max_rules, cfg.max_rule_chars)
     msg = clean_text(message, cfg.max_msg_chars)
+    if not msg:  # T043: nothing to judge
+        return {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
+                "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
+                "escalate_p": 0.0, "abstained": False, "reason": "empty message"}
     r = router or get_router()
     state = {"message": msg, "history": (context or [])[-cfg.history_n:], "rules": rules}
     out = r.predict(state, build_questions(rules))

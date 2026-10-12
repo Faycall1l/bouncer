@@ -45,7 +45,7 @@
 - [x] T040 conf: abstention flag when top2 margin<0.15
 - [ ] T041 multilingual: pass-through lang hint to Router
 - [ ] T042 multilingual: smoke test messages in 3 languages (fixtures only)
-- [ ] T043 edge: empty message -> allow with reason
+- [x] T043 edge: empty message -> allow with reason
 - [ ] T044 edge: overlong message truncation with marker
 - [ ] T045 edge: rules with overlapping text warn user
 
