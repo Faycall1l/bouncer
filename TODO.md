@@ -106,7 +106,7 @@
 - [x] T095 demo: flag-for-review button appends to review queue file
 
 ## P6 Eval + Kaggle (`eval/`, `kaggle/`)
-- [ ] T096 eval: zero-shot rule_acc on examples.jsonl (needs weights; script ready)
+- [x] T096 eval: zero-shot rule_acc on examples.jsonl (needs weights; script ready)
 - [ ] T097 eval: gate@0.85 precision report
 - [x] T098 eval: per-rule breakdown table
 - [ ] T099 eval: latency p50/p95 measurement
