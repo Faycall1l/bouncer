@@ -72,6 +72,25 @@ def _low_margin(a: dict, bar: float) -> bool:
     return len(probs) >= 2 and (probs[0] - probs[1]) < bar
 
 
+def _predict_safe(router, state: dict, questions: dict, timeout_s: float) -> dict:
+    """T025+T026: timeout guard, one retry, escalate-shaped fallback on failure."""
+    import concurrent.futures as cf
+    last = None
+    for _ in range(2):
+        try:
+            with cf.ThreadPoolExecutor(max_workers=1) as ex:
+                return ex.submit(router.predict, state, questions).result(timeout=timeout_s)
+        except Exception as e:  # noqa: BLE001 — any inference failure degrades to review
+            last = e
+    raise TimeoutError(f"E_MODEL: inference failed twice ({last})")
+
+
+def _fallback(action_note: str) -> dict:
+    return {"action": "escalate", "rule": "ok", "confidence": 0.0, "harm": "suspicious",
+            "harm_dist": [], "rule_dist": {}, "jailbreak_p": 0.0, "escalate_p": 1.0,
+            "abstained": True, "reason": action_note}
+
+
 def _decide(a: dict, cfg: GateConfig) -> dict:
     """T002: split allow/delete thresholds; jailbreak override; escalate override."""
     rule, conf = a["rule"]["choice"], float(a["rule"].get("confidence", 0))
@@ -122,7 +141,10 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
             u = h.split(":", 1)[0].strip()[:32]
             turns[u] = turns.get(u, 0) + 1
     state = {"message": msg, "history": hist, "rules": rules, "user_turns": turns}
-    out = r.predict(state, build_questions(rules))
+    try:
+        out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
+    except TimeoutError as e:
+        return _fallback(str(e))
     a = out["answers"]
     res = _decide(a, cfg)
     res["harm_dist"] = a["harm"].get("probabilities", [])
