@@ -28,6 +28,9 @@ Issues = "https://github.com/Faycall1l/bouncer/issues"
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
+server = ["fastapi", "uvicorn"]  # T153
+demo = ["gradio"]  # T153
+discord = ["discord.py"]  # T153
 
 [project.scripts]
 bouncer = "gatekeeper.cli:main"  # T152

@@ -169,7 +169,7 @@
 ## P9 Packaging + repo hygiene
 - [x] T151 pkg: `__all__` + version single-sourced
 - [x] T152 pkg: console script `bouncer=` entry point
-- [ ] T153 pkg: extras split (server, demo, discord)
+- [x] T153 pkg: extras split (server, demo, discord)
 - [ ] T154 pkg: python>=3.10 classifier matrix in CI (3.10/3.11/3.12)
 - [ ] T155 pkg: ruff clean on whole repo
 - [ ] T156 pkg: pre-commit config (ruff + trailing whitespace)
