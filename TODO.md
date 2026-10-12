@@ -211,7 +211,7 @@
 - [x] T190 extra: tweet-thread draft in docs/drafts/
 - [x] T191 i18n: Spanish preset pack
 - [x] T192 i18n: French preset pack
-- [ ] T193 i18n: Arabic preset pack (rtl-safe fixtures)
+- [x] T193 i18n: Arabic preset pack (rtl-safe fixtures)
 - [ ] T194 perf: orjson fastpath if installed (optional import)
 - [ ] T195 perf: slots on dataclasses
 - [ ] T196 perf: avoid re-serializing state twice

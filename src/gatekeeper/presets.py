@@ -43,8 +43,14 @@ FR = {  # T192
     "pas-de-spoilers": "pas de spoilers sans balise",
 }
 
+AR = {  # T193 (rtl-safe: plain strings, no bidi controls)
+    "bla-spam": "ممنوع الإعلانات والروابط والترويج الذاتي",
+    "khalik-latif": "ممنوع الشتائم والكراهية والمضايقة",
+    "bla-harg": "ممنوع حرق الأحداث بدون وسم",
+}
+
 PRESETS = {"gaming": GAMING, "study": STUDY, "support": SUPPORT, "stream": STREAM,
-           "es": ES, "fr": FR}
+           "es": ES, "fr": FR, "ar": AR}
 
 DESCRIPTIONS = {
     "gaming": "clan / lobby chat: cheats, kindness, spam, spoilers",
@@ -53,6 +59,7 @@ DESCRIPTIONS = {
     "stream": "twitch-style chat: spam, kindness, spoilers, flood",
     "es": "juego en español: spam, amabilidad, spoilers",
     "fr": "jeu en français: spam, amabilité, spoilers",
+    "ar": "لعب بالعربية: سبام، أدب، حرق",
 }
 
 
