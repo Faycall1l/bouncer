@@ -47,6 +47,13 @@ def build_questions(rules: dict[str, str]) -> dict:
     }
 
 
+def _delete_bar(cfg: GateConfig, rule: str) -> float:
+    """T003: high-severity rules delete 0.15 sooner."""
+    if cfg.severity.get(rule) == "high":
+        return max(0.5, cfg.delete_threshold - 0.15)
+    return cfg.delete_threshold
+
+
 def _decide(a: dict, cfg: GateConfig) -> dict:
     """T002: split allow/delete thresholds; jailbreak override; escalate override."""
     rule, conf = a["rule"]["choice"], float(a["rule"].get("confidence", 0))
@@ -57,7 +64,7 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
         action = "delete"
     elif esc >= cfg.escalate_threshold:
         action = "escalate"
-    elif rule != "ok" and conf >= cfg.delete_threshold:
+    elif rule != "ok" and conf >= _delete_bar(cfg, rule):
         action = "delete"
     elif rule == "ok" and conf >= cfg.allow_threshold and esc < 0.5:
         action = "allow"

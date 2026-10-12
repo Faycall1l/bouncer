@@ -3,7 +3,7 @@
 ## P1 Core engine (`src/gatekeeper/`)
 - [x] T001 config: `GateConfig` dataclass (thresholds, timeouts, max_rules, history_n)
 - [x] T002 config: per-action thresholds (delete vs escalate) instead of one float
-- [ ] T003 config: per-rule severity map (rule_id -> low|high)
+- [x] T003 config: per-rule severity map (rule_id -> low|high)
 - [x] T004 rules: validate rule ids (slug, <=24 chars, unique)
 - [x] T005 rules: validate rule text (non-empty, <=280 chars)
 - [x] T006 rules: cap rule count (default 12, error message lists offender)
