@@ -14,6 +14,10 @@ from .presets import get_preset, list_presets
 from .normalize import clean_text, extract_links
 from .cache import CACHE  # T023/T024 decision cache
 
+_INFLIGHT: dict = {}  # T180: key -> [event, result]
+import threading as _th
+_FLY_LOCK = _th.Lock()
+
 
 def _fastpath_allow(msg: str, rules: dict) -> dict | None:
     """T017: all rules about links/ads but message has none -> allow without a model call."""
@@ -135,6 +139,18 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     hit = CACHE.get(key)
     if hit is not None:
         return dict(hit, cached=True)
+    with _FLY_LOCK:  # T180: join identical in-flight call instead of doubling work
+        if key in _INFLIGHT:
+            ev, box = _INFLIGHT[key]
+            joined = True
+        else:
+            ev, box = _th.Event(), {}
+            _INFLIGHT[key] = (ev, box)
+            joined = False
+    if joined:
+        ev.wait(timeout=cfg.timeout_s + 5)
+        if box:
+            return dict(box["res"], coalesced=True)
     r = router or get_router()
     import time as _t
     t0 = _t.time()
@@ -150,7 +166,13 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     try:
         out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
     except TimeoutError as e:
-        return _fallback(str(e))
+        fb = _fallback(str(e))
+        with _FLY_LOCK:
+            if key in _INFLIGHT:
+                _INFLIGHT[key][1]["res"] = fb
+                _INFLIGHT[key][0].set()
+                del _INFLIGHT[key]
+        return fb
     a = out["answers"]
     res = _decide(a, cfg)
     res["harm_dist"] = a["harm"].get("probabilities", [])
@@ -164,6 +186,11 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     record(res["action"], res["rule"])
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"])
     CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
+    with _FLY_LOCK:  # T180: publish to joiners
+        if key in _INFLIGHT:
+            _INFLIGHT[key][1]["res"] = {k: v for k, v in res.items() if k != "raw"}
+            _INFLIGHT[key][0].set()
+            del _INFLIGHT[key]
     return res
 
 
