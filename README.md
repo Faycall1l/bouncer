@@ -35,6 +35,14 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 * 3 tasks, 1 forward pass (~33ms T4). Classical = 3 models.
 * Calibrated confidence → automate top-50% @ 90%+ precision, escalate rest. Classical softmax lies.
 
+## Cost (T148)
+
+| approach | per 1k messages | latency |
+|---|---|---|
+| bouncer (self-hosted Laya) | ~$0 marginal | ~33ms, 5 questions, 1 pass |
+| LLM judge (5 calls) | ~$0.50–2.50 | seconds |
+| regex | $0 | instant, blind to phrasing |
+
 ## Quickstart (30 seconds, zero-shot — no training)
 
 ```bash
