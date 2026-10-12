@@ -113,6 +113,18 @@ def test_severity_threshold():  # T125
     assert (plain["action"], sev["action"]) == ("flag", "delete")
 
 
+def test_abstention():  # T126
+    from gatekeeper import moderate
+    r = moderate("hmm not sure", {"plain-chat": "normal talk"},
+                 router=Stub(conf=0.9, probs={"ok": 0.5, "other": 0.45}))
+    assert r["abstained"] is True and r["action"] == "escalate"
+
+
+def test_empty_allows():  # T127
+    from gatekeeper import moderate
+    assert moderate("   ", {"plain-chat": "normal talk"})["action"] == "allow"
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)

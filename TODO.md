@@ -138,7 +138,7 @@
 - [x] T123 test: jailbreak override deletes
 - [x] T124 test: escalate_p override forces review
 - [x] T125 test: high-severity rule lower threshold
-- [ ] T126 test: abstention on small margin
+- [x] T126 test: abstention on small margin
 - [ ] T127 test: empty message allows
 - [ ] T128 test: batch keeps order
 - [ ] T129 test: cache hit returns same + counts hit
