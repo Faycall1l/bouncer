@@ -60,7 +60,7 @@
 - [ ] T053 server: optional API key auth via env `BOUNCER_KEY`
 - [ ] T054 server: per-IP rate limit (slow path, stdlib)
 - [ ] T055 server: CORS middleware on
-- [ ] T056 server: structured JSON access log
+- [x] T056 server: structured JSON access log
 - [ ] T057 server: `GET /stats` exposes counters
 - [ ] T058 server: `GET /presets` serves rule packs
 - [ ] T059 server: graceful Router preload on startup
