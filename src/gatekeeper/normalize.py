@@ -22,3 +22,15 @@ def caps_flood(msg: str, ratio: float = 0.7, min_len: int = 12) -> bool:
     if len(letters) < min_len:
         return False
     return sum(c.isupper() for c in letters) / len(letters) >= ratio
+
+
+def emoji_flood(msg: str, max_run: int = 5, max_total: int = 10) -> bool:
+    """T015: True on emoji walls (long run or high total of non-text symbols)."""
+    syms = [c for c in msg if not (c.isalnum() or c.isspace() or c in ".,!?;:'\"-()")]
+    if len(syms) >= max_total:
+        return True
+    run = best = 0
+    for c in msg:
+        run = run + 1 if not (c.isalnum() or c.isspace()) else 0
+        best = max(best, run)
+    return best >= max_run
