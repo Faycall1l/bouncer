@@ -8,7 +8,7 @@
 - [x] T005 rules: validate rule text (non-empty, <=280 chars)
 - [x] T006 rules: cap rule count (default 12, error message lists offender)
 - [x] T007 rules: `ok` reserved id rejected with clear error
-- [ ] T008 presets: gaming server rule pack
+- [x] T008 presets: gaming server rule pack
 - [ ] T009 presets: study/homework rule pack
 - [ ] T010 presets: support-ticket rule pack
 - [ ] T011 presets: stream-chat (twitch-style) rule pack
