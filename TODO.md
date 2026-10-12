@@ -96,7 +96,7 @@
 - [x] T085 demo: rule distribution bar chart (native gradio)
 - [x] T086 demo: harm/hype/jailbreak meters
 - [x] T087 demo: latency readout per call
-- [ ] T088 demo: 6 one-click example messages
+- [x] T088 demo: 6 one-click example messages
 - [ ] T089 demo: history panel (last 10 decisions)
 - [ ] T090 demo: confusion-style gate explainer text
 - [ ] T091 demo: dark theme + title/branding
