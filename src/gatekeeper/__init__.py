@@ -8,9 +8,9 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 __all__ = [
-    "BouncerError",
     "DEFAULT_HARM",
     "DEFAULT_HYPE",
+    "BouncerError",
     "GateConfig",
     "ModelError",
     "RuleError",
