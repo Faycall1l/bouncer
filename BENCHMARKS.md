@@ -2,16 +2,17 @@
 
 ## Zero-shot base Laya on gatekeeper-chatmix (T108)
 
-Kernel `faycal00/bouncer-eval-zero` (CPU, 200 rows, 1 choice question).
+Kernel `faycal00/bouncer-eval-zero` (CPU, 200 rows, 1 choice question). COMPLETE.
 
-| metric | value | status |
-|---|---|---|
-| rule_acc | — | running |
-| gate@0.85 prec | — | running |
-| p50 latency (CPU) | — | running |
-| overconfident errors | — | running |
+| metric | value |
+|---|---|
+| rule_acc | **0.305** (≈ chance — base Laya is near-blind on unseen rule-sets, as its authors warn) |
+| gate@0.85 prec | n/a (0 gated — model never confident; honest abstention) |
+| p50 latency (CPU) | 1004ms (GPU T4 ref: ~33ms) |
+| top confusion | be-kind→ok (73), no-spoiler→ok (32): defaults to "no violation" |
+| overconfident errors | 0 |
 
-Filled from kernel log when COMPLETE.
+Takeaway: zero-shot base is a demo, not a product. Fine-tune (`kaggle/train`) is the product.
 
 ## Honest limits (T109)
 
