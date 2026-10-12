@@ -196,7 +196,7 @@
 - [ ] T175 extra: demo: side-by-side vs regex baseline accuracy
 - [ ] T176 extra: demo: cost ticker (decisions per $ vs GPT-4o-mini)
 - [x] T177 extra: fasting: warmup call on serve startup
-- [ ] T178 extra: prometheus-style `/metrics` text endpoint
+- [x] T178 extra: prometheus-style `/metrics` text endpoint
 - [ ] T179 extra: graceful shutdown drains in-flight
 - [ ] T180 extra: request coalescing for identical concurrent messages
 - [ ] T181 extra: per-user strike counter (3 flags -> suggest ban)
