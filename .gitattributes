@@ -1,0 +1,3 @@
+# T165
+*.jsonl text eol=lf
+*.cast binary
