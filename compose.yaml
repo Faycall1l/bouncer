@@ -1,0 +1,15 @@
+# T061: server + demo. HF cache persists in ./hf-cache.
+services:
+  server:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      BOUNCER_KEY: ${BOUNCER_KEY:-}
+    volumes:
+      - ./hf-cache:/root/.cache
+  demo:
+    build: .
+    ports: ["7860:7860"]
+    command: ["python", "-c", "from gatekeeper.demo_app import launch; launch()"]
+    volumes:
+      - ./hf-cache:/root/.cache

@@ -65,7 +65,7 @@
 - [x] T058 server: `GET /presets` serves rule packs
 - [x] T059 server: graceful Router preload on startup
 - [x] T060 server: Dockerfile (cpu, slim)
-- [ ] T061 ops: docker-compose with server + demo
+- [x] T061 ops: docker-compose with server + demo
 - [ ] T062 ops: `.dockerignore`
 - [ ] T063 server: openapi examples on /predict
 - [ ] T064 server: max body size guard (413)
