@@ -174,7 +174,7 @@
 - [x] T155 pkg: ruff clean on whole repo
 - [x] T156 pkg: pre-commit config (ruff + trailing whitespace)
 - [x] T157 repo: issue templates (bug / rule-pack request)
-- [ ] T158 repo: PR template
+- [x] T158 repo: PR template
 - [ ] T159 repo: SECURITY.md (no secrets, token handling)
 - [ ] T160 repo: FUNDING? no — skip, CODEOWNERS instead
 - [x] T161 ci: pytest + ruff already — add import smoke job
