@@ -84,7 +84,7 @@
 - [x] T075 discord: env-based token, no hardcode
 - [x] T076 twitch: IRC stub via stdlib socket (read chat, flag only)
 - [x] T077 twitch: never sends password to logs
-- [ ] T078 slack: webhook receiver stub
+- [x] T078 slack: webhook receiver stub
 - [ ] T079 adapter: generic webhook POST forwarder (allow/delete events)
 - [ ] T080 adapters README with setup per platform
 
