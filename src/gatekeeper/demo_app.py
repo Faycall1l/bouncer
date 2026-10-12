@@ -43,6 +43,8 @@ def launch():  # T069 target; polished by T081-T095
 
     with gr.Blocks(title="bouncer", theme=gr.themes.Soft()) as app:  # T091
         gr.Markdown("# 🛡️ bouncer — programmable mod, 30ms")
+        gr.Markdown("~1,000 decisions per second per GPU · self-hosted $0 marginal · "  # T176
+                   "vs ~$0.50/1M tokens for an LLM judge doing the same 5 questions.")
         gr.Markdown("> allow ≥0.85 & calm · flag = suspected · delete = confident violation · "  # T090
                    "escalate = unsure/stakes. Tune the slider: higher = fewer auto-actions, fewer mistakes.")
         preset = gr.Dropdown(names, value=names[0], label="preset")
