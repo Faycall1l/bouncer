@@ -14,3 +14,11 @@ def clean_text(msg: str, max_chars: int = 2000) -> str:
     if len(t) > max_chars:
         t = t[:max_chars] + " …[truncated]"
     return t
+
+
+def caps_flood(msg: str, ratio: float = 0.7, min_len: int = 12) -> bool:
+    """T014: True when mostly-caps shouting on a long-enough message."""
+    letters = [c for c in msg if c.isalpha()]
+    if len(letters) < min_len:
+        return False
+    return sum(c.isupper() for c in letters) / len(letters) >= ratio
