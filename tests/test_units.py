@@ -168,6 +168,14 @@ def test_explain_mentions_rule():  # T131
     assert "no-spam" in s and "no ads" in s
 
 
+def test_version_consistent():  # T135
+    import re
+    import gatekeeper
+    proj = open("pyproject.toml").read()
+    m = re.search(r'version = "([^"]+)"', proj)
+    assert m and m.group(1) == gatekeeper.__version__
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)
