@@ -21,6 +21,11 @@ def launch():  # T069 target; polished by T081-T095
 
     def run(msg, preset, rules_t, thr):
         rules = parse_rules(rules_t) or get_preset(preset)
+        from gatekeeper.rules import validate_rules, RuleError
+        try:
+            validate_rules(rules)
+        except RuleError as e:  # T082: live validation errors
+            return "⚠️ RULES ERROR", "-", str(e), "", "", ""
         from gatekeeper import GateConfig
         r = moderate(msg, rules, config=GateConfig(allow_threshold=thr, delete_threshold=thr))
         r["reason"] = explain(r, rules)
@@ -29,7 +34,9 @@ def launch():  # T069 target; polished by T081-T095
         dist = r.get("rule_dist") or {}
         bars = "\n".join(f"{k}: {'█' * int(v * 20)} {v:.2f}" for k, v in
                          sorted(dist.items(), key=lambda kv: -kv[1])[:8])
-        return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"], bars, f"{r.get('latency_ms', '?')} ms"
+        meters = (f"harm={r['harm']} jail={r['jailbreak_p']:.2f} "  # T086
+                  f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
+        return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"], bars, meters, f"{r.get('latency_ms', '?')} ms"
 
     with gr.Blocks(title="bouncer") as app:
         gr.Markdown("# 🛡️ bouncer — programmable mod, 30ms")
@@ -43,6 +50,7 @@ def launch():  # T069 target; polished by T081-T095
         rule = gr.Label(label="rule")
         reason = gr.Textbox(label="reason")
         dist = gr.Textbox(label="distribution")
+        meters = gr.Textbox(label="meters")  # T086
         lat = gr.Label(label="latency")
-        btn.click(run, [msg, preset, rules, thr], [badge, rule, reason, dist, lat])
+        btn.click(run, [msg, preset, rules, thr], [badge, rule, reason, dist, meters, lat])
     app.queue().launch()

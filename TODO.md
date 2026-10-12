@@ -89,13 +89,13 @@
 - [x] T080 adapters README with setup per platform
 
 ## P5 Demo app (`app/`)
-- [ ] T081 demo: server-preset dropdown (gaming/study/support/stream)
-- [ ] T082 demo: editable rules box with live validation errors
-- [ ] T083 demo: threshold slider 0.5-0.99
-- [ ] T084 demo: action badge (green/yellow/red)
-- [ ] T085 demo: rule distribution bar chart (native gradio)
-- [ ] T086 demo: harm/hype/jailbreak meters
-- [ ] T087 demo: latency readout per call
+- [x] T081 demo: server-preset dropdown (gaming/study/support/stream)
+- [x] T082 demo: editable rules box with live validation errors
+- [x] T083 demo: threshold slider 0.5-0.99
+- [x] T084 demo: action badge (green/yellow/red)
+- [x] T085 demo: rule distribution bar chart (native gradio)
+- [x] T086 demo: harm/hype/jailbreak meters
+- [x] T087 demo: latency readout per call
 - [ ] T088 demo: 6 one-click example messages
 - [ ] T089 demo: history panel (last 10 decisions)
 - [ ] T090 demo: confusion-style gate explainer text
