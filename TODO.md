@@ -187,7 +187,7 @@
 - [ ] T168 changelog: 0.1.0 entry dated
 
 ## P10 Impressive extras
-- [ ] T169 extra: `bouncer watch` live tail mode with colors
+- [x] T169 extra: `bouncer watch` live tail mode with colors
 - [x] T170 extra: review-queue file + `bouncer review` list command
 - [x] T171 extra: stats sparkline in CLI (`bouncer stats`)
 - [x] T172 extra: export audit to CSV (`bouncer export`)
