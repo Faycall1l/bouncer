@@ -8,9 +8,11 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 __all__ = [
+    "BouncerError",
     "DEFAULT_HARM",
     "DEFAULT_HYPE",
     "GateConfig",
+    "ModelError",
     "RuleError",
     "build_questions",
     "get_preset",
@@ -102,7 +104,17 @@ def _predict_safe(router, state: dict, questions: dict, timeout_s: float) -> dic
                 return ex.submit(router.predict, state, questions).result(timeout=timeout_s)
         except Exception as e:  # noqa: BLE001 — any inference failure degrades to review
             last = e
-    raise TimeoutError(f"E_MODEL: inference failed twice ({last})")
+    raise ModelError(f"inference failed twice ({last})")  # T197
+
+
+class BouncerError(Exception):
+    """T197: every error carries a machine-readable code."""
+
+    code = "E_BOUNCER"
+
+
+class ModelError(BouncerError):
+    code = "E_MODEL"
 
 
 def _fallback(action_note: str) -> dict:
@@ -188,8 +200,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         state["lang_hint"] = lang  # T041: nudge multilingual routing
     try:
         out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
-    except TimeoutError as e:
-        fb = _fallback(str(e))
+    except ModelError as e:
+        fb = _fallback(f"{e.code}: {e}")
         with _FLY_LOCK:
             if key in _INFLIGHT:
                 _INFLIGHT[key][1]["res"] = fb

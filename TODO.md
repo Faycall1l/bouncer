@@ -215,7 +215,7 @@
 - [x] T194 perf: orjson fastpath if installed (optional import)
 - [x] T195 perf: slots on dataclasses
 - [x] T196 perf: avoid re-serializing state twice
-- [ ] T197 robust: structured errors with codes (E_RULES, E_MODEL, E_TIMEOUT)
+- [x] T197 robust: structured errors with codes (E_RULES, E_MODEL, E_TIMEOUT)
 - [ ] T198 robust: error codes documented in README
 - [ ] T199 final: full test suite green
 - [ ] T200 final: tag v0.1.0 + GitHub release notes
