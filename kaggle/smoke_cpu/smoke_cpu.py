@@ -9,7 +9,10 @@ from huggingface_hub import hf_hub_download
 from transformers import AutoTokenizer
 from laya.train import items_from_rows
 
-paths = glob.glob("/kaggle/input/gatekeeper-chatmix-12k/*.jsonl")
+import os
+print("INPUT_TREE:", os.listdir("/kaggle/input") if os.path.exists("/kaggle/input") else "NO_INPUT_DIR")
+paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
+print("FOUND:", paths)
 assert paths, "dataset missing"
 rows_raw = [json.loads(l) for l in open(paths[0])]
 random.seed(7); random.shuffle(rows_raw)
