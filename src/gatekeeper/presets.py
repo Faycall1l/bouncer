@@ -7,3 +7,10 @@ GAMING = {
     "no-spam": "no ads, links, self-promo, or crypto giveaways",
     "no-spoiler": "no plot spoilers without a spoiler tag",
 }
+
+STUDY = {
+    "stay-topic": "keep to homework, exams, and study material",
+    "no-answers": "no posting full solutions; hints and method only",
+    "be-kind": "no insults, mockery, or harassment",
+    "en-only": "English only in main chat during study hours",
+}
