@@ -63,7 +63,7 @@
 - [x] T056 server: structured JSON access log
 - [x] T057 server: `GET /stats` exposes counters
 - [x] T058 server: `GET /presets` serves rule packs
-- [ ] T059 server: graceful Router preload on startup
+- [x] T059 server: graceful Router preload on startup
 - [ ] T060 server: Dockerfile (cpu, slim)
 - [ ] T061 ops: docker-compose with server + demo
 - [ ] T062 ops: `.dockerignore`
