@@ -203,7 +203,7 @@
 - [x] T182 extra: strike decay (halve every hour)
 - [x] T183 extra: appeal helper text generator (template, no LLM)
 - [x] T184 extra: announcement mode (pin-friendly summary line)
-- [ ] T185 extra: quiet-hours config (escalate instead of delete at night?)
+- [x] T185 extra: quiet-hours config (escalate instead of delete at night?)
 - [ ] T186 extra: language detect note in explain (script guess)
 - [ ] T187 extra: demo video script (60s tour)
 - [ ] T188 extra: awesome-list PR draft (link System Onelandscape)

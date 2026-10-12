@@ -116,6 +116,12 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
     abstained = _low_margin(a, cfg.margin_abstain)  # T040
     if abstained and action in ("allow", "delete"):
         action = "escalate"
+    if action == "delete" and cfg.quiet_hours:  # T185
+        import datetime
+        h = datetime.datetime.now(datetime.timezone.utc).hour
+        lo, hi = cfg.quiet_hours
+        if lo <= h < hi if lo < hi else (h >= lo or h < hi):
+            action = "escalate"
     return {"action": action, "rule": rule, "confidence": conf, "harm": harm,
             "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained}
 

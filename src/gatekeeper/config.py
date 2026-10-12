@@ -19,3 +19,4 @@ class GateConfig:
     history_n: int = 4
     timeout_s: float = 10.0
     severity: dict = field(default_factory=dict)  # rule_id -> "low" | "high"
+    quiet_hours: tuple = ()  # T185: e.g. (1, 7) UTC -> delete becomes escalate overnight
