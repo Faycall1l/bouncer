@@ -56,7 +56,7 @@
 - [x] T049 server: `POST /predict` validates rules via T004-T007
 - [x] T050 server: `POST /predict/batch` endpoint
 - [x] T051 server: `/v1/systemone` passthrough kept + tested
-- [ ] T052 server: request-id middleware + echo header
+- [x] T052 server: request-id middleware + echo header
 - [ ] T053 server: optional API key auth via env `BOUNCER_KEY`
 - [ ] T054 server: per-IP rate limit (slow path, stdlib)
 - [ ] T055 server: CORS middleware on

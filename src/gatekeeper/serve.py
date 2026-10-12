@@ -9,6 +9,19 @@ app = FastAPI(title="bouncer")
 _START = time.time()
 
 
+@app.middleware("http")  # T052+T056+T065: request id, access log, latency header
+async def _mw(request, call_next):
+    import uuid
+    rid = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+    t0 = time.time()
+    resp = await call_next(request)
+    ms = (time.time() - t0) * 1000
+    resp.headers["X-Request-ID"] = rid
+    resp.headers["X-Bouncer-ms"] = f"{ms:.1f}"
+    print(f'{{"rid": "{rid}", "path": "{request.url.path}", "ms": {ms:.1f}}}', flush=True)
+    return resp
+
+
 @app.get("/health")  # T046
 def health():
     try:
