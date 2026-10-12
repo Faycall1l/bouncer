@@ -23,3 +23,5 @@ def bench(n_q=5, batch=1):
 if __name__ == "__main__":
     bench(1)
     bench(5)
+    # T107: batch-size sweep entry — run with N=64: `N=64 python eval/bench_latency.py`
+    # (moderate_batch chunks at 1/4/8/16 via chunk= arg; compare wall time per message)

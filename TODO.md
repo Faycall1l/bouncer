@@ -117,7 +117,7 @@
 - [x] T104 eval: confusion pairs (ok vs be-kind) counted
 - [x] T105 eval: overconfidence audit (conf>=0.9 but wrong)
 - [x] T106 bench: 1-question vs 5-question latency comparison script
-- [ ] T107 bench: batch-size sweep script (1/4/8/16)
+- [x] T107 bench: batch-size sweep script (1/4/8/16)
 - [ ] T108 docs: BENCHMARKS.md with zero-shot table (fill after kernel)
 - [ ] T109 docs: honest-limits section (template data, 3 rules)
 - [ ] T110 eval: multilingual spot-check fixtures (5 langs)
