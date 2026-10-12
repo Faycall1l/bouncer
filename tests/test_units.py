@@ -102,6 +102,17 @@ def test_escalate_override():  # T124
     assert r["action"] == "escalate"
 
 
+def test_severity_threshold():  # T125
+    from gatekeeper import moderate, GateConfig
+    kw = dict(choice="no-spam", conf=0.75, harm="suspicious",
+              probs={"no-spam": 0.75, "ok": 0.6})
+    plain = moderate("win free stuff now", {"no-spam": "no promos or giveaways"},
+                     router=Stub(**kw))
+    sev = moderate("win free stuff now", {"no-spam": "no promos or giveaways"},
+                   config=GateConfig(severity={"no-spam": "high"}), router=Stub(**kw))
+    assert (plain["action"], sev["action"]) == ("flag", "delete")
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)

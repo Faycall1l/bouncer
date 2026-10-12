@@ -137,7 +137,7 @@
 - [x] T122 test: gate escalate path (low conf)
 - [x] T123 test: jailbreak override deletes
 - [x] T124 test: escalate_p override forces review
-- [ ] T125 test: high-severity rule lower threshold
+- [x] T125 test: high-severity rule lower threshold
 - [ ] T126 test: abstention on small margin
 - [ ] T127 test: empty message allows
 - [ ] T128 test: batch keeps order
