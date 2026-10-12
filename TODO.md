@@ -10,7 +10,7 @@
 - [x] T007 rules: `ok` reserved id rejected with clear error
 - [x] T008 presets: gaming server rule pack
 - [x] T009 presets: study/homework rule pack
-- [ ] T010 presets: support-ticket rule pack
+- [x] T010 presets: support-ticket rule pack
 - [ ] T011 presets: stream-chat (twitch-style) rule pack
 - [ ] T012 presets: `list_presets()` + preset descriptions
 - [ ] T013 normalize: lowercase/whitespace/unicode-fold before predict

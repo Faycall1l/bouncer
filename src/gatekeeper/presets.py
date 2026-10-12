@@ -14,3 +14,10 @@ STUDY = {
     "be-kind": "no insults, mockery, or harassment",
     "en-only": "English only in main chat during study hours",
 }
+
+SUPPORT = {
+    "no-pii": "no passwords, tokens, card numbers, or personal data in chat",
+    "stay-topic": "billing, refunds, outages, and account help only",
+    "be-kind": "no abuse toward agents or other customers",
+    "no-spam": "no ads, links, or repeated reposts",
+}
