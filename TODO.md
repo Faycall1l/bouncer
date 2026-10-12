@@ -46,7 +46,7 @@
 - [x] T041 multilingual: pass-through lang hint to Router
 - [x] T042 multilingual: smoke test messages in 3 languages (fixtures only)
 - [x] T043 edge: empty message -> allow with reason
-- [ ] T044 edge: overlong message truncation with marker
+- [x] T044 edge: overlong message truncation with marker
 - [ ] T045 edge: rules with overlapping text warn user
 
 ## P3 Server (`serve.py`, ops)
