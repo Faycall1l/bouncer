@@ -40,6 +40,8 @@ def launch():  # T069 target; polished by T081-T095
 
     with gr.Blocks(title="bouncer") as app:
         gr.Markdown("# 🛡️ bouncer — programmable mod, 30ms")
+        gr.Markdown("> allow ≥0.85 & calm · flag = suspected · delete = confident violation · "  # T090
+                   "escalate = unsure/stakes. Tune the slider: higher = fewer auto-actions, fewer mistakes.")
         preset = gr.Dropdown(names, value=names[0], label="preset")
         rules = gr.Textbox(value=preset_text[names[0]], lines=5, label="rules (id: text)")
         preset.change(lambda n: preset_text[n], preset, rules)

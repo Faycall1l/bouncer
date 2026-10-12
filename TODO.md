@@ -98,7 +98,7 @@
 - [x] T087 demo: latency readout per call
 - [x] T088 demo: 6 one-click example messages
 - [ ] T089 demo: history panel (last 10 decisions)
-- [ ] T090 demo: confusion-style gate explainer text
+- [x] T090 demo: confusion-style gate explainer text
 - [ ] T091 demo: dark theme + title/branding
 - [ ] T092 demo: `requirements.txt` for Spaces
 - [ ] T093 demo: Space-ready README header
