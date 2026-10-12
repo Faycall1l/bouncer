@@ -123,7 +123,7 @@
 - [ ] T110 eval: multilingual spot-check fixtures (5 langs)
 
 ## P7 Tests (`tests/`)
-- [ ] T111 test: config defaults sane
+- [x] T111 test: config defaults sane
 - [ ] T112 test: rule validation rejects bad ids
 - [ ] T113 test: rule validation rejects empty text
 - [ ] T114 test: rule validation rejects >12 rules
