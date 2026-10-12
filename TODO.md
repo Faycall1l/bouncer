@@ -177,7 +177,7 @@
 - [ ] T158 repo: PR template
 - [ ] T159 repo: SECURITY.md (no secrets, token handling)
 - [ ] T160 repo: FUNDING? no — skip, CODEOWNERS instead
-- [ ] T161 ci: pytest + ruff already — add import smoke job
+- [x] T161 ci: pytest + ruff already — add import smoke job
 - [ ] T162 ci: cache pip in workflow
 - [ ] T163 pkg: LICENSE headers check (Apache short form per file)
 - [ ] T164 pkg: `requirements-demo.txt` pinned for Spaces
