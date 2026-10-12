@@ -1,11 +1,14 @@
 """FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
 import time
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware  # T055
 from pydantic import BaseModel
 from . import moderate, build_questions, get_router
 from . import __version__
 
 app = FastAPI(title="bouncer")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
+                   allow_headers=["*"])  # T055: demo-friendly
 _START = time.time()
 
 _KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared key

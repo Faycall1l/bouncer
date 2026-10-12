@@ -59,7 +59,7 @@
 - [x] T052 server: request-id middleware + echo header
 - [x] T053 server: optional API key auth via env `BOUNCER_KEY`
 - [x] T054 server: per-IP rate limit (slow path, stdlib)
-- [ ] T055 server: CORS middleware on
+- [x] T055 server: CORS middleware on
 - [x] T056 server: structured JSON access log
 - [ ] T057 server: `GET /stats` exposes counters
 - [ ] T058 server: `GET /presets` serves rule packs
