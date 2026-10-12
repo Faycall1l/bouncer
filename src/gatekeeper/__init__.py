@@ -54,6 +54,12 @@ def _delete_bar(cfg: GateConfig, rule: str) -> float:
     return cfg.delete_threshold
 
 
+def _low_margin(a: dict, bar: float) -> bool:
+    """T040: top1-top2 gap below bar -> abstain."""
+    probs = sorted((a["rule"].get("probabilities", {}) or {}).values(), reverse=True)
+    return len(probs) >= 2 and (probs[0] - probs[1]) < bar
+
+
 def _decide(a: dict, cfg: GateConfig) -> dict:
     """T002: split allow/delete thresholds; jailbreak override; escalate override."""
     rule, conf = a["rule"]["choice"], float(a["rule"].get("confidence", 0))
@@ -70,8 +76,11 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
         action = "allow"
     else:
         action = "escalate"
+    abstained = _low_margin(a, cfg.margin_abstain)  # T040
+    if abstained and action in ("allow", "delete"):
+        action = "escalate"
     return {"action": action, "rule": rule, "confidence": conf, "harm": harm,
-            "jailbreak_p": jail, "escalate_p": esc}
+            "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained}
 
 
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
