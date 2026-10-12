@@ -4,12 +4,12 @@ subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U",
                 "laya>=0.1.6", "transformers>=4.48.0",
                 "huggingface_hub"], check=True)
 
-import json, glob, random
-from huggingface_hub import hf_hub_download
+import json, glob, random, os
+from huggingface_hub import snapshot_download
 from transformers import AutoTokenizer
+from laya.agent import _fix_tokenizer_config
 from laya.train import items_from_rows
 
-import os
 print("INPUT_TREE:", os.listdir("/kaggle/input") if os.path.exists("/kaggle/input") else "NO_INPUT_DIR")
 paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
 print("FOUND:", paths)
@@ -36,10 +36,10 @@ def to_row(r):
                          "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}
 
 cands = [to_row(r) for r in rows_raw]
-tok_dir = hf_hub_download("convaiinnovations/laya", "tokenizer/tokenizer.json")
-import os
-tok = AutoTokenizer.from_pretrained(os.path.dirname(tok_dir))
-cfg = json.loads(open(hf_hub_download("convaiinnovations/laya", "rl_agent_config.json")).read())
+model_dir = snapshot_download("convaiinnovations/laya")
+_fix_tokenizer_config(model_dir)
+tok = AutoTokenizer.from_pretrained(os.path.join(model_dir, "tokenizer"))
+cfg = json.load(open(os.path.join(model_dir, "rl_agent_config.json")))
 items, skipped = items_from_rows(tok, cands, cfg["max_len"], cfg["head_max_len"])
 print(f"ITEMS={len(items)} SKIPPED={skipped}")
 assert len(items) >= 7000, "too few items — format mismatch?"
