@@ -43,7 +43,7 @@ def validate_reserved(rules: dict) -> None:
 
 def warn_overlapping(rules: dict) -> list:
     """T045: rule texts sharing rare words confuse the scorer; return warnings."""
-    toks = {rid: set(t.lower() for t in text.split() if len(t) > 4) for rid, text in rules.items()}
+    toks = {rid: set(t.lower() for t in text.split() if len(t) >= 4) for rid, text in rules.items()}
     warns = []
     ids = list(rules)
     for i in range(len(ids)):
