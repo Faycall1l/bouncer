@@ -68,6 +68,12 @@ See `data/README.md` for dataset spec, `notebooks/README.md` for RLCD loop.
 * [Architecture](docs/architecture.md) · [API reference](docs/api.md)
 * [Adapters](src/gatekeeper/adapters/README.md) · [Benchmarks](BENCHMARKS.md)
 
+## Honest limits (T144)
+
+Template bootstrap (6 message shapes), 3 violation types in v1, English-first,
+≤20 options per question, refit temperatures on your data. Full list:
+[BENCHMARKS.md](BENCHMARKS.md#honest-limits-t109).
+
 ## Benchmarks (base `laya`, zero-shot → fine-tuned target)
 
 | split | acc(rule) | ECE | p50 |
