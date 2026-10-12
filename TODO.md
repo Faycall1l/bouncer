@@ -2,7 +2,7 @@
 
 ## P1 Core engine (`src/gatekeeper/`)
 - [x] T001 config: `GateConfig` dataclass (thresholds, timeouts, max_rules, history_n)
-- [ ] T002 config: per-action thresholds (delete vs escalate) instead of one float
+- [x] T002 config: per-action thresholds (delete vs escalate) instead of one float
 - [ ] T003 config: per-rule severity map (rule_id -> low|high)
 - [x] T004 rules: validate rule ids (slug, <=24 chars, unique)
 - [x] T005 rules: validate rule text (non-empty, <=280 chars)
@@ -20,7 +20,7 @@
 - [ ] T017 fastpath: obvious-ok short messages skip model when all rules need links/insults
 - [ ] T018 history: sliding window of last N messages into state
 - [ ] T019 history: per-user message counts in state
-- [ ] T020 batch: `moderate_batch()` shares one Router, keeps order
+- [x] T020 batch: `moderate_batch()` shares one Router, keeps order
 - [ ] T021 batch: `moderate_batch()` chunks to bound forward-pass padding
 - [ ] T022 async: `amoderate()` via asyncio.to_thread
 - [ ] T023 cache: LRU on (message, rules-hash) with TTL
