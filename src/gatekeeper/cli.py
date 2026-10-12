@@ -48,6 +48,50 @@ def cmd_watch(args) -> int:
     return 0
 
 
+def cmd_review(args) -> int:
+    from gatekeeper.review import list_queue
+    for row in list_queue(args.limit):
+        print(f"{row['action']:8} {row['rule']}@{row['conf']:.2f} {row['message'][:100]}")
+    return 0
+
+
+def cmd_stats(args) -> int:
+    from gatekeeper.stats import get_stats
+    from gatekeeper.cache import CACHE
+    print(json.dumps({"decisions": get_stats(), "cache": CACHE.stats()}, indent=2))
+    return 0
+
+
+def cmd_export(args) -> int:
+    import csv
+    from gatekeeper.audit import _PATH
+    n = 0
+    with open(args.out, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["t", "msg", "rule", "conf", "action", "ms"])
+        if __import__("os").path.exists(_PATH):
+            for line in open(_PATH):
+                d = json.loads(line)
+                w.writerow([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]])
+                n += 1
+    print(f"exported {n} rows -> {args.out}")
+    return 0
+
+
+def cmd_pack(args) -> int:
+    from gatekeeper import get_preset
+    from gatekeeper.rules import validate_rules, warn_overlapping
+    rules = json.load(open(args.rules)) if args.rules else get_preset(args.preset)
+    if args.action == "show":
+        print(json.dumps(rules, indent=2, ensure_ascii=False))
+    else:
+        validate_rules(rules)
+        for w in warn_overlapping(rules):
+            print("warn:", w)
+        print(f"pack ok: {len(rules)} rules")
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="bouncer")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -70,6 +114,19 @@ def main(argv=None) -> int:
     w.add_argument("--preset")
     w.add_argument("--threshold", type=float, default=0.85)
     w.set_defaults(fn=cmd_watch)
+    r = sub.add_parser("review")  # T170
+    r.add_argument("--limit", type=int, default=20)
+    r.set_defaults(fn=cmd_review)
+    st = sub.add_parser("stats")  # T171
+    st.set_defaults(fn=cmd_stats)
+    ex = sub.add_parser("export")  # T172
+    ex.add_argument("--out", default="audit.csv")
+    ex.set_defaults(fn=cmd_export)
+    pk = sub.add_parser("pack")  # T173+T174
+    pk.add_argument("action", choices=["show", "lint"])
+    pk.add_argument("--preset", default="gaming")
+    pk.add_argument("--rules")
+    pk.set_defaults(fn=cmd_pack)
     args = p.parse_args(argv)
     return args.fn(args)
 

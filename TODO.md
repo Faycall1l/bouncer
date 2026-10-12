@@ -188,7 +188,7 @@
 
 ## P10 Impressive extras
 - [ ] T169 extra: `bouncer watch` live tail mode with colors
-- [ ] T170 extra: review-queue file + `bouncer review` list command
+- [x] T170 extra: review-queue file + `bouncer review` list command
 - [ ] T171 extra: stats sparkline in CLI (`bouncer stats`)
 - [ ] T172 extra: export audit to CSV (`bouncer export`)
 - [ ] T173 extra: rule-pack share format (yaml-ish json + `bouncer pack show`)
