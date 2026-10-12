@@ -62,6 +62,12 @@ cd app && python app.py  # Space demo
 
 See `data/README.md` for dataset spec, `notebooks/README.md` for RLCD loop.
 
+## Docs
+
+* [Rule-writing guide](docs/rule-guide.md) · [Threshold tuning](docs/thresholds.md)
+* [Architecture](docs/architecture.md) · [API reference](docs/api.md)
+* [Adapters](src/gatekeeper/adapters/README.md) · [Benchmarks](BENCHMARKS.md)
+
 ## Benchmarks (base `laya`, zero-shot → fine-tuned target)
 
 | split | acc(rule) | ECE | p50 |

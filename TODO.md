@@ -156,7 +156,7 @@
 - [x] T139 docs: threshold-tuning guide (gate@0.85 curve explainer)
 - [x] T140 docs: architecture diagram (mermaid)
 - [x] T141 docs: API reference section (/predict, /batch, /systemone)
-- [ ] T142 docs: adapters setup matrix
+- [x] T142 docs: adapters setup matrix
 - [ ] T143 docs: FAQ (why not regex? why not LLM? cost?)
 - [ ] T144 docs: honest-limits mirrored from BENCHMARKS
 - [ ] T145 docs: CONTRIBUTING.md
