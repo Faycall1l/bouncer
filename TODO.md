@@ -145,7 +145,7 @@
 - [ ] T130 test: audit log writes JSONL line
 - [ ] T131 test: explain string mentions rule
 - [x] T132 test: server /health schema (TestClient, no weights)
-- [ ] T133 test: server rejects bad rules with 422
+- [x] T133 test: server rejects bad rules with 422
 - [ ] T134 test: CLI exit codes
 - [ ] T135 test: version string consistent everywhere
 
