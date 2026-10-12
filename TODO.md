@@ -206,7 +206,7 @@
 - [x] T185 extra: quiet-hours config (escalate instead of delete at night?)
 - [x] T186 extra: language detect note in explain (script guess)
 - [x] T187 extra: demo video script (60s tour)
-- [ ] T188 extra: awesome-list PR draft (link System Onelandscape)
+- [x] T188 extra: awesome-list PR draft (link System Onelandscape)
 - [ ] T189 extra: HN Show draft in docs/drafts/
 - [ ] T190 extra: tweet-thread draft in docs/drafts/
 - [ ] T191 i18n: Spanish preset pack
