@@ -29,3 +29,17 @@ def appeal_text(res: dict) -> str:
 def announce_line(res: dict) -> str:
     """T184: pin-friendly one-liner for mod channels."""
     return f"[{res['action'].upper()}] {res['rule']} @ {res['confidence']:.0%}"
+
+
+def lang_note(state: dict) -> str:
+    """T186: script guess for the audit trail (heuristic, not a claim)."""
+    t = state.get("message", "")
+    if any("\u0600" <= c <= "\u06ff" for c in t):
+        return "ar"
+    if any("\u0400" <= c <= "\u04ff" for c in t):
+        return "ru"
+    if any("\u4e00" <= c <= "\u9fff" for c in t):
+        return "zh"
+    if any(ord(c) > 127 for c in t):
+        return "non-latin"
+    return "latin"
