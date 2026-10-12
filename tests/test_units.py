@@ -41,6 +41,12 @@ def test_rejects_ok():  # T115
     raise AssertionError("accepted ok")
 
 
+def test_presets():  # T116
+    from gatekeeper import get_preset, list_presets
+    for name in list_presets():
+        assert len(get_preset(name)) >= 3, name
+
+
 def test_config_defaults():  # T111
     c = GateConfig()
     assert (c.allow_threshold, c.delete_threshold) == (0.85, 0.85)

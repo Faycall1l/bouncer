@@ -128,7 +128,7 @@
 - [x] T113 test: rule validation rejects empty text
 - [x] T114 test: rule validation rejects >12 rules
 - [x] T115 test: `ok` id rejected
-- [ ] T116 test: presets load + each has >=3 rules
+- [x] T116 test: presets load + each has >=3 rules
 - [ ] T117 test: caps-flood detector triggers
 - [ ] T118 test: emoji-flood detector triggers
 - [ ] T119 test: link extractor finds urls
