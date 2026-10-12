@@ -110,7 +110,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     if fp is not None:
         return fp
     r = router or get_router()
-    state = {"message": msg, "history": (context or [])[-cfg.history_n:], "rules": rules}
+    hist = [clean_text(h, 500) for h in (context or [])[-cfg.history_n:]]  # T018: bounded clean window
+    state = {"message": msg, "history": hist, "rules": rules}
     out = r.predict(state, build_questions(rules))
     a = out["answers"]
     res = _decide(a, cfg)
