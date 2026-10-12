@@ -78,7 +78,7 @@
 - [x] T069 cli: `bouncer demo` launches Gradio
 - [x] T070 cli: stdin pipe mode (`cat chat.log | bouncer watch`)
 - [x] T071 cli: `--threshold` and `--json` flags
-- [ ] T072 cli: exit codes (0 allow, 2 delete, 3 escalate)
+- [x] T072 cli: exit codes (0 allow, 2 delete, 3 escalate)
 - [ ] T073 discord: bot stub (on_message -> moderate -> delete/flag)
 - [ ] T074 discord: `!bouncer rules` prints active pack
 - [ ] T075 discord: env-based token, no hardcode
