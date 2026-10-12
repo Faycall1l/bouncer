@@ -207,7 +207,7 @@
 - [x] T186 extra: language detect note in explain (script guess)
 - [x] T187 extra: demo video script (60s tour)
 - [x] T188 extra: awesome-list PR draft (link System Onelandscape)
-- [ ] T189 extra: HN Show draft in docs/drafts/
+- [x] T189 extra: HN Show draft in docs/drafts/
 - [ ] T190 extra: tweet-thread draft in docs/drafts/
 - [ ] T191 i18n: Spanish preset pack
 - [ ] T192 i18n: French preset pack
