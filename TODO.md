@@ -69,7 +69,7 @@
 - [ ] T062 ops: `.dockerignore`
 - [ ] T063 server: openapi examples on /predict
 - [ ] T064 server: max body size guard (413)
-- [ ] T065 server: latency header `X-Bouncer-ms`
+- [x] T065 server: latency header `X-Bouncer-ms`
 
 ## P4 CLI + adapters
 - [x] T066 cli: `bouncer check "msg" --rules rules.json`
