@@ -37,8 +37,14 @@ ES = {  # T191
     "sin-spoilers": "sin spoilers sin etiqueta",
 }
 
+FR = {  # T192
+    "pas-de-spam": "pas de pubs, liens, autopromo ni cadeaux crypto",
+    "soyez-aimable": "pas d'insultes, de haine ni de harcèlement",
+    "pas-de-spoilers": "pas de spoilers sans balise",
+}
+
 PRESETS = {"gaming": GAMING, "study": STUDY, "support": SUPPORT, "stream": STREAM,
-           "es": ES}
+           "es": ES, "fr": FR}
 
 DESCRIPTIONS = {
     "gaming": "clan / lobby chat: cheats, kindness, spam, spoilers",
@@ -46,6 +52,7 @@ DESCRIPTIONS = {
     "support": "help desk: no PII, on-topic, kindness",
     "stream": "twitch-style chat: spam, kindness, spoilers, flood",
     "es": "juego en español: spam, amabilidad, spoilers",
+    "fr": "jeu en français: spam, amabilité, spoilers",
 }
 
 
