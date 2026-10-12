@@ -218,4 +218,4 @@
 - [x] T197 robust: structured errors with codes (E_RULES, E_MODEL, E_TIMEOUT)
 - [x] T198 robust: error codes documented in README
 - [x] T199 final: full test suite green
-- [ ] T200 final: tag v0.1.0 + GitHub release notes
+- [x] T200 final: tag v0.1.0 + GitHub release notes
