@@ -239,7 +239,7 @@
 - [x] T214 cli: friendly error when rules file missing
 - [x] T215 cli: `bouncer --version`
 - [x] T216 pkg: extras get lower bounds (laya, gradio, fastapi)
-- [ ] T217 ci: publish workflow on tag (test PyPI dry-run)
+- [x] T217 ci: publish workflow on tag (test PyPI dry-run)
 - [ ] T218 fix: README benchmark table uses measured 0.305
 - [ ] T219 docs: local MPS setup notes
 - [ ] T220 final: suite green + push v0.1.1
