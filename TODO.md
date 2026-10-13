@@ -230,7 +230,7 @@
 - [x] T207 review queue auto-add on escalate/flag
 - [x] T208 watch mode sends flags to review queue
 - [x] T209 eval script dogfoods moderate() instead of raw router
-- [ ] T210 regex baseline accuracy on examples.jsonl (no weights)
+- [x] T210 regex baseline accuracy on examples.jsonl (no weights)
 
 ## P12 Release polish
 - [x] T211 fix: README quickstart (`python -m gatekeeper.demo` is wrong)

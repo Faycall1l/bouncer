@@ -14,6 +14,12 @@ Kernel `faycal00/bouncer-eval-zero` (CPU, 200 rows, 1 choice question). COMPLETE
 
 Takeaway: zero-shot base is a demo, not a product. Fine-tune (`kaggle/train`) is the product.
 
+## Regex baseline (T210, local, no weights)
+
+`python eval/baseline_regex.py data/examples.jsonl` → **0.480** on 300 rows.
+Dumb links/caps rules beat uncalibrated zero-shot (0.305) on template data —
+exactly why the demo shows both side by side, and why calibration + finetune matter.
+
 ## Honest limits (T109)
 
 * Template bootstrap: 6 message shapes × 3 rule-sets. Zero-shot numbers measure
