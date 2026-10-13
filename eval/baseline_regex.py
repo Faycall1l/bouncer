@@ -16,7 +16,8 @@ def baseline(msg):
 
 if __name__ == "__main__":
     path = sys.argv[1] if len(sys.argv) > 1 else "data/examples.jsonl"
-    rows = [json.loads(line) for line in open(path)]
+    with open(path) as f:
+        rows = [json.loads(line) for line in f]
     hit, n_violation = 0, 0
     for r in rows:
         lab = r["labels"]["rule"]
