@@ -3,7 +3,7 @@ import json
 import sys
 import time
 
-from gatekeeper import build_questions, get_router
+from gatekeeper import GateConfig, get_router, moderate  # T209: dogfood moderate()
 
 
 def ece(probs, golds, n=10):
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     with open(path) as f:
         rows = [json.loads(line) for line in f][:500]
     r = get_router()
+    cfg = GateConfig()
     ok, confs, golds, lat, gated_ok, gated_n = 0, [], [], [], 0, 0
     from collections import Counter
     conf_pairs, overconf = Counter(), 0  # T104+T105
@@ -27,10 +28,9 @@ if __name__ == "__main__":
     t0 = time.time()
     for row in rows:
         s, lab = row["state"], row["labels"]
-        t = time.time()
-        out = r.predict(s, build_questions(s["rules"]))["answers"]
-        lat.append((time.time()-t)*1000)
-        pred = out["rule"]["choice"]; conf = float(out["rule"]["confidence"])
+        res = moderate(s["message"], s["rules"], s.get("history"), config=cfg, router=r)
+        lat.append(res.get("latency_ms", 0))
+        pred = res["rule"]; conf = res["confidence"]
         good = pred == lab["rule"]
         ok += good; confs.append(conf); golds.append(good)
         per_rule[lab["rule"]] += 1; per_rule_ok[lab["rule"]] += good  # T098
