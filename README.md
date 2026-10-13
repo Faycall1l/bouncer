@@ -90,11 +90,12 @@ Template bootstrap (6 message shapes), 3 violation types in v1, English-first,
 ≤20 options per question, refit temperatures on your data. Full list:
 [BENCHMARKS.md](BENCHMARKS.md#honest-limits-t109).
 
-## Benchmarks (base `laya`, zero-shot → fine-tuned target)
+## Benchmarks (measured, base `laya`)
 
-| split | acc(rule) | ECE | p50 |
+| split | acc(rule) | gate@0.85 | p50 |
 |---|---|---|---|
-| template-500 zero-shot | ~0.55 | ~0.18 | 33ms |
-| gatekeeper-test fine-tuned | **target 0.80+** | <0.10 | 33ms |
+| gatekeeper 200-row, CPU zero-shot | **0.305** (≈ chance) | 0 gated (honest abstention) | 1004ms CPU / ~33ms T4 ref |
+| gatekeeper-test fine-tuned | **target 0.80+** | — | — |
 
-Fine-tuned numbers filled in after your run. Be honest — see `eval/eval_gatekeeper.py`.
+Base is near-blind on unseen rule-sets (Laya's own warning) — the finetune is the
+product. Full numbers: [BENCHMARKS.md](BENCHMARKS.md). Be honest — see `eval/`.
