@@ -241,5 +241,5 @@
 - [x] T216 pkg: extras get lower bounds (laya, gradio, fastapi)
 - [x] T217 ci: publish workflow on tag (test PyPI dry-run)
 - [x] T218 fix: README benchmark table uses measured 0.305
-- [ ] T219 docs: local MPS setup notes
+- [x] T219 docs: local MPS setup notes
 - [ ] T220 final: suite green + push v0.1.1
