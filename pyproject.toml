@@ -12,14 +12,14 @@ classifiers = [
   "License :: OSI Approved :: Apache Software License",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = [
-  "laya",
-  "fastapi",
-  "uvicorn",
-  "gradio",
-  "numpy",
-  "datasets",
-  "huggingface_hub",
+dependencies = [  # T216: lower bounds from smoke-tested versions
+  "laya>=0.4.3",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "gradio>=4.44.0",
+  "numpy>=1.26",
+  "datasets>=3.0.0",
+  "huggingface_hub>=0.23",
 ]
 
 [project.urls]

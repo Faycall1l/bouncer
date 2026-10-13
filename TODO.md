@@ -238,7 +238,7 @@
 - [x] T213 reason: moderate() includes reason directly
 - [x] T214 cli: friendly error when rules file missing
 - [x] T215 cli: `bouncer --version`
-- [ ] T216 pkg: extras get lower bounds (laya, gradio, fastapi)
+- [x] T216 pkg: extras get lower bounds (laya, gradio, fastapi)
 - [ ] T217 ci: publish workflow on tag (test PyPI dry-run)
 - [ ] T218 fix: README benchmark table uses measured 0.305
 - [ ] T219 docs: local MPS setup notes
