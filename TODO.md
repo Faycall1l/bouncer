@@ -236,7 +236,7 @@
 - [x] T211 fix: README quickstart (`python -m gatekeeper.demo` is wrong)
 - [x] T212 fix: app.py launches on import — guard with __main__
 - [x] T213 reason: moderate() includes reason directly
-- [ ] T214 cli: friendly error when rules file missing
+- [x] T214 cli: friendly error when rules file missing
 - [ ] T215 cli: `bouncer --version`
 - [ ] T216 pkg: extras get lower bounds (laya, gradio, fastapi)
 - [ ] T217 ci: publish workflow on tag (test PyPI dry-run)
