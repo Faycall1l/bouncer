@@ -233,7 +233,7 @@
 - [ ] T210 regex baseline accuracy on examples.jsonl (no weights)
 
 ## P12 Release polish
-- [ ] T211 fix: README quickstart (`python -m gatekeeper.demo` is wrong)
+- [x] T211 fix: README quickstart (`python -m gatekeeper.demo` is wrong)
 - [ ] T212 fix: app.py launches on import — guard with __main__
 - [ ] T213 reason: moderate() includes reason directly
 - [ ] T214 cli: friendly error when rules file missing

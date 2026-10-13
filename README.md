@@ -64,10 +64,10 @@ print(moderate('FREE NITRO http://x.gg', get_preset('gaming')))
 ```
 
 ```bash
-pip install laya fastapi uvicorn gradio
-python -m gatekeeper.demo  # CLI
-uvicorn gatekeeper.serve:app  # POST /predict, /v1/systemone
-cd app && python app.py  # Space demo
+pip install -e ".[server,demo]"
+bouncer check "you all suck" --preset gaming
+bouncer serve  # API on :8000
+bouncer demo   # Gradio UI
 ```
 
 ## Fine-tune (Kaggle 2xT4, 4-5h)
