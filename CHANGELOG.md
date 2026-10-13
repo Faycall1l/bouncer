@@ -1,5 +1,10 @@
 # Changelog (T146/T168)
 
+## 0.1.1 — 2026-10-13
+* Real-model shakedown: score floats→labels, forced overrides survive abstention,
+  reasons match actions. Golden transcript + MPS notes. Eval dogfoods moderate().
+  Review auto-queue, `--version`, publish workflow, es/fr/ar packs.
+
 ## 0.1.0 — 2026-10-12
 * First tagged release: 200-box build-out complete, 29 tests green, ruff clean,
   sdist builds, zero-shot eval 0.305 (honest baseline for the finetune).

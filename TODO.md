@@ -242,4 +242,4 @@
 - [x] T217 ci: publish workflow on tag (test PyPI dry-run)
 - [x] T218 fix: README benchmark table uses measured 0.305
 - [x] T219 docs: local MPS setup notes
-- [ ] T220 final: suite green + push v0.1.1
+- [x] T220 final: suite green + push v0.1.1
