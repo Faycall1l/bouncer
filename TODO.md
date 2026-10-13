@@ -237,7 +237,7 @@
 - [x] T212 fix: app.py launches on import — guard with __main__
 - [x] T213 reason: moderate() includes reason directly
 - [x] T214 cli: friendly error when rules file missing
-- [ ] T215 cli: `bouncer --version`
+- [x] T215 cli: `bouncer --version`
 - [ ] T216 pkg: extras get lower bounds (laya, gradio, fastapi)
 - [ ] T217 ci: publish workflow on tag (test PyPI dry-run)
 - [ ] T218 fix: README benchmark table uses measured 0.305

@@ -103,7 +103,9 @@ def cmd_pack(args) -> int:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="bouncer")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    p.add_argument("--version", action="store_true")  # T215
+    sub = p.add_subparsers(dest="cmd", required=False)
+    sub.required = False
     c = sub.add_parser("check")
     c.add_argument("message")
     c.add_argument("--rules", default="rules.json")
@@ -137,6 +139,13 @@ def main(argv=None) -> int:
     pk.add_argument("--rules")
     pk.set_defaults(fn=cmd_pack)
     args = p.parse_args(argv)
+    if args.version or args.cmd is None:
+        if args.version:
+            from gatekeeper import __version__
+            print(f"bouncer {__version__}")
+            return 0
+        p.print_help()
+        return 2
     return args.fn(args)
 
 
