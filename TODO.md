@@ -228,7 +228,7 @@
 - [ ] T205 docs: golden transcript in docs/golden.md
 - [ ] T206 docs: MPS vs CPU latency note
 - [x] T207 review queue auto-add on escalate/flag
-- [ ] T208 watch mode sends flags to review queue
+- [x] T208 watch mode sends flags to review queue
 - [ ] T209 eval script dogfoods moderate() instead of raw router
 - [ ] T210 regex baseline accuracy on examples.jsonl (no weights)
 

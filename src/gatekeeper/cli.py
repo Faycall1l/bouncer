@@ -46,7 +46,8 @@ def cmd_watch(args) -> int:
             print(f"error: {e}", file=sys.stderr)
             continue
         c = COLORS.get(res["action"], "")
-        print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {line[:120]}",
+        extra = " -> review queue" if res["action"] in ("flag", "escalate") else ""  # T208
+        print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {line[:120]}{extra}",
               flush=True)
     return 0
 
