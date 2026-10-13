@@ -221,7 +221,7 @@
 - [x] T200 final: tag v0.1.0 + GitHub release notes
 
 ## P11 Real-model hardening (base Laya, no finetune)
-- [ ] T201 local: venv + laya install + weights download (MPS/CPU)
+- [x] T201 local: venv + laya install + weights download (MPS/CPU)
 - [ ] T202 audit: real Router.predict answer shape (confidence? probabilities?)
 - [ ] T203 fix: adapt engine to real answer shape
 - [ ] T204 e2e: moderate() 6 fixtures on real model, golden transcript
