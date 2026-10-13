@@ -220,6 +220,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     from .stats import record
     record(res["action"], res["rule"])
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"])
+    from .explain import explain as _explain  # T213: reason ships in every result
+    res["reason"] = _explain(res, rules)
     CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
     with _FLY_LOCK:  # T180: publish to joiners
         if key in _INFLIGHT:
