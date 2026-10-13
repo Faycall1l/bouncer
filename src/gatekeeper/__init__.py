@@ -140,10 +140,11 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
     harm = _level(a["harm"]["score"], DEFAULT_HARM)  # T203
     jail = float(a["jailbreak"]["noul"])
     esc = float(a["escalate"]["noul"])
+    forced = None  # T204: overrides survive margin abstention
     if jail >= cfg.jailbreak_threshold:
-        action = "delete"
+        action, forced = "delete", f"jailbreak {jail:.2f}"
     elif esc >= cfg.escalate_threshold:
-        action = "escalate"
+        action, forced = "escalate", f"needs-human {esc:.2f}"
     elif rule != "ok" and conf >= _delete_bar(cfg, rule):
         action = "delete"
     elif rule != "ok" and conf >= _delete_bar(cfg, rule) - 0.15:
@@ -153,7 +154,7 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
     else:
         action = "escalate"
     abstained = _low_margin(a, cfg.margin_abstain)  # T040
-    if abstained and action in ("allow", "delete"):
+    if abstained and forced is None and action in ("allow", "delete"):
         action = "escalate"
     if action == "delete" and cfg.quiet_hours:  # T185
         import datetime
@@ -162,7 +163,7 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
         if lo <= h < hi if lo < hi else (h >= lo or h < hi):
             action = "escalate"
     return {"action": action, "rule": rule, "confidence": conf, "harm": harm,
-            "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained}
+            "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained, "forced": forced}
 
 
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,

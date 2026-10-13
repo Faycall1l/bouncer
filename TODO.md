@@ -224,9 +224,9 @@
 - [x] T201 local: venv + laya install + weights download (MPS/CPU)
 - [x] T202 audit: real Router.predict answer shape (confidence? probabilities?)
 - [x] T203 fix: adapt engine to real answer shape
-- [ ] T204 e2e: moderate() 6 fixtures on real model, golden transcript
-- [ ] T205 docs: golden transcript in docs/golden.md
-- [ ] T206 docs: MPS vs CPU latency note
+- [x] T204 e2e: moderate() 6 fixtures on real model, golden transcript
+- [x] T205 docs: golden transcript in docs/golden.md
+- [x] T206 docs: MPS vs CPU latency note
 - [x] T207 review queue auto-add on escalate/flag
 - [x] T208 watch mode sends flags to review queue
 - [x] T209 eval script dogfoods moderate() instead of raw router

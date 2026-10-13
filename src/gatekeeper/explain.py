@@ -7,8 +7,14 @@ from __future__ import annotations
 def explain(res: dict, rules: dict) -> str:
     """T035: one-line reason citing the rule text; T036 includes text, T037 runner-up."""
     action, rule, conf = res["action"], res["rule"], res["confidence"]
+    if res.get("forced"):  # T204: overrides lead, rule text follows
+        base = f"{action}: override {res['forced']}"
+        if rule != "ok":
+            base += f"; rule '{rule}' — {rules.get(rule, '')}"
+        base += f" (conf {conf:.2f})"
+        return base
     if rule == "ok":
-        base = f"allow: no rule violated (conf {conf:.2f})"
+        base = f"{action}: no rule violated (conf {conf:.2f})"
     else:
         base = f"{action}: violates '{rule}' — {rules.get(rule, '')} (conf {conf:.2f})"
     probs = res.get("rule_dist") or {}
