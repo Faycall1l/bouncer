@@ -220,6 +220,12 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     from .stats import record
     record(res["action"], res["rule"])
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"])
+    if res["action"] in ("flag", "escalate"):  # T207: humans work the queue
+        from .review import add as _qadd
+        try:
+            _qadd(msg, res)
+        except OSError:
+            pass
     from .explain import explain as _explain  # T213: reason ships in every result
     res["reason"] = _explain(res, rules)
     CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
