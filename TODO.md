@@ -222,8 +222,8 @@
 
 ## P11 Real-model hardening (base Laya, no finetune)
 - [x] T201 local: venv + laya install + weights download (MPS/CPU)
-- [ ] T202 audit: real Router.predict answer shape (confidence? probabilities?)
-- [ ] T203 fix: adapt engine to real answer shape
+- [x] T202 audit: real Router.predict answer shape (confidence? probabilities?)
+- [x] T203 fix: adapt engine to real answer shape
 - [ ] T204 e2e: moderate() 6 fixtures on real model, golden transcript
 - [ ] T205 docs: golden transcript in docs/golden.md
 - [ ] T206 docs: MPS vs CPU latency note

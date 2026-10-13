@@ -123,10 +123,21 @@ def _fallback(action_note: str) -> dict:
             "abstained": True, "reason": action_note}
 
 
+def _level(score_val, levels: list) -> str:
+    """T203: real score answers are floats (expected level); snap to nearest label."""
+    try:
+        idx = min(len(levels) - 1, max(0, round(float(score_val))))
+    except (TypeError, ValueError):
+        return str(score_val)
+    if isinstance(score_val, str) and score_val in levels:
+        return score_val
+    return levels[idx]
+
+
 def _decide(a: dict, cfg: GateConfig) -> dict:
     """T002: split allow/delete thresholds; jailbreak override; escalate override."""
     rule, conf = a["rule"]["choice"], float(a["rule"].get("confidence", 0))
-    harm = a["harm"]["score"]
+    harm = _level(a["harm"]["score"], DEFAULT_HARM)  # T203
     jail = float(a["jailbreak"]["noul"])
     esc = float(a["escalate"]["noul"])
     if jail >= cfg.jailbreak_threshold:
@@ -211,7 +222,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     a = out["answers"]
     res = _decide(a, cfg)
     res["harm_dist"] = a["harm"].get("probabilities", [])
-    res["hype"] = a["hype"]["score"]  # T039
+    res["harm"] = _level(a["harm"]["score"], DEFAULT_HARM)  # T203: float->label (already in _decide)
+    res["hype"] = _level(a["hype"]["score"], DEFAULT_HYPE)  # T039+T203
     res["hype_dist"] = a["hype"].get("probabilities", [])  # T039
     res["rule_dist"] = a["rule"].get("probabilities", {})  # T038: full distribution
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
