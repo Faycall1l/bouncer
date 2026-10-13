@@ -219,3 +219,27 @@
 - [x] T198 robust: error codes documented in README
 - [x] T199 final: full test suite green
 - [x] T200 final: tag v0.1.0 + GitHub release notes
+
+## P11 Real-model hardening (base Laya, no finetune)
+- [ ] T201 local: venv + laya install + weights download (MPS/CPU)
+- [ ] T202 audit: real Router.predict answer shape (confidence? probabilities?)
+- [ ] T203 fix: adapt engine to real answer shape
+- [ ] T204 e2e: moderate() 6 fixtures on real model, golden transcript
+- [ ] T205 docs: golden transcript in docs/golden.md
+- [ ] T206 docs: MPS vs CPU latency note
+- [ ] T207 review queue auto-add on escalate/flag
+- [ ] T208 watch mode sends flags to review queue
+- [ ] T209 eval script dogfoods moderate() instead of raw router
+- [ ] T210 regex baseline accuracy on examples.jsonl (no weights)
+
+## P12 Release polish
+- [ ] T211 fix: README quickstart (`python -m gatekeeper.demo` is wrong)
+- [ ] T212 fix: app.py launches on import — guard with __main__
+- [ ] T213 reason: moderate() includes reason directly
+- [ ] T214 cli: friendly error when rules file missing
+- [ ] T215 cli: `bouncer --version`
+- [ ] T216 pkg: extras get lower bounds (laya, gradio, fastapi)
+- [ ] T217 ci: publish workflow on tag (test PyPI dry-run)
+- [ ] T218 fix: README benchmark table uses measured 0.305
+- [ ] T219 docs: local MPS setup notes
+- [ ] T220 final: suite green + push v0.1.1
