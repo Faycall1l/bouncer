@@ -12,4 +12,5 @@ pinned: false
 """HF Space entry (T093). Full UI lives in gatekeeper.demo_app."""
 from gatekeeper.demo_app import launch
 
-launch()
+if __name__ == "__main__":  # T212: import-safe
+    launch()
