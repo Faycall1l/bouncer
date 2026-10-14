@@ -6,7 +6,7 @@ from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = [
     "DEFAULT_HARM",
     "DEFAULT_HYPE",
@@ -41,7 +41,8 @@ def _fastpath_allow(msg: str, rules: dict) -> dict | None:
     """T017: all rules about links/ads but message has none -> allow without a model call."""
     if extract_links(msg):
         return None
-    if all(any(w in t.lower() for w in ("link", "url", "promo", "ad")) for t in rules.values()):
+    import re as _re  # T228: word boundaries — "ad" must not match "raid"/"ready"
+    if all(_re.search(r"\b(link|url|promo|ads?)\b", t.lower()) for t in rules.values()):
         return {"action": "allow", "rule": "ok", "confidence": 0.9, "harm": "safe",
                 "harm_dist": [], "rule_dist": {"ok": 0.9}, "jailbreak_p": 0.0,
                 "escalate_p": 0.1, "abstained": False, "reason": "fastpath: no links"}
@@ -86,6 +87,24 @@ def _delete_bar(cfg: GateConfig, rule: str) -> float:
     if cfg.severity.get(rule) == "high":
         return max(0.5, cfg.delete_threshold - 0.15)
     return cfg.delete_threshold
+
+
+def _quiet_active(cfg: GateConfig) -> bool:
+    """T221: is a delete->escalate quiet window in effect right now?"""
+    if not cfg.quiet_hours:
+        return False
+    import datetime
+    h = datetime.datetime.now(datetime.timezone.utc).hour
+    lo, hi = cfg.quiet_hours
+    return (lo <= h < hi) if lo < hi else (h >= lo or h < hi)
+
+
+def _observe(msg: str, action: str, rule: str, conf: float) -> None:
+    """T222: cheap paths (empty/fastpath) still count in stats + audit."""
+    from .audit import log_decision
+    from .stats import record
+    record(action, rule)
+    log_decision(msg, rule, conf, action, 0.0)
 
 
 def _low_margin(a: dict, bar: float) -> bool:
@@ -156,12 +175,8 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
     abstained = _low_margin(a, cfg.margin_abstain)  # T040
     if abstained and forced is None and action in ("allow", "delete"):
         action = "escalate"
-    if action == "delete" and cfg.quiet_hours:  # T185
-        import datetime
-        h = datetime.datetime.now(datetime.timezone.utc).hour
-        lo, hi = cfg.quiet_hours
-        if lo <= h < hi if lo < hi else (h >= lo or h < hi):
-            action = "escalate"
+    if action == "delete" and _quiet_active(cfg):  # T185
+        action = "escalate"
     return {"action": action, "rule": rule, "confidence": conf, "harm": harm,
             "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained, "forced": forced}
 
@@ -176,13 +191,20 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         validate_rules(rules, cfg.max_rules, cfg.max_rule_chars)
     msg = clean_text(message, cfg.max_msg_chars)
     if not msg:  # T043: nothing to judge
-        return {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
-                "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
-                "escalate_p": 0.0, "abstained": False, "reason": "empty message"}
+        res = {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
+               "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
+               "escalate_p": 0.0, "abstained": False, "reason": "empty message",
+               "latency_ms": 0.0}
+        _observe(msg, "allow", "ok", 1.0)  # T222
+        return res
     fp = _fastpath_allow(msg, rules)  # T017
     if fp is not None:
+        fp["latency_ms"] = 0.0
+        _observe(msg, fp["action"], fp["rule"], fp["confidence"])  # T222
         return fp
-    key = CACHE.key(msg, rules, cfg.delete_threshold, cfg.severity)  # T024: cached decisions count stats
+    key = CACHE.key(msg, rules, cfg.allow_threshold, cfg.delete_threshold,  # T221
+                    cfg.severity, lang, context or (), cfg.history_n,
+                    _quiet_active(cfg))
     hit = CACHE.get(key)
     if hit is not None:
         return dict(hit, cached=True)

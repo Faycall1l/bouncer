@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
 
 try:  # T194: orjson fastpath when installed
@@ -18,6 +19,7 @@ except ImportError:
 
 _PATH = os.environ.get("BOUNCER_AUDIT", "bouncer-audit.jsonl")
 _MAX_BYTES = 5 * 1024 * 1024
+_LOCK = threading.Lock()  # T229: threaded server must not interleave lines
 
 
 def _maybe_rotate() -> None:
@@ -28,9 +30,10 @@ def _maybe_rotate() -> None:
 
 def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: float) -> None:
     """T029: one JSON line per decision; rotates at 5MB (T030 trims below)."""
-    _maybe_rotate()
     h = hashlib.sha256(msg.encode()).hexdigest()[:16]
-    with open(_PATH, "a") as f:
-        f.write(_dump({"t": int(time.time()), "msg": h, "rule": rule,
-                       "conf": round(conf, 3), "action": action,
-                       "ms": round(latency_ms, 1)}) + "\n")
+    with _LOCK:  # T229
+        _maybe_rotate()
+        with open(_PATH, "a") as f:
+            f.write(_dump({"t": int(time.time()), "msg": h, "rule": rule,
+                           "conf": round(conf, 3), "action": action,
+                           "ms": round(latency_ms, 1)}) + "\n")

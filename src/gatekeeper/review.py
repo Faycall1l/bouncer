@@ -4,6 +4,7 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 import json
 import os
+from collections import deque
 
 _PATH = os.environ.get("BOUNCER_REVIEW", "review-queue.jsonl")
 
@@ -17,4 +18,5 @@ def add(message: str, res: dict) -> None:  # T170
 def list_queue(limit: int = 20) -> list:  # T170
     if not os.path.exists(_PATH):
         return []
-    return [json.loads(l) for l in open(_PATH)][-limit:]
+    with open(_PATH) as f:  # T229: tail via deque, no full-file list in memory
+        return [json.loads(line) for line in deque(f, maxlen=max(limit, 1))]

@@ -17,11 +17,19 @@ def _load_rules(args) -> dict:
     with open(args.rules) as f:
         return json.load(f)
 
+def _cfg_from_args(args):
+    """T223: split gates; unset flags fall back to the single --threshold."""
+    from gatekeeper import GateConfig
+    allow = args.threshold if args.allow_threshold is None else args.allow_threshold
+    delete = args.threshold if args.delete_threshold is None else args.delete_threshold
+    return GateConfig(allow_threshold=allow, delete_threshold=delete)
+
+
 def cmd_check(args) -> int:  # T066+T067+T071+T072
-    from gatekeeper import GateConfig, moderate
+    from gatekeeper import moderate
     from gatekeeper.explain import explain
     rules = _load_rules(args)
-    cfg = GateConfig(allow_threshold=args.threshold, delete_threshold=args.threshold)
+    cfg = _cfg_from_args(args)
     res = moderate(args.message, rules, config=cfg)
     res["reason"] = explain(res, rules)
     print(json.dumps(res, default=str, indent=2) if args.json else f"{res['action']}: {res['reason']}")
@@ -33,9 +41,9 @@ RESET = "\033[0m"
 
 
 def cmd_watch(args) -> int:
-    from gatekeeper import GateConfig, moderate
+    from gatekeeper import moderate
     rules = _load_rules(args)
-    cfg = GateConfig(allow_threshold=args.threshold, delete_threshold=args.threshold)
+    cfg = _cfg_from_args(args)
     for line in sys.stdin:
         line = line.rstrip("\n")
         if not line.strip():
@@ -102,6 +110,12 @@ def cmd_pack(args) -> int:
     return 0
 
 
+def _add_threshold_flags(p) -> None:
+    p.add_argument("--threshold", type=float, default=0.85)
+    p.add_argument("--allow-threshold", type=float, default=None)  # T223
+    p.add_argument("--delete-threshold", type=float, default=None)  # T223
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="bouncer")
     p.add_argument("--version", action="store_true")  # T215
@@ -111,7 +125,7 @@ def main(argv=None) -> int:
     c.add_argument("message")
     c.add_argument("--rules", default="rules.json")
     c.add_argument("--preset")
-    c.add_argument("--threshold", type=float, default=0.85)
+    _add_threshold_flags(c)
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
@@ -124,7 +138,7 @@ def main(argv=None) -> int:
     w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail
     w.add_argument("--rules", default="rules.json")
     w.add_argument("--preset")
-    w.add_argument("--threshold", type=float, default=0.85)
+    _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)
     r = sub.add_parser("review")  # T170
     r.add_argument("--limit", type=int, default=20)

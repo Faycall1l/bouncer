@@ -1,6 +1,7 @@
 # Apache-2.0. See LICENSE.
 """FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware  # T055
@@ -8,7 +9,20 @@ from pydantic import BaseModel
 
 from . import __version__, get_router, moderate
 
-app = FastAPI(title="bouncer")
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):  # T226: lifespan replaces deprecated on_event
+    try:  # T059+T177: preload + warmup; weights may be absent at boot
+        r = get_router()
+        r.predict({"message": "warmup"}, {"q": {"type": "noul", "instructions": "warmup?"}})
+    except Exception as e:  # noqa: BLE001 — first real call loads instead
+        print(f"warmup skipped: {e}", flush=True)
+    yield
+    print('{"event": "shutdown", "note": "in-flight predict calls drain with workers"}',  # T179
+          flush=True)
+
+
+app = FastAPI(title="bouncer", lifespan=_lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])  # T055: demo-friendly
 _START = time.time()
@@ -18,11 +32,20 @@ _KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared 
 _BUCKETS: dict = {}  # T054: >60 req/min per IP -> 429
 
 
+def _sweep(now: float) -> None:
+    """T227: evict idle IPs so the bucket map can't grow without bound."""
+    if len(_BUCKETS) > 512:
+        for ip, hits in list(_BUCKETS.items()):
+            if not hits or now - hits[-1] > 120:
+                del _BUCKETS[ip]
+
+
 def _rate(request: Request) -> None:
     if request is None:
         return
     ip = request.client.host if request.client else "?"
     now = time.time()
+    _sweep(now)  # T227
     hits = [t for t in _BUCKETS.get(ip, []) if now - t < 60]
     hits.append(now)
     _BUCKETS[ip] = hits[-60:]
@@ -95,25 +118,13 @@ def metrics():
     return PlainTextResponse("\n".join(lines) + "\n")
 
 
-@app.on_event("startup")  # T059+T177: preload + warmup
-def _startup():
-    try:
-        from . import get_router
-        r = get_router()
-        r.predict({"message": "warmup"}, {"q": {"type": "noul", "instructions": "warmup?"}})
-    except Exception as e:  # noqa: BLE001 — weights may be absent; first real call loads
-        print(f"warmup skipped: {e}", flush=True)
-
-
-@app.on_event("shutdown")  # T179: note drain; ThreadPool calls finish with the loop
-def _shutdown():
-    print('{"event": "shutdown", "note": "in-flight predict calls drain with workers"}', flush=True)
-
 class ModReq(BaseModel):
     message: str
     rules: dict[str, str]
     context: list[str] = []
     threshold: float = 0.85
+    allow_threshold: float | None = None  # T223: split gates; None falls back to threshold
+    delete_threshold: float | None = None
     lang: str | None = None
 
     model_config = {"json_schema_extra": {"examples": [  # T063
@@ -127,6 +138,21 @@ def _clean(res: dict) -> dict:
     return res
 
 
+def _thresholds(threshold: float, allow: float | None,
+                delete: float | None) -> tuple[float, float]:
+    """T223: split gates with back-compat single float; 422 on out-of-range."""
+    from fastapi import HTTPException
+    a = threshold if allow is None else allow
+    d = threshold if delete is None else delete
+    for t in (a, d):
+        if not 0.0 <= t <= 1.0:
+            raise HTTPException(status_code=422, detail="thresholds must be in [0, 1]")
+    return a, d
+
+
+MAX_BATCH = 32  # T224: bound one request's work
+
+
 @app.post("/predict")
 def predict(req: ModReq, request: Request):
     from fastapi import HTTPException
@@ -136,10 +162,14 @@ def predict(req: ModReq, request: Request):
         raise HTTPException(status_code=413, detail="message too long")
     from fastapi import HTTPException
 
+    from .config import GateConfig
     from .explain import explain
     from .rules import RuleError
+    allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
     try:
-        res = moderate(req.message, req.rules, req.context, threshold=req.threshold, lang=req.lang)
+        res = moderate(req.message, req.rules, req.context,
+                       config=GateConfig(allow_threshold=allow_t, delete_threshold=delete_t),
+                       lang=req.lang)
     except RuleError as e:
         raise HTTPException(status_code=422, detail=str(e))  # T049: rule errors are 422
     res["reason"] = explain(res, req.rules)
@@ -150,17 +180,27 @@ class BatchReq(BaseModel):
     messages: list[str]
     rules: dict[str, str]
     threshold: float = 0.85
+    allow_threshold: float | None = None  # T223
+    delete_threshold: float | None = None
 
 
 @app.post("/predict/batch")  # T050
-def predict_batch(req: BatchReq):
+def predict_batch(req: BatchReq, request: Request):
+    from fastapi import HTTPException
+    _rate(request)  # T224: batch shares the same guards as single
+    _auth(request)
+    if len(req.messages) > MAX_BATCH:  # T224
+        raise HTTPException(status_code=413, detail=f"batch capped at {MAX_BATCH} messages")
     from . import moderate_batch
     from .config import GateConfig
-    cfg = GateConfig(allow_threshold=req.threshold, delete_threshold=req.threshold)
+    allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
+    cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t)
     return [_clean(r) for r in moderate_batch(req.messages, req.rules, config=cfg)]
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
 @app.post("/v1/systemone")
-def systemone(body: dict):
+def systemone(body: dict, request: Request):
+    _rate(request)  # T224: passthrough shares guards too
+    _auth(request)
     r = get_router()
     return r.predict(body.get("state", {}), body.get("questions", {}))

@@ -243,3 +243,15 @@
 - [x] T218 fix: README benchmark table uses measured 0.305
 - [x] T219 docs: local MPS setup notes
 - [x] T220 final: suite green + push v0.1.1
+
+## P13 Correctness + API gaps (audit 2026-10-14)
+- [x] T221 cache: key covers all decision inputs (both thresholds, lang, context, quiet-state)
+- [x] T222 observability: fastpath/empty decisions record stats + audit
+- [x] T223 api: split allow/delete thresholds on /predict, /batch, check, watch + range validation
+- [x] T224 harden: batch cap 32 + shared rate/auth guards; /v1/systemone guarded
+- [x] T225 cache: thread-safe lock + `clear()` (tests stop poking `_d`)
+- [x] T226 server: lifespan replaces deprecated `on_event` startup/shutdown
+- [x] T227 server: rate-bucket idle eviction (bounded memory)
+- [x] T228 fix: fastpath word-boundary match (`ad` no longer fires on `raid`)
+- [x] T229 robust: audit write lock + bounded review tail (deque)
+- [x] T230 final: P13 tests green + tag v0.1.2

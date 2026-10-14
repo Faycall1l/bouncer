@@ -3,44 +3,66 @@ from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
 import hashlib
+import threading
 import time
 from collections import OrderedDict
 
 
+def _short(text: str, n: int = 16) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()[:n]
+
+
 class TTLCache:
-    """T023: bounded LRU + TTL; T024 exposes hits/misses."""
+    """T023: bounded LRU + TTL; T024 exposes hits/misses; T225 thread-safe + clear()."""
 
     def __init__(self, maxsize: int = 1024, ttl: float = 60.0):
         self.maxsize, self.ttl = maxsize, ttl
         self._d: OrderedDict = OrderedDict()
+        self._lock = threading.Lock()
         self.hits = self.misses = 0
 
     @staticmethod
-    def key(message: str, rules: dict, threshold: float, severity: dict | None = None) -> str:
-        h = hashlib.sha256(message.encode()).hexdigest()[:16]
-        rh = hashlib.sha256(repr(sorted(rules.items())).encode()).hexdigest()[:8]
-        sh = hashlib.sha256(repr(sorted((severity or {}).items())).encode()).hexdigest()[:8]
-        return f"{h}:{rh}:{threshold}:{sh}"
+    def key(message: str, rules: dict, allow_threshold: float, delete_threshold: float,
+            severity: dict | None = None, lang: str | None = None,
+            context: tuple | list = (), history_n: int = 4,
+            quiet_active: bool = False) -> str:
+        """T221: every input that can change the decision is in the key.
+
+        (msg, rules, both thresholds, severity, lang, bounded context,
+        history window, quiet-hours state). `v2:` prefix busts old-format keys.
+        """
+        hist = list(context)[-history_n:] if context else []
+        parts = [message, repr(sorted(rules.items())), repr((allow_threshold, delete_threshold)),
+                 repr(sorted((severity or {}).items())), repr(lang), repr(hist), repr(quiet_active)]
+        return "v2:" + ":".join(_short(p, 12 if i else 16) for i, p in enumerate(parts))
 
     def get(self, k: str):
         now = time.time()
-        if k in self._d:
-            exp, v = self._d.pop(k)
-            if exp > now:
-                self._d[k] = (exp, v)
-                self.hits += 1
-                return v
-        self.misses += 1
-        return None
+        with self._lock:
+            if k in self._d:
+                exp, v = self._d.pop(k)
+                if exp > now:
+                    self._d[k] = (exp, v)
+                    self.hits += 1
+                    return v
+            self.misses += 1
+            return None
 
     def set(self, k: str, v: dict) -> None:
-        self._d[k] = (time.time() + self.ttl, v)
-        while len(self._d) > self.maxsize:
-            self._d.popitem(last=False)
+        with self._lock:
+            self._d[k] = (time.time() + self.ttl, v)
+            while len(self._d) > self.maxsize:
+                self._d.popitem(last=False)
+
+    def clear(self) -> None:
+        """T225: drop entries (counters kept); tests use this instead of `_d`."""
+        with self._lock:
+            self._d.clear()
 
     def stats(self) -> dict:
         """T024."""
-        return {"hits": self.hits, "misses": self.misses, "size": len(self._d)}
+        with self._lock:
+            return {"hits": self.hits, "misses": self.misses, "size": len(self._d)}
 
 
 CACHE = TTLCache()

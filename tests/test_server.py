@@ -33,7 +33,7 @@ import pytest
 def _stub_router():
     gatekeeper._router = Stub()
     from gatekeeper.cache import CACHE
-    CACHE._d.clear()
+    CACHE.clear()
     yield
 
 
