@@ -257,7 +257,7 @@
 - [x] T230 final: P13 tests green + tag v0.1.2
 
 ## P14 Observability + stats (T231–T250)
-- [ ] T231 stats: joint action×rule counts (`actions_by_rule`)
+- [x] T231 stats: joint action×rule counts (`actions_by_rule`)
 - [ ] T232 stats: latency ring buffer (last 200) + p50/p95 in `get_stats()`
 - [ ] T233 stats: cheap-path counters (fastpath/empty allows tracked separately)
 - [ ] T234 stats: escalate-cause breakdown (margin vs needs-human vs quiet vs low-conf vs fallback)
