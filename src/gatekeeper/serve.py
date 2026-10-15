@@ -61,7 +61,8 @@ def _rate(request: Request) -> None:
     _BUCKETS[ip] = hits[-60:]
     if len(hits) > 60:
         from fastapi import HTTPException
-        raise HTTPException(status_code=429, detail="rate limited")
+        raise HTTPException(status_code=429, detail="rate limited",
+                            headers={"Retry-After": "60"})  # T306
 
 
 def _auth(request) -> None:
