@@ -60,6 +60,10 @@ def get_router(**kw):
     if _router is None:
         from laya import Router as _R
         _router = _R(**kw)
+    elif kw:  # T268: silent kwarg-drop is a debugging trap
+        import warnings
+        warnings.warn(f"get_router() already initialized; ignoring {sorted(kw)}",
+                      RuntimeWarning, stacklevel=2)
     return _router
 
 
