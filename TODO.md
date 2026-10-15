@@ -371,7 +371,7 @@
 - [x] T332 gate: `require_calm` option (allow only when harm == safe; default off)
 - [x] T333 gate: severity offset configurable (`GateConfig.severity_offset`, default 0.15)
 - [x] T334 docs: gate precedence documented in code + `docs/gates.md`
-- [ ] T335 result: exposes `margin` float (top1-top2 gap)
+- [x] T335 result: exposes `margin` float (top1-top2 gap)
 - [ ] T336 result: exposes `thresholds` snapshot {allow, delete}
 - [ ] T337 result: echoes `lang` hint
 - [ ] T338 history: empty user names ignored in turn counts

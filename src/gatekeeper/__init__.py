@@ -122,8 +122,13 @@ def _observe(msg: str, action: str, rule: str, conf: float, cause: str) -> None:
 
 def _low_margin(a: dict, bar: float) -> bool:
     """T040: top1-top2 gap below bar -> abstain."""
+    return _margin(a) < bar
+
+
+def _margin(a: dict) -> float:
+    """T335: top1-top2 probability gap (1.0 when a single horse runs)."""
     probs = sorted((a["rule"].get("probabilities", {}) or {}).values(), reverse=True)
-    return len(probs) >= 2 and (probs[0] - probs[1]) < bar
+    return (probs[0] - probs[1]) if len(probs) >= 2 else 1.0
 
 
 def _executor():
@@ -223,7 +228,7 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
         action, cause = "escalate", "quiet"  # T234
     return {"action": action, "rule": rule, "confidence": conf, "harm": harm,
             "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained, "forced": forced,
-            "cause": cause}
+            "cause": cause, "margin": round(_margin(a), 3)}
 
 
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
