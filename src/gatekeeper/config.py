@@ -38,3 +38,10 @@ class GateConfig:
             v = getattr(self, name)
             if not 0.0 <= v <= 1.0:  # T253
                 raise ConfigError(f"E_CONFIG: {name}={v!r} must be in [0, 1]")
+        if not 0.0 <= self.margin_abstain <= 1.0:  # T254
+            raise ConfigError(f"E_CONFIG: margin_abstain={self.margin_abstain!r} "
+                              "must be in [0, 1]")
+        if self.timeout_s <= 0:  # T254
+            raise ConfigError(f"E_CONFIG: timeout_s={self.timeout_s!r} must be > 0")
+        if self.history_n < 0:  # T254
+            raise ConfigError(f"E_CONFIG: history_n={self.history_n!r} must be >= 0")
