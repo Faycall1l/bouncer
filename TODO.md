@@ -360,7 +360,7 @@
 - [x] T323 cli: `demo --port/--share` passthrough
 - [x] T324 demo: `launch(port, share)` kwargs
 - [x] T325 cli: `pack show --format lines` (grep-friendly `id: text` lines)
-- [ ] T326 cli: `watch` running totals every 100 lines (stderr)
+- [x] T326 cli: `watch` running totals every 100 lines (stderr)
 - [ ] T327 cli: `export --since TS` filters by audit time
 - [ ] T328 cli: `bouncer: ` prefix on watch errors too
 - [ ] T329 cli: `check --history N` overrides history_n

@@ -77,6 +77,9 @@ def cmd_watch(args) -> int:
             print(f"error: {e}", file=sys.stderr)
             continue
         totals[res["action"]] = totals.get(res["action"], 0) + 1
+        if sum(totals.values()) % 100 == 0:  # T326: heartbeat for long tails
+            print("totals: " + " ".join(f"{a}={n}" for a, n in sorted(totals.items())),
+                  file=sys.stderr, flush=True)
         c = COLORS.get(res["action"], "")
         extra = " -> review queue" if res["action"] in ("flag", "escalate") else ""  # T208
         print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {line[:120]}{extra}",
