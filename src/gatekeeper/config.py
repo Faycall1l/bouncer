@@ -45,3 +45,12 @@ class GateConfig:
             raise ConfigError(f"E_CONFIG: timeout_s={self.timeout_s!r} must be > 0")
         if self.history_n < 0:  # T254
             raise ConfigError(f"E_CONFIG: history_n={self.history_n!r} must be >= 0")
+
+    @classmethod
+    def from_dict(cls, d: dict) -> GateConfig:
+        """T289: build from a JSON config; unknown keys rejected loudly."""
+        known = {f for f in cls.__dataclass_fields__}
+        extra = sorted(set(d) - known)
+        if extra:
+            raise ConfigError(f"E_CONFIG: unknown keys {extra}")
+        return cls(**{k: v for k, v in d.items() if k in known})
