@@ -10,6 +10,7 @@ _by_rule: dict = {}
 _joint: dict = {}  # T231: (action, rule) -> n
 _lat: list = []  # T232: ring buffer of recent latency_ms (cap 200)
 _cheap = 0  # T233: decisions served without a model call (empty/fastpath)
+_causes: dict = {}  # T234: cause -> n (margin, needs-human, quiet, low-conf, ...)
 
 
 def _pct(xs: list, q: float) -> float:
@@ -20,13 +21,15 @@ def _pct(xs: list, q: float) -> float:
 
 
 def record(action: str, rule: str, latency_ms: float | None = None,
-           cheap: bool = False) -> None:
+           cheap: bool = False, cause: str | None = None) -> None:
     """T027: count every decision + per-rule hits."""
     global _cheap
     with _lock:
         _counts[action] = _counts.get(action, 0) + 1
         _by_rule[rule] = _by_rule.get(rule, 0) + 1
         _joint[(action, rule)] = _joint.get((action, rule), 0) + 1
+        if cause:  # T234
+            _causes[cause] = _causes.get(cause, 0) + 1
         if cheap:  # T233
             _cheap += 1
         if latency_ms is not None:  # T232
@@ -45,6 +48,7 @@ def get_stats() -> dict:
                 "latency": {"n": len(_lat), "p50_ms": _pct(_lat, 0.5),  # T232
                             "p95_ms": _pct(_lat, 0.95)},
                 "cheap_paths": _cheap,  # T233
+                "causes": dict(sorted(_causes.items())),  # T234
                 "total": sum(_counts.values())}
 
 
@@ -57,3 +61,4 @@ def reset_stats() -> None:
         _joint.clear()  # T231
         del _lat[:]  # T232
         _cheap = 0  # T233
+        _causes.clear()  # T234

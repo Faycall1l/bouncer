@@ -99,11 +99,11 @@ def _quiet_active(cfg: GateConfig) -> bool:
     return (lo <= h < hi) if lo < hi else (h >= lo or h < hi)
 
 
-def _observe(msg: str, action: str, rule: str, conf: float) -> None:
+def _observe(msg: str, action: str, rule: str, conf: float, cause: str) -> None:
     """T222: cheap paths (empty/fastpath) still count in stats + audit."""
     from .audit import log_decision
     from .stats import record
-    record(action, rule, 0.0, cheap=True)  # T232+T233: zero latency, cheap path
+    record(action, rule, 0.0, cheap=True, cause=cause)  # T232+T233+T234
     log_decision(msg, rule, conf, action, 0.0)
 
 
@@ -162,23 +162,26 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
     forced = None  # T204: overrides survive margin abstention
     if jail >= cfg.jailbreak_threshold:
         action, forced = "delete", f"jailbreak {jail:.2f}"
+        cause = "jailbreak"  # T234
     elif esc >= cfg.escalate_threshold:
         action, forced = "escalate", f"needs-human {esc:.2f}"
+        cause = "needs-human"  # T234
     elif rule != "ok" and conf >= _delete_bar(cfg, rule):
-        action = "delete"
+        action, cause = "delete", "violation"
     elif rule != "ok" and conf >= _delete_bar(cfg, rule) - 0.15:
-        action = "flag"  # T031: suspected violation, visible but needs review
+        action, cause = "flag", "suspected"  # T031: suspected violation, visible but needs review
     elif rule == "ok" and conf >= cfg.allow_threshold and esc < 0.5:
-        action = "allow"
+        action, cause = "allow", "ok"
     else:
-        action = "escalate"
+        action, cause = "escalate", "low-conf"
     abstained = _low_margin(a, cfg.margin_abstain)  # T040
     if abstained and forced is None and action in ("allow", "delete"):
-        action = "escalate"
+        action, cause = "escalate", "margin"  # T234
     if action == "delete" and _quiet_active(cfg):  # T185
-        action = "escalate"
+        action, cause = "escalate", "quiet"  # T234
     return {"action": action, "rule": rule, "confidence": conf, "harm": harm,
-            "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained, "forced": forced}
+            "jailbreak_p": jail, "escalate_p": esc, "abstained": abstained, "forced": forced,
+            "cause": cause}
 
 
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
@@ -195,12 +198,12 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
                "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
                "escalate_p": 0.0, "abstained": False, "reason": "empty message",
                "latency_ms": 0.0}
-        _observe(msg, "allow", "ok", 1.0)  # T222
+        _observe(msg, "allow", "ok", 1.0, "empty")  # T222
         return res
     fp = _fastpath_allow(msg, rules)  # T017
     if fp is not None:
         fp["latency_ms"] = 0.0
-        _observe(msg, fp["action"], fp["rule"], fp["confidence"])  # T222
+        _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath")  # T222
         return fp
     key = CACHE.key(msg, rules, cfg.allow_threshold, cfg.delete_threshold,  # T221
                     cfg.severity, lang, context or (), cfg.history_n,
@@ -253,7 +256,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["raw"] = a
     from .audit import log_decision
     from .stats import record
-    record(res["action"], res["rule"], res["latency_ms"])
+    record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"))
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"])
     if res["action"] in ("flag", "escalate"):  # T207: humans work the queue
         from .review import add as _qadd
