@@ -10,6 +10,8 @@ _PATH = os.environ.get("BOUNCER_REVIEW", "review-queue.jsonl")
 
 
 def add(message: str, res: dict) -> None:  # T170
+    parent = os.path.dirname(os.path.abspath(_PATH))  # T281
+    os.makedirs(parent, exist_ok=True)
     with open(_PATH, "a") as f:
         f.write(json.dumps({"message": message[:500], "action": res["action"],
                             "rule": res["rule"], "conf": round(res["confidence"], 3),

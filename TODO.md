@@ -311,7 +311,7 @@
 - [x] T278 bench: 1-question vs 5-question payload timing script
 - [x] T279 server: batch rejects empty message list with 422
 - [x] T280 strikes: `_decay` early-returns on empty table (no clock syscall)
-- [ ] T281 review: `add()` ensures parent dir exists
+- [x] T281 review: `add()` ensures parent dir exists
 - [ ] T282 audit: rotation keeps 2 generations (.1, .2)
 - [ ] T283 stats: `get_stats()` returns deterministic (sorted) rule order
 - [ ] T284 server: `GZipMiddleware` (minimum_size=1000)
