@@ -104,8 +104,8 @@ def health():
     try:
         get_router()
         model = "loaded"
-    except Exception as e:  # noqa: BLE001
-        model = f"error: {e}"
+    except Exception:  # noqa: BLE001 — T305: never leak loader internals
+        model = "unavailable"
     return {"ok": True, "model": model, "uptime_s": round(time.time() - _START, 1)}
 
 
