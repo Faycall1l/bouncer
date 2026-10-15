@@ -178,6 +178,15 @@ def _thresholds(threshold: float, allow: float | None,
 
 
 MAX_BATCH = 32  # T224: bound one request's work
+MAX_BODY = 1_000_000  # T291: 1MB cap on batch payloads
+
+
+def _body_too_big(request: Request, limit: int = MAX_BODY) -> bool:
+    """T291: honor Content-Length before parsing a batch body."""
+    try:
+        return int(request.headers.get("content-length", 0)) > limit
+    except (TypeError, ValueError):
+        return False
 
 
 @app.post("/predict")
@@ -221,6 +230,8 @@ def predict_batch(req: BatchReq, request: Request):
     from fastapi import HTTPException
     _rate(request)  # T224: batch shares the same guards as single
     _auth(request)
+    if _body_too_big(request):  # T291
+        raise HTTPException(status_code=413, detail="batch body too large")
     if len(req.messages) > MAX_BATCH:  # T224
         raise HTTPException(status_code=413, detail=f"batch capped at {MAX_BATCH} messages")
     if not req.messages:  # T279
