@@ -16,8 +16,11 @@ def receive_slack_event(body: dict, rules: dict) -> dict:  # T078
 
 
 def forward(url: str, event: dict) -> None:  # T079
+    from gatekeeper import __version__
     req = urllib.request.Request(url, data=json.dumps(event).encode(),
-                                 headers={"Content-Type": "application/json"})
+                                 headers={"Content-Type": "application/json",
+                                          "User-Agent": f"bouncer/{__version__}",  # T293
+                                          "X-Bouncer-Event": event.get("action", "?")})
     urllib.request.urlopen(req, timeout=10).read()
 
 
