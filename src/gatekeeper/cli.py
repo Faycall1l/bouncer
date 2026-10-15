@@ -22,7 +22,17 @@ def _cfg_from_args(args):
     from gatekeeper import GateConfig
     allow = args.threshold if args.allow_threshold is None else args.allow_threshold
     delete = args.threshold if args.delete_threshold is None else args.delete_threshold
-    return GateConfig(allow_threshold=allow, delete_threshold=delete)
+    sev = {}  # T313: ["no-scams=high", ...] -> {"no-scams": "high"}
+    for item in getattr(args, "severity", None) or []:
+        if "=" not in item:
+            print(f"bouncer: bad --severity {item!r} (want RULE=low|high)", file=sys.stderr)
+            sys.exit(4)
+        rid, level = item.split("=", 1)
+        sev[rid.strip()] = level.strip()
+    cfg = GateConfig(allow_threshold=allow, delete_threshold=delete, severity=sev)
+    if getattr(args, "history", None) is not None:  # T329 (wired here, flag lands there)
+        cfg.history_n = args.history
+    return cfg
 
 
 def cmd_check(args) -> int:  # T066+T067+T071+T072
@@ -134,6 +144,7 @@ def main(argv=None) -> int:
     _add_threshold_flags(c)
     c.add_argument("--lang", default=None)  # T311
     c.add_argument("--context", action="append", default=None)  # T312: repeatable
+    c.add_argument("--severity", action="append", default=None)  # T313: RULE=low|high
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
