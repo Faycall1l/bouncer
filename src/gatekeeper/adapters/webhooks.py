@@ -24,8 +24,12 @@ def forward(url: str, event: dict) -> None:  # T079
     urllib.request.urlopen(req, timeout=10).read()
 
 
-def forward_if_interesting(res: dict, message: str) -> None:
+def forward_if_interesting(res: dict, message: str) -> bool:
+    """T294: delete/flag/escalate go to BOUNCER_FORWARD_URL with the reason; True if sent."""
     url = os.environ.get("BOUNCER_FORWARD_URL", "")
-    if url and res["action"] in ("delete", "flag"):
+    if url and res["action"] in ("delete", "flag", "escalate"):
         forward(url, {"action": res["action"], "rule": res["rule"],
-                      "confidence": res["confidence"], "message": message[:500]})
+                      "confidence": res["confidence"], "reason": res.get("reason", ""),
+                      "message": message[:500]})
+        return True
+    return False
