@@ -354,7 +354,7 @@
 - [x] T317 cli: `review --action` filter
 - [x] T318 cli: `review --clear --yes` truncates queue (`clear_queue()`)
 - [x] T319 cli: `pack --strict` exits 2 on overlap warnings
-- [ ] T320 cli: `check --quiet` prints action only
+- [x] T320 cli: `check --quiet` prints action only
 - [ ] T321 cli: `--help` epilog documents exit codes
 - [ ] T322 cli: `serve --workers N`
 - [ ] T323 cli: `demo --port/--share` passthrough

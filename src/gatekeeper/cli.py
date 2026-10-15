@@ -51,7 +51,10 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
     res = moderate(args.message, rules, config=cfg, lang=args.lang,  # T311+T312
                    context=args.context or [])
     res["reason"] = explain(res, rules)
-    print(json.dumps(res, default=str, indent=2) if args.json else f"{res['action']}: {res['reason']}")
+    if getattr(args, "quiet", False):  # T320
+        print(res["action"])
+    else:
+        print(json.dumps(res, default=str, indent=2) if args.json else f"{res['action']}: {res['reason']}")
     return {"allow": 0, "delete": 2, "flag": 2, "escalate": 3}[res["action"]]
 
 
@@ -173,6 +176,7 @@ def main(argv=None) -> int:
     c.add_argument("--lang", default=None)  # T311
     c.add_argument("--context", action="append", default=None)  # T312: repeatable
     c.add_argument("--severity", action="append", default=None)  # T313: RULE=low|high
+    c.add_argument("--quiet", action="store_true")  # T320: action word only
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
