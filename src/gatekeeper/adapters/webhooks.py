@@ -6,7 +6,12 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 import json
 import os
+import urllib.error
 import urllib.request
+
+
+class WebhookError(Exception):  # T295
+    code = "E_WEBHOOK"
 
 
 def receive_slack_event(body: dict, rules: dict) -> dict:  # T078
@@ -21,7 +26,10 @@ def forward(url: str, event: dict) -> None:  # T079
                                  headers={"Content-Type": "application/json",
                                           "User-Agent": f"bouncer/{__version__}",  # T293
                                           "X-Bouncer-Event": event.get("action", "?")})
-    urllib.request.urlopen(req, timeout=10).read()
+    try:  # T295: network failure becomes a coded error, not a bare URLError
+        urllib.request.urlopen(req, timeout=10).read()
+    except urllib.error.URLError as e:
+        raise WebhookError(f"E_WEBHOOK: POST {url} failed ({e})") from e
 
 
 def forward_if_interesting(res: dict, message: str) -> bool:
