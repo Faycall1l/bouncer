@@ -320,7 +320,7 @@
 - [x] T287 engine: fastpath results stored in CACHE (repeat hits count as cached)
 - [x] T288 cache: `set()` stores a copy (no caller-mutation aliasing)
 - [x] T289 config: `GateConfig.from_dict()` for JSON configs
-- [ ] T290 test: P16 coverage (bench scripts, gzip, from_dict, fastpath-cache)
+- [x] T290 test: P16 coverage (bench scripts, gzip, from_dict, fastpath-cache)
 
 ## P17 Security + server (T291–T310)
 - [ ] T291 server: batch 413 when Content-Length > 1MB (`_body_too_big` helper)
