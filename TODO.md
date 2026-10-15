@@ -294,7 +294,7 @@
 - [x] T263 normalize: `clean_text` guards non-str input (None -> "")
 - [x] T264 normalize: `extract_links` guards non-str input
 - [x] T265 normalize: flood detectors guard non-str input
-- [ ] T266 rules: non-str rule text rejected with type-mentioning message
+- [x] T266 rules: non-str rule text rejected with type-mentioning message
 - [ ] T267 rules: `warn_overlapping` capped at 10 warnings
 - [ ] T268 engine: `get_router()` warns when kwargs ignored after first init
 - [ ] T269 server: catch-all 500 returns structured `{code: E_INTERNAL, message}` (no traceback leak)

@@ -23,7 +23,10 @@ def validate_rule_ids(rules: dict) -> None:
 def validate_rule_text(rules: dict, max_chars: int = 280) -> None:
     """T005: rule text non-empty, bounded."""
     for rid, text in rules.items():
-        if not isinstance(text, str) or not text.strip():
+        if not isinstance(text, str):  # T266: name the type, not just "empty"
+            raise RuleError(f"E_RULES_TEXT: rule {rid!r} text is {type(text).__name__}, "
+                            "expected str")
+        if not text.strip():
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} has empty text")
         if len(text) > max_chars:
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} exceeds {max_chars} chars")
