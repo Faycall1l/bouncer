@@ -19,6 +19,8 @@ def clean_text(msg: str, max_chars: int = 2000) -> str:
 
 def caps_flood(msg: str, ratio: float = 0.7, min_len: int = 12) -> bool:
     """T014: True when mostly-caps shouting on a long-enough message."""
+    if not isinstance(msg, str):  # T265
+        return False
     letters = [c for c in msg if c.isalpha()]
     if len(letters) < min_len:
         return False
@@ -27,6 +29,8 @@ def caps_flood(msg: str, ratio: float = 0.7, min_len: int = 12) -> bool:
 
 def emoji_flood(msg: str, max_run: int = 5, max_total: int = 10) -> bool:
     """T015: True on emoji walls (long run or high total of non-text symbols)."""
+    if not isinstance(msg, str):  # T265
+        return False
     syms = [c for c in msg if not (c.isalnum() or c.isspace() or c in ".,!?;:'\"-()")]
     if len(syms) >= max_total:
         return True
