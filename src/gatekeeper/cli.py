@@ -30,7 +30,7 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
     from gatekeeper.explain import explain
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
-    res = moderate(args.message, rules, config=cfg)
+    res = moderate(args.message, rules, config=cfg, lang=args.lang)  # T311
     res["reason"] = explain(res, rules)
     print(json.dumps(res, default=str, indent=2) if args.json else f"{res['action']}: {res['reason']}")
     return {"allow": 0, "delete": 2, "flag": 2, "escalate": 3}[res["action"]]
@@ -131,6 +131,7 @@ def main(argv=None) -> int:
     c.add_argument("--rules", default="rules.json")
     c.add_argument("--preset")
     _add_threshold_flags(c)
+    c.add_argument("--lang", default=None)  # T311
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068

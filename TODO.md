@@ -345,7 +345,7 @@
 - [x] T310 test: P17 security coverage
 
 ## P18 CLI + UX (T311–T330)
-- [ ] T311 cli: `check --lang` passthrough
+- [x] T311 cli: `check --lang` passthrough
 - [ ] T312 cli: `check --context` (repeatable)
 - [ ] T313 cli: `check --severity R=high` (repeatable)
 - [ ] T314 cli: rules validated up front (fail fast, exit 4, `bouncer: ` prefix)
