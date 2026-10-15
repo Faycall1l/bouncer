@@ -305,7 +305,7 @@
 - [x] T272 cache: key fast path skips context copy when empty
 - [x] T273 engine: hoist lazy imports (audit/stats/explain) to module top
 - [x] T274 engine: `build_questions` cached per rules-hash (`lru_cache`)
-- [ ] T275 normalize: module-level precompiled whitespace regex
+- [x] T275 normalize: module-level precompiled whitespace regex
 - [ ] T276 explain: skip dist work on forced+ok fast path
 - [ ] T277 bench: stub-latency script (`eval/bench_stub.py`) writes `eval/reports/stub-latency.json`
 - [ ] T278 bench: 1-question vs 5-question payload timing script
