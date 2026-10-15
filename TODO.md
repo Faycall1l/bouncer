@@ -367,7 +367,7 @@
 - [x] T330 test: P18 CLI coverage
 
 ## P19 Engine + gates (T331–T350)
-- [ ] T331 gate: flag band width configurable (`GateConfig.flag_margin`, default 0.15)
+- [x] T331 gate: flag band width configurable (`GateConfig.flag_margin`, default 0.15)
 - [ ] T332 gate: `require_calm` option (allow only when harm == safe; default off)
 - [ ] T333 gate: severity offset configurable (`GateConfig.severity_offset`, default 0.15)
 - [ ] T334 docs: gate precedence documented in code + `docs/gates.md`

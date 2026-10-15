@@ -20,6 +20,7 @@ class GateConfig:
     jailbreak_threshold: float = 0.8   # noul jailbreak always deletes above this
     escalate_threshold: float = 0.7    # escalate_p above this forces review
     margin_abstain: float = 0.15       # top1-top2 gap below this -> abstain/escalate
+    flag_margin: float = 0.15          # T331: violation conf within this of delete bar -> flag
     max_rules: int = 12
     max_rule_chars: int = 280
     max_msg_chars: int = 2000

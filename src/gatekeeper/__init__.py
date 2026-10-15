@@ -201,7 +201,7 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
         cause = "needs-human"  # T234
     elif rule != "ok" and conf >= _delete_bar(cfg, rule):
         action, cause = "delete", "violation"
-    elif rule != "ok" and conf >= _delete_bar(cfg, rule) - 0.15:
+    elif rule != "ok" and conf >= _delete_bar(cfg, rule) - cfg.flag_margin:
         action, cause = "flag", "suspected"  # T031: suspected violation, visible but needs review
     elif rule == "ok" and conf >= cfg.allow_threshold and esc < 0.5:
         action, cause = "allow", "ok"
