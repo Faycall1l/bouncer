@@ -276,7 +276,7 @@
 - [x] T247 moderate: fresh results carry explicit `"cached": False`
 - [x] T248 strikes: `standing()` includes suggest_ban bool
 - [x] T249 strikes: `reset()` for tests
-- [ ] T250 test: P14 coverage (stats/metrics/audit/review/strikes)
+- [x] T250 test: P14 coverage (stats/metrics/audit/review/strikes)
 
 ## P15 Robustness + errors (T251–T270)
 - [ ] T251 rules: severity values must be low|high (`E_RULES_SEVERITY`)
