@@ -235,13 +235,15 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         _observe(msg, "allow", "ok", 1.0, "empty")  # T222
         return res
     fp = _fastpath_allow(msg, rules)  # T017
-    if fp is not None:
-        fp["latency_ms"] = 0.0
-        _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath")  # T222
-        return fp
     key = CACHE.key(msg, rules, cfg.allow_threshold, cfg.delete_threshold,  # T221
                     cfg.severity, lang, context or (), cfg.history_n,
                     _quiet_active(cfg))
+    if fp is not None:
+        fp["latency_ms"] = 0.0
+        fp["cached"] = False
+        _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath")  # T222
+        CACHE.set(key, dict(fp))  # T287: repeats serve from cache
+        return fp
     hit = CACHE.get(key)
     if hit is not None:
         return dict(hit, cached=True)
