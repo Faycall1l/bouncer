@@ -339,7 +339,7 @@
 - [x] T304 server: `X-Content-Type-Options: nosniff` header via middleware
 - [x] T305 server: `/health` model field is loaded/unavailable (no exception text leak)
 - [x] T306 server: 429 includes `Retry-After: 60` header
-- [ ] T307 server: constant-time API key compare (`hmac.compare_digest`)
+- [x] T307 server: constant-time API key compare (`hmac.compare_digest`)
 - [ ] T308 server: `/predict` 422 when context > 20 items
 - [ ] T309 server: batch 413 when any message > 8000 chars
 - [ ] T310 test: P17 security coverage

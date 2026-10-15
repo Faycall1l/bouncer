@@ -66,9 +66,11 @@ def _rate(request: Request) -> None:
 
 
 def _auth(request) -> None:
-    if _KEY and request.headers.get("X-API-Key") != _KEY:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=401, detail="bad API key")
+    if _KEY:
+        import hmac  # T307: constant-time compare blunts timing probes
+        if not hmac.compare_digest(request.headers.get("X-API-Key", ""), _KEY):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=401, detail="bad API key")
 
 
 @app.middleware("http")  # T052+T056+T065: request id, access log, latency header
