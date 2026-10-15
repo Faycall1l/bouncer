@@ -184,8 +184,10 @@ def main(argv=None) -> int:
     s = sub.add_parser("serve")  # T068
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
+    s.add_argument("--workers", type=int, default=1)  # T322
     s.set_defaults(fn=lambda a: (__import__("uvicorn").run("gatekeeper.serve:app",
-                                                           host=a.host, port=a.port), 0)[1])
+                                                           host=a.host, port=a.port,
+                                                           workers=a.workers), 0)[1])
     d = sub.add_parser("demo")  # T069
     d.set_defaults(fn=lambda a: (_demo(), 0))
     w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail

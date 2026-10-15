@@ -356,7 +356,7 @@
 - [x] T319 cli: `pack --strict` exits 2 on overlap warnings
 - [x] T320 cli: `check --quiet` prints action only
 - [x] T321 cli: `--help` epilog documents exit codes
-- [ ] T322 cli: `serve --workers N`
+- [x] T322 cli: `serve --workers N`
 - [ ] T323 cli: `demo --port/--share` passthrough
 - [ ] T324 demo: `launch(port, share)` kwargs
 - [ ] T325 cli: `pack show --format lines` (grep-friendly `id: text` lines)
