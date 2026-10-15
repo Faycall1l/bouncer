@@ -24,8 +24,13 @@ def run(token: str | None = None, preset: str = "gaming"):
             return
         res = moderate(msg.content, rules)
         if res["action"] == "delete":
-            await msg.delete()
-            await msg.channel.send(f"removed ({res['rule']} @ {res['confidence']:.2f})", delete_after=10)
+            try:  # T296: missing perms must not crash the bot loop
+                await msg.delete()
+            except Exception:  # noqa: BLE001 — fall back to flagging in place
+                await msg.add_reaction("⚠️")
+                return
+            await msg.channel.send(f"removed ({res['rule']} @ {res['confidence']:.2f})",
+                                   delete_after=10)
         elif res["action"] in ("flag", "escalate"):
             await msg.add_reaction("⚠️")
 
