@@ -301,7 +301,7 @@
 - [x] T270 test: P15 error-path coverage
 
 ## P16 Performance (T271–T290)
-- [ ] T271 cache: maxsize/ttl via `BOUNCER_CACHE_SIZE` / `BOUNCER_CACHE_TTL` env
+- [x] T271 cache: maxsize/ttl via `BOUNCER_CACHE_SIZE` / `BOUNCER_CACHE_TTL` env
 - [ ] T272 cache: key fast path skips context copy when empty
 - [ ] T273 engine: hoist lazy imports (audit/stats/explain) to module top
 - [ ] T274 engine: `build_questions` cached per rules-hash (`lru_cache`)

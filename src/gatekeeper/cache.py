@@ -67,4 +67,19 @@ class TTLCache:
                     "hit_rate": round(self.hits / tot, 3) if tot else 0.0}  # T245
 
 
-CACHE = TTLCache()
+def _env_int(name: str, default: int) -> int:
+    try:
+        return max(1, int(__import__("os").environ.get(name, default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return max(0.1, float(__import__("os").environ.get(name, default)))
+    except (TypeError, ValueError):
+        return default
+
+
+CACHE = TTLCache(maxsize=_env_int("BOUNCER_CACHE_SIZE", 1024),  # T271
+                 ttl=_env_float("BOUNCER_CACHE_TTL", 60.0))
