@@ -19,6 +19,8 @@ def run(token: str | None = None, preset: str = "gaming"):
     async def on_message(msg):  # T073
         if msg.author.bot:
             return
+        if not msg.content.strip():  # T298: embeds/stickers carry no text
+            return
         if msg.content.strip() == "!bouncer rules":  # T074
             await msg.channel.send("active: " + ", ".join(rules))
             return
