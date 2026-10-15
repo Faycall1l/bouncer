@@ -62,7 +62,9 @@ class TTLCache:
     def stats(self) -> dict:
         """T024."""
         with self._lock:
-            return {"hits": self.hits, "misses": self.misses, "size": len(self._d)}
+            tot = self.hits + self.misses
+            return {"hits": self.hits, "misses": self.misses, "size": len(self._d),
+                    "hit_rate": round(self.hits / tot, 3) if tot else 0.0}  # T245
 
 
 CACHE = TTLCache()
