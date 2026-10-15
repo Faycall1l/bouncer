@@ -331,7 +331,7 @@
 - [x] T296 discord: delete wrapped in try/except (missing perms -> fallback reaction)
 - [x] T297 discord: `!bouncer stats` command (from `get_stats()`)
 - [x] T298 discord: ignore empty content
-- [ ] T299 twitch: reconnect with backoff (3 retries), `_parse_privmsg` extracted (testable)
+- [x] T299 twitch: reconnect with backoff (3 retries), `_parse_privmsg` extracted (testable)
 - [ ] T300 twitch: all console output redacted (token never leaks)
 - [ ] T301 slack: body validation (`SlackError`, `E_SLACK`)
 - [ ] T302 slack: ignore bot subtypes + return explicit ignored shape
