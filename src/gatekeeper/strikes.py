@@ -2,11 +2,16 @@
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
+import os
 import time
 
 _strikes: dict = {}
 _last_decay: list = [time.time()]
-BAN_AT = 3  # T181
+
+try:  # T342
+    BAN_AT = max(1, int(os.environ.get("BOUNCER_BAN_AT", "3")))
+except (TypeError, ValueError):
+    BAN_AT = 3
 
 
 def weight_for_action(action: str) -> int:
