@@ -312,7 +312,7 @@
 - [x] T279 server: batch rejects empty message list with 422
 - [x] T280 strikes: `_decay` early-returns on empty table (no clock syscall)
 - [x] T281 review: `add()` ensures parent dir exists
-- [ ] T282 audit: rotation keeps 2 generations (.1, .2)
+- [x] T282 audit: rotation keeps 2 generations (.1, .2)
 - [ ] T283 stats: `get_stats()` returns deterministic (sorted) rule order
 - [ ] T284 server: `GZipMiddleware` (minimum_size=1000)
 - [ ] T285 demo: `run()` catches exceptions -> error badge (no traceback to UI)

@@ -23,8 +23,10 @@ _LOCK = threading.Lock()  # T229: threaded server must not interleave lines
 
 
 def _maybe_rotate() -> None:
-    """T030: size-based rotation keeps one backup generation."""
+    """T030: size-based rotation keeps two backup generations."""
     if os.path.exists(_PATH) and os.path.getsize(_PATH) > _MAX_BYTES:
+        if os.path.exists(_PATH + ".1"):  # T282: shift, don't clobber
+            os.replace(_PATH + ".1", _PATH + ".2")
         os.replace(_PATH, _PATH + ".1")
 
 
