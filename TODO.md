@@ -364,7 +364,7 @@
 - [x] T327 cli: `export --since TS` filters by audit time
 - [x] T328 cli: `bouncer: ` prefix on watch errors too
 - [x] T329 cli: `check --history N` overrides history_n
-- [ ] T330 test: P18 CLI coverage
+- [x] T330 test: P18 CLI coverage
 
 ## P19 Engine + gates (T331–T350)
 - [ ] T331 gate: flag band width configurable (`GateConfig.flag_margin`, default 0.15)
