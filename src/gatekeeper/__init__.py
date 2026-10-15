@@ -35,6 +35,7 @@ from .presets import get_preset, list_presets
 from .review import add as _qadd  # T273
 from .rules import RuleError, validate_rules
 from .stats import record  # T273
+from .strikes import add_strike, weight_for_action  # T340
 
 _INFLIGHT: dict = {}  # T180: key -> [event, result]
 import threading as _th
@@ -233,7 +234,8 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
 
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
-             lang: str | None = None, router=None, _prevalidated: bool = False) -> dict:
+             lang: str | None = None, router=None, user_id: str | None = None,
+             _prevalidated: bool = False) -> dict:
     cfg = config or GateConfig()
     if threshold is not None:  # back-compat single float sets both gates
         cfg.allow_threshold = cfg.delete_threshold = threshold
@@ -313,6 +315,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["thresholds"] = {"allow": cfg.allow_threshold,  # T336: what gated this call
                          "delete": cfg.delete_threshold}
     res["lang"] = lang  # T337: echo the hint that shaped routing
+    if user_id and res["action"] in ("flag", "delete"):  # T340: per-user strikes
+        res["strikes"] = add_strike(user_id, weight_for_action(res["action"]))
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
     res["raw"] = a
     record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"))

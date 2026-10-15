@@ -376,7 +376,7 @@
 - [x] T337 result: echoes `lang` hint
 - [x] T338 history: empty user names ignored in turn counts
 - [x] T339 history: user ids lowercased before counting
-- [ ] T340 engine: `moderate(..., user_id=)` records strikes on flag/delete, returns strikes status
+- [x] T340 engine: `moderate(..., user_id=)` records strikes on flag/delete, returns strikes status
 - [x] T341 strikes: `weight_for_action()` helper (delete=2, flag=1, else 0)
 - [ ] T342 strikes: `BAN_AT` via `BOUNCER_BAN_AT` env
 - [ ] T343 config: `quiet_hours` validated (0 <= h < 24)
