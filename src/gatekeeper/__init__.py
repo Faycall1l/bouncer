@@ -311,6 +311,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["rule_dist"] = a["rule"].get("probabilities", {})  # T038: full distribution
     res["thresholds"] = {"allow": cfg.allow_threshold,  # T336: what gated this call
                          "delete": cfg.delete_threshold}
+    res["lang"] = lang  # T337: echo the hint that shaped routing
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
     res["raw"] = a
     record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"))

@@ -373,7 +373,7 @@
 - [x] T334 docs: gate precedence documented in code + `docs/gates.md`
 - [x] T335 result: exposes `margin` float (top1-top2 gap)
 - [x] T336 result: exposes `thresholds` snapshot {allow, delete}
-- [ ] T337 result: echoes `lang` hint
+- [x] T337 result: echoes `lang` hint
 - [ ] T338 history: empty user names ignored in turn counts
 - [ ] T339 history: user ids lowercased before counting
 - [ ] T340 engine: `moderate(..., user_id=)` records strikes on flag/delete, returns strikes status
