@@ -183,6 +183,9 @@ def predict(req: ModReq, request: Request):
     except RuleError as e:
         raise HTTPException(status_code=422, detail=str(e))  # T049: rule errors are 422
     res["reason"] = explain(res, req.rules)
+    import json as _json  # T246: decision line for operators (no message text)
+    print(_json.dumps({"event": "decision", "action": res["action"], "rule": res["rule"],
+                       "conf": round(res["confidence"], 3)}), flush=True)
     return _clean(res)
 
 

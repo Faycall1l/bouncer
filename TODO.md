@@ -272,7 +272,7 @@
 - [x] T243 review: `list_queue(limit, action=None)` filter
 - [x] T244 review: `add()` stores latency_ms + rounded conf
 - [x] T245 cache: `stats()` includes hit_rate float
-- [ ] T246 server: `/predict` logs action/rule/conf JSON line
+- [x] T246 server: `/predict` logs action/rule/conf JSON line
 - [ ] T247 moderate: fresh results carry explicit `"cached": False`
 - [ ] T248 strikes: `standing()` includes suggest_ban bool
 - [ ] T249 strikes: `reset()` for tests
