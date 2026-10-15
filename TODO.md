@@ -324,7 +324,7 @@
 
 ## P17 Security + server (T291–T310)
 - [x] T291 server: batch 413 when Content-Length > 1MB (`_body_too_big` helper)
-- [ ] T292 server: warn at startup when `BOUNCER_KEY` set but < 16 chars
+- [x] T292 server: warn at startup when `BOUNCER_KEY` set but < 16 chars
 - [ ] T293 webhooks: `forward()` sends User-Agent + X-Bouncer-Event headers
 - [ ] T294 webhooks: `forward_if_interesting` also forwards escalate + includes reason, returns bool
 - [ ] T295 webhooks: `WebhookError` (`E_WEBHOOK`) on URLError

@@ -30,6 +30,8 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)  # T284
 _START = time.time()
 
 _KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared key
+if 0 < len(_KEY) < 16:  # T292: short keys fall to guessing; warn loudly, still enforce
+    print('{"warn": "BOUNCER_KEY shorter than 16 chars"}', flush=True)
 
 _BUCKETS: dict = {}  # T054: >60 req/min per IP -> 429
 
