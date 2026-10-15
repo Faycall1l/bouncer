@@ -9,6 +9,11 @@ _last_decay: list = [time.time()]
 BAN_AT = 3  # T181
 
 
+def weight_for_action(action: str) -> int:
+    """T341: strike weight per verdict (deletes hit harder than flags)."""
+    return {"delete": 2, "flag": 1}.get(action, 0)
+
+
 def add_strike(user: str, weight: int = 1) -> dict:
     """T181: record flag/delete against a user; returns status incl. ban suggestion."""
     _decay()
