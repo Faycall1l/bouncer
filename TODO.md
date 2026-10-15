@@ -268,7 +268,7 @@
 - [x] T239 stats: `reset_stats()` also clears latency buffer + causes
 - [x] T240 server: `GET /stats` includes version + uptime_s
 - [x] T241 explain: reason string includes harm label
-- [ ] T242 explain: `appeal_text(res, rules)` cites rule text
+- [x] T242 explain: `appeal_text(res, rules)` cites rule text
 - [ ] T243 review: `list_queue(limit, action=None)` filter
 - [ ] T244 review: `add()` stores latency_ms + rounded conf
 - [ ] T245 cache: `stats()` includes hit_rate float
