@@ -12,7 +12,8 @@ _PATH = os.environ.get("BOUNCER_REVIEW", "review-queue.jsonl")
 def add(message: str, res: dict) -> None:  # T170
     with open(_PATH, "a") as f:
         f.write(json.dumps({"message": message[:500], "action": res["action"],
-                            "rule": res["rule"], "conf": res["confidence"]}) + "\n")
+                            "rule": res["rule"], "conf": round(res["confidence"], 3),
+                            "ms": res.get("latency_ms", 0.0)}) + "\n")  # T244
 
 
 def list_queue(limit: int = 20, action: str | None = None) -> list:  # T170+T243

@@ -270,7 +270,7 @@
 - [x] T241 explain: reason string includes harm label
 - [x] T242 explain: `appeal_text(res, rules)` cites rule text
 - [x] T243 review: `list_queue(limit, action=None)` filter
-- [ ] T244 review: `add()` stores latency_ms + rounded conf
+- [x] T244 review: `add()` stores latency_ms + rounded conf
 - [ ] T245 cache: `stats()` includes hit_rate float
 - [ ] T246 server: `/predict` logs action/rule/conf JSON line
 - [ ] T247 moderate: fresh results carry explicit `"cached": False`
