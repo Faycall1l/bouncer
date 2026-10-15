@@ -145,9 +145,12 @@ def cmd_pack(args) -> int:
         print(json.dumps(rules, indent=2, ensure_ascii=False))
     else:
         validate_rules(rules)
-        for w in warn_overlapping(rules):
+        warns = warn_overlapping(rules)
+        for w in warns:
             print("warn:", w)
         print(f"pack ok: {len(rules)} rules")
+        if warns and getattr(args, "strict", False):  # T319
+            return 2
     return 0
 
 
@@ -200,6 +203,7 @@ def main(argv=None) -> int:
     pk.add_argument("action", choices=["show", "lint"])
     pk.add_argument("--preset", default="gaming")
     pk.add_argument("--rules")
+    pk.add_argument("--strict", action="store_true")  # T319: exit 2 on warnings
     pk.set_defaults(fn=cmd_pack)
     args = p.parse_args(argv)
     if args.version or args.cmd is None:
