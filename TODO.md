@@ -308,7 +308,7 @@
 - [x] T275 normalize: module-level precompiled whitespace regex
 - [x] T276 explain: skip dist work on forced+ok fast path
 - [x] T277 bench: stub-latency script (`eval/bench_stub.py`) writes `eval/reports/stub-latency.json`
-- [ ] T278 bench: 1-question vs 5-question payload timing script
+- [x] T278 bench: 1-question vs 5-question payload timing script
 - [ ] T279 server: batch rejects empty message list with 422
 - [ ] T280 strikes: `_decay` early-returns on empty table (no clock syscall)
 - [ ] T281 review: `add()` ensures parent dir exists
