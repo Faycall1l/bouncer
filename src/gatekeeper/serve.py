@@ -99,7 +99,9 @@ def models():
 def stats():
     from .cache import CACHE
     from .stats import get_stats
-    return {"decisions": get_stats(), "cache": CACHE.stats()}
+    return {"name": "bouncer", "version": __version__,  # T240
+            "uptime_s": round(time.time() - _START, 1),
+            "decisions": get_stats(), "cache": CACHE.stats()}
 
 
 @app.get("/presets")  # T058
