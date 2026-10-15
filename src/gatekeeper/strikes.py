@@ -30,4 +30,5 @@ def _decay() -> None:  # T182
 
 def standing(user: str) -> dict:
     _decay()
-    return {"user": user, "strikes": _strikes.get(user, 0)}
+    n = _strikes.get(user, 0)  # T248: same shape as add_strike
+    return {"user": user, "strikes": n, "suggest_ban": n >= BAN_AT}
