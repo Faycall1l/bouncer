@@ -221,6 +221,10 @@ def predict_batch(req: BatchReq, request: Request):
     _auth(request)
     if len(req.messages) > MAX_BATCH:  # T224
         raise HTTPException(status_code=413, detail=f"batch capped at {MAX_BATCH} messages")
+    if not req.messages:  # T279
+        raise HTTPException(status_code=422,
+                            detail={"code": "E_BATCH_EMPTY",
+                                    "message": "messages must be a non-empty list"})
     from . import moderate_batch
     from .config import GateConfig
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
