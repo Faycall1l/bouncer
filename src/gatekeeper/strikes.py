@@ -32,3 +32,8 @@ def standing(user: str) -> dict:
     _decay()
     n = _strikes.get(user, 0)  # T248: same shape as add_strike
     return {"user": user, "strikes": n, "suggest_ban": n >= BAN_AT}
+
+
+def reset() -> None:  # T249: test isolation
+    _strikes.clear()
+    _last_decay[0] = time.time()
