@@ -8,14 +8,25 @@ _lock = threading.Lock()
 _counts = {"allow": 0, "flag": 0, "delete": 0, "escalate": 0}
 _by_rule: dict = {}
 _joint: dict = {}  # T231: (action, rule) -> n
+_lat: list = []  # T232: ring buffer of recent latency_ms (cap 200)
 
 
-def record(action: str, rule: str) -> None:
+def _pct(xs: list, q: float) -> float:
+    if not xs:
+        return 0.0
+    s = sorted(xs)
+    return round(s[min(len(s) - 1, int(q * len(s)))], 1)
+
+
+def record(action: str, rule: str, latency_ms: float | None = None) -> None:
     """T027: count every decision + per-rule hits."""
     with _lock:
         _counts[action] = _counts.get(action, 0) + 1
         _by_rule[rule] = _by_rule.get(rule, 0) + 1
         _joint[(action, rule)] = _joint.get((action, rule), 0) + 1
+        if latency_ms is not None:  # T232
+            _lat.append(float(latency_ms))
+            del _lat[:-200]
 
 
 def get_stats() -> dict:
@@ -26,6 +37,8 @@ def get_stats() -> dict:
             nested.setdefault(r, {})[a] = n
         return {"actions": dict(_counts), "rules": dict(_by_rule),
                 "actions_by_rule": nested,  # T231
+                "latency": {"n": len(_lat), "p50_ms": _pct(_lat, 0.5),  # T232
+                            "p95_ms": _pct(_lat, 0.95)},
                 "total": sum(_counts.values())}
 
 
@@ -35,3 +48,4 @@ def reset_stats() -> None:
         _counts.update({"allow": 0, "flag": 0, "delete": 0, "escalate": 0})
         _by_rule.clear()
         _joint.clear()  # T231
+        del _lat[:]  # T232

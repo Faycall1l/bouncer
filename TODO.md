@@ -258,7 +258,7 @@
 
 ## P14 Observability + stats (T231–T250)
 - [x] T231 stats: joint action×rule counts (`actions_by_rule`)
-- [ ] T232 stats: latency ring buffer (last 200) + p50/p95 in `get_stats()`
+- [x] T232 stats: latency ring buffer (last 200) + p50/p95 in `get_stats()`
 - [ ] T233 stats: cheap-path counters (fastpath/empty allows tracked separately)
 - [ ] T234 stats: escalate-cause breakdown (margin vs needs-human vs quiet vs low-conf vs fallback)
 - [ ] T235 metrics: cache hits/misses/hit_rate + latency p50 lines

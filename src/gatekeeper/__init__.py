@@ -103,7 +103,7 @@ def _observe(msg: str, action: str, rule: str, conf: float) -> None:
     """T222: cheap paths (empty/fastpath) still count in stats + audit."""
     from .audit import log_decision
     from .stats import record
-    record(action, rule)
+    record(action, rule, 0.0)  # T232: cheap paths log zero latency
     log_decision(msg, rule, conf, action, 0.0)
 
 
@@ -253,7 +253,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["raw"] = a
     from .audit import log_decision
     from .stats import record
-    record(res["action"], res["rule"])
+    record(res["action"], res["rule"], res["latency_ms"])
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"])
     if res["action"] in ("flag", "escalate"):  # T207: humans work the queue
         from .review import add as _qadd
