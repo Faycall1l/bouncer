@@ -190,6 +190,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     cfg = config or GateConfig()
     if threshold is not None:  # back-compat single float sets both gates
         cfg.allow_threshold = cfg.delete_threshold = threshold
+        cfg.validate()  # T255: mutation bypasses __post_init__; re-check ranges
     if not _prevalidated:
         validate_rules(rules, cfg.max_rules, cfg.max_rule_chars, cfg.severity)
     msg = clean_text(message, cfg.max_msg_chars)
