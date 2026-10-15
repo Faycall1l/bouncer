@@ -31,9 +31,10 @@ class TTLCache:
         (msg, rules, both thresholds, severity, lang, bounded context,
         history window, quiet-hours state). `v2:` prefix busts old-format keys.
         """
-        hist = list(context)[-history_n:] if context else []
+        hist = list(context)[-history_n:] if context else []  # T272: no copy when empty
+        sev = repr(sorted(severity.items())) if severity else "{}"  # T272
         parts = [message, repr(sorted(rules.items())), repr((allow_threshold, delete_threshold)),
-                 repr(sorted((severity or {}).items())), repr(lang), repr(hist), repr(quiet_active)]
+                 sev, repr(lang), repr(hist), repr(quiet_active)]
         return "v2:" + ":".join(_short(p, 12 if i else 16) for i, p in enumerate(parts))
 
     def get(self, k: str):
