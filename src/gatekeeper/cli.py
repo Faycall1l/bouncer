@@ -74,7 +74,7 @@ def cmd_watch(args) -> int:
         try:
             res = moderate(line, rules, config=cfg)
         except Exception as e:  # noqa: BLE001
-            print(f"error: {e}", file=sys.stderr)
+            print(f"bouncer: watch error: {e}", file=sys.stderr)  # T328
             continue
         totals[res["action"]] = totals.get(res["action"], 0) + 1
         if sum(totals.values()) % 100 == 0:  # T326: heartbeat for long tails
