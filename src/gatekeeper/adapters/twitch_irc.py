@@ -9,9 +9,10 @@ import socket
 import sys
 
 
-def redact(s: str) -> str:  # T077
+def redact(s: str) -> str:  # T077+T300: token never reaches logs in any form
     tok = os.environ.get("TWITCH_TOKEN", "")
-    return s.replace(tok, "***") if tok else s
+    out = s.replace(tok, "***") if tok else s
+    return __import__("re").sub(r"oauth:\S+", "oauth:***", out)
 
 
 def _parse_privmsg(line: str) -> tuple | None:
@@ -59,7 +60,7 @@ def run(retries: int = 3):
         try:
             sock = socket.create_connection((host, port), timeout=15)
             sock.sendall(f"PASS {os.environ['TWITCH_TOKEN']}\r\nNICK {nick}\r\nJOIN {chan}\r\n".encode())
-            print(f"watching {chan} (flag-only)", flush=True)
+            print(f"watching {redact(chan)} (flag-only)", flush=True)  # T300
             _watch_once(sock, rules)
             return
         except OSError as e:
