@@ -315,7 +315,7 @@
 - [x] T282 audit: rotation keeps 2 generations (.1, .2)
 - [x] T283 stats: `get_stats()` returns deterministic (sorted) rule order
 - [x] T284 server: `GZipMiddleware` (minimum_size=1000)
-- [ ] T285 demo: `run()` catches exceptions -> error badge (no traceback to UI)
+- [x] T285 demo: `run()` catches exceptions -> error badge (no traceback to UI)
 - [ ] T286 cli: `watch` prints final totals at EOF
 - [ ] T287 engine: fastpath results stored in CACHE (repeat hits count as cached)
 - [ ] T288 cache: `set()` stores a copy (no caller-mutation aliasing)

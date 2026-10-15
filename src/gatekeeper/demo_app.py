@@ -29,8 +29,11 @@ def launch():  # T069 target; polished by T081-T095
             validate_rules(rules)
         except RuleError as e:  # T082: live validation errors
             return "⚠️ RULES ERROR", "-", str(e), "", "", ""
-        from gatekeeper import GateConfig
-        r = moderate(msg, rules, config=GateConfig(allow_threshold=thr, delete_threshold=thr))
+        try:  # T285: model errors become a badge, never a traceback
+            from gatekeeper import GateConfig
+            r = moderate(msg, rules, config=GateConfig(allow_threshold=thr, delete_threshold=thr))
+        except Exception as e:  # noqa: BLE001 — demo must stay up without weights
+            return "⚪ ERROR", "-", f"{type(e).__name__}: {e}", "", "", ""
         r["reason"] = explain(r, rules)
         badge = {"allow": "🟢 ALLOW", "flag": "🟡 FLAG", "delete": "🔴 DELETE",
                  "escalate": "⚪ ESCALATE"}[r["action"]]
