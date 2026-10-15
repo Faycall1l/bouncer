@@ -267,7 +267,7 @@
 - [x] T238 audit: log allow/delete threshold snapshot per line
 - [x] T239 stats: `reset_stats()` also clears latency buffer + causes
 - [x] T240 server: `GET /stats` includes version + uptime_s
-- [ ] T241 explain: reason string includes harm label
+- [x] T241 explain: reason string includes harm label
 - [ ] T242 explain: `appeal_text(res, rules)` cites rule text
 - [ ] T243 review: `list_queue(limit, action=None)` filter
 - [ ] T244 review: `add()` stores latency_ms + rounded conf
