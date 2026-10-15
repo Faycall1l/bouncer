@@ -298,7 +298,7 @@
 - [x] T267 rules: `warn_overlapping` capped at 10 warnings
 - [x] T268 engine: `get_router()` warns when kwargs ignored after first init
 - [x] T269 server: catch-all 500 returns structured `{code: E_INTERNAL, message}` (no traceback leak)
-- [ ] T270 test: P15 error-path coverage
+- [x] T270 test: P15 error-path coverage
 
 ## P16 Performance (T271–T290)
 - [ ] T271 cache: maxsize/ttl via `BOUNCER_CACHE_SIZE` / `BOUNCER_CACHE_TTL` env
