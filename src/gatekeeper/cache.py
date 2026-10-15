@@ -51,7 +51,7 @@ class TTLCache:
 
     def set(self, k: str, v: dict) -> None:
         with self._lock:
-            self._d[k] = (time.time() + self.ttl, v)
+            self._d[k] = (time.time() + self.ttl, dict(v))  # T288: copy, no aliasing
             while len(self._d) > self.maxsize:
                 self._d.popitem(last=False)
 

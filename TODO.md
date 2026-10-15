@@ -318,7 +318,7 @@
 - [x] T285 demo: `run()` catches exceptions -> error badge (no traceback to UI)
 - [x] T286 cli: `watch` prints final totals at EOF
 - [x] T287 engine: fastpath results stored in CACHE (repeat hits count as cached)
-- [ ] T288 cache: `set()` stores a copy (no caller-mutation aliasing)
+- [x] T288 cache: `set()` stores a copy (no caller-mutation aliasing)
 - [ ] T289 config: `GateConfig.from_dict()` for JSON configs
 - [ ] T290 test: P16 coverage (bench scripts, gzip, from_dict, fastpath-cache)
 
