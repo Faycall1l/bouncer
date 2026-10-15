@@ -48,6 +48,10 @@ class GateConfig:
             raise ConfigError(f"E_CONFIG: timeout_s={self.timeout_s!r} must be > 0")
         if self.history_n < 0:  # T254
             raise ConfigError(f"E_CONFIG: history_n={self.history_n!r} must be >= 0")
+        _qh = self.quiet_hours  # T343
+        if _qh and (len(_qh) != 2
+                    or not all(isinstance(h, int) and 0 <= h < 24 for h in _qh)):
+            raise ConfigError(f"E_CONFIG: quiet_hours={_qh!r} must be (lo, hi) hours in 0..23")
 
     @classmethod
     def from_dict(cls, d: dict) -> GateConfig:

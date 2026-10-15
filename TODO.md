@@ -379,7 +379,7 @@
 - [x] T340 engine: `moderate(..., user_id=)` records strikes on flag/delete, returns strikes status
 - [x] T341 strikes: `weight_for_action()` helper (delete=2, flag=1, else 0)
 - [x] T342 strikes: `BAN_AT` via `BOUNCER_BAN_AT` env
-- [ ] T343 config: `quiet_hours` validated (0 <= h < 24)
+- [x] T343 config: `quiet_hours` validated (0 <= h < 24)
 - [ ] T344 result: exposes `quiet_active` bool
 - [ ] T345 test: context-bearing moderate uses history window (history_n respected)
 - [ ] T346 test: high-severity preset rule deletes at lower bar (e2e)
