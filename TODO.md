@@ -329,7 +329,7 @@
 - [x] T294 webhooks: `forward_if_interesting` also forwards escalate + includes reason, returns bool
 - [x] T295 webhooks: `WebhookError` (`E_WEBHOOK`) on URLError
 - [x] T296 discord: delete wrapped in try/except (missing perms -> fallback reaction)
-- [ ] T297 discord: `!bouncer stats` command (from `get_stats()`)
+- [x] T297 discord: `!bouncer stats` command (from `get_stats()`)
 - [ ] T298 discord: ignore empty content
 - [ ] T299 twitch: reconnect with backoff (3 retries), `_parse_privmsg` extracted (testable)
 - [ ] T300 twitch: all console output redacted (token never leaks)

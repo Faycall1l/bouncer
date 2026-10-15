@@ -22,6 +22,12 @@ def run(token: str | None = None, preset: str = "gaming"):
         if msg.content.strip() == "!bouncer rules":  # T074
             await msg.channel.send("active: " + ", ".join(rules))
             return
+        if msg.content.strip() == "!bouncer stats":  # T297
+            from gatekeeper.stats import get_stats
+            s = get_stats()["actions"]
+            await msg.channel.send("decisions: " + ", ".join(f"{a}={n}" for a, n in
+                                                             sorted(s.items())))
+            return
         res = moderate(msg.content, rules)
         if res["action"] == "delete":
             try:  # T296: missing perms must not crash the bot loop
