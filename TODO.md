@@ -352,7 +352,7 @@
 - [x] T315 cli: `stats` human one-line summary + `--json` flag
 - [x] T316 cli: `export` prints latency p50 footer
 - [x] T317 cli: `review --action` filter
-- [ ] T318 cli: `review --clear --yes` truncates queue (`clear_queue()`)
+- [x] T318 cli: `review --clear --yes` truncates queue (`clear_queue()`)
 - [ ] T319 cli: `pack --strict` exits 2 on overlap warnings
 - [ ] T320 cli: `check --quiet` prints action only
 - [ ] T321 cli: `--help` epilog documents exit codes

@@ -26,3 +26,13 @@ def list_queue(limit: int = 20, action: str | None = None) -> list:  # T170+T243
     if action:  # T243
         rows = [r for r in rows if r.get("action") == action]
     return rows[-max(limit, 1):]
+
+
+def clear_queue() -> int:  # T318: truncate; returns rows dropped
+    if not os.path.exists(_PATH):
+        return 0
+    with open(_PATH) as f:
+        n = sum(1 for _ in f)
+    with open(_PATH, "w"):
+        pass
+    return n
