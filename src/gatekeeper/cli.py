@@ -122,6 +122,7 @@ def cmd_export(args) -> int:
     import csv
 
     from gatekeeper.audit import _PATH
+    since = getattr(args, "since", 0) or 0  # T327: epoch filter on audit "t"
     n, mss = 0, []
     with open(args.out, "w", newline="") as f:
         w = csv.writer(f)
@@ -130,6 +131,8 @@ def cmd_export(args) -> int:
             with open(_PATH) as af:
                 for line in af:
                     d = json.loads(line)
+                    if d["t"] < since:
+                        continue
                     w.writerow([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]])
                     mss.append(d["ms"])
                     n += 1
@@ -215,6 +218,7 @@ def main(argv=None) -> int:
     st.set_defaults(fn=cmd_stats)
     ex = sub.add_parser("export")  # T172
     ex.add_argument("--out", default="audit.csv")
+    ex.add_argument("--since", type=float, default=0)  # T327: epoch seconds
     ex.set_defaults(fn=cmd_export)
     pk = sub.add_parser("pack")  # T173+T174
     pk.add_argument("action", choices=["show", "lint"])
