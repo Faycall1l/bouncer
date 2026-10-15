@@ -363,7 +363,7 @@
 - [x] T326 cli: `watch` running totals every 100 lines (stderr)
 - [x] T327 cli: `export --since TS` filters by audit time
 - [x] T328 cli: `bouncer: ` prefix on watch errors too
-- [ ] T329 cli: `check --history N` overrides history_n
+- [x] T329 cli: `check --history N` overrides history_n
 - [ ] T330 test: P18 CLI coverage
 
 ## P19 Engine + gates (T331–T350)

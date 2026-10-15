@@ -38,7 +38,7 @@ def _cfg_from_args(args):
         rid, level = item.split("=", 1)
         sev[rid.strip()] = level.strip()
     cfg = GateConfig(allow_threshold=allow, delete_threshold=delete, severity=sev)
-    if getattr(args, "history", None) is not None:  # T329 (wired here, flag lands there)
+    if getattr(args, "history", None) is not None:  # T329
         cfg.history_n = args.history
     return cfg
 
@@ -189,6 +189,7 @@ def main(argv=None) -> int:
     c.add_argument("--context", action="append", default=None)  # T312: repeatable
     c.add_argument("--severity", action="append", default=None)  # T313: RULE=low|high
     c.add_argument("--quiet", action="store_true")  # T320: action word only
+    c.add_argument("--history", type=int, default=None)  # T329: override history_n
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
