@@ -258,7 +258,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     from .stats import record
     record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"))
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"],
-                 lang, len(hist))
+                 lang, len(hist), (cfg.allow_threshold, cfg.delete_threshold))
     if res["action"] in ("flag", "escalate"):  # T207: humans work the queue
         from .review import add as _qadd
         try:
