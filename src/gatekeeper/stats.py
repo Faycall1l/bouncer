@@ -43,7 +43,7 @@ def get_stats() -> dict:
         nested: dict = {}
         for (a, r), n in sorted(_joint.items()):
             nested.setdefault(r, {})[a] = n
-        return {"actions": dict(_counts), "rules": dict(_by_rule),
+        return {"actions": dict(_counts), "rules": dict(sorted(_by_rule.items())),  # T283
                 "actions_by_rule": nested,  # T231
                 "latency": {"n": len(_lat), "p50_ms": _pct(_lat, 0.5),  # T232
                             "p95_ms": _pct(_lat, 0.95)},
