@@ -265,7 +265,7 @@
 - [x] T236 metrics: `bouncer_info{version}` + uptime lines
 - [x] T237 audit: log lang_hint + context_n per line
 - [x] T238 audit: log allow/delete threshold snapshot per line
-- [ ] T239 stats: `reset_stats()` also clears latency buffer + causes
+- [x] T239 stats: `reset_stats()` also clears latency buffer + causes
 - [ ] T240 server: `GET /stats` includes version + uptime_s
 - [ ] T241 explain: reason string includes harm label
 - [ ] T242 explain: `appeal_text(res, rules)` cites rule text
