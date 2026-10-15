@@ -120,7 +120,9 @@ def metrics():
     tot = c["hits"] + c["misses"]
     lines += [f"bouncer_cache_hits {c['hits']}", f"bouncer_cache_misses {c['misses']}",
               f"bouncer_cache_hit_rate {round(c['hits'] / tot, 3) if tot else 0.0}",
-              f"bouncer_latency_p50_ms {g['latency']['p50_ms']}"]
+              f"bouncer_latency_p50_ms {g['latency']['p50_ms']}",
+              f'bouncer_info{{version="{__version__}"}} 1',  # T236
+              f"bouncer_uptime_seconds {round(time.time() - _START, 1)}"]  # T236
     return PlainTextResponse("\n".join(lines) + "\n")
 
 
