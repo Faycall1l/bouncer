@@ -316,7 +316,7 @@
 - [x] T283 stats: `get_stats()` returns deterministic (sorted) rule order
 - [x] T284 server: `GZipMiddleware` (minimum_size=1000)
 - [x] T285 demo: `run()` catches exceptions -> error badge (no traceback to UI)
-- [ ] T286 cli: `watch` prints final totals at EOF
+- [x] T286 cli: `watch` prints final totals at EOF
 - [ ] T287 engine: fastpath results stored in CACHE (repeat hits count as cached)
 - [ ] T288 cache: `set()` stores a copy (no caller-mutation aliasing)
 - [ ] T289 config: `GateConfig.from_dict()` for JSON configs

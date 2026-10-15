@@ -44,6 +44,7 @@ def cmd_watch(args) -> int:
     from gatekeeper import moderate
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
+    totals: dict = {}  # T286
     for line in sys.stdin:
         line = line.rstrip("\n")
         if not line.strip():
@@ -53,10 +54,14 @@ def cmd_watch(args) -> int:
         except Exception as e:  # noqa: BLE001
             print(f"error: {e}", file=sys.stderr)
             continue
+        totals[res["action"]] = totals.get(res["action"], 0) + 1
         c = COLORS.get(res["action"], "")
         extra = " -> review queue" if res["action"] in ("flag", "escalate") else ""  # T208
         print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {line[:120]}{extra}",
               flush=True)
+    if totals:  # T286: EOF summary to stderr (keeps stdout pipe-clean)
+        print("totals: " + " ".join(f"{a}={n}" for a, n in sorted(totals.items())),
+              file=sys.stderr)
     return 0
 
 
