@@ -40,9 +40,10 @@ def test_cache_hit_rate():  # T245
 
 
 def test_metrics_lines():  # T235+T236
+    from fastapi.testclient import TestClient
+
     import gatekeeper
     from gatekeeper import serve
-    from fastapi.testclient import TestClient
 
     class S:
         def predict(self, state, questions):
