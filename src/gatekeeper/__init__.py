@@ -113,6 +113,18 @@ def _low_margin(a: dict, bar: float) -> bool:
     return len(probs) >= 2 and (probs[0] - probs[1]) < bar
 
 
+def _executor():
+    """T259: one shared pool for timeout-guarded predicts (no per-call alloc)."""
+    global _EXEC
+    if _EXEC is None:
+        import concurrent.futures as cf
+        _EXEC = cf.ThreadPoolExecutor(max_workers=4, thread_name_prefix="bouncer-inf")
+    return _EXEC
+
+
+_EXEC = None
+
+
 def _predict_safe(router, state: dict, questions: dict, timeout_s: float) -> dict:
     """T025+T026: timeout guard, one retry, escalate-shaped fallback on failure."""
     import concurrent.futures as cf
@@ -120,8 +132,7 @@ def _predict_safe(router, state: dict, questions: dict, timeout_s: float) -> dic
     timed_out = False  # T258
     for _ in range(2):
         try:
-            with cf.ThreadPoolExecutor(max_workers=1) as ex:
-                return ex.submit(router.predict, state, questions).result(timeout=timeout_s)
+            return _executor().submit(router.predict, state, questions).result(timeout_s)
         except cf.TimeoutError:
             timed_out, last = True, f"predict exceeded {timeout_s}s"
         except Exception as e:  # noqa: BLE001
