@@ -349,7 +349,7 @@
 - [x] T312 cli: `check --context` (repeatable)
 - [x] T313 cli: `check --severity R=high` (repeatable)
 - [x] T314 cli: rules validated up front (fail fast, exit 4, `bouncer: ` prefix)
-- [ ] T315 cli: `stats` human one-line summary + `--json` flag
+- [x] T315 cli: `stats` human one-line summary + `--json` flag
 - [ ] T316 cli: `export` prints latency p50 footer
 - [ ] T317 cli: `review --action` filter
 - [ ] T318 cli: `review --clear --yes` truncates queue (`clear_queue()`)

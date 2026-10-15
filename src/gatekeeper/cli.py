@@ -94,7 +94,14 @@ def cmd_review(args) -> int:
 def cmd_stats(args) -> int:
     from gatekeeper.cache import CACHE
     from gatekeeper.stats import get_stats
-    print(json.dumps({"decisions": get_stats(), "cache": CACHE.stats()}, indent=2))
+    snap = {"decisions": get_stats(), "cache": CACHE.stats()}
+    if getattr(args, "json", False):  # T315
+        print(json.dumps(snap, indent=2))
+        return 0
+    a = snap["decisions"]["actions"]  # T315: one-line human summary
+    print(f"allow={a.get('allow', 0)} flag={a.get('flag', 0)} delete={a.get('delete', 0)} "
+          f"escalate={a.get('escalate', 0)} total={snap['decisions']['total']} "
+          f"cache_hits={snap['cache']['hits']} p50={snap['decisions']['latency']['p50_ms']}ms")
     return 0
 
 
@@ -171,6 +178,7 @@ def main(argv=None) -> int:
     r.add_argument("--limit", type=int, default=20)
     r.set_defaults(fn=cmd_review)
     st = sub.add_parser("stats")  # T171
+    st.add_argument("--json", action="store_true")  # T315
     st.set_defaults(fn=cmd_stats)
     ex = sub.add_parser("export")  # T172
     ex.add_argument("--out", default="audit.csv")
