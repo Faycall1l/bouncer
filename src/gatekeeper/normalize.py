@@ -39,4 +39,6 @@ def emoji_flood(msg: str, max_run: int = 5, max_total: int = 10) -> bool:
 
 def extract_links(msg: str) -> list:
     """T016: urls for rules/no-spam to cite and for the audit trail."""
+    if not isinstance(msg, str):  # T264
+        return []
     return URL_RE.findall(msg)
