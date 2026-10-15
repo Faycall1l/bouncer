@@ -10,7 +10,7 @@ URL_RE = re.compile(r"https?://\S+|www\.\S+|\S+\.(?:gg|com|net|io|xyz)\b\S*", re
 
 def clean_text(msg: str, max_chars: int = 2000) -> str:
     """T013: unicode-fold, collapse whitespace, truncate with marker."""
-    t = unicodedata.normalize("NFKC", msg or "")
+    t = unicodedata.normalize("NFKC", msg or "") if isinstance(msg, str) else ""  # T263
     t = re.sub(r"\s+", " ", t).strip()
     if len(t) > max_chars:
         t = t[:max_chars] + " …[truncated]"
