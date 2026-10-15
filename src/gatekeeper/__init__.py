@@ -191,7 +191,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     if threshold is not None:  # back-compat single float sets both gates
         cfg.allow_threshold = cfg.delete_threshold = threshold
     if not _prevalidated:
-        validate_rules(rules, cfg.max_rules, cfg.max_rule_chars)
+        validate_rules(rules, cfg.max_rules, cfg.max_rule_chars, cfg.severity)
     msg = clean_text(message, cfg.max_msg_chars)
     if not msg:  # T043: nothing to judge
         res = {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
@@ -281,7 +281,8 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
                    router=None, chunk: int = 8) -> list[dict]:
     """T020+T021: shared Router, chunked to bound padding; order preserved."""
     cfg = config or GateConfig()
-    validate_rules(rules, cfg.max_rules, cfg.max_rule_chars)  # T196: once, not per message
+    validate_rules(rules, cfg.max_rules, cfg.max_rule_chars,  # T196: once, not per message
+                   cfg.severity)
     r = router or get_router()
     out = []
     for i in range(0, len(messages), chunk):
