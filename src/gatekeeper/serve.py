@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware  # T055
 from pydantic import BaseModel
+from starlette.middleware.gzip import GZipMiddleware  # T284
 
 from . import __version__, get_router, moderate
 
@@ -25,6 +26,7 @@ async def _lifespan(app: FastAPI):  # T226: lifespan replaces deprecated on_even
 app = FastAPI(title="bouncer", lifespan=_lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])  # T055: demo-friendly
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # T284
 _START = time.time()
 
 _KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared key
