@@ -335,7 +335,7 @@
 - [x] T300 twitch: all console output redacted (token never leaks)
 - [x] T301 slack: body validation (`SlackError`, `E_SLACK`)
 - [x] T302 slack: ignore bot subtypes + return explicit ignored shape
-- [ ] T303 server: CORS origins via `BOUNCER_CORS` env (default "*")
+- [x] T303 server: CORS origins via `BOUNCER_CORS` env (default "*")
 - [ ] T304 server: `X-Content-Type-Options: nosniff` header via middleware
 - [ ] T305 server: `/health` model field is loaded/unavailable (no exception text leak)
 - [ ] T306 server: 429 includes `Retry-After: 60` header

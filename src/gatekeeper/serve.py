@@ -23,8 +23,14 @@ async def _lifespan(app: FastAPI):  # T226: lifespan replaces deprecated on_even
           flush=True)
 
 
+def _cors_origins() -> list:
+    """T303: comma-separated origins, default open (demo-friendly)."""
+    raw = __import__("os").environ.get("BOUNCER_CORS", "*").strip()
+    return [o.strip() for o in raw.split(",") if o.strip()] or ["*"]
+
+
 app = FastAPI(title="bouncer", lifespan=_lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
+app.add_middleware(CORSMiddleware, allow_origins=_cors_origins(), allow_methods=["*"],
                    allow_headers=["*"])  # T055: demo-friendly
 app.add_middleware(GZipMiddleware, minimum_size=1000)  # T284
 _START = time.time()
