@@ -25,6 +25,9 @@ def receive_slack_event(body: dict, rules: dict) -> dict:  # T078
     text = body.get("text", "")
     if not isinstance(text, str):
         raise SlackError("E_SLACK: event text must be a string")
+    if body.get("subtype") == "bot_message" or body.get("bot_id"):  # T302: no bot loops
+        return {"action": "allow", "rule": "ok", "confidence": 1.0, "ignored": True,
+                "reason": "slack: bot message ignored"}
     return moderate(text, rules)
 
 

@@ -334,7 +334,7 @@
 - [x] T299 twitch: reconnect with backoff (3 retries), `_parse_privmsg` extracted (testable)
 - [x] T300 twitch: all console output redacted (token never leaks)
 - [x] T301 slack: body validation (`SlackError`, `E_SLACK`)
-- [ ] T302 slack: ignore bot subtypes + return explicit ignored shape
+- [x] T302 slack: ignore bot subtypes + return explicit ignored shape
 - [ ] T303 server: CORS origins via `BOUNCER_CORS` env (default "*")
 - [ ] T304 server: `X-Content-Type-Options: nosniff` header via middleware
 - [ ] T305 server: `/health` model field is loaded/unavailable (no exception text leak)
