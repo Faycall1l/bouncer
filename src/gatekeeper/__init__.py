@@ -187,7 +187,13 @@ def _level(score_val, levels: list) -> str:
 
 
 def _decide(a: dict, cfg: GateConfig) -> dict:
-    """T002: split allow/delete thresholds; jailbreak override; escalate override."""
+    """T002: split allow/delete thresholds; jailbreak override; escalate override.
+
+    Precedence (T334, see docs/gates.md): jailbreak-delete > needs-human-escalate >
+    confident-violation delete > suspected-violation flag > calm-ok allow >
+    low-conf escalate. Margin abstention then demotes allow/delete to escalate;
+    quiet-hours demotes delete to escalate last.
+    """
     rule, conf = a["rule"]["choice"], float(a["rule"].get("confidence", 0))
     harm = _level(a["harm"]["score"], DEFAULT_HARM)  # T203
     jail = float(a["jailbreak"]["noul"])
