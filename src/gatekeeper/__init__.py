@@ -281,7 +281,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     for h in list(context or [])[:200]:  # T262: bound the scan, not just the window
         if ":" in h:
             u = h.split(":", 1)[0].strip()[:32]
-            turns[u] = turns.get(u, 0) + 1
+            if u:  # T338: ": text" lines have no user
+                turns[u] = turns.get(u, 0) + 1
     state = {"message": msg, "history": hist, "rules": rules, "user_turns": turns}
     if lang:
         state["lang_hint"] = lang  # T041: nudge multilingual routing
