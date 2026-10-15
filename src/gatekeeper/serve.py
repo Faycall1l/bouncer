@@ -181,7 +181,9 @@ def predict(req: ModReq, request: Request):
                        config=GateConfig(allow_threshold=allow_t, delete_threshold=delete_t),
                        lang=req.lang)
     except RuleError as e:
-        raise HTTPException(status_code=422, detail=str(e))  # T049: rule errors are 422
+        raise HTTPException(status_code=422,  # T256: machine-readable code
+                            detail={"code": getattr(e, "code", "E_RULES"),
+                                    "message": str(e)})
     res["reason"] = explain(res, req.rules)
     import json as _json  # T246: decision line for operators (no message text)
     print(_json.dumps({"event": "decision", "action": res["action"], "rule": res["rule"],

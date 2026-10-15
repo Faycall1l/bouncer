@@ -284,7 +284,7 @@
 - [x] T253 config: `__post_init__` validates thresholds in [0,1]
 - [x] T254 config: validates margin_abstain in [0,1], timeout_s > 0, history_n >= 0
 - [x] T255 config: `ConfigError` (`E_CONFIG`) raised on bad config
-- [ ] T256 server: 422 detail is `{code, message}` dict (machine-readable)
+- [x] T256 server: 422 detail is `{code, message}` dict (machine-readable)
 - [ ] T257 errors: `str(BouncerError)` includes its code
 - [ ] T258 engine: timeout fallback reason names the timeout (`E_MODEL: timed out after Ns`)
 - [ ] T259 engine: shared module-level `ThreadPoolExecutor` (no per-call alloc)
