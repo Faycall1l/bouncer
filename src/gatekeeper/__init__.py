@@ -264,6 +264,12 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         from .stats import record as _record
         _record("escalate", "ok", 0.0, cause="fallback")  # T260: failures are visible
         _log(msg, "ok", 0.0, "escalate", 0.0)
+        from .review import add as _qadd  # T261: failures need human eyes too
+        try:
+            _qadd(msg, {"action": "escalate", "rule": "ok", "confidence": 0.0,
+                        "latency_ms": 0.0})
+        except OSError:
+            pass
         with _FLY_LOCK:
             if key in _INFLIGHT:
                 _INFLIGHT[key][1]["res"] = fb
