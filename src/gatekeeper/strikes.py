@@ -12,12 +12,17 @@ BAN_AT = 3  # T181
 def add_strike(user: str, weight: int = 1) -> dict:
     """T181: record flag/delete against a user; returns status incl. ban suggestion."""
     _decay()
+    was_empty = not _strikes
     _strikes[user] = _strikes.get(user, 0) + weight
+    if was_empty:  # T280: clock went stale while idle-empty; restart it here
+        _last_decay[0] = time.time()
     return {"user": user, "strikes": _strikes[user],
             "suggest_ban": _strikes[user] >= BAN_AT}
 
 
 def _decay() -> None:  # T182
+    if not _strikes:  # T280: no table, no clock syscall
+        return
     now = time.time()
     hours = (now - _last_decay[0]) / 3600
     if hours >= 1:

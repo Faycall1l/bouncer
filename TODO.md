@@ -310,7 +310,7 @@
 - [x] T277 bench: stub-latency script (`eval/bench_stub.py`) writes `eval/reports/stub-latency.json`
 - [x] T278 bench: 1-question vs 5-question payload timing script
 - [x] T279 server: batch rejects empty message list with 422
-- [ ] T280 strikes: `_decay` early-returns on empty table (no clock syscall)
+- [x] T280 strikes: `_decay` early-returns on empty table (no clock syscall)
 - [ ] T281 review: `add()` ensures parent dir exists
 - [ ] T282 audit: rotation keeps 2 generations (.1, .2)
 - [ ] T283 stats: `get_stats()` returns deterministic (sorted) rule order
