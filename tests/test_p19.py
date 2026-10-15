@@ -26,3 +26,21 @@ def test_history_window_respected():  # T345
     moderate("p19 hist msg", {"plain-chat": "normal talk"}, context=ctx,
              config=GateConfig(history_n=2), router=stub)
     assert stub.last_hist == ["u4: hello there", "u5: hello there"]
+
+
+def test_severity_deletes_sooner():  # T346
+    CACHE.clear()
+
+    class Viol:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "no-scams", "confidence": 0.75,
+                         "probabilities": {"no-scams": 0.75, "ok": 0.6}},
+                "harm": {"score": "suspicious", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    rules = {"no-scams": "no scams, frauds, or rigged giveaways"}
+    plain = moderate("p19 sev msg", rules, router=Viol())
+    sev = moderate("p19 sev msg", rules,
+                   config=GateConfig(severity={"no-scams": "high"}), router=Viol())
+    assert (plain["action"], sev["action"]) == ("flag", "delete")

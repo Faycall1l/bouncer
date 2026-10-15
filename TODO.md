@@ -382,7 +382,7 @@
 - [x] T343 config: `quiet_hours` validated (0 <= h < 24)
 - [x] T344 result: exposes `quiet_active` bool
 - [x] T345 test: context-bearing moderate uses history window (history_n respected)
-- [ ] T346 test: high-severity preset rule deletes at lower bar (e2e)
+- [x] T346 test: high-severity preset rule deletes at lower bar (e2e)
 - [ ] T347 engine: question instructions mention option count
 - [ ] T348 engine: `build_questions(rules, lang=None)` adds lang line to rule question
 - [ ] T349 test: all presets validate + texts within 280 chars
