@@ -109,7 +109,7 @@ def cmd_export(args) -> int:
     import csv
 
     from gatekeeper.audit import _PATH
-    n = 0
+    n, mss = 0, []
     with open(args.out, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["t", "msg", "rule", "conf", "action", "ms"])
@@ -118,8 +118,11 @@ def cmd_export(args) -> int:
                 for line in af:
                     d = json.loads(line)
                     w.writerow([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]])
+                    mss.append(d["ms"])
                     n += 1
-    print(f"exported {n} rows -> {args.out}")
+    mss.sort()  # T316
+    p50 = mss[len(mss) // 2] if mss else 0
+    print(f"exported {n} rows -> {args.out} (latency p50 {p50}ms)")
     return 0
 
 
