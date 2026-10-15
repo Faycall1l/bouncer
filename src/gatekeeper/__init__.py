@@ -103,7 +103,7 @@ def _observe(msg: str, action: str, rule: str, conf: float) -> None:
     """T222: cheap paths (empty/fastpath) still count in stats + audit."""
     from .audit import log_decision
     from .stats import record
-    record(action, rule, 0.0)  # T232: cheap paths log zero latency
+    record(action, rule, 0.0, cheap=True)  # T232+T233: zero latency, cheap path
     log_decision(msg, rule, conf, action, 0.0)
 
 
