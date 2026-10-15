@@ -249,7 +249,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     t0 = _t.time()
     hist = [clean_text(h, 500) for h in (context or [])[-cfg.history_n:]]  # T018: bounded clean window
     turns: dict = {}  # T019: per-user turn counts from "user: text" lines
-    for h in context or []:
+    for h in list(context or [])[:200]:  # T262: bound the scan, not just the window
         if ":" in h:
             u = h.split(":", 1)[0].strip()[:32]
             turns[u] = turns.get(u, 0) + 1

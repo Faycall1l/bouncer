@@ -290,7 +290,7 @@
 - [x] T259 engine: shared module-level `ThreadPoolExecutor` (no per-call alloc)
 - [x] T260 engine: `ModelError` fallback is recorded in stats + audit
 - [x] T261 engine: `ModelError` fallback enqueues review (escalate path)
-- [ ] T262 engine: turn-counting capped at 200 context items
+- [x] T262 engine: turn-counting capped at 200 context items
 - [ ] T263 normalize: `clean_text` guards non-str input (None -> "")
 - [ ] T264 normalize: `extract_links` guards non-str input
 - [ ] T265 normalize: flood detectors guard non-str input
