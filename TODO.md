@@ -351,7 +351,7 @@
 - [x] T314 cli: rules validated up front (fail fast, exit 4, `bouncer: ` prefix)
 - [x] T315 cli: `stats` human one-line summary + `--json` flag
 - [x] T316 cli: `export` prints latency p50 footer
-- [ ] T317 cli: `review --action` filter
+- [x] T317 cli: `review --action` filter
 - [ ] T318 cli: `review --clear --yes` truncates queue (`clear_queue()`)
 - [ ] T319 cli: `pack --strict` exits 2 on overlap warnings
 - [ ] T320 cli: `check --quiet` prints action only

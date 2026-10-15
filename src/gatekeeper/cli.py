@@ -86,7 +86,7 @@ def cmd_watch(args) -> int:
 
 def cmd_review(args) -> int:
     from gatekeeper.review import list_queue
-    for row in list_queue(args.limit):
+    for row in list_queue(args.limit, action=args.action):  # T317
         print(f"{row['action']:8} {row['rule']}@{row['conf']:.2f} {row['message'][:100]}")
     return 0
 
@@ -179,6 +179,7 @@ def main(argv=None) -> int:
     w.set_defaults(fn=cmd_watch)
     r = sub.add_parser("review")  # T170
     r.add_argument("--limit", type=int, default=20)
+    r.add_argument("--action", default=None)  # T317
     r.set_defaults(fn=cmd_review)
     st = sub.add_parser("stats")  # T171
     st.add_argument("--json", action="store_true")  # T315
