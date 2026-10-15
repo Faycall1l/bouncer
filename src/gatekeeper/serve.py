@@ -191,6 +191,7 @@ def _thresholds(threshold: float, allow: float | None,
 
 MAX_BATCH = 32  # T224: bound one request's work
 MAX_BODY = 1_000_000  # T291: 1MB cap on batch payloads
+MAX_CONTEXT = 20  # T308: bound per-request history
 
 
 def _body_too_big(request: Request, limit: int = MAX_BODY) -> bool:
@@ -208,6 +209,10 @@ def predict(req: ModReq, request: Request):
     _auth(request)
     if len(req.message) > 8000:  # T064
         raise HTTPException(status_code=413, detail="message too long")
+    if len(req.context) > MAX_CONTEXT:  # T308
+        raise HTTPException(status_code=422,
+                            detail={"code": "E_CONTEXT",
+                                    "message": f"context capped at {MAX_CONTEXT} items"})
     from fastapi import HTTPException
 
     from .config import GateConfig
