@@ -28,3 +28,9 @@ def test_config_ranges():  # T253+T254+T255
         GateConfig(timeout_s=0)
     with pytest.raises(ConfigError, match="E_CONFIG"):
         moderate("hi", {"a": "rule a text"}, threshold=2.0)
+
+
+def test_error_str_has_code():  # T257
+    from gatekeeper import BouncerError, ModelError
+    assert str(ModelError("boom")) == "E_MODEL: boom"
+    assert BouncerError().code in str(BouncerError())

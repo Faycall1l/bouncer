@@ -131,6 +131,10 @@ class BouncerError(Exception):
 
     code = "E_BOUNCER"
 
+    def __str__(self) -> str:  # T257: code always visible in logs/messages
+        base = super().__str__()
+        return f"{self.code}: {base}" if base else self.code
+
 
 class ModelError(BouncerError):
     code = "E_MODEL"
@@ -239,7 +243,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     try:
         out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
     except ModelError as e:
-        fb = _fallback(f"{e.code}: {e}")
+        fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
         with _FLY_LOCK:
             if key in _INFLIGHT:
                 _INFLIGHT[key][1]["res"] = fb
