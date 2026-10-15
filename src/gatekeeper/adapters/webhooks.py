@@ -14,9 +14,17 @@ class WebhookError(Exception):  # T295
     code = "E_WEBHOOK"
 
 
+class SlackError(Exception):  # T301
+    code = "E_SLACK"
+
+
 def receive_slack_event(body: dict, rules: dict) -> dict:  # T078
     from gatekeeper import moderate
+    if not isinstance(body, dict):  # T301
+        raise SlackError(f"E_SLACK: event body is {type(body).__name__}, expected dict")
     text = body.get("text", "")
+    if not isinstance(text, str):
+        raise SlackError("E_SLACK: event text must be a string")
     return moderate(text, rules)
 
 
