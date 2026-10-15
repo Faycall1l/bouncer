@@ -189,7 +189,9 @@ def main(argv=None) -> int:
                                                            host=a.host, port=a.port,
                                                            workers=a.workers), 0)[1])
     d = sub.add_parser("demo")  # T069
-    d.set_defaults(fn=lambda a: (_demo(), 0))
+    d.add_argument("--port", type=int, default=7860)  # T323
+    d.add_argument("--share", action="store_true")  # T323
+    d.set_defaults(fn=lambda a: (_demo(a), 0))
     w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail
     w.add_argument("--rules", default="rules.json")
     w.add_argument("--preset")
@@ -224,9 +226,10 @@ def main(argv=None) -> int:
     return args.fn(args)
 
 
-def _demo():
+def _demo(args=None):
     from gatekeeper.demo_app import launch
-    launch()
+    kw = {} if args is None else {"port": args.port, "share": args.share}  # T323
+    launch(**kw)
 
 
 if __name__ == "__main__":

@@ -357,7 +357,7 @@
 - [x] T320 cli: `check --quiet` prints action only
 - [x] T321 cli: `--help` epilog documents exit codes
 - [x] T322 cli: `serve --workers N`
-- [ ] T323 cli: `demo --port/--share` passthrough
+- [x] T323 cli: `demo --port/--share` passthrough
 - [x] T324 demo: `launch(port, share)` kwargs
 - [ ] T325 cli: `pack show --format lines` (grep-friendly `id: text` lines)
 - [ ] T326 cli: `watch` running totals every 100 lines (stderr)
