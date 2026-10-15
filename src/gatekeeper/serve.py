@@ -79,6 +79,7 @@ async def _mw(request, call_next):
     ms = (time.time() - t0) * 1000
     resp.headers["X-Request-ID"] = rid
     resp.headers["X-Bouncer-ms"] = f"{ms:.1f}"
+    resp.headers["X-Content-Type-Options"] = "nosniff"  # T304
     print(f'{{"rid": "{rid}", "path": "{request.url.path}", "ms": {ms:.1f}}}', flush=True)
     return resp
 
