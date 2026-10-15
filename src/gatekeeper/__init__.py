@@ -23,6 +23,7 @@ __all__ = [
     "validate_rules",
 ]
 
+from functools import lru_cache  # T274
 from typing import TYPE_CHECKING
 
 from .audit import log_decision  # T273: stdlib-only modules, no import cycle
@@ -76,7 +77,13 @@ DEFAULT_HYPE = ["dead", "chill", "hyped"]
 
 
 def build_questions(rules: dict[str, str]) -> dict:
-    criteria = dict(rules)
+    """Read-only result (backed by an lru_cache): pass to predict, do not mutate."""
+    return _cached_questions(tuple(sorted(rules.items())))
+
+
+@lru_cache(maxsize=128)  # T274: same rule-set rebuilds no dicts per message
+def _cached_questions(items: tuple) -> dict:
+    criteria = dict(items)
     criteria["ok"] = "message follows all rules, nothing violated"
     return {
         "rule": {"type": "choice", "instructions": "Which single rule is violated? Pick ok if none.",

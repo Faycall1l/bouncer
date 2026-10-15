@@ -304,7 +304,7 @@
 - [x] T271 cache: maxsize/ttl via `BOUNCER_CACHE_SIZE` / `BOUNCER_CACHE_TTL` env
 - [x] T272 cache: key fast path skips context copy when empty
 - [x] T273 engine: hoist lazy imports (audit/stats/explain) to module top
-- [ ] T274 engine: `build_questions` cached per rules-hash (`lru_cache`)
+- [x] T274 engine: `build_questions` cached per rules-hash (`lru_cache`)
 - [ ] T275 normalize: module-level precompiled whitespace regex
 - [ ] T276 explain: skip dist work on forced+ok fast path
 - [ ] T277 bench: stub-latency script (`eval/bench_stub.py`) writes `eval/reports/stub-latency.json`
