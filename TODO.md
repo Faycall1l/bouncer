@@ -255,3 +255,223 @@
 - [x] T228 fix: fastpath word-boundary match (`ad` no longer fires on `raid`)
 - [x] T229 robust: audit write lock + bounded review tail (deque)
 - [x] T230 final: P13 tests green + tag v0.1.2
+
+## P14 Observability + stats (T231–T250)
+- [ ] T231 stats: joint action×rule counts (`actions_by_rule`)
+- [ ] T232 stats: latency ring buffer (last 200) + p50/p95 in `get_stats()`
+- [ ] T233 stats: cheap-path counters (fastpath/empty allows tracked separately)
+- [ ] T234 stats: escalate-cause breakdown (margin vs needs-human vs quiet vs low-conf vs fallback)
+- [ ] T235 metrics: cache hits/misses/hit_rate + latency p50 lines
+- [ ] T236 metrics: `bouncer_info{version}` + uptime lines
+- [ ] T237 audit: log lang_hint + context_n per line
+- [ ] T238 audit: log allow/delete threshold snapshot per line
+- [ ] T239 stats: `reset_stats()` also clears latency buffer + causes
+- [ ] T240 server: `GET /stats` includes version + uptime_s
+- [ ] T241 explain: reason string includes harm label
+- [ ] T242 explain: `appeal_text(res, rules)` cites rule text
+- [ ] T243 review: `list_queue(limit, action=None)` filter
+- [ ] T244 review: `add()` stores latency_ms + rounded conf
+- [ ] T245 cache: `stats()` includes hit_rate float
+- [ ] T246 server: `/predict` logs action/rule/conf JSON line
+- [ ] T247 moderate: fresh results carry explicit `"cached": False`
+- [ ] T248 strikes: `standing()` includes suggest_ban bool
+- [ ] T249 strikes: `reset()` for tests
+- [ ] T250 test: P14 coverage (stats/metrics/audit/review/strikes)
+
+## P15 Robustness + errors (T251–T270)
+- [ ] T251 rules: severity values must be low|high (`E_RULES_SEVERITY`)
+- [ ] T252 rules: severity keys must be a subset of rule ids
+- [ ] T253 config: `__post_init__` validates thresholds in [0,1]
+- [ ] T254 config: validates margin_abstain in [0,1], timeout_s > 0, history_n >= 0
+- [ ] T255 config: `ConfigError` (`E_CONFIG`) raised on bad config
+- [ ] T256 server: 422 detail is `{code, message}` dict (machine-readable)
+- [ ] T257 errors: `str(BouncerError)` includes its code
+- [ ] T258 engine: timeout fallback reason names the timeout (`E_MODEL: timed out after Ns`)
+- [ ] T259 engine: shared module-level `ThreadPoolExecutor` (no per-call alloc)
+- [ ] T260 engine: `ModelError` fallback is recorded in stats + audit
+- [ ] T261 engine: `ModelError` fallback enqueues review (escalate path)
+- [ ] T262 engine: turn-counting capped at 200 context items
+- [ ] T263 normalize: `clean_text` guards non-str input (None -> "")
+- [ ] T264 normalize: `extract_links` guards non-str input
+- [ ] T265 normalize: flood detectors guard non-str input
+- [ ] T266 rules: non-str rule text rejected with type-mentioning message
+- [ ] T267 rules: `warn_overlapping` capped at 10 warnings
+- [ ] T268 engine: `get_router()` warns when kwargs ignored after first init
+- [ ] T269 server: catch-all 500 returns structured `{code: E_INTERNAL, message}` (no traceback leak)
+- [ ] T270 test: P15 error-path coverage
+
+## P16 Performance (T271–T290)
+- [ ] T271 cache: maxsize/ttl via `BOUNCER_CACHE_SIZE` / `BOUNCER_CACHE_TTL` env
+- [ ] T272 cache: key fast path skips context copy when empty
+- [ ] T273 engine: hoist lazy imports (audit/stats/explain) to module top
+- [ ] T274 engine: `build_questions` cached per rules-hash (`lru_cache`)
+- [ ] T275 normalize: module-level precompiled whitespace regex
+- [ ] T276 explain: skip dist work on forced+ok fast path
+- [ ] T277 bench: stub-latency script (`eval/bench_stub.py`) writes `eval/reports/stub-latency.json`
+- [ ] T278 bench: 1-question vs 5-question payload timing script
+- [ ] T279 server: batch rejects empty message list with 422
+- [ ] T280 strikes: `_decay` early-returns on empty table (no clock syscall)
+- [ ] T281 review: `add()` ensures parent dir exists
+- [ ] T282 audit: rotation keeps 2 generations (.1, .2)
+- [ ] T283 stats: `get_stats()` returns deterministic (sorted) rule order
+- [ ] T284 server: `GZipMiddleware` (minimum_size=1000)
+- [ ] T285 demo: `run()` catches exceptions -> error badge (no traceback to UI)
+- [ ] T286 cli: `watch` prints final totals at EOF
+- [ ] T287 engine: fastpath results stored in CACHE (repeat hits count as cached)
+- [ ] T288 cache: `set()` stores a copy (no caller-mutation aliasing)
+- [ ] T289 config: `GateConfig.from_dict()` for JSON configs
+- [ ] T290 test: P16 coverage (bench scripts, gzip, from_dict, fastpath-cache)
+
+## P17 Security + server (T291–T310)
+- [ ] T291 server: batch 413 when Content-Length > 1MB (`_body_too_big` helper)
+- [ ] T292 server: warn at startup when `BOUNCER_KEY` set but < 16 chars
+- [ ] T293 webhooks: `forward()` sends User-Agent + X-Bouncer-Event headers
+- [ ] T294 webhooks: `forward_if_interesting` also forwards escalate + includes reason, returns bool
+- [ ] T295 webhooks: `WebhookError` (`E_WEBHOOK`) on URLError
+- [ ] T296 discord: delete wrapped in try/except (missing perms -> fallback reaction)
+- [ ] T297 discord: `!bouncer stats` command (from `get_stats()`)
+- [ ] T298 discord: ignore empty content
+- [ ] T299 twitch: reconnect with backoff (3 retries), `_parse_privmsg` extracted (testable)
+- [ ] T300 twitch: all console output redacted (token never leaks)
+- [ ] T301 slack: body validation (`SlackError`, `E_SLACK`)
+- [ ] T302 slack: ignore bot subtypes + return explicit ignored shape
+- [ ] T303 server: CORS origins via `BOUNCER_CORS` env (default "*")
+- [ ] T304 server: `X-Content-Type-Options: nosniff` header via middleware
+- [ ] T305 server: `/health` model field is loaded/unavailable (no exception text leak)
+- [ ] T306 server: 429 includes `Retry-After: 60` header
+- [ ] T307 server: constant-time API key compare (`hmac.compare_digest`)
+- [ ] T308 server: `/predict` 422 when context > 20 items
+- [ ] T309 server: batch 413 when any message > 8000 chars
+- [ ] T310 test: P17 security coverage
+
+## P18 CLI + UX (T311–T330)
+- [ ] T311 cli: `check --lang` passthrough
+- [ ] T312 cli: `check --context` (repeatable)
+- [ ] T313 cli: `check --severity R=high` (repeatable)
+- [ ] T314 cli: rules validated up front (fail fast, exit 4, `bouncer: ` prefix)
+- [ ] T315 cli: `stats` human one-line summary + `--json` flag
+- [ ] T316 cli: `export` prints latency p50 footer
+- [ ] T317 cli: `review --action` filter
+- [ ] T318 cli: `review --clear --yes` truncates queue (`clear_queue()`)
+- [ ] T319 cli: `pack --strict` exits 2 on overlap warnings
+- [ ] T320 cli: `check --quiet` prints action only
+- [ ] T321 cli: `--help` epilog documents exit codes
+- [ ] T322 cli: `serve --workers N`
+- [ ] T323 cli: `demo --port/--share` passthrough
+- [ ] T324 demo: `launch(port, share)` kwargs
+- [ ] T325 cli: `pack show --format lines` (grep-friendly `id: text` lines)
+- [ ] T326 cli: `watch` running totals every 100 lines (stderr)
+- [ ] T327 cli: `export --since TS` filters by audit time
+- [ ] T328 cli: `bouncer: ` prefix on watch errors too
+- [ ] T329 cli: `check --history N` overrides history_n
+- [ ] T330 test: P18 CLI coverage
+
+## P19 Engine + gates (T331–T350)
+- [ ] T331 gate: flag band width configurable (`GateConfig.flag_margin`, default 0.15)
+- [ ] T332 gate: `require_calm` option (allow only when harm == safe; default off)
+- [ ] T333 gate: severity offset configurable (`GateConfig.severity_offset`, default 0.15)
+- [ ] T334 docs: gate precedence documented in code + `docs/gates.md`
+- [ ] T335 result: exposes `margin` float (top1-top2 gap)
+- [ ] T336 result: exposes `thresholds` snapshot {allow, delete}
+- [ ] T337 result: echoes `lang` hint
+- [ ] T338 history: empty user names ignored in turn counts
+- [ ] T339 history: user ids lowercased before counting
+- [ ] T340 engine: `moderate(..., user_id=)` records strikes on flag/delete, returns strikes status
+- [ ] T341 strikes: `weight_for_action()` helper (delete=2, flag=1, else 0)
+- [ ] T342 strikes: `BAN_AT` via `BOUNCER_BAN_AT` env
+- [ ] T343 config: `quiet_hours` validated (0 <= h < 24)
+- [ ] T344 result: exposes `quiet_active` bool
+- [ ] T345 test: context-bearing moderate uses history window (history_n respected)
+- [ ] T346 test: high-severity preset rule deletes at lower bar (e2e)
+- [ ] T347 engine: question instructions mention option count
+- [ ] T348 engine: `build_questions(rules, lang=None)` adds lang line to rule question
+- [ ] T349 test: all presets validate + texts within 280 chars
+- [ ] T350 test: P19 engine coverage
+
+## P20 Demo app (T351–T370)
+- [ ] T351 demo: split allow/delete threshold sliders
+- [ ] T352 demo: meters line shows margin + abstained
+- [ ] T353 demo: session latency p50 in history header
+- [ ] T354 demo: history entries include rule@conf
+- [ ] T355 demo: 8 examples (add jailbreak + empty message)
+- [ ] T356 demo: review button queues the real current result
+- [ ] T357 demo: language dropdown (auto/en/es/fr/ar) -> lang_hint
+- [ ] T358 demo: preset switch preserves hand-edited rules (dirty flag)
+- [ ] T359 demo: footer links BENCHMARKS honest-limits
+- [ ] T360 demo: empty message returns early EMPTY badge
+- [ ] T361 demo: live session decision counter in history header
+- [ ] T362 demo: regex-baseline running agree tally
+- [ ] T363 demo: gate precedence list in explainer text
+- [ ] T364 test: Space entry imports without gradio (`parse_rules`, badge helper)
+- [ ] T365 demo: title includes package version
+- [ ] T366 demo: overlong messages truncated with note before moderate
+- [ ] T367 demo: history trail capped at 50 entries
+- [ ] T368 demo: empty distribution renders "n/a"
+- [ ] T369 demo: latency label shows cached/coalesced indicator
+- [ ] T370 test: P20 demo-logic coverage (pure helpers, no gradio)
+
+## P21 Eval + data (T371–T390)
+- [ ] T371 eval: `eval_gatekeeper.py` argparse (`--limit`, `--out`, `--help` works weightless)
+- [ ] T372 eval: report includes threshold snapshot
+- [ ] T373 eval: report includes per-action counts
+- [ ] T374 eval: report includes abstention rate
+- [ ] T375 eval: report includes Brier score
+- [ ] T376 eval: confusion pairs include mean confidence
+- [ ] T377 eval: report includes latency p95
+- [ ] T378 eval: rows with missing keys skipped + counted
+- [ ] T379 baseline: per-label breakdown output
+- [ ] T380 baseline: `--json` machine-readable flag
+- [ ] T381 data: `eval/validate_data.py` schema checker (state/rules/labels)
+- [ ] T382 data: `synth_rules.py --seed` reproducibility flag
+- [ ] T383 bench: 1-question vs 5-question timing script
+- [ ] T384 bench: batch-size sweep script with stub router
+- [ ] T385 docs: BENCHMARKS stub-latency table filled from measured runs
+- [ ] T386 kaggle: `train.py` documents expected input schema (docstring)
+- [ ] T387 notebooks: `finetune_kaggle.py` file handling via context managers
+- [ ] T388 repo: `ruff check .` fully green (notebooks/eval/kaggle/data)
+- [ ] T389 repo: `eval/reports/*.json` gitignored (keep dir via README)
+- [ ] T390 test: P21 eval-helper coverage (ece/brier/baseline/validate, no weights)
+
+## P22 Docs + packaging (T391–T410)
+- [ ] T391 docs: README split-threshold examples (CLI + API)
+- [ ] T392 docs: README batch cap + 413/429 codes
+- [ ] T393 docs: README error table gains E_CONFIG/E_WEBHOOK/E_SLACK/E_INTERNAL
+- [ ] T394 docs: `api.md` updated (split gates, caps, guards, Retry-After)
+- [ ] T395 docs: `architecture.md` diagram updated (key inputs, early observability, precedence)
+- [ ] T396 docs: `docs/gates.md` precedence reference (also T334)
+- [ ] T397 docs: rule-guide pointer to overlap warnings
+- [ ] T398 docs: thresholds guide covers flag band + severity offset
+- [ ] T399 docs: presets catalogue documents es/fr/ar packs
+- [ ] T400 docs: CHANGELOG 0.2.0 entry drafted
+- [ ] T401 pkg: Python 3.13 classifier
+- [ ] T402 ci: workflow gains `ruff check src tests` lint step
+- [ ] T403 docs: SECURITY.md `BOUNCER_*` env table
+- [ ] T404 docs: CONTRIBUTING tick+push-per-box convention note
+- [ ] T405 docs: glossary gains flag band, coalescing, quiet-hours, fastpath, margin
+- [ ] T406 docs: FAQ gains 3 entries (split gates, batch cap, stale-cache fix)
+- [ ] T407 docs: BENCHMARKS honest-limits refresh
+- [ ] T408 docs: adapters README (discord stats, twitch reconnect, webhook escalate)
+- [ ] T409 docs: `api.md` auth + rate-limit headers section
+- [ ] T410 test: docs-consistency test (codes + presets match code)
+
+## P23 Release + final (T411–T430)
+- [ ] T411 pkg: version 0.2.0 (`pyproject.toml` + `__init__.py`)
+- [ ] T412 suite: full run green (fix fallout)
+- [ ] T413 lint: `ruff check .` fully green (verify T388)
+- [ ] T414 test: every CLI subcommand `--help` exits 0
+- [ ] T415 test: every server GET route 200 with stub
+- [ ] T416 test: demo import smoke (no gradio installed)
+- [ ] T417 test: eval helpers import-safe + `ece()` golden value
+- [ ] T418 test: audit rotation (small `_MAX_BYTES`)
+- [ ] T419 test: review queue round-trip (add/list/filter/clear)
+- [ ] T420 test: strikes lifecycle (add/standing/decay/reset)
+- [ ] T421 test: cache TTL expiry
+- [ ] T422 test: request coalescing (2 threads, 1 predict call)
+- [ ] T423 test: inference timeout -> escalate fallback
+- [ ] T424 test: `amoderate` over stub via `asyncio.run`
+- [ ] T425 test: batch order + mixed cached/fresh
+- [ ] T426 test: i18n presets (ar/es/fr validate + stub moderate)
+- [ ] T427 docs: golden transcript 0.2.0 behavior note
+- [ ] T428 docs: CHANGELOG 0.2.0 dated entry finalized
+- [ ] T429 docs: release-notes draft `docs/drafts/release-0.2.0.md` + tag v0.2.0
+- [ ] T430 final: suite green + push
