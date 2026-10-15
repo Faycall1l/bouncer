@@ -28,7 +28,8 @@ def _maybe_rotate() -> None:
         os.replace(_PATH, _PATH + ".1")
 
 
-def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: float) -> None:
+def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: float,
+                 lang: str | None = None, context_n: int = 0) -> None:
     """T029: one JSON line per decision; rotates at 5MB (T030 trims below)."""
     h = hashlib.sha256(msg.encode()).hexdigest()[:16]
     with _LOCK:  # T229
@@ -36,4 +37,5 @@ def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: floa
         with open(_PATH, "a") as f:
             f.write(_dump({"t": int(time.time()), "msg": h, "rule": rule,
                            "conf": round(conf, 3), "action": action,
-                           "ms": round(latency_ms, 1)}) + "\n")
+                           "ms": round(latency_ms, 1), "lang": lang or "",  # T237
+                           "ctx": context_n}) + "\n")
