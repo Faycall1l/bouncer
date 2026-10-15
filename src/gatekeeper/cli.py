@@ -12,10 +12,18 @@ def _load_rules(args) -> dict:
     if args.preset:
         return get_preset(args.preset)
     if not __import__("os").path.exists(args.rules):  # T214
-        print(f"no rules file {args.rules!r} — pass --rules PATH or --preset NAME", file=sys.stderr)
+        print(f"bouncer: no rules file {args.rules!r} — pass --rules PATH or --preset NAME",
+              file=sys.stderr)
         sys.exit(4)
     with open(args.rules) as f:
-        return json.load(f)
+        rules = json.load(f)
+    from gatekeeper.rules import RuleError, validate_rules  # T314: fail fast, not per-line
+    try:
+        validate_rules(rules)
+    except RuleError as e:
+        print(f"bouncer: bad rules: {e}", file=sys.stderr)
+        sys.exit(4)
+    return rules
 
 def _cfg_from_args(args):
     """T223: split gates; unset flags fall back to the single --threshold."""
