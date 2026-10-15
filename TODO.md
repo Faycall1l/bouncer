@@ -306,7 +306,7 @@
 - [x] T273 engine: hoist lazy imports (audit/stats/explain) to module top
 - [x] T274 engine: `build_questions` cached per rules-hash (`lru_cache`)
 - [x] T275 normalize: module-level precompiled whitespace regex
-- [ ] T276 explain: skip dist work on forced+ok fast path
+- [x] T276 explain: skip dist work on forced+ok fast path
 - [ ] T277 bench: stub-latency script (`eval/bench_stub.py`) writes `eval/reports/stub-latency.json`
 - [ ] T278 bench: 1-question vs 5-question payload timing script
 - [ ] T279 server: batch rejects empty message list with 422
