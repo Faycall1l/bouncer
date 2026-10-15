@@ -260,6 +260,10 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
     except ModelError as e:
         fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
+        from .audit import log_decision as _log
+        from .stats import record as _record
+        _record("escalate", "ok", 0.0, cause="fallback")  # T260: failures are visible
+        _log(msg, "ok", 0.0, "escalate", 0.0)
         with _FLY_LOCK:
             if key in _INFLIGHT:
                 _INFLIGHT[key][1]["res"] = fb

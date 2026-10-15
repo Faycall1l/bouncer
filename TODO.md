@@ -288,7 +288,7 @@
 - [x] T257 errors: `str(BouncerError)` includes its code
 - [x] T258 engine: timeout fallback reason names the timeout (`E_MODEL: timed out after Ns`)
 - [x] T259 engine: shared module-level `ThreadPoolExecutor` (no per-call alloc)
-- [ ] T260 engine: `ModelError` fallback is recorded in stats + audit
+- [x] T260 engine: `ModelError` fallback is recorded in stats + audit
 - [ ] T261 engine: `ModelError` fallback enqueues review (escalate path)
 - [ ] T262 engine: turn-counting capped at 200 context items
 - [ ] T263 normalize: `clean_text` guards non-str input (None -> "")
