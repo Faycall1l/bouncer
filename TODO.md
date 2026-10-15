@@ -368,7 +368,7 @@
 
 ## P19 Engine + gates (T331–T350)
 - [x] T331 gate: flag band width configurable (`GateConfig.flag_margin`, default 0.15)
-- [ ] T332 gate: `require_calm` option (allow only when harm == safe; default off)
+- [x] T332 gate: `require_calm` option (allow only when harm == safe; default off)
 - [ ] T333 gate: severity offset configurable (`GateConfig.severity_offset`, default 0.15)
 - [ ] T334 docs: gate precedence documented in code + `docs/gates.md`
 - [ ] T335 result: exposes `margin` float (top1-top2 gap)

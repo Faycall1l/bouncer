@@ -204,7 +204,10 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
     elif rule != "ok" and conf >= _delete_bar(cfg, rule) - cfg.flag_margin:
         action, cause = "flag", "suspected"  # T031: suspected violation, visible but needs review
     elif rule == "ok" and conf >= cfg.allow_threshold and esc < 0.5:
-        action, cause = "allow", "ok"
+        if cfg.require_calm and harm != "safe":  # T332
+            action, cause = "escalate", "low-conf"
+        else:
+            action, cause = "allow", "ok"
     else:
         action, cause = "escalate", "low-conf"
     abstained = _low_margin(a, cfg.margin_abstain)  # T040
