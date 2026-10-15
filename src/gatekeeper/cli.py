@@ -145,7 +145,11 @@ def cmd_pack(args) -> int:
     else:
         rules = get_preset(args.preset)
     if args.action == "show":
-        print(json.dumps(rules, indent=2, ensure_ascii=False))
+        if getattr(args, "format", "json") == "lines":  # T325: grep-friendly
+            for rid, text in rules.items():
+                print(f"{rid}: {text}")
+        else:
+            print(json.dumps(rules, indent=2, ensure_ascii=False))
     else:
         validate_rules(rules)
         warns = warn_overlapping(rules)
@@ -214,6 +218,7 @@ def main(argv=None) -> int:
     pk.add_argument("--preset", default="gaming")
     pk.add_argument("--rules")
     pk.add_argument("--strict", action="store_true")  # T319: exit 2 on warnings
+    pk.add_argument("--format", choices=["json", "lines"], default="json")  # T325
     pk.set_defaults(fn=cmd_pack)
     args = p.parse_args(argv)
     if args.version or args.cmd is None:
