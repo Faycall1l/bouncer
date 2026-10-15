@@ -65,6 +65,8 @@ def warn_overlapping(rules: dict) -> list:
             shared = toks[ids[i]] & toks[ids[j]]
             if len(shared) >= 3:
                 warns.append(f"{ids[i]} ~ {ids[j]} share {sorted(shared)[:4]}")
+            if len(warns) >= 10:  # T267: cap noise on big packs
+                return warns
     return warns
 
 

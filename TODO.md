@@ -295,7 +295,7 @@
 - [x] T264 normalize: `extract_links` guards non-str input
 - [x] T265 normalize: flood detectors guard non-str input
 - [x] T266 rules: non-str rule text rejected with type-mentioning message
-- [ ] T267 rules: `warn_overlapping` capped at 10 warnings
+- [x] T267 rules: `warn_overlapping` capped at 10 warnings
 - [ ] T268 engine: `get_router()` warns when kwargs ignored after first init
 - [ ] T269 server: catch-all 500 returns structured `{code: E_INTERNAL, message}` (no traceback leak)
 - [ ] T270 test: P15 error-path coverage
