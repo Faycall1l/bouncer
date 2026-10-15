@@ -267,6 +267,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
             pass
     from .explain import explain as _explain  # T213: reason ships in every result
     res["reason"] = _explain(res, rules)
+    res["cached"] = False  # T247: explicit miss marker (hits override to True)
     CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
     with _FLY_LOCK:  # T180: publish to joiners
         if key in _INFLIGHT:
