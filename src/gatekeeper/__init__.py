@@ -98,9 +98,9 @@ def _cached_questions(items: tuple) -> dict:
 
 
 def _delete_bar(cfg: GateConfig, rule: str) -> float:
-    """T003: high-severity rules delete 0.15 sooner."""
+    """T003: high-severity rules delete sooner (offset configurable, T333)."""
     if cfg.severity.get(rule) == "high":
-        return max(0.5, cfg.delete_threshold - 0.15)
+        return max(0.5, cfg.delete_threshold - cfg.severity_offset)
     return cfg.delete_threshold
 
 
