@@ -112,9 +112,15 @@ def presets():
 def metrics():
     from fastapi.responses import PlainTextResponse
 
+    from .cache import CACHE
     from .stats import get_stats
-    s = get_stats()["actions"]
-    lines = [f'bouncer_decisions_total{{action="{k}"}} {v}' for k, v in s.items()]
+    g = get_stats()
+    lines = [f'bouncer_decisions_total{{action="{k}"}} {v}' for k, v in g["actions"].items()]
+    c = CACHE.stats()  # T235
+    tot = c["hits"] + c["misses"]
+    lines += [f"bouncer_cache_hits {c['hits']}", f"bouncer_cache_misses {c['misses']}",
+              f"bouncer_cache_hit_rate {round(c['hits'] / tot, 3) if tot else 0.0}",
+              f"bouncer_latency_p50_ms {g['latency']['p50_ms']}"]
     return PlainTextResponse("\n".join(lines) + "\n")
 
 

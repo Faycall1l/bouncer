@@ -261,7 +261,7 @@
 - [x] T232 stats: latency ring buffer (last 200) + p50/p95 in `get_stats()`
 - [x] T233 stats: cheap-path counters (fastpath/empty allows tracked separately)
 - [x] T234 stats: escalate-cause breakdown (margin vs needs-human vs quiet vs low-conf vs fallback)
-- [ ] T235 metrics: cache hits/misses/hit_rate + latency p50 lines
+- [x] T235 metrics: cache hits/misses/hit_rate + latency p50 lines
 - [ ] T236 metrics: `bouncer_info{version}` + uptime lines
 - [ ] T237 audit: log lang_hint + context_n per line
 - [ ] T238 audit: log allow/delete threshold snapshot per line
