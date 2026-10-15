@@ -164,7 +164,9 @@ def _add_threshold_flags(p) -> None:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="bouncer")
+    p = argparse.ArgumentParser(prog="bouncer",  # T321: exit codes up front
+                                epilog="exit codes: 0 allow · 2 delete/flag · 3 escalate · "
+                                       "4 usage/rules error")
     p.add_argument("--version", action="store_true")  # T215
     sub = p.add_subparsers(dest="cmd", required=False)
     sub.required = False
