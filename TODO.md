@@ -358,7 +358,7 @@
 - [x] T321 cli: `--help` epilog documents exit codes
 - [x] T322 cli: `serve --workers N`
 - [ ] T323 cli: `demo --port/--share` passthrough
-- [ ] T324 demo: `launch(port, share)` kwargs
+- [x] T324 demo: `launch(port, share)` kwargs
 - [ ] T325 cli: `pack show --format lines` (grep-friendly `id: text` lines)
 - [ ] T326 cli: `watch` running totals every 100 lines (stderr)
 - [ ] T327 cli: `export --since TS` filters by audit time
