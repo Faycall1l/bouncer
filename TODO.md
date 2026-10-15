@@ -303,7 +303,7 @@
 ## P16 Performance (T271–T290)
 - [x] T271 cache: maxsize/ttl via `BOUNCER_CACHE_SIZE` / `BOUNCER_CACHE_TTL` env
 - [x] T272 cache: key fast path skips context copy when empty
-- [ ] T273 engine: hoist lazy imports (audit/stats/explain) to module top
+- [x] T273 engine: hoist lazy imports (audit/stats/explain) to module top
 - [ ] T274 engine: `build_questions` cached per rules-hash (`lru_cache`)
 - [ ] T275 normalize: module-level precompiled whitespace regex
 - [ ] T276 explain: skip dist work on forced+ok fast path

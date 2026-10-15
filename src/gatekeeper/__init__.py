@@ -25,11 +25,15 @@ __all__ = [
 
 from typing import TYPE_CHECKING
 
+from .audit import log_decision  # T273: stdlib-only modules, no import cycle
 from .cache import CACHE  # T023/T024 decision cache
 from .config import GateConfig
+from .explain import explain as _explain  # T273
 from .normalize import clean_text, extract_links
 from .presets import get_preset, list_presets
+from .review import add as _qadd  # T273
 from .rules import RuleError, validate_rules
+from .stats import record  # T273
 
 _INFLIGHT: dict = {}  # T180: key -> [event, result]
 import threading as _th
@@ -105,8 +109,6 @@ def _quiet_active(cfg: GateConfig) -> bool:
 
 def _observe(msg: str, action: str, rule: str, conf: float, cause: str) -> None:
     """T222: cheap paths (empty/fastpath) still count in stats + audit."""
-    from .audit import log_decision
-    from .stats import record
     record(action, rule, 0.0, cheap=True, cause=cause)  # T232+T233+T234
     log_decision(msg, rule, conf, action, 0.0)
 
@@ -264,11 +266,8 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
     except ModelError as e:
         fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
-        from .audit import log_decision as _log
-        from .stats import record as _record
-        _record("escalate", "ok", 0.0, cause="fallback")  # T260: failures are visible
-        _log(msg, "ok", 0.0, "escalate", 0.0)
-        from .review import add as _qadd  # T261: failures need human eyes too
+        record("escalate", "ok", 0.0, cause="fallback")  # T260: failures are visible
+        log_decision(msg, "ok", 0.0, "escalate", 0.0)
         try:
             _qadd(msg, {"action": "escalate", "rule": "ok", "confidence": 0.0,
                         "latency_ms": 0.0})
@@ -289,19 +288,15 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["rule_dist"] = a["rule"].get("probabilities", {})  # T038: full distribution
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
     res["raw"] = a
-    from .audit import log_decision
-    from .stats import record
     record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"))
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"],
                  lang, len(hist), (cfg.allow_threshold, cfg.delete_threshold))
     if res["action"] in ("flag", "escalate"):  # T207: humans work the queue
-        from .review import add as _qadd
         try:
             _qadd(msg, res)
         except OSError:
             pass
-    from .explain import explain as _explain  # T213: reason ships in every result
-    res["reason"] = _explain(res, rules)
+    res["reason"] = _explain(res, rules)  # T213: reason ships in every result
     res["cached"] = False  # T247: explicit miss marker (hits override to True)
     CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
     with _FLY_LOCK:  # T180: publish to joiners
