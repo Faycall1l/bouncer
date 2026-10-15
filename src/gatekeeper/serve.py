@@ -73,6 +73,21 @@ async def _mw(request, call_next):
     return resp
 
 
+@app.exception_handler(Exception)  # T269: structured 500, no traceback to clients
+async def _internal(request: Request, exc: Exception):
+    from fastapi import HTTPException
+    from fastapi.responses import JSONResponse
+    if isinstance(exc, HTTPException):  # T269: HTTP errors keep status + detail
+        return JSONResponse(status_code=exc.status_code,
+                            content={"detail": exc.detail},
+                            headers=exc.headers)
+    print(f'{{"event": "internal-error", "path": "{request.url.path}", '
+          f'"err": "{type(exc).__name__}"}}', flush=True)
+    return JSONResponse(status_code=500,
+                        content={"detail": {"code": "E_INTERNAL",
+                                            "message": "internal error"}})
+
+
 @app.get("/health")  # T046
 def health():
     try:

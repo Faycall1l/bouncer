@@ -297,7 +297,7 @@
 - [x] T266 rules: non-str rule text rejected with type-mentioning message
 - [x] T267 rules: `warn_overlapping` capped at 10 warnings
 - [x] T268 engine: `get_router()` warns when kwargs ignored after first init
-- [ ] T269 server: catch-all 500 returns structured `{code: E_INTERNAL, message}` (no traceback leak)
+- [x] T269 server: catch-all 500 returns structured `{code: E_INTERNAL, message}` (no traceback leak)
 - [ ] T270 test: P15 error-path coverage
 
 ## P16 Performance (T271–T290)
