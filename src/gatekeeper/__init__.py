@@ -280,7 +280,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     turns: dict = {}  # T019: per-user turn counts from "user: text" lines
     for h in list(context or [])[:200]:  # T262: bound the scan, not just the window
         if ":" in h:
-            u = h.split(":", 1)[0].strip()[:32]
+            u = h.split(":", 1)[0].strip().lower()[:32]  # T339: case-fold ids
             if u:  # T338: ": text" lines have no user
                 turns[u] = turns.get(u, 0) + 1
     state = {"message": msg, "history": hist, "rules": rules, "user_turns": turns}
