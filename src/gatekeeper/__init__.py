@@ -117,12 +117,17 @@ def _predict_safe(router, state: dict, questions: dict, timeout_s: float) -> dic
     """T025+T026: timeout guard, one retry, escalate-shaped fallback on failure."""
     import concurrent.futures as cf
     last = None
+    timed_out = False  # T258
     for _ in range(2):
         try:
             with cf.ThreadPoolExecutor(max_workers=1) as ex:
                 return ex.submit(router.predict, state, questions).result(timeout=timeout_s)
-        except Exception as e:  # noqa: BLE001 — any inference failure degrades to review
+        except cf.TimeoutError:
+            timed_out, last = True, f"predict exceeded {timeout_s}s"
+        except Exception as e:  # noqa: BLE001
             last = e
+    if timed_out:  # T258: name the timeout so operators see a slow model, not a crash
+        raise ModelError(f"timed out after {timeout_s}s (one retry)")
     raise ModelError(f"inference failed twice ({last})")  # T197
 
 

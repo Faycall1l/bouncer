@@ -286,7 +286,7 @@
 - [x] T255 config: `ConfigError` (`E_CONFIG`) raised on bad config
 - [x] T256 server: 422 detail is `{code, message}` dict (machine-readable)
 - [x] T257 errors: `str(BouncerError)` includes its code
-- [ ] T258 engine: timeout fallback reason names the timeout (`E_MODEL: timed out after Ns`)
+- [x] T258 engine: timeout fallback reason names the timeout (`E_MODEL: timed out after Ns`)
 - [ ] T259 engine: shared module-level `ThreadPoolExecutor` (no per-call alloc)
 - [ ] T260 engine: `ModelError` fallback is recorded in stats + audit
 - [ ] T261 engine: `ModelError` fallback enqueues review (escalate path)
