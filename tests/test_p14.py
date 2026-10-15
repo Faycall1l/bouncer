@@ -7,6 +7,7 @@ from gatekeeper.stats import get_stats, record, reset_stats
 
 
 def test_reset_clears_all():  # T239
+    reset_stats()
     record("delete", "no-spam", 12.5, cause="violation")
     record("allow", "ok", 0.0, cheap=True, cause="fastpath")
     s = get_stats()
@@ -17,3 +18,4 @@ def test_reset_clears_all():  # T239
     s = get_stats()
     assert s["total"] == 0 and s["latency"]["n"] == 0
     assert s["cheap_paths"] == 0 and s["causes"] == {} and s["actions_by_rule"] == {}
+    reset_stats()  # leave clean state for later tests
