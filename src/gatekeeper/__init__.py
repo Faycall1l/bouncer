@@ -315,6 +315,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     res["thresholds"] = {"allow": cfg.allow_threshold,  # T336: what gated this call
                          "delete": cfg.delete_threshold}
     res["lang"] = lang  # T337: echo the hint that shaped routing
+    res["quiet_active"] = _quiet_active(cfg)  # T344
     if user_id and res["action"] in ("flag", "delete"):  # T340: per-user strikes
         res["strikes"] = add_strike(user_id, weight_for_action(res["action"]))
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
