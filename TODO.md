@@ -280,7 +280,7 @@
 
 ## P15 Robustness + errors (T251–T270)
 - [x] T251 rules: severity values must be low|high (`E_RULES_SEVERITY`)
-- [ ] T252 rules: severity keys must be a subset of rule ids
+- [x] T252 rules: severity keys must be a subset of rule ids
 - [ ] T253 config: `__post_init__` validates thresholds in [0,1]
 - [ ] T254 config: validates margin_abstain in [0,1], timeout_s > 0, history_n >= 0
 - [ ] T255 config: `ConfigError` (`E_CONFIG`) raised on bad config
