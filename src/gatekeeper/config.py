@@ -29,6 +29,8 @@ class GateConfig:
     history_n: int = 4
     timeout_s: float = 10.0
     severity: dict = field(default_factory=dict)  # rule_id -> "low" | "high"
+    # T484: severity is NEVER inferred from presets — callers attach it explicitly
+    # (presets ship text only; high-stakes meanings differ per community).
     quiet_hours: tuple = ()  # T185: e.g. (1, 7) UTC -> delete becomes escalate overnight
 
     def __post_init__(self) -> None:

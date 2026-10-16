@@ -534,7 +534,7 @@
 - [x] T481 serve: preset requests still honor split thresholds
 - [x] T482 serve: preset + rules together → 422 (exactly one source)
 - [x] T483 cli: `check` preset+rules conflict exits 4
-- [ ] T484 engine: preset severity auto-attach? no — explicit only (docstring note)
+- [x] T484 engine: preset severity auto-attach? no — explicit only (docstring note)
 - [ ] T485 serve: batch preset applies to every message
 - [ ] T486 test: batch preset e2e
 - [ ] T487 test: default-preset env e2e
