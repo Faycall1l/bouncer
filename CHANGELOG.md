@@ -1,6 +1,6 @@
 # Changelog (T146/T168)
 
-## 0.2.0 — UNRELEASED (draft, T400)
+## 0.2.0 — 2026-10-16 (T428)
 * Observability: joint action×rule counts, latency p50/p95, cheap-path counter,
   escalate causes, richer audit lines (lang/ctx/thresholds), metrics + /stats
   growth, harm in reasons, review filters.
