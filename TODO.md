@@ -405,7 +405,7 @@
 - [x] T364 test: Space entry imports without gradio (`parse_rules`, badge helper)
 - [x] T365 demo: title includes package version
 - [x] T366 demo: overlong messages truncated with note before moderate
-- [ ] T367 demo: history trail capped at 50 entries
+- [x] T367 demo: history trail capped at 50 entries
 - [ ] T368 demo: empty distribution renders "n/a"
 - [ ] T369 demo: latency label shows cached/coalesced indicator
 - [ ] T370 test: P20 demo-logic coverage (pure helpers, no gradio)

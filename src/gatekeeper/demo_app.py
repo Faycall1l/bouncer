@@ -118,6 +118,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         def run_h(msg, preset, rules_t, allow_thr, delete_thr, lang):
             out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr, lang)
             trail.append(f"{out[0]} {out[1]} {msg[:60]}")  # T354: badge + rule@conf
+            del trail[:-50]  # T367: bounded session memory
             ms = out[5]
             try:
                 lats.append(float(str(ms).split()[0]))
