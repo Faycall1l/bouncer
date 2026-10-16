@@ -455,7 +455,7 @@
 - [x] T410 test: docs-consistency test (codes + presets match code)
 
 ## P23 Release + final (T411–T430)
-- [ ] T411 pkg: version 0.2.0 (`pyproject.toml` + `__init__.py`)
+- [x] T411 pkg: version 0.2.0 (`pyproject.toml` + `__init__.py`)
 - [ ] T412 suite: full run green (fix fallout)
 - [ ] T413 lint: `ruff check .` fully green (verify T388)
 - [ ] T414 test: every CLI subcommand `--help` exits 0

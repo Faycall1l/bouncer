@@ -6,7 +6,7 @@ from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 __all__ = [
     "DEFAULT_HARM",
     "DEFAULT_HYPE",
