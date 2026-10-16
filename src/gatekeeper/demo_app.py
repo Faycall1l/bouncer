@@ -13,6 +13,13 @@ def parse_rules(text: str) -> dict:
     return d
 
 
+def review_entry(message: str, res: dict) -> dict:
+    """T356: pure payload builder for the review-queue button (testable w/o gradio)."""
+    return {"message": message[:500], "action": res["action"], "rule": res["rule"],
+            "conf": round(res.get("confidence", 0.0), 3),
+            "ms": res.get("latency_ms", 0.0)}
+
+
 def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T081-T095
     """T324: port/share settable for `bouncer demo --port/--share` and Spaces."""
     import gradio as gr
@@ -22,6 +29,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
 
     names = sorted(list_presets())
     preset_text = {n: "\n".join(f"{k}: {v}" for k, v in get_preset(n).items()) for n in names}
+    stash: dict = {}  # T356: latest real result for the review button
 
     def run(msg, preset, rules_t, allow_thr, delete_thr):  # T351: split gates
         rules = parse_rules(rules_t) or get_preset(preset)
@@ -37,6 +45,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         except Exception as e:  # noqa: BLE001 — demo must stay up without weights
             return "⚪ ERROR", "-", f"{type(e).__name__}: {e}", "", "", ""
         r["reason"] = explain(r, rules)
+        stash["res"] = r  # T356
         badge = {"allow": "🟢 ALLOW", "flag": "🟡 FLAG", "delete": "🔴 DELETE",
                  "escalate": "⚪ ESCALATE"}[r["action"]]
         dist = r.get("rule_dist") or {}
@@ -93,8 +102,10 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
 
         def to_review(m, b, r):
             from gatekeeper.review import add
-            add(m, {"action": "flag", "rule": r, "confidence": 0.0})
-            return f"queued: {b} {m[:60]}"
+            res = stash.get("res") or {"action": "flag", "rule": r,  # T356: real result
+                                       "confidence": 0.0}
+            add(m, res)
+            return f"queued: {res['action']} {m[:60]}"
 
         flag_btn.click(to_review, [msg, badge, rule], [flag_out])
         gr.Examples(  # T088+T355
