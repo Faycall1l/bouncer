@@ -407,7 +407,7 @@
 - [x] T366 demo: overlong messages truncated with note before moderate
 - [x] T367 demo: history trail capped at 50 entries
 - [x] T368 demo: empty distribution renders "n/a"
-- [ ] T369 demo: latency label shows cached/coalesced indicator
+- [x] T369 demo: latency label shows cached/coalesced indicator
 - [ ] T370 test: P20 demo-logic coverage (pure helpers, no gradio)
 
 ## P21 Eval + data (T371–T390)

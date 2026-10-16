@@ -69,7 +69,12 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         tally[0] += agree  # T362: running [hits, total]
         tally[1] += 1
         meters += f" ({tally[0]}/{tally[1]})"
-        return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"] + note, bars, meters, f"{r.get('latency_ms', '?')} ms"
+        lat_txt = f"{r.get('latency_ms', '?')} ms"  # T369
+        if r.get("cached"):
+            lat_txt += " (cached)"
+        elif r.get("coalesced"):
+            lat_txt += " (coalesced)"
+        return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"] + note, bars, meters, lat_txt
 
     with gr.Blocks(title="bouncer", theme=gr.themes.Soft()) as app:  # T091
         from gatekeeper import __version__  # T365
