@@ -140,10 +140,16 @@ def stats():
     from .cache import CACHE
     from .stats import get_stats
     table = _strikes._strikes
+    from . import _BREAKER, _BREAKER_LOCK  # T522
     from .pool import POOL  # T462
+    with _BREAKER_LOCK:
+        breaker = {"fails": _BREAKER["fails"],
+                   "open": time.time() < _BREAKER["open_until"],
+                   "half_open": _BREAKER["half_open"]}
     return {"name": "bouncer", "version": __version__,  # T240
             "uptime_s": round(time.time() - _START, 1),
             "decisions": get_stats(), "cache": CACHE.stats(), "pool": POOL.stats(),
+            "breaker": breaker,  # T522
             "strikes": {"users": len(table), "total": sum(table.values()),
                         "ban_suggested": sum(1 for n in table.values()
                                             if n >= _strikes.BAN_AT)}}

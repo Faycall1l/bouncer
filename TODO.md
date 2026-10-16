@@ -576,7 +576,7 @@
 - [x] T519 serve: `/ready` includes pool stats
 - [x] T520 metrics: `bouncer_breaker_open` 0/1 line
 - [x] T521 breaker: half-open trial probe after cooldown
-- [ ] T522 serve: `/stats` breaker section
+- [x] T522 serve: `/stats` breaker section
 - [ ] T523 breaker: `BOUNCER_BREAKER=off` disables
 - [ ] T524 serve: `BOUNCER_TIMEOUT` default request timeout
 - [ ] T525 serve: batch honors `BOUNCER_TIMEOUT` too
