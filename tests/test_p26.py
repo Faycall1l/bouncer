@@ -96,6 +96,23 @@ def test_batch_preset():  # T473+T485
     assert all("raw" not in row for row in r.json())
 
 
+def test_batch_preset_gates():  # T486: preset text really decides, not just 200s
+    class Viol:
+        def predict(self, state, questions):
+            assert "no-cheat" in questions["rule"]["criteria"]  # gaming pack arrived
+            return {"answers": {
+                "rule": {"choice": "no-cheat", "confidence": 0.95,
+                         "probabilities": {"no-cheat": 0.95}},
+                "harm": {"score": "harmful", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    gatekeeper._router = Viol()
+    r = client.post("/predict/batch", json={"messages": ["p26 bg1"],
+                                            "preset": "gaming"})
+    assert r.status_code == 200 and r.json()[0]["action"] == "delete"
+    gatekeeper._router = Stub()
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})
