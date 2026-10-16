@@ -126,11 +126,16 @@ def models():
 
 @app.get("/stats")  # T057
 def stats():
+    from . import strikes as _strikes  # T439: counts only, never user ids
     from .cache import CACHE
     from .stats import get_stats
+    table = _strikes._strikes
     return {"name": "bouncer", "version": __version__,  # T240
             "uptime_s": round(time.time() - _START, 1),
-            "decisions": get_stats(), "cache": CACHE.stats()}
+            "decisions": get_stats(), "cache": CACHE.stats(),
+            "strikes": {"users": len(table), "total": sum(table.values()),
+                        "ban_suggested": sum(1 for n in table.values()
+                                            if n >= _strikes.BAN_AT)}}
 
 
 @app.get("/presets")  # T058
