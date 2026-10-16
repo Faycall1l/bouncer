@@ -104,3 +104,20 @@ def test_model_reaches_predict():  # T466
                 "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
     moderate("p25 model msg", {"plain-chat": "normal talk"}, model="multilingual", router=S())
     assert seen["model"] == "multilingual"
+
+
+def test_invalid_model_422():  # T467
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    class S:
+        def predict(self, state, questions):
+            raise AssertionError("unreachable")
+    gatekeeper._router = S()
+    serve._BUCKETS.clear()
+    r = TestClient(serve.app).post("/predict", json={"message": "hi",
+                                                     "rules": {"a": "rule a text"},
+                                                     "model": "gpt-9"})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_MODEL_NAME"

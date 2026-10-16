@@ -515,7 +515,7 @@
 - [x] T464 engine: `BOUNCER_DEVICE` env → default router kwargs
 - [x] T465 test: pool thread-safety (2 threads, 1 construction)
 - [x] T466 test: `model=` reaches router.predict (stub captures kwarg)
-- [ ] T467 test: invalid model 422 on /predict
+- [x] T467 test: invalid model 422 on /predict
 - [ ] T468 test: pool stats counters
 - [ ] T469 test: device env honored by get_router
 - [ ] T470 test: P25 pool coverage sweep
