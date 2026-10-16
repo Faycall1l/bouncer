@@ -496,7 +496,7 @@
 - [x] T447 stats: `restore()` rejects unknown actions
 - [x] T448 review: `add()` includes cause field
 - [x] T449 audit: `tail()` used by `export --limit` (bounded read, no full scan)
-- [ ] T450 test: P24 persistence coverage
+- [x] T450 test: P24 persistence coverage
 
 ## P25 Router pools (T451–T470)
 - [ ] T451 pool: `pool.py` RouterPool (kwargs-keyed, LRU, thread-safe)
