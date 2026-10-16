@@ -6,7 +6,7 @@ import time
 
 os.environ.setdefault("BOUNCER_AUDIT", "eval/reports/bench-audit.jsonl")
 sys.path.insert(0, "src")
-from gatekeeper import moderate  # noqa: E402
+from gatekeeper import moderate
 
 
 class Stub:

@@ -44,6 +44,8 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 100
+# T388: Space entry carries HF frontmatter (not plain Python) — lint the package, not it.
+exclude = ["app/app.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

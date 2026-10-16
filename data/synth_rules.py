@@ -2,7 +2,10 @@
 Format per row: {state: {message, history, rules}, questions: built at train time, labels: {rule, harm, hype, jailbreak, escalate}}
 Teacher: OpenAI-compatible LLM (--template-only for offline bootstrap).
 """
-import argparse, json, random, os
+import argparse
+import json
+import os
+import random
 
 RULE_POOLS = [
     {"no-spam": "no ads, links, self-promo, crypto giveaways",
@@ -57,7 +60,7 @@ def llm_rows(n, model="qwen3-4b"):
                          "labels": {"rule": d["rule"] if d["rule"] in rules or d["rule"]=="ok" else "ok",
                                     "harm": d["harm"], "hype": d["hype"],
                                     "jailbreak": bool(d["jailbreak"]), "escalate": bool(d["escalate"])}})
-        except Exception:
+        except Exception:  # noqa: BLE001, S112 — best-effort teacher rows, skip failures
             continue
     return rows
 
@@ -73,6 +76,5 @@ if __name__ == "__main__":
     rows = template_rows(a.n) if a.template_only or not os.environ.get("OPENAI_API_KEY") else template_rows(a.n//3) + llm_rows(2*a.n//3)
     random.shuffle(rows)
     with open(a.out, "w") as f:
-        for r in rows:
-            f.write(json.dumps(r) + "\n")
+        f.writelines(json.dumps(r) + "\n" for r in rows)
     print(f"wrote {len(rows)} -> {a.out}")

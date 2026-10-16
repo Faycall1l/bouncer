@@ -1,6 +1,5 @@
 """Eval: accuracy(rule), MAE(harm/hype), ECE, gate precision@0.85, p50 latency."""
 import json
-import sys
 import time
 
 from gatekeeper import GateConfig, get_router, moderate  # T209: dogfood moderate()
