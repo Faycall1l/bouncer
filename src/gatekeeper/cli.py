@@ -115,6 +115,9 @@ def cmd_stats(args) -> int:
     print(f"allow={a.get('allow', 0)} flag={a.get('flag', 0)} delete={a.get('delete', 0)} "
           f"escalate={a.get('escalate', 0)} total={snap['decisions']['total']} "
           f"cache_hits={snap['cache']['hits']} p50={snap['decisions']['latency']['p50_ms']}ms")
+    from gatekeeper import strikes as _st  # T443
+    users = len(_st._strikes)
+    print(f"strikes: {users} users, {sum(_st._strikes.values())} total")
     return 0
 
 

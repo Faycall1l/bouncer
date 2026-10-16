@@ -489,7 +489,7 @@
 - [x] T440 audit: `tail(n)` helper (deque, no full read)
 - [x] T441 review: entries gain `t` timestamp
 - [x] T442 review: `prune(max_age_s)` drops old rows
-- [ ] T443 cli: `stats` shows strikes summary line
+- [x] T443 cli: `stats` shows strikes summary line
 - [ ] T444 audit: `log_decision` ensures parent dir exists
 - [ ] T445 cli: `export --stats FILE` writes snapshot JSON
 - [ ] T446 persist: `read_json` raises SnapshotError on corrupt files
