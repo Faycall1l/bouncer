@@ -15,7 +15,12 @@ def baseline(msg):
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "data/examples.jsonl"
+    import argparse  # T380
+    ap = argparse.ArgumentParser(prog="baseline_regex")
+    ap.add_argument("path", nargs="?", default="data/examples.jsonl")
+    ap.add_argument("--json", action="store_true")
+    a = ap.parse_args()
+    path = a.path
     with open(path) as f:
         rows = [json.loads(line) for line in f]
     from collections import Counter
@@ -35,3 +40,7 @@ if __name__ == "__main__":
     print(f"n={len(rows)} regex_acc={hit / len(rows):.3f} (violations={n_violation})")
     for lab in sorted(per_label):  # T379
         print(f"  {lab}: {per_hit[lab]}/{per_label[lab]}")
+    if a.json:  # T380
+        print(json.dumps({"n": len(rows), "regex_acc": round(hit / len(rows), 3),
+                          "per_label": {k: [per_hit[k], per_label[k]]
+                                        for k in sorted(per_label)}}))

@@ -420,7 +420,7 @@
 - [x] T377 eval: report includes latency p95
 - [x] T378 eval: rows with missing keys skipped + counted
 - [x] T379 baseline: per-label breakdown output
-- [ ] T380 baseline: `--json` machine-readable flag
+- [x] T380 baseline: `--json` machine-readable flag
 - [ ] T381 data: `eval/validate_data.py` schema checker (state/rules/labels)
 - [ ] T382 data: `synth_rules.py --seed` reproducibility flag
 - [ ] T383 bench: 1-question vs 5-question timing script
