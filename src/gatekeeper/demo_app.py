@@ -69,7 +69,19 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
                    "escalate = unsure/stakes. Tune the slider: higher = fewer auto-actions, fewer mistakes.")
         preset = gr.Dropdown(names, value=names[0], label="preset")
         rules = gr.Textbox(value=preset_text[names[0]], lines=5, label="rules (id: text)")
-        preset.change(lambda n: preset_text[n], preset, rules)
+        dirty = []  # T358: hand-edits survive preset switches
+
+        def _on_preset(n):
+            if dirty:
+                return gr.skip()
+            return preset_text[n]
+
+        def _on_edit():
+            if not dirty:
+                dirty.append(True)
+
+        preset.change(_on_preset, preset, rules)
+        rules.change(_on_edit, None, None)
         msg = gr.Textbox(label="chat message")
         lang = gr.Dropdown(["auto", "en", "es", "fr", "ar"], value="auto",  # T357
                            label="language hint")
