@@ -98,3 +98,19 @@ def test_cli_lang_mismatch_note(capsys):  # T504+T508
     gatekeeper._router = S()
     assert main(["check", "p27 mismatch msg", "--preset", "es", "--lang", "fr"]) == 0
     assert "note" in capsys.readouterr().err
+
+
+def test_i18n_script_parity(tmp_path):  # T509
+    import json as _json
+    import os as _os
+    import subprocess
+    import sys as _sys
+    env = dict(_os.environ, PYTHONPATH="src:eval")
+    r = subprocess.run([_sys.executable, "eval/eval_i18n.py", "--help"], check=False,
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 0 and "--limit" in r.stdout and "--out" in r.stdout
+    out = tmp_path / "i.json"
+    r = subprocess.run([_sys.executable, "eval/eval_i18n.py", "--limit", "4",
+                        "--out", str(out), "--json"], check=False, capture_output=True,
+                       text=True, env=env)
+    assert r.returncode == 0 and _json.loads(out.read_text())["n"] == 4

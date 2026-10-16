@@ -561,7 +561,7 @@
 - [x] T506 test: preset lang tags
 - [x] T507 test: serve preset-lang autofill
 - [x] T508 test: CLI mismatch note
-- [ ] T509 eval: i18n script argparse parity (--limit/--out/--json)
+- [x] T509 eval: i18n script argparse parity (--limit/--out/--json)
 - [ ] T510 test: P27 i18n sweep
 
 ## P28 Reliability (T511–T530)
