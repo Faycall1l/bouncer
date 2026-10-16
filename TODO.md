@@ -452,7 +452,7 @@
 - [x] T407 docs: BENCHMARKS honest-limits refresh
 - [x] T408 docs: adapters README (discord stats, twitch reconnect, webhook escalate)
 - [x] T409 docs: `api.md` auth + rate-limit headers section
-- [ ] T410 test: docs-consistency test (codes + presets match code)
+- [x] T410 test: docs-consistency test (codes + presets match code)
 
 ## P23 Release + final (T411–T430)
 - [ ] T411 pkg: version 0.2.0 (`pyproject.toml` + `__init__.py`)
