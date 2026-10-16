@@ -253,6 +253,16 @@ def _check_model(model: str | None) -> None:
                                     "message": f"unknown model {model!r} (pick from {list(MODELS)})"})
 
 
+def _check_lang(lang: str | None) -> None:
+    """T496: lang hints are short slugs, not sentences."""
+    import re as _re
+    if lang is not None and not _re.fullmatch(r"[a-z-]{2,16}", lang):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422,
+                            detail={"code": "E_LANG",
+                                    "message": f"bad lang hint {lang!r} (want like 'es', 'fr')"})
+
+
 def _body_too_big(request: Request, limit: int = MAX_BODY) -> bool:
     """T291: honor Content-Length before parsing a batch body."""
     try:
@@ -279,6 +289,7 @@ def predict(req: ModReq, request: Request):
     from .rules import RuleError
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
     _check_model(req.model)  # T459
+    _check_lang(req.lang)  # T496
     rules, preset_name = _resolve_rules(req.rules, req.preset)  # T472
     try:
         res = moderate(req.message, rules, req.context,
