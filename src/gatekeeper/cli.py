@@ -48,8 +48,15 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
     from gatekeeper.explain import explain
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
+    model = getattr(args, "model", None)
+    if model is not None:  # T460: same allowlist as the server
+        from gatekeeper.serve import MODELS
+        if model not in MODELS:
+            print(f"bouncer: bad --model {model!r} (pick from {list(MODELS)})",
+                  file=sys.stderr)
+            return 4
     res = moderate(args.message, rules, config=cfg, lang=args.lang,  # T311+T312
-                   context=args.context or [])
+                   context=args.context or [], model=model)
     res["reason"] = explain(res, rules)
     if getattr(args, "quiet", False):  # T320
         print(res["action"])
@@ -247,6 +254,7 @@ def main(argv=None) -> int:
     c.add_argument("--severity", action="append", default=None)  # T313: RULE=low|high
     c.add_argument("--quiet", action="store_true")  # T320: action word only
     c.add_argument("--history", type=int, default=None)  # T329: override history_n
+    c.add_argument("--model", default=None)  # T460: pin checkpoint
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068

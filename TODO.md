@@ -508,7 +508,7 @@
 - [x] T457 pool: `model_for_lang()` pure mapping + test
 - [x] T458 engine: auto `model_for_lang(lang)` when model omitted
 - [x] T459 serve: `model` field on ModReq/BatchReq (allowlist, 422 else)
-- [ ] T460 cli: `check --model` flag (validated)
+- [x] T460 cli: `check --model` flag (validated)
 - [ ] T461 cli: `stats` shows pool section
 - [ ] T462 serve: `/stats` pool section
 - [ ] T463 pool: `clear()` for tests
