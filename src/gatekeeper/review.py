@@ -38,3 +38,15 @@ def clear_queue() -> int:  # T318: truncate; returns rows dropped
     with open(_PATH, "w"):
         pass
     return n
+
+
+def prune(max_age_s: float) -> int:  # T442: drop rows older than this; returns dropped
+    if not os.path.exists(_PATH):
+        return 0
+    cutoff = time.time() - max_age_s
+    with open(_PATH) as f:
+        rows = [json.loads(line) for line in f if line.strip()]
+    kept = [r for r in rows if r.get("t", cutoff) >= cutoff]
+    with open(_PATH, "w") as f:
+        f.writelines(json.dumps(r) + "\n" for r in kept)
+    return len(rows) - len(kept)
