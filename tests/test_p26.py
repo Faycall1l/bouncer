@@ -40,6 +40,8 @@ def test_preset_predict_and_log(capsys):  # T472+T474
 def test_unknown_preset_422():  # T472+T476
     r = client.post("/predict", json={"message": "hi", "preset": "nope"})
     assert r.status_code == 422 and r.json()["detail"]["code"] == "E_PRESET"
+    r = client.post("/predict", json={"message": "hi", "preset": 42})  # T476: type guard
+    assert r.status_code == 422
 
 
 def test_default_preset_env(monkeypatch):  # T475
