@@ -471,7 +471,7 @@
 - [x] T424 test: `amoderate` over stub via `asyncio.run`
 - [x] T425 test: batch order + mixed cached/fresh
 - [x] T426 test: i18n presets (ar/es/fr validate + stub moderate)
-- [ ] T427 docs: golden transcript 0.2.0 behavior note
+- [x] T427 docs: golden transcript 0.2.0 behavior note
 - [ ] T428 docs: CHANGELOG 0.2.0 dated entry finalized
 - [ ] T429 docs: release-notes draft `docs/drafts/release-0.2.0.md` + tag v0.2.0
 - [ ] T430 final: suite green + push

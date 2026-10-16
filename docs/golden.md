@@ -13,3 +13,13 @@
 
 Apple Silicon, first call ~45s (Metal compile), then 1–5s on MPS/CPU for 5
 questions. T4 ref ~33ms. Batch + warmup on serve path; CPU twist: prefill-bound.
+
+## 0.2.0 behavior notes (T427)
+
+Transcript above was captured on 0.1.x; verdicts are unchanged on 0.2.0, but the
+shapes around them grew: results now carry `cause`, `margin`, `thresholds`,
+`lang`, `quiet_active`, and explicit `cached` flags; reasons append
+`[harm=...]`; fastpath/empty decisions appear in stats + audit (they were
+invisible before); the same message under different thresholds/context/lang no
+longer reuses a stale cached verdict (T221). Re-record the transcript only when
+a gate behavior changes, not when fields are added.
