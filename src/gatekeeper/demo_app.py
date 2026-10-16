@@ -74,6 +74,9 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
                    "vs ~$0.50/1M tokens for an LLM judge doing the same 5 questions.")
         gr.Markdown("> allow ≥0.85 & calm · flag = suspected · delete = confident violation · "  # T090
                    "escalate = unsure/stakes. Tune the slider: higher = fewer auto-actions, fewer mistakes.")
+        gr.Markdown("> Order: jailbreak-delete → human-escalate → confident delete → "  # T363
+                   "suspected flag → calm allow → unsure escalate. Close calls abstain; "
+                   "see docs/gates.md.")
         gr.Markdown("> Honest limits: template data, 3 violation types, English-first — "  # T359
                    "full list in BENCHMARKS.md (`#honest-limits`).")
         preset = gr.Dropdown(names, value=names[0], label="preset")

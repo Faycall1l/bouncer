@@ -401,7 +401,7 @@
 - [x] T360 demo: empty message returns early EMPTY badge
 - [x] T361 demo: live session decision counter in history header
 - [x] T362 demo: regex-baseline running agree tally
-- [ ] T363 demo: gate precedence list in explainer text
+- [x] T363 demo: gate precedence list in explainer text
 - [ ] T364 test: Space entry imports without gradio (`parse_rules`, badge helper)
 - [ ] T365 demo: title includes package version
 - [ ] T366 demo: overlong messages truncated with note before moderate
