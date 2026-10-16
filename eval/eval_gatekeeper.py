@@ -63,6 +63,7 @@ if __name__ == "__main__":
               "thresholds": {"allow": cfg.allow_threshold,  # T372
                              "delete": cfg.delete_threshold},
               "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),
+              "p95_ms": round(lat[int(len(lat) * 0.95)], 1),  # T377
               "brier": round(brier(confs, golds), 3),  # T375
               "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
               "actions": dict(sorted(actions.items())),  # T373
