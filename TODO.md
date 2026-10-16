@@ -581,7 +581,7 @@
 - [x] T524 serve: `BOUNCER_TIMEOUT` default request timeout
 - [x] T525 serve: batch honors `BOUNCER_TIMEOUT` too
 - [x] T526 test: breaker opens after N failures
-- [ ] T527 test: breaker cools + half-open probe
+- [x] T527 test: breaker cools + half-open probe
 - [ ] T528 test: timeout caps + /ready shapes
 - [ ] T529 test: breaker metric + stats section
 - [ ] T530 test: P28 reliability sweep

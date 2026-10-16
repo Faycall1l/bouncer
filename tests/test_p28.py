@@ -102,3 +102,23 @@ def test_breaker_trips_exactly_at_n():  # T511+T526
     moderate("p28 exact three", rules, config=cfg, router=Boom())
     assert gatekeeper._breaker_tripped() is True
     _reset_breaker()
+
+
+def test_breaker_cool_and_probe():  # T521+T527
+    import time as _t
+
+    from gatekeeper import moderate as _mod
+    CACHE.clear()
+    _reset_breaker()
+    Boom.calls = 0
+    cfg = GateConfig(breaker_n=1, breaker_cool_s=0.05)
+    rules = {"plain-chat": "normal talk"}
+    r1 = _mod("p28 cool one", rules, config=cfg, router=Boom())
+    assert r1["cause"] == "fallback" and gatekeeper._breaker_tripped() is True
+    _t.sleep(0.06)  # cooldown passes
+    assert gatekeeper._breaker_tripped() is False  # half-open probe allowed
+    assert gatekeeper._BREAKER["half_open"] is True
+    r2 = _mod("p28 cool two", rules, config=cfg, router=Boom())
+    assert r2["cause"] == "fallback"  # probe failed → re-tripped
+    assert gatekeeper._breaker_tripped() is True
+    _reset_breaker()
