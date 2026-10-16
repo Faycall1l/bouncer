@@ -66,3 +66,19 @@ def save(path: str | None = None) -> str:  # T432
     atomic_write(target, _json.dumps({"v": 1, "t": int(_t.time()),
                                      "strikes": dict(_strikes)}))
     return target
+
+
+def load(path: str | None = None) -> int:  # T433
+    """Restore the table; in-memory counts win ties (max-wins). Returns users loaded."""
+    from .persist import SnapshotError, read_json
+    data = read_json(path or _PATH)
+    if data.get("v") != 1:
+        raise SnapshotError(f"E_SNAPSHOT: unsupported strikes version {data.get('v')!r}")
+    incoming = data.get("strikes", {})
+    if not isinstance(incoming, dict):
+        raise SnapshotError("E_SNAPSHOT: strikes table must be an object")
+    for user, n in incoming.items():
+        if isinstance(n, int) and n > 0:
+            _strikes[user] = max(_strikes.get(user, 0), n)
+    _last_decay[0] = time.time()
+    return len(incoming)
