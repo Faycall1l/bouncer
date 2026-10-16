@@ -108,7 +108,8 @@ def cmd_watch(args) -> int:
         if not line.strip():
             continue
         try:
-            res = moderate(line, rules, config=cfg, user_id=getattr(args, "user", None))  # T534
+            res = moderate(line, rules, config=cfg, user_id=getattr(args, "user", None),  # T534
+                           lang=getattr(args, "lang", None))  # T541
         except Exception as e:  # noqa: BLE001
             print(f"bouncer: watch error: {e}", file=sys.stderr)  # T328
             continue
@@ -335,6 +336,7 @@ def main(argv=None) -> int:
     w.add_argument("--config", default=None)  # T532
     w.add_argument("--user", default=None)  # T534: attribute piped lines to one user
     w.add_argument("--action", default=None)  # T535: comma list, e.g. flag,escalate
+    w.add_argument("--lang", default=None)  # T541: language hint for the whole pipe
     _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)
     r = sub.add_parser("review")  # T170
