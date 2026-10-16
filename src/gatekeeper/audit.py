@@ -37,6 +37,8 @@ def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: floa
     h = hashlib.sha256(msg.encode()).hexdigest()[:16]
     with _LOCK:  # T229
         _maybe_rotate()
+        parent = os.path.dirname(os.path.abspath(_PATH))  # T444 (mirrors T281)
+        os.makedirs(parent, exist_ok=True)
         with open(_PATH, "a") as f:
             f.write(_dump({"t": int(time.time()), "msg": h, "rule": rule,
                            "conf": round(conf, 3), "action": action,
