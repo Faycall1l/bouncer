@@ -551,7 +551,7 @@
 - [x] T496 serve: lang format validated (`E_LANG`, ^[a-z-]{2,16}$)
 - [x] T497 data: `data/examples_i18n.jsonl` (12 es/fr/ar rows)
 - [x] T498 eval: `eval/eval_i18n.py` wiring check + JSON report
-- [ ] T499 docs: BENCHMARKS i18n wiring table
+- [x] T499 docs: BENCHMARKS i18n wiring table
 - [ ] T500 engine: auto model test (ar → multilingual kwarg captured)
 - [ ] T501 presets: `PRESET_LANG` tags + `preset_lang(name)`
 - [ ] T502 serve: preset lang autofills request lang when omitted

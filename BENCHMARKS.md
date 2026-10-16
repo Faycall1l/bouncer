@@ -34,6 +34,23 @@ Takeaway: zero-shot base is a demo, not a product. Fine-tune (`kaggle/train`) is
 ~0.08ms/message stub overhead, linear in batch size; chunk size is irrelevant
 with a stub router (it matters for real-model padding — see T106/T107).
 
+## i18n wiring (T499, `python eval/eval_i18n.py --json`)
+
+No weights: checks fixtures validate, preset packs match fixture rules, every
+question carries the language hint, script detection is right, and routing is
+sane — 12/12 rows, 0 schema errors:
+
+| lang | rows | script | auto model |
+|---|---|---|---|
+| es | 4 | latin | auto (router detects) |
+| fr | 4 | latin | auto (router detects) |
+| ar | 4 | arabic | multilingual (pinned) |
+
+Latin scripts rely on laya's own auto-routing (english vs multilingual);
+arabic is pinned to `multilingual` via `model_for_lang()` because base
+detection under-routes it. Accuracy numbers need the finetune + real
+checkpoints; this table pins the plumbing, not the quality.
+
 ## Regex baseline (T210, local, no weights)
 
 `python eval/baseline_regex.py data/examples.jsonl` → **0.480** on 300 rows.
