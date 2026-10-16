@@ -430,7 +430,7 @@
 - [x] T387 notebooks: `finetune_kaggle.py` file handling via context managers
 - [x] T388 repo: `ruff check .` fully green (notebooks/eval/kaggle/data)
 - [x] T389 repo: `eval/reports/*.json` gitignored (keep dir via README)
-- [ ] T390 test: P21 eval-helper coverage (ece/brier/baseline/validate, no weights)
+- [x] T390 test: P21 eval-helper coverage (ece/brier/baseline/validate, no weights)
 
 ## P22 Docs + packaging (T391–T410)
 - [ ] T391 docs: README split-threshold examples (CLI + API)
