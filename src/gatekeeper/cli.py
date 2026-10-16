@@ -156,6 +156,10 @@ def cmd_review(args) -> int:
             return 4
         print(f"cleared {clear_queue()} queued rows")
         return 0
+    if getattr(args, "prune", False):  # T540: age-based drop, keeps the rest
+        from gatekeeper.review import prune
+        print(f"pruned {prune(args.older_than)} rows older than {args.older_than}s")
+        return 0
     for row in list_queue(args.limit, action=args.action,
                           since=getattr(args, "since", 0) or 0,  # T537
                           rule=getattr(args, "rule", None)):  # T543
@@ -338,6 +342,8 @@ def main(argv=None) -> int:
     r.add_argument("--action", default=None)  # T317
     r.add_argument("--since", type=float, default=0)  # T537: epoch seconds
     r.add_argument("--rule", default=None)  # T543
+    r.add_argument("--prune", action="store_true")  # T540: drop aged rows
+    r.add_argument("--older-than", type=float, default=86400.0)  # T540: seconds
     r.add_argument("--clear", action="store_true")  # T318
     r.add_argument("--yes", action="store_true")  # T318
     r.set_defaults(fn=cmd_review)

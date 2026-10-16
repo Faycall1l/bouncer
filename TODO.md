@@ -596,7 +596,7 @@
 - [x] T537 cli: `review --since TS` filter
 - [x] T538 cli: `bouncer models` (checkpoints + pool stats, no weights)
 - [x] T539 cli: `bouncer presets` (names + descriptions)
-- [ ] T540 cli: `review prune --older-than SEC`
+- [x] T540 cli: `review prune --older-than SEC`
 - [ ] T541 cli: `watch --lang` flag
 - [ ] T542 cli: `watch --json-in` (per-line {message, user_id})
 - [ ] T543 cli: `review --rule` filter
