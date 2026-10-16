@@ -425,7 +425,7 @@
 - [x] T382 data: `synth_rules.py --seed` reproducibility flag
 - [x] T383 bench: 1-question vs 5-question timing script
 - [x] T384 bench: batch-size sweep script with stub router
-- [ ] T385 docs: BENCHMARKS stub-latency table filled from measured runs
+- [x] T385 docs: BENCHMARKS stub-latency table filled from measured runs
 - [ ] T386 kaggle: `train.py` documents expected input schema (docstring)
 - [ ] T387 notebooks: `finetune_kaggle.py` file handling via context managers
 - [ ] T388 repo: `ruff check .` fully green (notebooks/eval/kaggle/data)

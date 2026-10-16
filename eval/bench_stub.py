@@ -19,6 +19,8 @@ class Stub:
 
 
 if __name__ == "__main__":
+    import os as _os  # T385: reports dir must exist before the first audit line
+    _os.makedirs("eval/reports", exist_ok=True)
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 200
     rules = {"plain-chat": "normal talk"}
     lat = []

@@ -21,8 +21,8 @@ if __name__ == "__main__":
     rules = {"plain-chat": "normal talk"}
     rows = {}
     for size in (1, 4, 8, 16):
-        msgs = [f"sweep msg {i}" for i in range(size)]
         for chunk in (1, 4, 8, 16):
+            msgs = [f"sweep {size}/{chunk} msg {i}" for i in range(size)]  # unique: no cache
             t0 = time.perf_counter()
             moderate_batch(msgs, rules, router=Stub(), chunk=chunk)
             rows[f"batch{size}/chunk{chunk}"] = round((time.perf_counter() - t0) * 1000, 1)
