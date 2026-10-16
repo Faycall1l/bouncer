@@ -555,7 +555,7 @@
 - [x] T500 engine: auto model test (ar → multilingual kwarg captured)
 - [x] T501 presets: `PRESET_LANG` tags + `preset_lang(name)`
 - [x] T502 serve: preset lang autofills request lang when omitted
-- [ ] T503 eval: i18n check asserts question hint lines
+- [x] T503 eval: i18n check asserts question hint lines
 - [ ] T504 cli: preset-lang vs --lang mismatch prints stderr note
 - [ ] T505 demo: preset switch sets language dropdown to preset lang
 - [ ] T506 test: preset lang tags

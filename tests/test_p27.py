@@ -41,3 +41,11 @@ def test_detect_script():  # T492
     assert detect_script("你好世界") == "cjk"
     assert detect_script("123 !!!") == "other"
     assert detect_script(None) == "other"
+
+
+def test_question_hints_all_langs():  # T503
+    from gatekeeper import build_questions
+    for lang in ("en", "es", "fr", "ar"):
+        q = build_questions({"a": "rule a text"}, lang)
+        assert lang in q["rule"]["instructions"]
+    assert "hint" not in build_questions({"a": "rule a text"})["rule"]["instructions"]
