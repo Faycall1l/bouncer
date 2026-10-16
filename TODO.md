@@ -443,7 +443,7 @@
 - [x] T398 docs: thresholds guide covers flag band + severity offset
 - [x] T399 docs: presets catalogue documents es/fr/ar packs
 - [x] T400 docs: CHANGELOG 0.2.0 entry drafted
-- [ ] T401 pkg: Python 3.13 classifier
+- [x] T401 pkg: Python 3.13 classifier
 - [ ] T402 ci: workflow gains `ruff check src tests` lint step
 - [ ] T403 docs: SECURITY.md `BOUNCER_*` env table
 - [ ] T404 docs: CONTRIBUTING tick+push-per-box convention note

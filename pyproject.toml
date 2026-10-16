@@ -9,6 +9,10 @@ authors = [{ name = "gatekeeper-1 contributors" }]
 keywords = ["moderation", "system-one", "jev", "laya", "typed-decisions", "calibration"]
 classifiers = [
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",  # T401
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "License :: OSI Approved :: Apache Software License",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
