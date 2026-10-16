@@ -441,7 +441,7 @@
 - [x] T396 docs: `docs/gates.md` precedence reference (also T334)
 - [x] T397 docs: rule-guide pointer to overlap warnings
 - [x] T398 docs: thresholds guide covers flag band + severity offset
-- [ ] T399 docs: presets catalogue documents es/fr/ar packs
+- [x] T399 docs: presets catalogue documents es/fr/ar packs
 - [ ] T400 docs: CHANGELOG 0.2.0 entry drafted
 - [ ] T401 pkg: Python 3.13 classifier
 - [ ] T402 ci: workflow gains `ruff check src tests` lint step
