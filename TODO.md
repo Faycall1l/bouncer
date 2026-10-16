@@ -549,7 +549,7 @@
 - [x] T494 result: exposes `script` field
 - [x] T495 demo: meters shows script
 - [x] T496 serve: lang format validated (`E_LANG`, ^[a-z-]{2,16}$)
-- [ ] T497 data: `data/examples_i18n.jsonl` (12 es/fr/ar rows)
+- [x] T497 data: `data/examples_i18n.jsonl` (12 es/fr/ar rows)
 - [ ] T498 eval: `eval/eval_i18n.py` wiring check + JSON report
 - [ ] T499 docs: BENCHMARKS i18n wiring table
 - [ ] T500 engine: auto model test (ar → multilingual kwarg captured)
