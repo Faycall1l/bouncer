@@ -61,3 +61,24 @@ def test_preset_lang_tags():  # T501+T506
     assert {preset_lang(n) for n in list_presets()} <= {"en", "es", "fr", "ar"}
     with pytest.raises(KeyError):
         preset_lang("nope")
+
+
+def test_preset_lang_autofill():  # T502+T507
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    class S:
+        def predict(self, state, questions):
+            assert state.get("lang_hint") == "ar"
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    gatekeeper._router = S()
+    serve._BUCKETS.clear()
+    r = TestClient(serve.app).post("/predict", json={"message": "p27 autofill مباراة",
+                                                     "preset": "ar"})
+    assert r.status_code == 200 and r.json()["lang"] == "ar"

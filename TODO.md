@@ -559,7 +559,7 @@
 - [x] T504 cli: preset-lang vs --lang mismatch prints stderr note
 - [x] T505 demo: preset switch sets language dropdown to preset lang
 - [x] T506 test: preset lang tags
-- [ ] T507 test: serve preset-lang autofill
+- [x] T507 test: serve preset-lang autofill
 - [ ] T508 test: CLI mismatch note
 - [ ] T509 eval: i18n script argparse parity (--limit/--out/--json)
 - [ ] T510 test: P27 i18n sweep
