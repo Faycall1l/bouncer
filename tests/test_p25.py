@@ -146,3 +146,18 @@ def test_device_env(monkeypatch):  # T469
     finally:
         gatekeeper._router = None
         monkeypatch.delenv("BOUNCER_DEVICE", raising=False)
+
+
+def test_pool_sweep():  # T470
+    import gatekeeper.pool as _pool
+    from gatekeeper.pool import RouterPool, get_pooled_router
+    p = RouterPool(max_n=8, factory=lambda **kw: dict(kw))
+    a, b = p.get(device="cpu"), p.get(device="cuda")
+    assert a != b and p.get(device="cpu") is a
+    old_factory = _pool.POOL._factory
+    _pool.POOL._factory = lambda **kw: object()
+    try:
+        assert get_pooled_router(device="cpu") is get_pooled_router(device="cpu")
+    finally:
+        _pool.POOL._factory = old_factory
+        _pool.POOL.clear()
