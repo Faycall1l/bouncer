@@ -500,7 +500,7 @@
 
 ## P25 Router pools (T451–T470)
 - [x] T451 pool: `pool.py` RouterPool (kwargs-keyed, LRU, thread-safe)
-- [ ] T452 pool: `BOUNCER_POOL_MAX` env (default 2, mirrors laya reasoning)
+- [x] T452 pool: `BOUNCER_POOL_MAX` env (default 2, mirrors laya reasoning)
 - [ ] T453 pool: `stats()` hits/creates/evictions
 - [ ] T454 pool: `get_pooled_router(**kw)` public constructor cache
 - [ ] T455 engine: `moderate(..., model=None)` passes `model=` to predict
