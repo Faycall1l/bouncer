@@ -67,6 +67,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         meters = (f"harm={r['harm']} jail={r['jailbreak_p']:.2f} "  # T086
                   f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
         meters += f" margin={r.get('margin', '?')}"  # T352
+        meters += f" script={r.get('script', '?')}"  # T495
         from gatekeeper.normalize import caps_flood, extract_links  # T175: regex baseline
         base = "delete" if extract_links(msg) else ("flag" if caps_flood(msg) else "allow")
         agree = base == r["action"]

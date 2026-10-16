@@ -547,7 +547,7 @@
 - [x] T492 normalize: `detect_script()` (arabic/cyrillic/cjk/latin/other)
 - [x] T493 engine: state gains `script` field
 - [x] T494 result: exposes `script` field
-- [ ] T495 demo: meters shows script
+- [x] T495 demo: meters shows script
 - [ ] T496 serve: lang format validated (`E_LANG`, ^[a-z-]{2,16}$)
 - [ ] T497 data: `data/examples_i18n.jsonl` (12 es/fr/ar rows)
 - [ ] T498 eval: `eval/eval_i18n.py` wiring check + JSON report
