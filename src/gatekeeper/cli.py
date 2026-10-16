@@ -211,32 +211,31 @@ def cmd_export(args) -> int:
         return 0
     since = getattr(args, "since", 0) or 0  # T327: epoch filter on audit "t"
     limit = getattr(args, "limit", 0) or 0  # T449: bounded tail read
-    n, mss = 0, []
-    with open(args.out, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["t", "msg", "rule", "conf", "action", "ms"])
-
-        def _emit(d):
-            nonlocal n
-            w.writerow([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]])
-            mss.append(d["ms"])
-            n += 1
-
-        if limit:
-            from gatekeeper.audit import tail as _tail
-            for d in _tail(limit):
+    as_json = getattr(args, "format", "csv") == "json"  # T536: raw JSON array out
+    rows, mss = [], []
+    if limit:
+        from gatekeeper.audit import tail as _tail
+        rows = [d for d in _tail(limit) if d["t"] >= since]
+    elif __import__("os").path.exists(_PATH):
+        with open(_PATH) as af:
+            for line in af:
+                d = json.loads(line)
                 if d["t"] >= since:
-                    _emit(d)
-        elif __import__("os").path.exists(_PATH):
-            with open(_PATH) as af:
-                for line in af:
-                    d = json.loads(line)
-                    if d["t"] < since:
-                        continue
-                    _emit(d)
+                    rows.append(d)
+    for d in rows:
+        mss.append(d["ms"])
+    if as_json:  # T536: exact audit dicts, nothing dropped
+        from gatekeeper.persist import atomic_write
+        atomic_write(args.out, json.dumps(rows, ensure_ascii=False, indent=2))
+    else:
+        with open(args.out, "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["t", "msg", "rule", "conf", "action", "ms"])
+            w.writerows([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]]
+                        for d in rows)
     mss.sort()  # T316
     p50 = mss[len(mss) // 2] if mss else 0
-    print(f"exported {n} rows -> {args.out} (latency p50 {p50}ms)")
+    print(f"exported {len(rows)} rows -> {args.out} (latency p50 {p50}ms)")
     return 0
 
 
@@ -327,6 +326,7 @@ def main(argv=None) -> int:
     ex.add_argument("--since", type=float, default=0)  # T327: epoch seconds
     ex.add_argument("--stats", default=None)  # T445: snapshot JSON path
     ex.add_argument("--limit", type=int, default=0)  # T449: bounded tail export
+    ex.add_argument("--format", choices=["csv", "json"], default="csv")  # T536
     ex.set_defaults(fn=cmd_export)
     sn = sub.add_parser("snapshot")  # T437+T438
     sn.add_argument("action", choices=["save", "load"])
