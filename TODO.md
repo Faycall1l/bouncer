@@ -389,7 +389,7 @@
 - [x] T350 test: P19 engine coverage
 
 ## P20 Demo app (T351–T370)
-- [ ] T351 demo: split allow/delete threshold sliders
+- [x] T351 demo: split allow/delete threshold sliders
 - [ ] T352 demo: meters line shows margin + abstained
 - [ ] T353 demo: session latency p50 in history header
 - [ ] T354 demo: history entries include rule@conf

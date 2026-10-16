@@ -23,7 +23,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
     names = sorted(list_presets())
     preset_text = {n: "\n".join(f"{k}: {v}" for k, v in get_preset(n).items()) for n in names}
 
-    def run(msg, preset, rules_t, thr):
+    def run(msg, preset, rules_t, allow_thr, delete_thr):  # T351: split gates
         rules = parse_rules(rules_t) or get_preset(preset)
         from gatekeeper.rules import RuleError, validate_rules
         try:
@@ -32,7 +32,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
             return "⚠️ RULES ERROR", "-", str(e), "", "", ""
         try:  # T285: model errors become a badge, never a traceback
             from gatekeeper import GateConfig
-            r = moderate(msg, rules, config=GateConfig(allow_threshold=thr, delete_threshold=thr))
+            r = moderate(msg, rules, config=GateConfig(allow_threshold=allow_thr,
+                                                       delete_threshold=delete_thr))
         except Exception as e:  # noqa: BLE001 — demo must stay up without weights
             return "⚪ ERROR", "-", f"{type(e).__name__}: {e}", "", "", ""
         r["reason"] = explain(r, rules)
@@ -58,7 +59,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         rules = gr.Textbox(value=preset_text[names[0]], lines=5, label="rules (id: text)")
         preset.change(lambda n: preset_text[n], preset, rules)
         msg = gr.Textbox(label="chat message")
-        thr = gr.Slider(0.5, 0.99, 0.85, label="threshold")
+        allow_thr = gr.Slider(0.5, 0.99, 0.85, label="allow threshold")  # T351
+        delete_thr = gr.Slider(0.5, 0.99, 0.85, label="delete threshold")  # T351
         btn = gr.Button("Moderate")
         badge = gr.Label(label="action")
         rule = gr.Label(label="rule")
@@ -70,12 +72,13 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         trail = []
         _orig_run = run
 
-        def run_h(msg, preset, rules_t, thr):
-            out = _orig_run(msg, preset, rules_t, thr)
+        def run_h(msg, preset, rules_t, allow_thr, delete_thr):
+            out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr)
             trail.append(f"{out[0]} {msg[:60]}")
             return out + ("\n".join(trail[-8:]),)
 
-        btn.click(run_h, [msg, preset, rules, thr], [badge, rule, reason, dist, meters, lat, hist])
+        btn.click(run_h, [msg, preset, rules, allow_thr, delete_thr],
+                  [badge, rule, reason, dist, meters, lat, hist])
         flag_btn = gr.Button("🚩 send to review queue")  # T095
         flag_out = gr.Textbox(label="review")
 
