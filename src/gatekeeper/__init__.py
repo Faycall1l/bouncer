@@ -212,7 +212,7 @@ def _predict_safe(router, state: dict, questions: dict, timeout_s: float,
     import concurrent.futures as cf
     last = None
     timed_out = False  # T258
-    for _ in range(2):
+    for attempt in range(2):
         try:
             if model is None:  # T455: 2-arg stubs keep working; model routes explicitly
                 fut = _executor().submit(router.predict, state, questions)
@@ -223,6 +223,9 @@ def _predict_safe(router, state: dict, questions: dict, timeout_s: float,
             timed_out, last = True, f"predict exceeded {timeout_s}s"
         except Exception as e:  # noqa: BLE001
             last = e
+        if attempt == 0 and not timed_out:  # T517: hammering a sick model helps nobody
+            import time as _t
+            _t.sleep(0.05)
     if timed_out:  # T258: name the timeout so operators see a slow model, not a crash
         raise ModelError(f"timed out after {timeout_s}s (one retry)")
     raise ModelError(f"inference failed twice ({last})")  # T197
