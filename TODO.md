@@ -505,7 +505,7 @@
 - [x] T454 pool: `get_pooled_router(**kw)` public constructor cache
 - [x] T455 engine: `moderate(..., model=None)` passes `model=` to predict
 - [x] T456 pool: eviction order test (fake factory)
-- [ ] T457 pool: `model_for_lang()` pure mapping + test
+- [x] T457 pool: `model_for_lang()` pure mapping + test
 - [ ] T458 engine: auto `model_for_lang(lang)` when model omitted
 - [ ] T459 serve: `model` field on ModReq/BatchReq (allowlist, 422 else)
 - [ ] T460 cli: `check --model` flag (validated)

@@ -46,3 +46,11 @@ def test_pool_eviction_lru():  # T456
     s = p.stats()
     assert s == {"size": 2, "max_n": 2, "hits": 1, "creates": 3, "evictions": 1}
     assert p.get(device="a")["device"] == "a"  # still resident
+
+
+def test_model_for_lang():  # T457
+    from gatekeeper.pool import model_for_lang
+    assert model_for_lang("ar") == "multilingual"
+    assert model_for_lang("en") is None
+    assert model_for_lang(None) is None
+    assert model_for_lang("fr") is None  # latin scripts auto-route
