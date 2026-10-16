@@ -393,7 +393,7 @@
 - [x] T352 demo: meters line shows margin + abstained
 - [x] T353 demo: session latency p50 in history header
 - [x] T354 demo: history entries include rule@conf
-- [ ] T355 demo: 8 examples (add jailbreak + empty message)
+- [x] T355 demo: 8 examples (add jailbreak + empty message)
 - [ ] T356 demo: review button queues the real current result
 - [ ] T357 demo: language dropdown (auto/en/es/fr/ar) -> lang_hint
 - [ ] T358 demo: preset switch preserves hand-edited rules (dirty flag)
