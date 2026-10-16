@@ -114,3 +114,20 @@ def test_i18n_script_parity(tmp_path):  # T509
                         "--out", str(out), "--json"], check=False, capture_output=True,
                        text=True, env=env)
     assert r.returncode == 0 and _json.loads(out.read_text())["n"] == 4
+
+
+def test_lang_format_422():  # T496+T510
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    class S:
+        def predict(self, state, questions):
+            raise AssertionError("unreachable")
+    gatekeeper._router = S()
+    serve._BUCKETS.clear()
+    r = TestClient(serve.app).post("/predict", json={"message": "hi",
+                                                     "rules": {"a": "rule a text"},
+                                                     "lang": "not a language!!"})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_LANG"
