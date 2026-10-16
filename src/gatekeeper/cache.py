@@ -67,6 +67,34 @@ class TTLCache:
             return {"hits": self.hits, "misses": self.misses, "size": len(self._d),
                     "hit_rate": round(self.hits / tot, 3) if tot else 0.0}  # T245
 
+    def save(self, path: str) -> str:  # T436
+        """Persist live entries atomically; returns the path written."""
+        import json as _json
+
+        from .persist import atomic_write
+        now = time.time()
+        with self._lock:
+            live = {k: [exp, v] for k, (exp, v) in self._d.items() if exp > now}
+        atomic_write(path, _json.dumps({"v": 1, "entries": live}))
+        return path
+
+    def load(self, path: str) -> int:  # T436: expired entries pruned on read
+        from .persist import SnapshotError, read_json
+        data = read_json(path)
+        if data.get("v") != 1 or not isinstance(data.get("entries"), dict):
+            raise SnapshotError("E_SNAPSHOT: bad cache snapshot")
+        now = time.time()
+        n = 0
+        with self._lock:
+            for k, pair in data["entries"].items():
+                exp, v = pair
+                if exp > now and isinstance(v, dict):
+                    self._d[k] = (float(exp), v)
+                    n += 1
+            while len(self._d) > self.maxsize:
+                self._d.popitem(last=False)
+        return n
+
 
 def _env_int(name: str, default: int) -> int:
     try:

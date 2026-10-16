@@ -482,7 +482,7 @@
 - [x] T433 strikes: `load()` restores table (max-wins merge)
 - [x] T434 stats: `snapshot()` + `restore()` (validated shape)
 - [x] T435 stats: `save()` / `load()` file round-trip
-- [ ] T436 cache: `save()` / `load()` entries (expired pruned on load)
+- [x] T436 cache: `save()` / `load()` entries (expired pruned on load)
 - [ ] T437 cli: `snapshot save FILE` (stats + strikes + version + ts)
 - [ ] T438 cli: `snapshot load FILE` (version-mismatch warning, not failure)
 - [ ] T439 serve: `/stats` gains strikes_summary (counts only, no user ids)
