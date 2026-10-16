@@ -71,12 +71,20 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         lat = gr.Label(label="latency")
         hist = gr.Textbox(label="history (last 8)", interactive=False)  # T089
         trail = []
+        lats = []  # T353: session latencies for the p50 line
         _orig_run = run
 
         def run_h(msg, preset, rules_t, allow_thr, delete_thr):
             out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr)
             trail.append(f"{out[0]} {msg[:60]}")
-            return out + ("\n".join(trail[-8:]),)
+            ms = out[5]
+            try:
+                lats.append(float(str(ms).split()[0]))
+            except (ValueError, IndexError):
+                pass
+            p50 = sorted(lats)[len(lats) // 2] if lats else 0  # T353
+            head = f"session p50 {p50:.1f}ms over {len(lats)} decisions"
+            return out + (head + "\n" + "\n".join(trail[-8:]),)
 
         btn.click(run_h, [msg, preset, rules, allow_thr, delete_thr],
                   [badge, rule, reason, dist, meters, lat, hist])

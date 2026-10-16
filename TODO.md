@@ -391,7 +391,7 @@
 ## P20 Demo app (T351–T370)
 - [x] T351 demo: split allow/delete threshold sliders
 - [x] T352 demo: meters line shows margin + abstained
-- [ ] T353 demo: session latency p50 in history header
+- [x] T353 demo: session latency p50 in history header
 - [ ] T354 demo: history entries include rule@conf
 - [ ] T355 demo: 8 examples (add jailbreak + empty message)
 - [ ] T356 demo: review button queues the real current result
