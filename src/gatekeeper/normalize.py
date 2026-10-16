@@ -47,3 +47,23 @@ def extract_links(msg: str) -> list:
     if not isinstance(msg, str):  # T264
         return []
     return URL_RE.findall(msg)
+
+
+def detect_script(msg: str) -> str:
+    """T492: dominant script guess (routing hint, not an identity claim)."""
+    if not isinstance(msg, str) or not msg.strip():
+        return "other"
+    hits: dict = {}
+    for c in msg:
+        o = ord(c)
+        if 0x0600 <= o <= 0x06FF or 0x0750 <= o <= 0x077F:
+            hits["arabic"] = hits.get("arabic", 0) + 1
+        elif 0x0400 <= o <= 0x04FF:
+            hits["cyrillic"] = hits.get("cyrillic", 0) + 1
+        elif 0x4E00 <= o <= 0x9FFF or 0x3040 <= o <= 0x30FF:
+            hits["cjk"] = hits.get("cjk", 0) + 1
+        elif c.isalpha():
+            hits["latin"] = hits.get("latin", 0) + 1
+    if not hits:
+        return "other"
+    return max(hits, key=hits.get)
