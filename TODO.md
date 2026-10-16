@@ -426,7 +426,7 @@
 - [x] T383 bench: 1-question vs 5-question timing script
 - [x] T384 bench: batch-size sweep script with stub router
 - [x] T385 docs: BENCHMARKS stub-latency table filled from measured runs
-- [ ] T386 kaggle: `train.py` documents expected input schema (docstring)
+- [x] T386 kaggle: `train.py` documents expected input schema (docstring)
 - [ ] T387 notebooks: `finetune_kaggle.py` file handling via context managers
 - [ ] T388 repo: `ruff check .` fully green (notebooks/eval/kaggle/data)
 - [ ] T389 repo: `eval/reports/*.json` gitignored (keep dir via README)

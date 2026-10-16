@@ -1,6 +1,12 @@
 """Full bouncer fine-tune, single-GPU adaptation of Laya's 2xT4 DDP script.
 Needs GPU quota (30h/week). Rolling checkpoint per epoch + HF push via HF_TOKEN secret.
 Smoke-validated: 7500/7500 items build clean (bouncer-smoke-cpu v6).
+
+Input schema (T386): JSONL rows from data/synth_rules.py —
+  {state: {message: str, history: [str], rules: {rule_id: rule_text}},
+   labels: {rule: rule_id | "ok", harm: safe|suspicious|harmful,
+            hype: dead|chill|hyped, jailbreak: bool, escalate: bool}}
+Input is read from the first /kaggle/input/**/*.jsonl file; 1500 train / 500 test.
 """
 import subprocess
 import sys
