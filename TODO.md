@@ -552,7 +552,7 @@
 - [x] T497 data: `data/examples_i18n.jsonl` (12 es/fr/ar rows)
 - [x] T498 eval: `eval/eval_i18n.py` wiring check + JSON report
 - [x] T499 docs: BENCHMARKS i18n wiring table
-- [ ] T500 engine: auto model test (ar → multilingual kwarg captured)
+- [x] T500 engine: auto model test (ar → multilingual kwarg captured)
 - [ ] T501 presets: `PRESET_LANG` tags + `preset_lang(name)`
 - [ ] T502 serve: preset lang autofills request lang when omitted
 - [ ] T503 eval: i18n check asserts question hint lines
