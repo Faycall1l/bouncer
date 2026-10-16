@@ -86,8 +86,10 @@ def build_questions(rules: dict[str, str]) -> dict:
 def _cached_questions(items: tuple) -> dict:
     criteria = dict(items)
     criteria["ok"] = "message follows all rules, nothing violated"
+    n = len(criteria)  # T347
     return {
-        "rule": {"type": "choice", "instructions": "Which single rule is violated? Pick ok if none.",
+        "rule": {"type": "choice", "instructions": "Which single rule is violated? "
+                 f"Pick ok if none. ({n} options: rule ids below.)",
                  "criteria": criteria},
         "harm": {"type": "score", "instructions": "How harmful is this message?",
                  "criteria": DEFAULT_HARM},
