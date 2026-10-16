@@ -4,6 +4,7 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 import json
 import os
+import time
 from collections import deque
 
 _PATH = os.environ.get("BOUNCER_REVIEW", "review-queue.jsonl")
@@ -13,7 +14,8 @@ def add(message: str, res: dict) -> None:  # T170
     parent = os.path.dirname(os.path.abspath(_PATH))  # T281
     os.makedirs(parent, exist_ok=True)
     with open(_PATH, "a") as f:
-        f.write(json.dumps({"message": message[:500], "action": res["action"],
+        f.write(json.dumps({"t": int(time.time()),  # T441: for prune()
+                            "message": message[:500], "action": res["action"],
                             "rule": res["rule"], "conf": round(res["confidence"], 3),
                             "ms": res.get("latency_ms", 0.0)}) + "\n")  # T244
 

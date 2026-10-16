@@ -487,7 +487,7 @@
 - [x] T438 cli: `snapshot load FILE` (version-mismatch warning, not failure)
 - [x] T439 serve: `/stats` gains strikes_summary (counts only, no user ids)
 - [x] T440 audit: `tail(n)` helper (deque, no full read)
-- [ ] T441 review: entries gain `t` timestamp
+- [x] T441 review: entries gain `t` timestamp
 - [ ] T442 review: `prune(max_age_s)` drops old rows
 - [ ] T443 cli: `stats` shows strikes summary line
 - [ ] T444 audit: `log_decision` ensures parent dir exists
