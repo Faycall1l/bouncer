@@ -459,7 +459,7 @@
 - [x] T412 suite: full run green (fix fallout)
 - [x] T413 lint: `ruff check .` fully green (verify T388)
 - [x] T414 test: every CLI subcommand `--help` exits 0
-- [ ] T415 test: every server GET route 200 with stub
+- [x] T415 test: every server GET route 200 with stub
 - [ ] T416 test: demo import smoke (no gradio installed)
 - [ ] T417 test: eval helpers import-safe + `ece()` golden value
 - [ ] T418 test: audit rotation (small `_MAX_BYTES`)

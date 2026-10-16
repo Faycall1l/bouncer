@@ -15,3 +15,24 @@ def test_all_subcommand_helps():  # T414
         with pytest.raises(SystemExit) as ei:
             main(cmd)
         assert ei.value.code == 0, cmd
+
+
+def test_all_get_routes():  # T415
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    class S:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    gatekeeper._router = S()
+    serve._BUCKETS.clear()
+    client = TestClient(serve.app)
+    for path in ("/health", "/version", "/models", "/stats", "/presets", "/metrics"):
+        r = client.get(path)
+        assert r.status_code == 200, path
