@@ -469,7 +469,7 @@
 - [x] T422 test: request coalescing (2 threads, 1 predict call)
 - [x] T423 test: inference timeout -> escalate fallback
 - [x] T424 test: `amoderate` over stub via `asyncio.run`
-- [ ] T425 test: batch order + mixed cached/fresh
+- [x] T425 test: batch order + mixed cached/fresh
 - [ ] T426 test: i18n presets (ar/es/fr validate + stub moderate)
 - [ ] T427 docs: golden transcript 0.2.0 behavior note
 - [ ] T428 docs: CHANGELOG 0.2.0 dated entry finalized

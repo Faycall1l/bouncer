@@ -170,3 +170,25 @@ def test_amoderate():  # T424
                 "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
     r = asyncio.run(amoderate("p23 async msg", {"plain-chat": "normal talk"}, router=S()))
     assert r["action"] == "allow"
+
+
+def test_batch_mixed_cached_fresh():  # T425
+    from gatekeeper import moderate_batch
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+    seen = []
+
+    class Seq:
+        def predict(self, state, questions):
+            seen.append(state["message"])
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    rules = {"plain-chat": "normal talk"}
+    first = moderate_batch(["p23 b1", "p23 b2"], rules, router=Seq())
+    assert [r["action"] for r in first] == ["allow", "allow"] and len(seen) == 2
+    second = moderate_batch(["p23 b1", "p23 b3"], rules, router=Seq())
+    assert len(seen) == 3  # b1 served from cache
+    assert [r.get("cached") for r in second] == [True, False]
