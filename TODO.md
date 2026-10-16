@@ -412,7 +412,7 @@
 
 ## P21 Eval + data (T371–T390)
 - [x] T371 eval: `eval_gatekeeper.py` argparse (`--limit`, `--out`, `--help` works weightless)
-- [ ] T372 eval: report includes threshold snapshot
+- [x] T372 eval: report includes threshold snapshot
 - [ ] T373 eval: report includes per-action counts
 - [ ] T374 eval: report includes abstention rate
 - [ ] T375 eval: report includes Brier score

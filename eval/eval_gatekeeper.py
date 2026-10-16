@@ -48,6 +48,8 @@ if __name__ == "__main__":
             gated_n += 1; gated_ok += good
     lat.sort()
     report = {"n": len(rows), "rule_acc": round(ok / len(rows), 3),  # T100: JSON report
+              "thresholds": {"allow": cfg.allow_threshold,  # T372
+                             "delete": cfg.delete_threshold},
               "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),
               "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
               "top_confusions": [[list(k), v] for k, v in conf_pairs.most_common(5)],
