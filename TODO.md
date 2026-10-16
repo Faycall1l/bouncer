@@ -539,7 +539,7 @@
 - [x] T486 test: batch preset e2e
 - [x] T487 test: default-preset env e2e
 - [x] T488 test: preset/rules conflict 422s
-- [ ] T489 test: single-preset endpoint shapes
+- [x] T489 test: single-preset endpoint shapes
 - [ ] T490 test: P26 multitenancy sweep
 
 ## P27 Multilingual wiring (T491–T510)

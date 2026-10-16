@@ -126,6 +126,15 @@ def test_batch_preset_conflict():  # T488
     assert r.status_code == 422 and r.json()["detail"]["code"] == "E_PRESET"
 
 
+def test_all_presets_reachable():  # T489
+    from gatekeeper import list_presets
+    for name in list_presets():
+        r = client.get(f"/presets/{name}")
+        body = r.json()
+        assert r.status_code == 200 and body["name"] == name
+        assert isinstance(body["rules"], dict) and len(body["rules"]) >= 3
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})
