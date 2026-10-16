@@ -30,6 +30,7 @@ if __name__ == "__main__":
     ok, confs, golds, lat, gated_ok, gated_n = 0, [], [], [], 0, 0
     from collections import Counter
     actions = Counter()  # T373
+    abstained_n = 0  # T374
     conf_pairs, overconf = Counter(), 0  # T104+T105
     per_rule, per_rule_ok = Counter(), Counter()  # T098
     t0 = time.time()
@@ -38,6 +39,7 @@ if __name__ == "__main__":
         res = moderate(s["message"], s["rules"], s.get("history"), config=cfg, router=r)
         lat.append(res.get("latency_ms", 0))
         actions[res["action"]] += 1  # T373
+        abstained_n += bool(res.get("abstained"))  # T374
         pred = res["rule"]; conf = res["confidence"]
         good = pred == lab["rule"]
         ok += good; confs.append(conf); golds.append(good)
@@ -55,6 +57,7 @@ if __name__ == "__main__":
               "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),
               "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
               "actions": dict(sorted(actions.items())),  # T373
+              "abstention_rate": round(abstained_n / len(rows), 3),  # T374
               "top_confusions": [[list(k), v] for k, v in conf_pairs.most_common(5)],
               "overconfident_errors": overconf,
               "per_rule": {k: [per_rule_ok[k], per_rule[k]] for k in per_rule}}
