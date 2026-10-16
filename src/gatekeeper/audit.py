@@ -43,3 +43,13 @@ def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: floa
                            "ms": round(latency_ms, 1), "lang": lang or "",  # T237
                            "ctx": context_n,
                            "thr": list(thresholds) if thresholds else []}) + "\n")  # T238
+
+
+def tail(n: int = 20, path: str | None = None) -> list:  # T440
+    """Last n audit rows as dicts (deque tail, no full-file list)."""
+    from collections import deque
+    target = path or _PATH
+    if not os.path.exists(target):
+        return []
+    with open(target) as f:
+        return [json.loads(line) for line in deque(f, maxlen=max(n, 1))]
