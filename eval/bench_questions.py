@@ -23,9 +23,13 @@ def bench(router, state, questions, n=200):
 
 
 if __name__ == "__main__":
+    import os  # T383
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 200
     r, state = Stub(), {"message": "bench q-count msg"}
     q1 = {"rule": build_questions({"a": "rule a text"})["rule"]}
     q5 = build_questions({"a": "rule a text"})
     report = {"n": n, "p50_1q_ms": bench(r, state, q1, n), "p50_5q_ms": bench(r, state, q5, n)}
+    os.makedirs("eval/reports", exist_ok=True)  # T383: persist, don't just print
+    with open("eval/reports/questions.json", "w") as f:
+        json.dump(report, f, indent=2)
     print(json.dumps(report))

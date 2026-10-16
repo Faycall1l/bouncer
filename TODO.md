@@ -423,7 +423,7 @@
 - [x] T380 baseline: `--json` machine-readable flag
 - [x] T381 data: `eval/validate_data.py` schema checker (state/rules/labels)
 - [x] T382 data: `synth_rules.py --seed` reproducibility flag
-- [ ] T383 bench: 1-question vs 5-question timing script
+- [x] T383 bench: 1-question vs 5-question timing script
 - [ ] T384 bench: batch-size sweep script with stub router
 - [ ] T385 docs: BENCHMARKS stub-latency table filled from measured runs
 - [ ] T386 kaggle: `train.py` documents expected input schema (docstring)
