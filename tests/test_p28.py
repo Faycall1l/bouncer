@@ -157,3 +157,19 @@ def test_breaker_metric_and_stats():  # T520+T522+T529
     assert "bouncer_breaker_open 0" in client.get("/metrics").text
     st = client.get("/stats").json()
     assert set(st["breaker"]) == {"fails", "open", "half_open"}
+
+
+def test_retry_backoff():  # T517+T530
+    import time as _t
+
+    from gatekeeper import _predict_safe
+    calls = []
+
+    class Once:
+        def predict(self, state, questions):
+            calls.append(_t.time())
+            if len(calls) == 1:
+                raise RuntimeError("blip")
+            return {"answers": {}}
+    _predict_safe(Once(), {}, {}, 5.0)
+    assert len(calls) == 2 and (calls[1] - calls[0]) >= 0.04

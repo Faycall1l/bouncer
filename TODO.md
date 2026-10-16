@@ -584,7 +584,7 @@
 - [x] T527 test: breaker cools + half-open probe
 - [x] T528 test: timeout caps + /ready shapes
 - [x] T529 test: breaker metric + stats section
-- [ ] T530 test: P28 reliability sweep
+- [x] T530 test: P28 reliability sweep
 
 ## P29 CLI (T531–T550)
 - [ ] T531 cli: `check --config FILE` (JSON → from_dict)
