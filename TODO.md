@@ -478,7 +478,7 @@
 
 ## P24 Persistence (T431–T450)
 - [x] T431 persist: `persist.py` atomic_write + read_json helpers (`E_SNAPSHOT`)
-- [ ] T432 strikes: `_PATH` + `save()` (atomic JSON)
+- [x] T432 strikes: `_PATH` + `save()` (atomic JSON)
 - [ ] T433 strikes: `load()` restores table (max-wins merge)
 - [ ] T434 stats: `snapshot()` + `restore()` (validated shape)
 - [ ] T435 stats: `save()` / `load()` file round-trip

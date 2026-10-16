@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import time
 
+from .persist import atomic_write  # T432: json/os only, no cycle
+
 _strikes: dict = {}
 _last_decay: list = [time.time()]
 
@@ -12,6 +14,8 @@ try:  # T342
     BAN_AT = max(1, int(os.environ.get("BOUNCER_BAN_AT", "3")))
 except (TypeError, ValueError):
     BAN_AT = 3
+
+_PATH = os.environ.get("BOUNCER_STRIKES", "bouncer-strikes.json")  # T432
 
 
 def weight_for_action(action: str) -> int:
@@ -52,3 +56,13 @@ def standing(user: str) -> dict:
 def reset() -> None:  # T249: test isolation
     _strikes.clear()
     _last_decay[0] = time.time()
+
+
+def save(path: str | None = None) -> str:  # T432
+    """Persist the strike table atomically; returns the path written."""
+    import json as _json
+    import time as _t
+    target = path or _PATH
+    atomic_write(target, _json.dumps({"v": 1, "t": int(_t.time()),
+                                     "strikes": dict(_strikes)}))
+    return target
