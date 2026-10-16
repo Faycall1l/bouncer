@@ -30,7 +30,7 @@ from .audit import log_decision  # T273: stdlib-only modules, no import cycle
 from .cache import CACHE  # T023/T024 decision cache
 from .config import GateConfig
 from .explain import explain as _explain  # T273
-from .normalize import clean_text, extract_links
+from .normalize import clean_text, detect_script, extract_links
 from .pool import model_for_lang  # T458: json/os only, no cycle
 from .presets import get_preset, list_presets
 from .review import add as _qadd  # T273
@@ -334,6 +334,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
             if u:  # T338: ": text" lines have no user
                 turns[u] = turns.get(u, 0) + 1
     state = {"message": msg, "history": hist, "rules": rules, "user_turns": turns}
+    state["script"] = detect_script(msg)  # T493: routers can key routing off this
     if lang:
         state["lang_hint"] = lang  # T041: nudge multilingual routing
     if model is None:  # T458: ar/zh/ru ride multilingual unless pinned

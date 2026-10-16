@@ -545,7 +545,7 @@
 ## P27 Multilingual wiring (T491–T510)
 - [x] T491 explain: reason appends lang when set
 - [x] T492 normalize: `detect_script()` (arabic/cyrillic/cjk/latin/other)
-- [ ] T493 engine: state gains `script` field
+- [x] T493 engine: state gains `script` field
 - [ ] T494 result: exposes `script` field
 - [ ] T495 demo: meters shows script
 - [ ] T496 serve: lang format validated (`E_LANG`, ^[a-z-]{2,16}$)
