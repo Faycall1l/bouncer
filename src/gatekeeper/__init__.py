@@ -87,6 +87,10 @@ def get_router(**kw):
     """Lazy singleton Router (laya imported only here so packaging stays light)."""
     global _router
     if _router is None:
+        if not kw:  # T464: device default from env (cuda/mps/cpu), overridable per call
+            dev = __import__("os").environ.get("BOUNCER_DEVICE", "").strip()
+            if dev:
+                kw = {"device": dev}
         from laya import Router as _R
         _router = _R(**kw)
     elif kw:  # T268: silent kwarg-drop is a debugging trap
