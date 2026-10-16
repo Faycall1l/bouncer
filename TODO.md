@@ -531,7 +531,7 @@
 - [x] T478 serve: unknown preset path returns structured 404
 - [x] T479 engine: `moderate(..., preset=)` resolves via get_preset
 - [x] T480 test: preset endpoint + resolve paths
-- [ ] T481 serve: preset requests still honor split thresholds
+- [x] T481 serve: preset requests still honor split thresholds
 - [ ] T482 serve: preset + rules together → 422 (exactly one source)
 - [ ] T483 cli: `check` preset+rules conflict exits 4
 - [ ] T484 engine: preset severity auto-attach? no — explicit only (docstring note)

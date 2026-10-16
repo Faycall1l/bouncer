@@ -74,6 +74,15 @@ def test_moderate_preset_paths():  # T479+T480
         moderate("x", preset="nope", router=S())
 
 
+def test_preset_split_thresholds():  # T481
+    gatekeeper._router = Stub()
+    r = client.post("/predict", json={"message": "p26 thr msg", "preset": "gaming",
+                                      "allow_threshold": 0.99, "delete_threshold": 0.99})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["thresholds"] == {"allow": 0.99, "delete": 0.99}
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})
