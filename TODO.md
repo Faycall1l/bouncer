@@ -503,7 +503,7 @@
 - [x] T452 pool: `BOUNCER_POOL_MAX` env (default 2, mirrors laya reasoning)
 - [x] T453 pool: `stats()` hits/creates/evictions
 - [x] T454 pool: `get_pooled_router(**kw)` public constructor cache
-- [ ] T455 engine: `moderate(..., model=None)` passes `model=` to predict
+- [x] T455 engine: `moderate(..., model=None)` passes `model=` to predict
 - [ ] T456 pool: eviction order test (fake factory)
 - [ ] T457 pool: `model_for_lang()` pure mapping + test
 - [ ] T458 engine: auto `model_for_lang(lang)` when model omitted

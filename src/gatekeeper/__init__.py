@@ -148,14 +148,19 @@ def _executor():
 _EXEC = None
 
 
-def _predict_safe(router, state: dict, questions: dict, timeout_s: float) -> dict:
+def _predict_safe(router, state: dict, questions: dict, timeout_s: float,
+                  model: str | None = None) -> dict:
     """T025+T026: timeout guard, one retry, escalate-shaped fallback on failure."""
     import concurrent.futures as cf
     last = None
     timed_out = False  # T258
     for _ in range(2):
         try:
-            return _executor().submit(router.predict, state, questions).result(timeout_s)
+            if model is None:  # T455: 2-arg stubs keep working; model routes explicitly
+                fut = _executor().submit(router.predict, state, questions)
+            else:
+                fut = _executor().submit(router.predict, state, questions, model=model)
+            return fut.result(timeout_s)
         except cf.TimeoutError:
             timed_out, last = True, f"predict exceeded {timeout_s}s"
         except Exception as e:  # noqa: BLE001
@@ -240,6 +245,7 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
 def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
              lang: str | None = None, router=None, user_id: str | None = None,
+             model: str | None = None, preset: str | None = None,  # T455+T479
              _prevalidated: bool = False) -> dict:
     cfg = config or GateConfig()
     if threshold is not None:  # back-compat single float sets both gates
@@ -296,7 +302,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     if lang:
         state["lang_hint"] = lang  # T041: nudge multilingual routing
     try:
-        out = _predict_safe(r, state, build_questions(rules, lang), cfg.timeout_s)
+        out = _predict_safe(r, state, build_questions(rules, lang), cfg.timeout_s, model)
     except ModelError as e:
         fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
         record("escalate", "ok", 0.0, cause="fallback")  # T260: failures are visible
