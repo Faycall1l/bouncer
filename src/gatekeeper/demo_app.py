@@ -32,6 +32,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
     stash: dict = {}  # T356: latest real result for the review button
 
     def run(msg, preset, rules_t, allow_thr, delete_thr, lang):  # T351+T357
+        if not (msg or "").strip():  # T360: don't spend a model call on nothing
+            return "⚪ EMPTY", "ok @ 0.00", "empty message", "n/a", "", "0.0 ms"
         rules = parse_rules(rules_t) or get_preset(preset)
         lang = lang if lang != "auto" else None  # T357
         from gatekeeper.rules import RuleError, validate_rules

@@ -398,7 +398,7 @@
 - [x] T357 demo: language dropdown (auto/en/es/fr/ar) -> lang_hint
 - [x] T358 demo: preset switch preserves hand-edited rules (dirty flag)
 - [x] T359 demo: footer links BENCHMARKS honest-limits
-- [ ] T360 demo: empty message returns early EMPTY badge
+- [x] T360 demo: empty message returns early EMPTY badge
 - [ ] T361 demo: live session decision counter in history header
 - [ ] T362 demo: regex-baseline running agree tally
 - [ ] T363 demo: gate precedence list in explainer text
