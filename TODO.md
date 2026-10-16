@@ -451,7 +451,7 @@
 - [x] T406 docs: FAQ gains 3 entries (split gates, batch cap, stale-cache fix)
 - [x] T407 docs: BENCHMARKS honest-limits refresh
 - [x] T408 docs: adapters README (discord stats, twitch reconnect, webhook escalate)
-- [ ] T409 docs: `api.md` auth + rate-limit headers section
+- [x] T409 docs: `api.md` auth + rate-limit headers section
 - [ ] T410 test: docs-consistency test (codes + presets match code)
 
 ## P23 Release + final (T411–T430)

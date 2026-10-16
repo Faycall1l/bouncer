@@ -16,3 +16,14 @@
   `X-Content-Type-Options: nosniff`. Optional `X-API-Key` when `BOUNCER_KEY`
   set (constant-time compare; <16 chars warns at boot). 60 req/min/IP with
   `Retry-After: 60` on 429. Gzip above 1000 bytes.
+
+## Auth + rate limits (T409)
+
+* No key configured → open API (demo default). Set `BOUNCER_KEY` → every
+  `POST` needs `X-API-Key`; wrong key is 401. Keys compare in constant time,
+  so timing probes learn nothing.
+* 60 requests/minute per IP across all endpoints (single, batch, passthrough
+  share one bucket map; idle IPs evicted past 512 entries). Over → 429 with
+  `Retry-After: 60`.
+* Every response carries `X-Request-ID` (echoed or generated) and
+  `X-Bouncer-ms` (server-side ms) — quote the request id in bug reports.
