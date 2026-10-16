@@ -104,3 +104,34 @@ def test_cache_ttl_expiry():  # T421
     assert c.get("k") == {"a": 1}
     _t.sleep(0.06)
     assert c.get("k") is None
+
+
+def test_request_coalescing():  # T422
+    import threading
+    import time as _t
+
+    from gatekeeper import moderate
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+    calls = []
+
+    class Slow:
+        def predict(self, state, questions):
+            calls.append(1)
+            _t.sleep(0.3)
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    rules = {"plain-chat": "normal talk"}
+    outs = []
+    ts = [threading.Thread(target=lambda: outs.append(moderate("p23 coal msg", rules,
+                                                               router=Slow())))
+          for _ in range(2)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+    assert len(calls) == 1 and len(outs) == 2
+    assert outs[1].get("coalesced") is True or outs[1].get("cached") is True
