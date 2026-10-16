@@ -15,3 +15,6 @@ data/*-*.jsonl
 bouncer-audit*.jsonl
 review-queue.jsonl
 .ipynb_checkpoints/
+eval/reports/*.json
+eval/reports/*.jsonl
+!eval/reports/README.md
