@@ -572,7 +572,7 @@
 - [x] T515 serve: `timeout_s` request field (0.5–60 cap, 422 else)
 - [x] T516 cli: `check --timeout` flag
 - [x] T517 engine: 0.05s backoff between predict retries
-- [ ] T518 serve: `GET /ready` (model loadable + pool size)
+- [x] T518 serve: `GET /ready` (model loadable + pool size)
 - [ ] T519 serve: `/ready` includes pool stats
 - [ ] T520 metrics: `bouncer_breaker_open` 0/1 line
 - [ ] T521 breaker: half-open trial probe after cooldown

@@ -112,6 +112,15 @@ def health():
     return {"ok": True, "model": model, "uptime_s": round(time.time() - _START, 1)}
 
 
+@app.get("/ready")  # T518: readiness for load balancers (model, not just process)
+def ready():
+    try:
+        get_router()
+        return {"ready": True, "model": "loaded"}
+    except Exception:  # noqa: BLE001
+        return {"ready": False, "model": "unavailable"}
+
+
 @app.get("/version")  # T047
 def version():
     return {"name": "bouncer", "version": __version__}
