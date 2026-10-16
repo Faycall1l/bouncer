@@ -53,6 +53,12 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
     model = getattr(args, "model", None)
+    if args.preset and getattr(args, "lang", None):  # T504: pack/language mismatch note
+        from gatekeeper.presets import preset_lang
+        want = preset_lang(args.preset)
+        if want != args.lang:
+            print(f"bouncer: note: preset {args.preset!r} is {want!r} "
+                  f"but --lang is {args.lang!r}", file=sys.stderr)
     if model is not None:  # T460: same allowlist as the server
         from gatekeeper.serve import MODELS
         if model not in MODELS:
