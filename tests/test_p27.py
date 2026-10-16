@@ -82,3 +82,19 @@ def test_preset_lang_autofill():  # T502+T507
     r = TestClient(serve.app).post("/predict", json={"message": "p27 autofill مباراة",
                                                      "preset": "ar"})
     assert r.status_code == 200 and r.json()["lang"] == "ar"
+
+
+def test_cli_lang_mismatch_note(capsys):  # T504+T508
+    import gatekeeper
+    from gatekeeper.cli import main
+
+    class S:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    gatekeeper._router = S()
+    assert main(["check", "p27 mismatch msg", "--preset", "es", "--lang", "fr"]) == 0
+    assert "note" in capsys.readouterr().err
