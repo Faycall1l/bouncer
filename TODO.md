@@ -568,7 +568,7 @@
 - [x] T511 breaker: `breaker_n` / `breaker_cool_s` GateConfig fields
 - [x] T512 breaker: short-circuit in moderate (no model call while open)
 - [x] T513 breaker: fallback cause `breaker-open` while tripped
-- [ ] T514 breaker: success closes, resets count
+- [x] T514 breaker: success closes, resets count
 - [ ] T515 serve: `timeout_s` request field (0.5–60 cap, 422 else)
 - [ ] T516 cli: `check --timeout` flag
 - [ ] T517 engine: 0.05s backoff between predict retries
