@@ -66,3 +66,16 @@ def test_audit_rotation(tmp_path):  # T418
         assert _os.path.exists(p + ".1")
     finally:
         _au._PATH, _au._MAX_BYTES = old_path, old_max
+
+
+def test_review_round_trip(tmp_path, monkeypatch):  # T419
+    import importlib
+
+    import gatekeeper.review as _rv
+    monkeypatch.setenv("BOUNCER_REVIEW", str(tmp_path / "sub" / "q.jsonl"))
+    importlib.reload(_rv)
+    _rv.add("spam msg", {"action": "flag", "rule": "no-spam", "confidence": 0.8})
+    _rv.add("hmm msg", {"action": "escalate", "rule": "ok", "confidence": 0.4})
+    assert len(_rv.list_queue()) == 2
+    assert [r["action"] for r in _rv.list_queue(action="escalate")] == ["escalate"]
+    assert _rv.clear_queue() == 2 and _rv.list_queue() == []
