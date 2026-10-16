@@ -182,6 +182,10 @@ def metrics():
               f"bouncer_latency_p50_ms {g['latency']['p50_ms']}",
               f'bouncer_info{{version="{__version__}"}} 1',  # T236
               f"bouncer_uptime_seconds {round(time.time() - _START, 1)}"]  # T236
+    from . import _BREAKER, _BREAKER_LOCK  # T520
+    with _BREAKER_LOCK:
+        is_open = time.time() < _BREAKER["open_until"]
+    lines.append(f"bouncer_breaker_open {int(is_open)}")
     return PlainTextResponse("\n".join(lines) + "\n")
 
 
