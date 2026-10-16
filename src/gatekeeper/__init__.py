@@ -182,7 +182,8 @@ class ModelError(BouncerError):
 def _fallback(action_note: str) -> dict:
     return {"action": "escalate", "rule": "ok", "confidence": 0.0, "harm": "suspicious",
             "harm_dist": [], "rule_dist": {}, "jailbreak_p": 0.0, "escalate_p": 1.0,
-            "abstained": True, "reason": action_note}
+            "abstained": True, "reason": action_note, "cause": "fallback",  # T234
+            "cached": False}
 
 
 def _level(score_val, levels: list) -> str:

@@ -135,3 +135,20 @@ def test_request_coalescing():  # T422
         t.join()
     assert len(calls) == 1 and len(outs) == 2
     assert outs[1].get("coalesced") is True or outs[1].get("cached") is True
+
+
+def test_inference_timeout_fallback():  # T423
+    import time as _t
+
+    from gatekeeper import GateConfig, moderate
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+
+    class Slow:
+        def predict(self, state, questions):
+            _t.sleep(0.5)
+            return {"answers": {}}
+    r = moderate("p23 timeout msg", {"plain-chat": "normal talk"},
+                 config=GateConfig(timeout_s=0.1), router=Slow())
+    assert r["action"] == "escalate" and "timed out" in r["reason"]
+    assert r["cause"] == "fallback"
