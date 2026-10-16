@@ -465,7 +465,7 @@
 - [x] T418 test: audit rotation (small `_MAX_BYTES`)
 - [x] T419 test: review queue round-trip (add/list/filter/clear)
 - [x] T420 test: strikes lifecycle (add/standing/decay/reset)
-- [ ] T421 test: cache TTL expiry
+- [x] T421 test: cache TTL expiry
 - [ ] T422 test: request coalescing (2 threads, 1 predict call)
 - [ ] T423 test: inference timeout -> escalate fallback
 - [ ] T424 test: `amoderate` over stub via `asyncio.run`

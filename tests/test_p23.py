@@ -93,3 +93,14 @@ def test_strikes_lifecycle():  # T420
     assert strikes.standing("u2")["strikes"] == 1  # fresh clock, not wiped
     strikes.reset()
     assert strikes.standing("u1")["strikes"] == 0
+
+
+def test_cache_ttl_expiry():  # T421
+    import time as _t
+
+    from gatekeeper.cache import TTLCache
+    c = TTLCache(ttl=0.05)
+    c.set("k", {"a": 1})
+    assert c.get("k") == {"a": 1}
+    _t.sleep(0.06)
+    assert c.get("k") is None
