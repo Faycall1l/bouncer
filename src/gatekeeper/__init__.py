@@ -269,7 +269,8 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
             "cause": cause, "margin": round(_margin(a), 3)}
 
 
-def moderate(message: str, rules: dict[str, str], context: list[str] | None = None,
+def moderate(message: str, rules: dict[str, str] | None = None,
+             context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
              lang: str | None = None, router=None, user_id: str | None = None,
              model: str | None = None, preset: str | None = None,  # T455+T479
@@ -278,6 +279,13 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     if threshold is not None:  # back-compat single float sets both gates
         cfg.allow_threshold = cfg.delete_threshold = threshold
         cfg.validate()  # T255: mutation bypasses __post_init__; re-check ranges
+    if preset is not None:  # T479: server-side pack by name (explicit > magic)
+        if rules is not None:
+            raise RuleError("E_PRESET: pass rules or preset, not both")
+        try:
+            rules = get_preset(preset)
+        except KeyError as e:
+            raise RuleError(f"E_PRESET: {e}") from e
     if not _prevalidated:
         validate_rules(rules, cfg.max_rules, cfg.max_rule_chars, cfg.severity)
     msg = clean_text(message, cfg.max_msg_chars)
