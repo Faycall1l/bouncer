@@ -52,6 +52,17 @@ AR = {  # T193 (rtl-safe: plain strings, no bidi controls)
 PRESETS = {"gaming": GAMING, "study": STUDY, "support": SUPPORT, "stream": STREAM,
            "es": ES, "fr": FR, "ar": AR}
 
+PRESET_LANG = {"gaming": "en", "study": "en", "support": "en", "stream": "en",  # T501
+               "es": "es", "fr": "fr", "ar": "ar"}
+
+
+def preset_lang(name: str) -> str:
+    """T501: primary language of a pack (for autofill + mismatch notes)."""
+    try:
+        return PRESET_LANG[name]
+    except KeyError:
+        raise KeyError(f"unknown preset {name!r}; pick from {sorted(PRESET_LANG)}")
+
 DESCRIPTIONS = {
     "gaming": "clan / lobby chat: cheats, kindness, spam, spoilers",
     "study": "homework group: on-topic, hints-not-answers, kindness",

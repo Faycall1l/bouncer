@@ -553,7 +553,7 @@
 - [x] T498 eval: `eval/eval_i18n.py` wiring check + JSON report
 - [x] T499 docs: BENCHMARKS i18n wiring table
 - [x] T500 engine: auto model test (ar → multilingual kwarg captured)
-- [ ] T501 presets: `PRESET_LANG` tags + `preset_lang(name)`
+- [x] T501 presets: `PRESET_LANG` tags + `preset_lang(name)`
 - [ ] T502 serve: preset lang autofills request lang when omitted
 - [ ] T503 eval: i18n check asserts question hint lines
 - [ ] T504 cli: preset-lang vs --lang mismatch prints stderr note
