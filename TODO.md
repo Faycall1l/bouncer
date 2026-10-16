@@ -480,7 +480,7 @@
 - [x] T431 persist: `persist.py` atomic_write + read_json helpers (`E_SNAPSHOT`)
 - [x] T432 strikes: `_PATH` + `save()` (atomic JSON)
 - [x] T433 strikes: `load()` restores table (max-wins merge)
-- [ ] T434 stats: `snapshot()` + `restore()` (validated shape)
+- [x] T434 stats: `snapshot()` + `restore()` (validated shape)
 - [ ] T435 stats: `save()` / `load()` file round-trip
 - [ ] T436 cache: `save()` / `load()` entries (expired pruned on load)
 - [ ] T437 cli: `snapshot save FILE` (stats + strikes + version + ts)

@@ -62,3 +62,33 @@ def reset_stats() -> None:
         del _lat[:]  # T232
         _cheap = 0  # T233
         _causes.clear()  # T234
+
+
+def snapshot() -> dict:  # T434
+    """Point-in-time copy for save(); restore() takes it back."""
+    import time as _t
+    with _lock:
+        return {"v": 1, "t": int(_t.time()), "counts": dict(_counts),
+                "by_rule": dict(_by_rule),
+                "joint": [list(k) + [v] for k, v in _joint.items()],
+                "causes": dict(_causes), "cheap": _cheap}
+
+
+def restore(snap: dict) -> None:  # T434
+    """Replace counters from a snapshot(); shape validated (see T447)."""
+    global _cheap
+    from .persist import SnapshotError
+    if not isinstance(snap, dict) or snap.get("v") != 1:
+        raise SnapshotError("E_SNAPSHOT: bad stats snapshot version")
+    with _lock:
+        _counts.clear()
+        _counts.update({k: int(snap.get("counts", {}).get(k, 0))
+                        for k in ("allow", "flag", "delete", "escalate")})
+        _by_rule.clear()
+        _by_rule.update(snap.get("by_rule", {}))
+        _joint.clear()
+        for a, r, n in snap.get("joint", []):
+            _joint[(a, r)] = int(n)
+        _causes.clear()
+        _causes.update(snap.get("causes", {}))
+        _cheap = int(snap.get("cheap", 0))
