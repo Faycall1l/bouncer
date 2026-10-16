@@ -156,6 +156,18 @@ def cmd_export(args) -> int:
     import csv
 
     from gatekeeper.audit import _PATH
+    if getattr(args, "stats", None):  # T445: snapshot JSON instead of audit CSV
+        import json as _json
+
+        from gatekeeper import strikes as _strikes
+        from gatekeeper.persist import atomic_write
+        from gatekeeper.stats import snapshot as _snap
+        snap = _snap()
+        atomic_write(args.stats, _json.dumps({"stats": snap,
+                                             "strikes": dict(_strikes._strikes)},
+                                            indent=2))
+        print(f"snapshot -> {args.stats} (total={sum(snap['counts'].values())})")
+        return 0
     since = getattr(args, "since", 0) or 0  # T327: epoch filter on audit "t"
     n, mss = 0, []
     with open(args.out, "w", newline="") as f:
@@ -254,6 +266,7 @@ def main(argv=None) -> int:
     ex = sub.add_parser("export")  # T172
     ex.add_argument("--out", default="audit.csv")
     ex.add_argument("--since", type=float, default=0)  # T327: epoch seconds
+    ex.add_argument("--stats", default=None)  # T445: snapshot JSON path
     ex.set_defaults(fn=cmd_export)
     sn = sub.add_parser("snapshot")  # T437+T438
     sn.add_argument("action", choices=["save", "load"])

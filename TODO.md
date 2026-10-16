@@ -491,7 +491,7 @@
 - [x] T442 review: `prune(max_age_s)` drops old rows
 - [x] T443 cli: `stats` shows strikes summary line
 - [x] T444 audit: `log_decision` ensures parent dir exists
-- [ ] T445 cli: `export --stats FILE` writes snapshot JSON
+- [x] T445 cli: `export --stats FILE` writes snapshot JSON
 - [ ] T446 persist: `read_json` raises SnapshotError on corrupt files
 - [ ] T447 stats: `restore()` rejects unknown actions
 - [ ] T448 review: `add()` includes cause field
