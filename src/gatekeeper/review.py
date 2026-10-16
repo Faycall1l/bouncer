@@ -17,6 +17,7 @@ def add(message: str, res: dict) -> None:  # T170
         f.write(json.dumps({"t": int(time.time()),  # T441: for prune()
                             "message": message[:500], "action": res["action"],
                             "rule": res["rule"], "conf": round(res["confidence"], 3),
+                            "cause": res.get("cause", ""),  # T448
                             "ms": res.get("latency_ms", 0.0)}) + "\n")  # T244
 
 

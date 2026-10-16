@@ -494,7 +494,7 @@
 - [x] T445 cli: `export --stats FILE` writes snapshot JSON
 - [x] T446 persist: `read_json` raises SnapshotError on corrupt files
 - [x] T447 stats: `restore()` rejects unknown actions
-- [ ] T448 review: `add()` includes cause field
+- [x] T448 review: `add()` includes cause field
 - [ ] T449 audit: `tail()` used by `export --since` (no full-file scan)
 - [ ] T450 test: P24 persistence coverage
 
