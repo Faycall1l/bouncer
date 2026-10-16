@@ -128,6 +128,25 @@ def cmd_watch(args) -> int:
     return 0
 
 
+def cmd_models(args) -> int:  # T538: checkpoints + pool stats, never weights
+    from gatekeeper.pool import POOL
+    print("checkpoints (laya):")
+    for name in ("english", "multilingual", "typed-decisions"):
+        print(f"  {name}")
+    s = POOL.stats()
+    print(f"pool: size={s['size']}/{s['max_n']} hits={s['hits']} "
+          f"creates={s['creates']} evictions={s['evictions']}")
+    return 0
+
+
+def cmd_presets(args) -> int:  # T539: names + descriptions
+    from gatekeeper import list_presets
+    from gatekeeper.presets import PRESET_LANG
+    for name, desc in list_presets().items():
+        print(f"{name:10} [{PRESET_LANG.get(name, '?')}] {desc}")
+    return 0
+
+
 def cmd_review(args) -> int:
     from gatekeeper.review import clear_queue, list_queue
     if args.clear:  # T318
@@ -322,6 +341,10 @@ def main(argv=None) -> int:
     r.add_argument("--clear", action="store_true")  # T318
     r.add_argument("--yes", action="store_true")  # T318
     r.set_defaults(fn=cmd_review)
+    md = sub.add_parser("models")  # T538
+    md.set_defaults(fn=cmd_models)
+    ps = sub.add_parser("presets")  # T539
+    ps.set_defaults(fn=cmd_presets)
     st = sub.add_parser("stats")  # T171
     st.add_argument("--json", action="store_true")  # T315
     st.set_defaults(fn=cmd_stats)

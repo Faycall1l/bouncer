@@ -594,7 +594,7 @@
 - [x] T535 cli: `watch --action` filter (comma list)
 - [x] T536 cli: `export --format json` (raw audit JSON array)
 - [x] T537 cli: `review --since TS` filter
-- [ ] T538 cli: `bouncer models` (checkpoints + pool stats, no weights)
+- [x] T538 cli: `bouncer models` (checkpoints + pool stats, no weights)
 - [ ] T539 cli: `bouncer presets` (names + descriptions)
 - [ ] T540 cli: `review prune --older-than SEC`
 - [ ] T541 cli: `watch --lang` flag
