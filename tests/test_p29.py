@@ -59,3 +59,29 @@ def test_pack_init(tmp_path):  # T545
     assert isinstance(rules, dict) and len(rules) >= 3
     assert main(["pack", "init", f, "--preset", "study"]) == 4  # refuses overwrite
     assert main(["pack", "init", f, "--preset", "study", "--force"]) == 0
+
+
+def test_serve_key_file(tmp_path, monkeypatch):  # T547
+    import os
+    import sys as _sys
+    import types as _types
+
+    from gatekeeper.cli import _cmd_serve
+
+    class Args:
+        host, port, workers, key_file = "127.0.0.1", 8000, 1, None
+    fake = _types.ModuleType("uvicorn")
+    fake.run = lambda *x, **k: None
+    monkeypatch.setitem(_sys.modules, "uvicorn", fake)
+    monkeypatch.delenv("BOUNCER_API_KEY", raising=False)
+    a = Args()
+    a.key_file = str(tmp_path / "missing")
+    assert _cmd_serve(a) == 4  # unreadable file, refuses to serve
+    keyf = tmp_path / "key"
+    keyf.write_text("  s3cret-key \n")
+    a.key_file = str(keyf)
+    assert _cmd_serve(a) == 0 and os.environ["BOUNCER_API_KEY"] == "s3cret-key"
+    empty = tmp_path / "empty"
+    empty.write_text("")
+    a.key_file = str(empty)
+    assert _cmd_serve(a) == 4

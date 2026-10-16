@@ -603,7 +603,7 @@
 - [x] T544 cli: `export --action` filter
 - [x] T545 cli: `pack init FILE` writes template pack
 - [x] T546 cli: preset+rules together exits 4 (conflict) — shipped in T483
-- [ ] T547 cli: `serve --key-file` (docker-secrets style key load)
+- [x] T547 cli: `serve --key-file` (docker-secrets style key load)
 - [ ] T548 cli: `demo --preset` default selection
 - [ ] T549 cli: `serve --cors` overrides env origins
 - [ ] T550 test: P29 CLI sweep

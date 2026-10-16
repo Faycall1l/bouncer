@@ -323,6 +323,25 @@ def _add_threshold_flags(p) -> None:
     p.add_argument("--delete-threshold", type=float, default=None)  # T223
 
 
+def _cmd_serve(args) -> int:  # T547: key-file (docker-secrets style) before uvicorn
+    if getattr(args, "key_file", None):
+        import os
+        try:
+            with open(args.key_file) as f:
+                key = f.read().strip()
+        except OSError as e:
+            print(f"bouncer: cannot read --key-file: {e}", file=sys.stderr)
+            return 4
+        if not key:
+            print("bouncer: --key-file is empty", file=sys.stderr)
+            return 4
+        os.environ["BOUNCER_API_KEY"] = key
+    import uvicorn
+    uvicorn.run("gatekeeper.serve:app", host=args.host, port=args.port,
+                workers=args.workers)
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="bouncer",  # T321: exit codes up front
                                 epilog="exit codes: 0 allow · 2 delete/flag · 3 escalate · "
@@ -350,9 +369,8 @@ def main(argv=None) -> int:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--workers", type=int, default=1)  # T322
-    s.set_defaults(fn=lambda a: (__import__("uvicorn").run("gatekeeper.serve:app",
-                                                           host=a.host, port=a.port,
-                                                           workers=a.workers), 0)[1])
+    s.add_argument("--key-file", default=None)  # T547: read API key from a file
+    s.set_defaults(fn=_cmd_serve)
     d = sub.add_parser("demo")  # T069
     d.add_argument("--port", type=int, default=7860)  # T323
     d.add_argument("--share", action="store_true")  # T323
