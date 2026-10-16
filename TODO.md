@@ -433,7 +433,7 @@
 - [x] T390 test: P21 eval-helper coverage (ece/brier/baseline/validate, no weights)
 
 ## P22 Docs + packaging (T391–T410)
-- [ ] T391 docs: README split-threshold examples (CLI + API)
+- [x] T391 docs: README split-threshold examples (CLI + API)
 - [ ] T392 docs: README batch cap + 413/429 codes
 - [ ] T393 docs: README error table gains E_CONFIG/E_WEBHOOK/E_SLACK/E_INTERNAL
 - [ ] T394 docs: `api.md` updated (split gates, caps, guards, Retry-After)

@@ -66,9 +66,14 @@ print(moderate('FREE NITRO http://x.gg', get_preset('gaming')))
 ```bash
 pip install -e ".[server,demo]"
 bouncer check "you all suck" --preset gaming
+bouncer check "you all suck" --preset gaming --allow-threshold 0.9 --delete-threshold 0.7
 bouncer serve  # API on :8000
 bouncer demo   # Gradio UI
 ```
+
+Split gates: `--allow-threshold` / `--delete-threshold` (and the same JSON keys
+on `POST /predict` + `/predict/batch`) tune the two bars independently;
+bare `--threshold` sets both. Higher allow = fewer auto-allows, more escalations.
 
 ## Fine-tune (Kaggle 2xT4, 4-5h)
 
