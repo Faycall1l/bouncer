@@ -96,6 +96,7 @@ See `data/README.md` for dataset spec, `notebooks/README.md` for RLCD loop.
 
 * [Rule-writing guide](docs/rule-guide.md) · [Threshold tuning](docs/thresholds.md)
 * [Architecture](docs/architecture.md) · [API reference](docs/api.md)
+  · [Gate precedence](docs/gates.md)
 * [Adapters](src/gatekeeper/adapters/README.md) · [Benchmarks](BENCHMARKS.md)
 
 ## Honest limits (T144)

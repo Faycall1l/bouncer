@@ -438,7 +438,7 @@
 - [x] T393 docs: README error table gains E_CONFIG/E_WEBHOOK/E_SLACK/E_INTERNAL
 - [x] T394 docs: `api.md` updated (split gates, caps, guards, Retry-After)
 - [x] T395 docs: `architecture.md` diagram updated (key inputs, early observability, precedence)
-- [ ] T396 docs: `docs/gates.md` precedence reference (also T334)
+- [x] T396 docs: `docs/gates.md` precedence reference (also T334)
 - [ ] T397 docs: rule-guide pointer to overlap warnings
 - [ ] T398 docs: thresholds guide covers flag band + severity offset
 - [ ] T399 docs: presets catalogue documents es/fr/ar packs
