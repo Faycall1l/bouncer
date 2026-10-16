@@ -589,7 +589,7 @@
 ## P29 CLI (T531–T550)
 - [x] T531 cli: `check --config FILE` (JSON → from_dict)
 - [x] T532 cli: `watch --config FILE`
-- [ ] T533 cli: `check --user` (strikes attribution)
+- [x] T533 cli: `check --user` (strikes attribution)
 - [ ] T534 cli: `watch --user`
 - [ ] T535 cli: `watch --action` filter (comma list)
 - [ ] T536 cli: `export --format json` (raw audit JSON array)

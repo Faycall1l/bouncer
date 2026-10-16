@@ -82,7 +82,8 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
                   file=sys.stderr)
             return 4
     res = moderate(args.message, rules, config=cfg, lang=args.lang,  # T311+T312
-                   context=args.context or [], model=model)
+                   context=args.context or [], model=model,
+                   user_id=getattr(args, "user", None))  # T533
     res["reason"] = explain(res, rules)
     if getattr(args, "quiet", False):  # T320
         print(res["action"])
@@ -286,6 +287,7 @@ def main(argv=None) -> int:
     c.add_argument("--model", default=None)  # T460: pin checkpoint
     c.add_argument("--timeout", type=float, default=None)  # T516: inference budget
     c.add_argument("--config", default=None)  # T531: JSON gate config file
+    c.add_argument("--user", default=None)  # T533: strikes attribution
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
