@@ -566,7 +566,7 @@
 
 ## P28 Reliability (T511–T530)
 - [x] T511 breaker: `breaker_n` / `breaker_cool_s` GateConfig fields
-- [ ] T512 breaker: short-circuit in moderate (no model call while open)
+- [x] T512 breaker: short-circuit in moderate (no model call while open)
 - [ ] T513 breaker: fallback cause `breaker-open` while tripped
 - [ ] T514 breaker: success closes, resets count
 - [ ] T515 serve: `timeout_s` request field (0.5–60 cap, 422 else)

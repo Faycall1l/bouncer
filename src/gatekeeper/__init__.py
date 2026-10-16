@@ -43,6 +43,37 @@ import threading as _th
 
 _FLY_LOCK = _th.Lock()
 _MODEL_OK: dict = {}  # T458: id(router) -> (router, accepts model= kwarg)
+_BREAKER = {"fails": 0, "open_until": 0.0, "half_open": False}  # T512
+_BREAKER_LOCK = _th.Lock()
+
+
+def _breaker_tripped() -> bool:
+    """T512: True while the breaker is open (short-circuit, no model call)."""
+    if __import__("os").environ.get("BOUNCER_BREAKER", "on") == "off":  # T523
+        return False
+    import time as _t
+    with _BREAKER_LOCK:
+        if _BREAKER["half_open"]:  # T521: trial probe owns the call
+            return False
+        return _t.time() < _BREAKER["open_until"]
+
+
+def _breaker_fail(n: int, cool_s: float) -> None:
+    """T512: count a failure; trip at n consecutive."""
+    import time as _t
+    with _BREAKER_LOCK:
+        _BREAKER["fails"] += 1
+        if _BREAKER["fails"] >= n:
+            _BREAKER["open_until"] = _t.time() + cool_s
+            _BREAKER["half_open"] = False
+
+
+def _breaker_ok() -> None:
+    """T514: success closes the circuit."""
+    with _BREAKER_LOCK:
+        _BREAKER["fails"] = 0
+        _BREAKER["open_until"] = 0.0
+        _BREAKER["half_open"] = False
 
 
 def _supports_model(router) -> bool:
@@ -341,11 +372,20 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         model = model_for_lang(lang)
     if model is not None and not _supports_model(r):  # T458: legacy 2-arg routers
         model = None  # (lang_hint in state still applies)
+    tripped = _breaker_tripped()  # T512: short-circuit, no model call while open
     try:
+        if tripped:
+            raise ModelError("breaker open (model failing, cooling down)")
         out = _predict_safe(r, state, build_questions(rules, lang), cfg.timeout_s, model)
+        _breaker_ok()  # T514: success closes the circuit
     except ModelError as e:
+        if not tripped:  # T512: open-state short-circuits don't extend the trip
+            _breaker_fail(cfg.breaker_n, cfg.breaker_cool_s)
         fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
-        record("escalate", "ok", 0.0, cause="fallback")  # T260: failures are visible
+        if tripped:  # T513
+            fb["cause"] = "breaker-open"
+            fb["reason"] = "escalate: breaker open (model failing, cooling down)"
+        record("escalate", "ok", 0.0, cause=fb["cause"])  # T260: failures are visible
         log_decision(msg, "ok", 0.0, "escalate", 0.0)
         try:
             _qadd(msg, {"action": "escalate", "rule": "ok", "confidence": 0.0,

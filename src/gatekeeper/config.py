@@ -52,6 +52,10 @@ class GateConfig:
             raise ConfigError(f"E_CONFIG: timeout_s={self.timeout_s!r} must be > 0")
         if self.history_n < 0:  # T254
             raise ConfigError(f"E_CONFIG: history_n={self.history_n!r} must be >= 0")
+        if self.breaker_n < 1:  # T511
+            raise ConfigError(f"E_CONFIG: breaker_n={self.breaker_n!r} must be >= 1")
+        if self.breaker_cool_s <= 0:  # T511
+            raise ConfigError(f"E_CONFIG: breaker_cool_s={self.breaker_cool_s!r} must be > 0")
         _qh = self.quiet_hours  # T343
         if _qh and (len(_qh) != 2
                     or not all(isinstance(h, int) and 0 <= h < 24 for h in _qh)):
