@@ -45,3 +45,9 @@ def test_demo_import_without_gradio():  # T416
     assert callable(_da.launch) and callable(_da.parse_rules)
     import inspect
     assert "port" in inspect.signature(_da.launch).parameters
+
+
+def test_eval_ece_golden():  # T417: import-safe (no router built) + golden value
+    sys.path.insert(0, "eval")
+    from eval_gatekeeper import ece
+    assert ece([0.9, 0.9, 0.1, 0.1], [True, False, False, False]) == pytest.approx(0.25)

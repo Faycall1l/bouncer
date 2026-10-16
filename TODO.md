@@ -461,7 +461,7 @@
 - [x] T414 test: every CLI subcommand `--help` exits 0
 - [x] T415 test: every server GET route 200 with stub
 - [x] T416 test: demo import smoke (no gradio installed)
-- [ ] T417 test: eval helpers import-safe + `ece()` golden value
+- [x] T417 test: eval helpers import-safe + `ece()` golden value
 - [ ] T418 test: audit rotation (small `_MAX_BYTES`)
 - [ ] T419 test: review queue round-trip (add/list/filter/clear)
 - [ ] T420 test: strikes lifecycle (add/standing/decay/reset)
