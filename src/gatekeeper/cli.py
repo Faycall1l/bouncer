@@ -107,9 +107,21 @@ def cmd_watch(args) -> int:
         line = line.rstrip("\n")
         if not line.strip():
             continue
+        user, lang, msg = getattr(args, "user", None), getattr(args, "lang", None), line
+        if getattr(args, "json_in", False):  # T542: per-line {"message", "user_id"}
+            try:
+                obj = json.loads(line)
+                msg = obj.get("message", "")
+                user = obj.get("user_id", user)
+                lang = obj.get("lang", lang)
+            except (json.JSONDecodeError, AttributeError) as e:
+                print(f"bouncer: watch bad json line: {e}", file=sys.stderr)
+                continue
+            if not isinstance(msg, str) or not msg.strip():
+                continue
         try:
-            res = moderate(line, rules, config=cfg, user_id=getattr(args, "user", None),  # T534
-                           lang=getattr(args, "lang", None))  # T541
+            res = moderate(msg, rules, config=cfg, user_id=user,  # T534
+                           lang=lang)  # T541
         except Exception as e:  # noqa: BLE001
             print(f"bouncer: watch error: {e}", file=sys.stderr)  # T328
             continue
@@ -121,7 +133,7 @@ def cmd_watch(args) -> int:
             continue
         c = COLORS.get(res["action"], "")
         extra = " -> review queue" if res["action"] in ("flag", "escalate") else ""  # T208
-        print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {line[:120]}{extra}",
+        print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {msg[:120]}{extra}",
               flush=True)
     if totals:  # T286: EOF summary to stderr (keeps stdout pipe-clean)
         print("totals: " + " ".join(f"{a}={n}" for a, n in sorted(totals.items())),
@@ -337,6 +349,7 @@ def main(argv=None) -> int:
     w.add_argument("--user", default=None)  # T534: attribute piped lines to one user
     w.add_argument("--action", default=None)  # T535: comma list, e.g. flag,escalate
     w.add_argument("--lang", default=None)  # T541: language hint for the whole pipe
+    w.add_argument("--json-in", action="store_true")  # T542: per-line {"message","user_id"}
     _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)
     r = sub.add_parser("review")  # T170

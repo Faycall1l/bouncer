@@ -598,7 +598,7 @@
 - [x] T539 cli: `bouncer presets` (names + descriptions)
 - [x] T540 cli: `review prune --older-than SEC`
 - [x] T541 cli: `watch --lang` flag
-- [ ] T542 cli: `watch --json-in` (per-line {message, user_id})
+- [x] T542 cli: `watch --json-in` (per-line {message, user_id})
 - [ ] T543 cli: `review --rule` filter
 - [ ] T544 cli: `export --action` filter
 - [ ] T545 cli: `pack init FILE` writes template pack
