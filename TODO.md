@@ -440,7 +440,7 @@
 - [x] T395 docs: `architecture.md` diagram updated (key inputs, early observability, precedence)
 - [x] T396 docs: `docs/gates.md` precedence reference (also T334)
 - [x] T397 docs: rule-guide pointer to overlap warnings
-- [ ] T398 docs: thresholds guide covers flag band + severity offset
+- [x] T398 docs: thresholds guide covers flag band + severity offset
 - [ ] T399 docs: presets catalogue documents es/fr/ar packs
 - [ ] T400 docs: CHANGELOG 0.2.0 entry drafted
 - [ ] T401 pkg: Python 3.13 classifier
