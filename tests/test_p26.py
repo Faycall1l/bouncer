@@ -135,6 +135,18 @@ def test_all_presets_reachable():  # T489
         assert isinstance(body["rules"], dict) and len(body["rules"]) >= 3
 
 
+def test_cli_preset_conflict_and_empty_source(capsys):  # T483+T490
+    import pytest
+
+    from gatekeeper.cli import main
+    with pytest.raises(SystemExit) as ei:
+        main(["check", "hi", "--preset", "gaming", "--rules", "x.json"])
+    assert ei.value.code == 4
+    assert "not both" in capsys.readouterr().err
+    r = client.post("/predict", json={"message": "hi"})
+    assert r.status_code == 422
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})

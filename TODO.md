@@ -540,7 +540,7 @@
 - [x] T487 test: default-preset env e2e
 - [x] T488 test: preset/rules conflict 422s
 - [x] T489 test: single-preset endpoint shapes
-- [ ] T490 test: P26 multitenancy sweep
+- [x] T490 test: P26 multitenancy sweep
 
 ## P27 Multilingual wiring (T491–T510)
 - [ ] T491 explain: reason appends lang when set
