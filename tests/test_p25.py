@@ -63,3 +63,26 @@ def test_pool_clear():  # T463
     assert p.stats()["size"] == 1
     p.clear()
     assert p.stats()["size"] == 0
+
+
+def test_pool_threadsafe():  # T465
+    import threading
+    import time as _t
+
+    from gatekeeper.pool import RouterPool
+    built = []
+    lock = threading.Lock()
+
+    def _factory(**kw):
+        _t.sleep(0.05)
+        with lock:
+            built.append(kw)
+        return dict(kw)
+    p = RouterPool(max_n=4, factory=_factory)
+    outs = []
+    ts = [threading.Thread(target=lambda: outs.append(p.get(device="x"))) for _ in range(4)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+    assert len(set(map(id, outs))) == 1 and p.stats()["creates"] == 1
