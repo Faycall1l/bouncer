@@ -81,3 +81,24 @@ def test_request_timeout_default(monkeypatch):  # T524
     assert _request_timeout(None) == 3.0
     monkeypatch.setenv("BOUNCER_TIMEOUT", "junk")
     assert _request_timeout(None) == 10.0
+
+
+def test_breaker_trips_exactly_at_n():  # T511+T526
+    import pytest
+
+    from gatekeeper.config import ConfigError, GateConfig
+    with pytest.raises(ConfigError, match="breaker_n"):
+        GateConfig(breaker_n=0)
+    with pytest.raises(ConfigError, match="breaker_cool"):
+        GateConfig(breaker_cool_s=0)
+    CACHE.clear()
+    _reset_breaker()
+    Boom.calls = 0
+    cfg = GateConfig(breaker_n=3, breaker_cool_s=60.0)
+    rules = {"plain-chat": "normal talk"}
+    moderate("p28 exact one", rules, config=cfg, router=Boom())
+    moderate("p28 exact two", rules, config=cfg, router=Boom())
+    assert gatekeeper._breaker_tripped() is False  # 2 < 3
+    moderate("p28 exact three", rules, config=cfg, router=Boom())
+    assert gatekeeper._breaker_tripped() is True
+    _reset_breaker()
