@@ -37,12 +37,18 @@ if __name__ == "__main__":
     from collections import Counter
     actions = Counter()  # T373
     abstained_n = 0  # T374
+    skipped = 0  # T378
     conf_pairs, overconf = Counter(), 0  # T104+T105
     conf_sums: dict = {}  # T376: pair -> sum of confs (for the mean)
     per_rule, per_rule_ok = Counter(), Counter()  # T098
     t0 = time.time()
     for row in rows:
-        s, lab = row["state"], row["labels"]
+        try:  # T378: malformed rows skew nothing; they get counted
+            s, lab = row["state"], row["labels"]
+            _msg, _rules = s["message"], s["rules"]
+        except (KeyError, TypeError):
+            skipped += 1
+            continue
         res = moderate(s["message"], s["rules"], s.get("history"), config=cfg, router=r)
         lat.append(res.get("latency_ms", 0))
         actions[res["action"]] += 1  # T373
@@ -68,6 +74,7 @@ if __name__ == "__main__":
               "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
               "actions": dict(sorted(actions.items())),  # T373
               "abstention_rate": round(abstained_n / len(rows), 3),  # T374
+              "skipped": skipped,  # T378
               "top_confusions": [[list(k), v,  # T376: + mean conf
                                     round(conf_sums[k] / v, 2)] for k, v in
                                    conf_pairs.most_common(5)],

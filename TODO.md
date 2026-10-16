@@ -418,7 +418,7 @@
 - [x] T375 eval: report includes Brier score
 - [x] T376 eval: confusion pairs include mean confidence
 - [x] T377 eval: report includes latency p95
-- [ ] T378 eval: rows with missing keys skipped + counted
+- [x] T378 eval: rows with missing keys skipped + counted
 - [ ] T379 baseline: per-label breakdown output
 - [ ] T380 baseline: `--json` machine-readable flag
 - [ ] T381 data: `eval/validate_data.py` schema checker (state/rules/labels)
