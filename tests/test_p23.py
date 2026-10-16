@@ -152,3 +152,21 @@ def test_inference_timeout_fallback():  # T423
                  config=GateConfig(timeout_s=0.1), router=Slow())
     assert r["action"] == "escalate" and "timed out" in r["reason"]
     assert r["cause"] == "fallback"
+
+
+def test_amoderate():  # T424
+    import asyncio
+
+    from gatekeeper import amoderate
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+
+    class S:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    r = asyncio.run(amoderate("p23 async msg", {"plain-chat": "normal talk"}, router=S()))
+    assert r["action"] == "allow"
