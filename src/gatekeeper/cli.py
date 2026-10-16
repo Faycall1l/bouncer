@@ -100,6 +100,8 @@ def cmd_watch(args) -> int:
     from gatekeeper import moderate
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
+    only = {a.strip() for a in (getattr(args, "action", None) or "").split(",")
+            if a.strip()}  # T535: comma list of actions to print
     totals: dict = {}  # T286
     for line in sys.stdin:
         line = line.rstrip("\n")
@@ -114,6 +116,8 @@ def cmd_watch(args) -> int:
         if sum(totals.values()) % 100 == 0:  # T326: heartbeat for long tails
             print("totals: " + " ".join(f"{a}={n}" for a, n in sorted(totals.items())),
                   file=sys.stderr, flush=True)
+        if only and res["action"] not in only:  # T535: filter keeps stdout pipe-clean
+            continue
         c = COLORS.get(res["action"], "")
         extra = " -> review queue" if res["action"] in ("flag", "escalate") else ""  # T208
         print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {line[:120]}{extra}",
@@ -306,6 +310,7 @@ def main(argv=None) -> int:
     w.add_argument("--preset")
     w.add_argument("--config", default=None)  # T532
     w.add_argument("--user", default=None)  # T534: attribute piped lines to one user
+    w.add_argument("--action", default=None)  # T535: comma list, e.g. flag,escalate
     _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)
     r = sub.add_parser("review")  # T170

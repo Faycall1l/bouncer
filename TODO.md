@@ -591,7 +591,7 @@
 - [x] T532 cli: `watch --config FILE`
 - [x] T533 cli: `check --user` (strikes attribution)
 - [x] T534 cli: `watch --user`
-- [ ] T535 cli: `watch --action` filter (comma list)
+- [x] T535 cli: `watch --action` filter (comma list)
 - [ ] T536 cli: `export --format json` (raw audit JSON array)
 - [ ] T537 cli: `review --since TS` filter
 - [ ] T538 cli: `bouncer models` (checkpoints + pool stats, no weights)
