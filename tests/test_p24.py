@@ -35,3 +35,16 @@ def test_corrupt_snapshot(tmp_path):  # T446
     arr.write_text("[1, 2]")
     with pytest.raises(SnapshotError, match="want object"):
         read_json(str(arr))
+
+
+def test_restore_rejects_unknown(tmp_path):  # T447
+    import pytest
+
+    from gatekeeper.persist import SnapshotError
+    from gatekeeper.stats import reset_stats, restore, snapshot
+    reset_stats()
+    snap = snapshot()
+    snap["counts"] = {"allow": 1, "ban": 2}
+    with pytest.raises(SnapshotError, match="unknown actions"):
+        restore(snap)
+    reset_stats()

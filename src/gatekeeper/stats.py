@@ -85,10 +85,13 @@ def restore(snap: dict) -> None:  # T434
     from .persist import SnapshotError
     if not isinstance(snap, dict) or snap.get("v") != 1:
         raise SnapshotError("E_SNAPSHOT: bad stats snapshot version")
+    known = ("allow", "flag", "delete", "escalate")
+    extra = sorted(set(snap.get("counts", {})) - set(known))  # T447
+    if extra:
+        raise SnapshotError(f"E_SNAPSHOT: unknown actions {extra}")
     with _lock:
         _counts.clear()
-        _counts.update({k: int(snap.get("counts", {}).get(k, 0))
-                        for k in ("allow", "flag", "delete", "escalate")})
+        _counts.update({k: int(snap.get("counts", {}).get(k, 0)) for k in known})
         _by_rule.clear()
         _by_rule.update(snap.get("by_rule", {}))
         _joint.clear()
