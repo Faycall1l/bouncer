@@ -170,6 +170,7 @@ class ModReq(BaseModel):
     allow_threshold: float | None = None  # T223: split gates; None falls back to threshold
     delete_threshold: float | None = None
     lang: str | None = None
+    model: str | None = None  # T459: pin a checkpoint or omit for auto-routing
 
     model_config = {"json_schema_extra": {"examples": [  # T063
         {"message": "FREE NITRO http://x.gg", "rules": {"no-spam": "no ads or links"},
@@ -197,6 +198,16 @@ def _thresholds(threshold: float, allow: float | None,
 MAX_BATCH = 32  # T224: bound one request's work
 MAX_BODY = 1_000_000  # T291: 1MB cap on batch payloads
 MAX_CONTEXT = 20  # T308: bound per-request history
+MODELS = ("english", "multilingual", "typed-decisions")  # T459: laya checkpoints
+
+
+def _check_model(model: str | None) -> None:
+    """T459: only real checkpoint names route explicitly."""
+    if model is not None and model not in MODELS:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422,
+                            detail={"code": "E_MODEL_NAME",
+                                    "message": f"unknown model {model!r} (pick from {list(MODELS)})"})
 
 
 def _body_too_big(request: Request, limit: int = MAX_BODY) -> bool:
@@ -224,10 +235,11 @@ def predict(req: ModReq, request: Request):
     from .explain import explain
     from .rules import RuleError
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
+    _check_model(req.model)  # T459
     try:
         res = moderate(req.message, req.rules, req.context,
                        config=GateConfig(allow_threshold=allow_t, delete_threshold=delete_t),
-                       lang=req.lang)
+                       lang=req.lang, model=req.model)
     except RuleError as e:
         raise HTTPException(status_code=422,  # T256: machine-readable code
                             detail={"code": getattr(e, "code", "E_RULES"),
@@ -245,6 +257,7 @@ class BatchReq(BaseModel):
     threshold: float = 0.85
     allow_threshold: float | None = None  # T223
     delete_threshold: float | None = None
+    model: str | None = None  # T459
 
 
 @app.post("/predict/batch")  # T050
@@ -265,8 +278,10 @@ def predict_batch(req: BatchReq, request: Request):
     from . import moderate_batch
     from .config import GateConfig
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
+    _check_model(req.model)  # T459
     cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t)
-    return [_clean(r) for r in moderate_batch(req.messages, req.rules, config=cfg)]
+    return [_clean(r) for r in moderate_batch(req.messages, req.rules, config=cfg,
+                                              model=req.model)]
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
 @app.post("/v1/systemone")
