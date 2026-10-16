@@ -475,3 +475,223 @@
 - [x] T428 docs: CHANGELOG 0.2.0 dated entry finalized
 - [x] T429 docs: release-notes draft `docs/drafts/release-0.2.0.md` + tag v0.2.0
 - [x] T430 final: suite green + push
+
+## P24 Persistence (T431–T450)
+- [ ] T431 persist: `persist.py` atomic_write + read_json helpers (`E_SNAPSHOT`)
+- [ ] T432 strikes: `_PATH` + `save()` (atomic JSON)
+- [ ] T433 strikes: `load()` restores table (max-wins merge)
+- [ ] T434 stats: `snapshot()` + `restore()` (validated shape)
+- [ ] T435 stats: `save()` / `load()` file round-trip
+- [ ] T436 cache: `save()` / `load()` entries (expired pruned on load)
+- [ ] T437 cli: `snapshot save FILE` (stats + strikes + version + ts)
+- [ ] T438 cli: `snapshot load FILE` (version-mismatch warning, not failure)
+- [ ] T439 serve: `/stats` gains strikes_summary (counts only, no user ids)
+- [ ] T440 audit: `tail(n)` helper (deque, no full read)
+- [ ] T441 review: entries gain `t` timestamp
+- [ ] T442 review: `prune(max_age_s)` drops old rows
+- [ ] T443 cli: `stats` shows strikes summary line
+- [ ] T444 audit: `log_decision` ensures parent dir exists
+- [ ] T445 cli: `export --stats FILE` writes snapshot JSON
+- [ ] T446 persist: `read_json` raises SnapshotError on corrupt files
+- [ ] T447 stats: `restore()` rejects unknown actions
+- [ ] T448 review: `add()` includes cause field
+- [ ] T449 audit: `tail()` used by `export --since` (no full-file scan)
+- [ ] T450 test: P24 persistence coverage
+
+## P25 Router pools (T451–T470)
+- [ ] T451 pool: `pool.py` RouterPool (kwargs-keyed, LRU, thread-safe)
+- [ ] T452 pool: `BOUNCER_POOL_MAX` env (default 2, mirrors laya reasoning)
+- [ ] T453 pool: `stats()` hits/creates/evictions
+- [ ] T454 pool: `get_pooled_router(**kw)` public constructor cache
+- [ ] T455 engine: `moderate(..., model=None)` passes `model=` to predict
+- [ ] T456 pool: eviction order test (fake factory)
+- [ ] T457 pool: `model_for_lang()` pure mapping + test
+- [ ] T458 engine: auto `model_for_lang(lang)` when model omitted
+- [ ] T459 serve: `model` field on ModReq/BatchReq (allowlist, 422 else)
+- [ ] T460 cli: `check --model` flag (validated)
+- [ ] T461 cli: `stats` shows pool section
+- [ ] T462 serve: `/stats` pool section
+- [ ] T463 pool: `clear()` for tests
+- [ ] T464 engine: `BOUNCER_DEVICE` env → default router kwargs
+- [ ] T465 test: pool thread-safety (2 threads, 1 construction)
+- [ ] T466 test: `model=` reaches router.predict (stub captures kwarg)
+- [ ] T467 test: invalid model 422 on /predict
+- [ ] T468 test: pool stats counters
+- [ ] T469 test: device env honored by get_router
+- [ ] T470 test: P25 pool coverage sweep
+
+## P26 Server multitenancy (T471–T490)
+- [ ] T471 serve: ModReq rules optional + `preset` field
+- [ ] T472 serve: preset resolve, unknown → 422 `E_PRESET`
+- [ ] T473 serve: BatchReq same preset support
+- [ ] T474 serve: decision log includes resolved preset
+- [ ] T475 serve: `BOUNCER_DEFAULT_PRESET` env when request has neither
+- [ ] T476 serve: preset validated against list_presets (422)
+- [ ] T477 serve: `GET /presets/{name}` (404 + E_PRESET when missing)
+- [ ] T478 serve: unknown preset path returns structured 404
+- [ ] T479 engine: `moderate(..., preset=)` resolves via get_preset
+- [ ] T480 test: preset endpoint + resolve paths
+- [ ] T481 serve: preset requests still honor split thresholds
+- [ ] T482 serve: preset + rules together → 422 (exactly one source)
+- [ ] T483 cli: `check` preset+rules conflict exits 4
+- [ ] T484 engine: preset severity auto-attach? no — explicit only (docstring note)
+- [ ] T485 serve: batch preset applies to every message
+- [ ] T486 test: batch preset e2e
+- [ ] T487 test: default-preset env e2e
+- [ ] T488 test: preset/rules conflict 422s
+- [ ] T489 test: single-preset endpoint shapes
+- [ ] T490 test: P26 multitenancy sweep
+
+## P27 Multilingual wiring (T491–T510)
+- [ ] T491 explain: reason appends lang when set
+- [ ] T492 normalize: `detect_script()` (arabic/cyrillic/cjk/latin/other)
+- [ ] T493 engine: state gains `script` field
+- [ ] T494 result: exposes `script` field
+- [ ] T495 demo: meters shows script
+- [ ] T496 serve: lang format validated (`E_LANG`, ^[a-z-]{2,16}$)
+- [ ] T497 data: `data/examples_i18n.jsonl` (12 es/fr/ar rows)
+- [ ] T498 eval: `eval/eval_i18n.py` wiring check + JSON report
+- [ ] T499 docs: BENCHMARKS i18n wiring table
+- [ ] T500 engine: auto model test (ar → multilingual kwarg captured)
+- [ ] T501 presets: `PRESET_LANG` tags + `preset_lang(name)`
+- [ ] T502 serve: preset lang autofills request lang when omitted
+- [ ] T503 eval: i18n check asserts question hint lines
+- [ ] T504 cli: preset-lang vs --lang mismatch prints stderr note
+- [ ] T505 demo: preset switch sets language dropdown to preset lang
+- [ ] T506 test: preset lang tags
+- [ ] T507 test: serve preset-lang autofill
+- [ ] T508 test: CLI mismatch note
+- [ ] T509 eval: i18n script argparse parity (--limit/--out/--json)
+- [ ] T510 test: P27 i18n sweep
+
+## P28 Reliability (T511–T530)
+- [ ] T511 breaker: `breaker_n` / `breaker_cool_s` GateConfig fields
+- [ ] T512 breaker: short-circuit in moderate (no model call while open)
+- [ ] T513 breaker: fallback cause `breaker-open` while tripped
+- [ ] T514 breaker: success closes, resets count
+- [ ] T515 serve: `timeout_s` request field (0.5–60 cap, 422 else)
+- [ ] T516 cli: `check --timeout` flag
+- [ ] T517 engine: 0.05s backoff between predict retries
+- [ ] T518 serve: `GET /ready` (model loadable + pool size)
+- [ ] T519 serve: `/ready` includes pool stats
+- [ ] T520 metrics: `bouncer_breaker_open` 0/1 line
+- [ ] T521 breaker: half-open trial probe after cooldown
+- [ ] T522 serve: `/stats` breaker section
+- [ ] T523 breaker: `BOUNCER_BREAKER=off` disables
+- [ ] T524 serve: `BOUNCER_TIMEOUT` default request timeout
+- [ ] T525 serve: batch honors `BOUNCER_TIMEOUT` too
+- [ ] T526 test: breaker opens after N failures
+- [ ] T527 test: breaker cools + half-open probe
+- [ ] T528 test: timeout caps + /ready shapes
+- [ ] T529 test: breaker metric + stats section
+- [ ] T530 test: P28 reliability sweep
+
+## P29 CLI (T531–T550)
+- [ ] T531 cli: `check --config FILE` (JSON → from_dict)
+- [ ] T532 cli: `watch --config FILE`
+- [ ] T533 cli: `check --user` (strikes attribution)
+- [ ] T534 cli: `watch --user`
+- [ ] T535 cli: `watch --action` filter (comma list)
+- [ ] T536 cli: `export --format json` (raw audit JSON array)
+- [ ] T537 cli: `review --since TS` filter
+- [ ] T538 cli: `bouncer models` (checkpoints + pool stats, no weights)
+- [ ] T539 cli: `bouncer presets` (names + descriptions)
+- [ ] T540 cli: `review prune --older-than SEC`
+- [ ] T541 cli: `watch --lang` flag
+- [ ] T542 cli: `watch --json-in` (per-line {message, user_id})
+- [ ] T543 cli: `review --rule` filter
+- [ ] T544 cli: `export --action` filter
+- [ ] T545 cli: `pack init FILE` writes template pack
+- [ ] T546 cli: preset+rules together exits 4 (conflict)
+- [ ] T547 cli: `serve --key-file` (docker-secrets style key load)
+- [ ] T548 cli: `demo --preset` default selection
+- [ ] T549 cli: `serve --cors` overrides env origins
+- [ ] T550 test: P29 CLI sweep
+
+## P30 Demo (T551–T570)
+- [ ] T551 demo: user_id box → strikes attribution
+- [ ] T552 demo: meters shows strikes standing
+- [ ] T553 demo: per-preset threshold memory (switch restores last values)
+- [ ] T554 demo: history download button (txt export)
+- [ ] T555 demo: review queue viewer (last 5 rows)
+- [ ] T556 demo: model dropdown (auto/english/multilingual/typed-decisions)
+- [ ] T557 demo: night-mode checkbox (quiet_hours 22–7)
+- [ ] T558 demo: require_calm checkbox
+- [ ] T559 demo: severity box (`RULE=high` lines)
+- [ ] T560 demo: meters shows cause
+- [ ] T561 demo: `format_meters(res)` pure helper extracted
+- [ ] T562 demo: `format_trail()` pure helper extracted
+- [ ] T563 demo: threshold memory pure helpers (`remember_thr`)
+- [ ] T564 demo: severity parser pure helper (`parse_severity`)
+- [ ] T565 demo: model dropdown default auto
+- [ ] T566 demo: user box placeholder text
+- [ ] T567 demo: review viewer empty-state text
+- [ ] T568 demo: download filename includes date
+- [ ] T569 demo: night-mode label explains demotion
+- [ ] T570 test: P30 demo-helper sweep
+
+## P31 Eval + data (T571–T590)
+- [ ] T571 eval: `eval/breaker_sim.py` (failure storm → opens, report JSON)
+- [ ] T572 eval: `eval/bench_pool.py` (pooled construction timing + eviction demo)
+- [ ] T573 eval: `validate_data --limit` flag
+- [ ] T574 data: `synth_rules --report` prints label distribution
+- [ ] T575 docs: BENCHMARKS pool/breaker notes
+- [ ] T576 eval: `eval_gatekeeper --model` (passes model= through)
+- [ ] T577 eval: `baseline --limit` flag
+- [ ] T578 docs: eval/reports README lists new artifacts
+- [ ] T579 docs: data/README documents i18n file
+- [ ] T580 test: breaker sim runs weightless (subprocess)
+- [ ] T581 test: pool bench runs weightless
+- [ ] T582 test: synth --report shape
+- [ ] T583 test: eval --model flag surfaces in report
+- [ ] T584 test: baseline --limit truncates
+- [ ] T585 test: validate --limit truncates
+- [ ] T586 data: i18n rows validate clean
+- [ ] T587 eval: i18n report written by CI-safe command
+- [ ] T588 test: snapshot round-trip via CLI (save/load)
+- [ ] T589 test: breaker sim report keys
+- [ ] T590 test: P31 eval sweep
+
+## P32 Docs + packaging (T591–T610)
+- [ ] T591 docs: README persistence section (snapshot CLI + files)
+- [ ] T592 docs: README pools section (max, device, model=)
+- [ ] T593 docs: README preset-as-rules + default preset
+- [ ] T594 docs: README i18n + breaker sections
+- [ ] T595 docs: api.md preset field + E_PRESET/E_LANG
+- [ ] T596 docs: api.md /ready + timeout_s + model fields
+- [ ] T597 docs: architecture pools + breaker diagram
+- [ ] T598 docs: SECURITY key-file + rotation notes
+- [ ] T599 docs: glossary (pool, breaker, half-open, snapshot, multitenancy)
+- [ ] T600 docs: FAQ (restore, breaker tripped, which model?)
+- [ ] T601 docs: CHANGELOG 0.3.0 entry drafted
+- [ ] T602 docs: thresholds guide breaker knobs
+- [ ] T603 docs: presets catalogue preset-lang tags
+- [ ] T604 docs: adapters README model routing note
+- [ ] T605 docs: data README i18n + report flags
+- [ ] T606 pkg: `snapshot` CLI surfaced in README command list
+- [ ] T607 docs: gates.md breaker demotion row
+- [ ] T608 docs: api.md snapshot/export-stats section
+- [ ] T609 test: docs-consistency extended (codes/routes/presets/env)
+- [ ] T610 test: README command list matches CLI parsers
+
+## P33 Release 0.3.0 (T611–T630)
+- [ ] T611 pkg: version 0.3.0
+- [ ] T612 suite: full run green
+- [ ] T613 lint: `ruff check .` green
+- [ ] T614 test: new CLI commands --help (snapshot/models/presets)
+- [ ] T615 test: GET /ready + /presets/{name} shapes
+- [ ] T616 test: pool eviction under max
+- [ ] T617 test: snapshot round-trip (stats+strikes)
+- [ ] T618 test: preset-as-rules e2e + default preset
+- [ ] T619 test: i18n eval report keys
+- [ ] T620 test: breaker e2e (storm → open → cool → probe)
+- [ ] T621 test: timeout + model fields e2e
+- [ ] T622 test: multitenancy isolation (preset A vs B same text)
+- [ ] T623 test: persistence files ignored by git
+- [ ] T624 test: version strings consistent (0.3.0 everywhere)
+- [ ] T625 docs: golden 0.3.0 behavior note
+- [ ] T626 docs: CHANGELOG 0.3.0 dated
+- [ ] T627 docs: release draft + tag v0.3.0
+- [ ] T628 test: breaker + pool metrics lines
+- [ ] T629 suite: final full green + stats
+- [ ] T630 final: push v0.3.0
