@@ -113,6 +113,12 @@ def test_batch_preset_gates():  # T486: preset text really decides, not just 200
     gatekeeper._router = Stub()
 
 
+def test_default_preset_batch(monkeypatch):  # T487
+    monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "stream")
+    r = client.post("/predict/batch", json={"messages": ["p26 db1"]})
+    assert r.status_code == 200 and len(r.json()) == 1
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})
