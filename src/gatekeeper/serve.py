@@ -130,9 +130,10 @@ def stats():
     from .cache import CACHE
     from .stats import get_stats
     table = _strikes._strikes
+    from .pool import POOL  # T462
     return {"name": "bouncer", "version": __version__,  # T240
             "uptime_s": round(time.time() - _START, 1),
-            "decisions": get_stats(), "cache": CACHE.stats(),
+            "decisions": get_stats(), "cache": CACHE.stats(), "pool": POOL.stats(),
             "strikes": {"users": len(table), "total": sum(table.values()),
                         "ban_suggested": sum(1 for n in table.values()
                                             if n >= _strikes.BAN_AT)}}
