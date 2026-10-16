@@ -573,7 +573,7 @@
 - [x] T516 cli: `check --timeout` flag
 - [x] T517 engine: 0.05s backoff between predict retries
 - [x] T518 serve: `GET /ready` (model loadable + pool size)
-- [ ] T519 serve: `/ready` includes pool stats
+- [x] T519 serve: `/ready` includes pool stats
 - [ ] T520 metrics: `bouncer_breaker_open` 0/1 line
 - [ ] T521 breaker: half-open trial probe after cooldown
 - [ ] T522 serve: `/stats` breaker section

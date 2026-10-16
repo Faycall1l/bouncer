@@ -114,11 +114,12 @@ def health():
 
 @app.get("/ready")  # T518: readiness for load balancers (model, not just process)
 def ready():
+    from .pool import POOL  # T519
     try:
         get_router()
-        return {"ready": True, "model": "loaded"}
+        return {"ready": True, "model": "loaded", "pool": POOL.stats()}
     except Exception:  # noqa: BLE001
-        return {"ready": False, "model": "unavailable"}
+        return {"ready": False, "model": "unavailable", "pool": POOL.stats()}
 
 
 @app.get("/version")  # T047
