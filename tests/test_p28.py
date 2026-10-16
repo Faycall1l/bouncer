@@ -71,3 +71,13 @@ def test_breaker_off(monkeypatch):  # T523
         assert gatekeeper._breaker_tripped() is False
     finally:
         _reset_breaker()
+
+
+def test_request_timeout_default(monkeypatch):  # T524
+    from gatekeeper.serve import _request_timeout
+    assert _request_timeout(None) == 10.0
+    assert _request_timeout(2.5) == 2.5
+    monkeypatch.setenv("BOUNCER_TIMEOUT", "3")
+    assert _request_timeout(None) == 3.0
+    monkeypatch.setenv("BOUNCER_TIMEOUT", "junk")
+    assert _request_timeout(None) == 10.0

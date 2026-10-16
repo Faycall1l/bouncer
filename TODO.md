@@ -578,7 +578,7 @@
 - [x] T521 breaker: half-open trial probe after cooldown
 - [x] T522 serve: `/stats` breaker section
 - [x] T523 breaker: `BOUNCER_BREAKER=off` disables
-- [ ] T524 serve: `BOUNCER_TIMEOUT` default request timeout
+- [x] T524 serve: `BOUNCER_TIMEOUT` default request timeout
 - [ ] T525 serve: batch honors `BOUNCER_TIMEOUT` too
 - [ ] T526 test: breaker opens after N failures
 - [ ] T527 test: breaker cools + half-open probe
