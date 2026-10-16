@@ -250,15 +250,18 @@ def cmd_export(args) -> int:
     since = getattr(args, "since", 0) or 0  # T327: epoch filter on audit "t"
     limit = getattr(args, "limit", 0) or 0  # T449: bounded tail read
     as_json = getattr(args, "format", "csv") == "json"  # T536: raw JSON array out
+    only = {a.strip() for a in (getattr(args, "action", None) or "").split(",")
+            if a.strip()}  # T544: comma list of actions to keep
     rows, mss = [], []
     if limit:
         from gatekeeper.audit import tail as _tail
-        rows = [d for d in _tail(limit) if d["t"] >= since]
+        rows = [d for d in _tail(limit)
+                if d["t"] >= since and (not only or d["action"] in only)]
     elif __import__("os").path.exists(_PATH):
         with open(_PATH) as af:
             for line in af:
                 d = json.loads(line)
-                if d["t"] >= since:
+                if d["t"] >= since and (not only or d["action"] in only):
                     rows.append(d)
     for d in rows:
         mss.append(d["ms"])
@@ -375,6 +378,7 @@ def main(argv=None) -> int:
     ex.add_argument("--stats", default=None)  # T445: snapshot JSON path
     ex.add_argument("--limit", type=int, default=0)  # T449: bounded tail export
     ex.add_argument("--format", choices=["csv", "json"], default="csv")  # T536
+    ex.add_argument("--action", default=None)  # T544: comma list, e.g. delete
     ex.set_defaults(fn=cmd_export)
     sn = sub.add_parser("snapshot")  # T437+T438
     sn.add_argument("action", choices=["save", "load"])

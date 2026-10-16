@@ -600,7 +600,7 @@
 - [x] T541 cli: `watch --lang` flag
 - [x] T542 cli: `watch --json-in` (per-line {message, user_id})
 - [x] T543 cli: `review --rule` filter
-- [ ] T544 cli: `export --action` filter
+- [x] T544 cli: `export --action` filter
 - [ ] T545 cli: `pack init FILE` writes template pack
 - [ ] T546 cli: preset+rules together exits 4 (conflict)
 - [ ] T547 cli: `serve --key-file` (docker-secrets style key load)
