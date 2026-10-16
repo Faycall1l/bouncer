@@ -565,7 +565,7 @@
 - [x] T510 test: P27 i18n sweep
 
 ## P28 Reliability (T511–T530)
-- [ ] T511 breaker: `breaker_n` / `breaker_cool_s` GateConfig fields
+- [x] T511 breaker: `breaker_n` / `breaker_cool_s` GateConfig fields
 - [ ] T512 breaker: short-circuit in moderate (no model call while open)
 - [ ] T513 breaker: fallback cause `breaker-open` while tripped
 - [ ] T514 breaker: success closes, resets count

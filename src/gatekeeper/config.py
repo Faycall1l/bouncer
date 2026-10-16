@@ -23,6 +23,8 @@ class GateConfig:
     flag_margin: float = 0.15          # T331: violation conf within this of delete bar -> flag
     require_calm: bool = False         # T332: allow only when harm == safe
     severity_offset: float = 0.15      # T333: high-severity rules delete this much sooner
+    breaker_n: int = 5                 # T511: consecutive failures that trip the breaker
+    breaker_cool_s: float = 30.0       # T511: short-circuit window while open
     max_rules: int = 12
     max_rule_chars: int = 280
     max_msg_chars: int = 2000
