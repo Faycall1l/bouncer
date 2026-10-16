@@ -48,6 +48,11 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 | code | meaning | HTTP |
 |---|---|---|
 | `E_RULES_EMPTY/ID/TEXT/COUNT/RESERVED` | bad rule-set (see message) | 422 |
+| `E_RULES_SEVERITY` | severity not low/high or on unknown rule | 422 |
+| `E_CONFIG` | bad gate config (thresholds, timeouts, quiet_hours) | 422 / ValueError |
+| `E_WEBHOOK` | event forward POST failed | exception |
+| `E_SLACK` | malformed Slack event body | exception |
+| `E_INTERNAL` | unexpected server failure (no detail leaked) | 500 |
 | `E_MODEL` | inference failed twice → escalated | 200 + action=escalate |
 | 429/413 | rate limited / body too long | as numbered |
 
