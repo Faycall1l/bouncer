@@ -256,7 +256,9 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
         return res
     key = CACHE.key(msg, rules, cfg.allow_threshold, cfg.delete_threshold,  # T221
                     cfg.severity, lang, context or (), cfg.history_n,
-                    _quiet_active(cfg))
+                    _quiet_active(cfg), (cfg.jailbreak_threshold, cfg.escalate_threshold,
+                                         cfg.margin_abstain, cfg.flag_margin,
+                                         cfg.severity_offset, cfg.require_calm))
     hit = CACHE.get(key)
     if hit is not None:
         return dict(hit, cached=True)

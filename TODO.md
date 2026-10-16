@@ -386,7 +386,7 @@
 - [x] T347 engine: question instructions mention option count
 - [x] T348 engine: `build_questions(rules, lang=None)` adds lang line to rule question
 - [x] T349 test: all presets validate + texts within 280 chars
-- [ ] T350 test: P19 engine coverage
+- [x] T350 test: P19 engine coverage
 
 ## P20 Demo app (T351–T370)
 - [ ] T351 demo: split allow/delete threshold sliders

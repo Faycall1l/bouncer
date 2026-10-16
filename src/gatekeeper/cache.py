@@ -25,16 +25,16 @@ class TTLCache:
     def key(message: str, rules: dict, allow_threshold: float, delete_threshold: float,
             severity: dict | None = None, lang: str | None = None,
             context: tuple | list = (), history_n: int = 4,
-            quiet_active: bool = False) -> str:
+            quiet_active: bool = False, gates: tuple = ()) -> str:
         """T221: every input that can change the decision is in the key.
 
         (msg, rules, both thresholds, severity, lang, bounded context,
-        history window, quiet-hours state). `v2:` prefix busts old-format keys.
+        history window, quiet-hours state, extra gate knobs). `v2:` prefix busts old-format keys.
         """
         hist = list(context)[-history_n:] if context else []  # T272: no copy when empty
         sev = repr(sorted(severity.items())) if severity else "{}"  # T272
         parts = [message, repr(sorted(rules.items())), repr((allow_threshold, delete_threshold)),
-                 sev, repr(lang), repr(hist), repr(quiet_active)]
+                 sev, repr(lang), repr(hist), repr(quiet_active), repr(gates)]
         return "v2:" + ":".join(_short(p, 12 if i else 16) for i, p in enumerate(parts))
 
     def get(self, k: str):
