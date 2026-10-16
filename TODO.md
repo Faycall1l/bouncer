@@ -411,7 +411,7 @@
 - [x] T370 test: P20 demo-logic coverage (pure helpers, no gradio)
 
 ## P21 Eval + data (T371–T390)
-- [ ] T371 eval: `eval_gatekeeper.py` argparse (`--limit`, `--out`, `--help` works weightless)
+- [x] T371 eval: `eval_gatekeeper.py` argparse (`--limit`, `--out`, `--help` works weightless)
 - [ ] T372 eval: report includes threshold snapshot
 - [ ] T373 eval: report includes per-action counts
 - [ ] T374 eval: report includes abstention rate

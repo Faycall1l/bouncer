@@ -16,9 +16,15 @@ def ece(probs, golds, n=10):
     return float(e)
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "data/gatekeeper-12k.jsonl"
+    import argparse  # T371
+    ap = argparse.ArgumentParser(prog="eval_gatekeeper")
+    ap.add_argument("path", nargs="?", default="data/gatekeeper-12k.jsonl")
+    ap.add_argument("--limit", type=int, default=500)
+    ap.add_argument("--out", default="eval/reports/zero-shot.json")
+    a = ap.parse_args()
+    path = a.path
     with open(path) as f:
-        rows = [json.loads(line) for line in f][:500]
+        rows = [json.loads(line) for line in f][:a.limit]
     r = get_router()
     cfg = GateConfig()
     ok, confs, golds, lat, gated_ok, gated_n = 0, [], [], [], 0, 0
@@ -49,6 +55,6 @@ if __name__ == "__main__":
               "per_rule": {k: [per_rule_ok[k], per_rule[k]] for k in per_rule}}
     import os
     os.makedirs("eval/reports", exist_ok=True)
-    with open("eval/reports/zero-shot.json", "w") as f:
+    with open(a.out, "w") as f:
         json.dump(report, f, indent=2)
     print(json.dumps(report, indent=2))
