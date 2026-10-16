@@ -20,6 +20,12 @@ def review_entry(message: str, res: dict) -> dict:
             "ms": res.get("latency_ms", 0.0)}
 
 
+def action_badge(action: str) -> str:
+    """T370: action -> badge (pure, so UI text is pinned by tests)."""
+    return {"allow": "🟢 ALLOW", "flag": "🟡 FLAG", "delete": "🔴 DELETE",
+            "escalate": "⚪ ESCALATE"}[action]
+
+
 def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T081-T095
     """T324: port/share settable for `bouncer demo --port/--share` and Spaces."""
     import gradio as gr
@@ -54,8 +60,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
             return "⚪ ERROR", "-", f"{type(e).__name__}: {e}", "", "", ""
         r["reason"] = explain(r, rules)
         stash["res"] = r  # T356
-        badge = {"allow": "🟢 ALLOW", "flag": "🟡 FLAG", "delete": "🔴 DELETE",
-                 "escalate": "⚪ ESCALATE"}[r["action"]]
+        badge = action_badge(r["action"])
         dist = r.get("rule_dist") or {}
         bars = "\n".join(f"{k}: {'█' * int(v * 20)} {v:.2f}" for k, v in
                          sorted(dist.items(), key=lambda kv: -kv[1])[:8]) or "n/a"  # T368
