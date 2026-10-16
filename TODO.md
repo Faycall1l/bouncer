@@ -495,7 +495,7 @@
 - [x] T446 persist: `read_json` raises SnapshotError on corrupt files
 - [x] T447 stats: `restore()` rejects unknown actions
 - [x] T448 review: `add()` includes cause field
-- [ ] T449 audit: `tail()` used by `export --since` (no full-file scan)
+- [x] T449 audit: `tail()` used by `export --limit` (bounded read, no full scan)
 - [ ] T450 test: P24 persistence coverage
 
 ## P25 Router pools (T451–T470)
