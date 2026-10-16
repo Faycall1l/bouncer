@@ -554,7 +554,7 @@
 - [x] T499 docs: BENCHMARKS i18n wiring table
 - [x] T500 engine: auto model test (ar → multilingual kwarg captured)
 - [x] T501 presets: `PRESET_LANG` tags + `preset_lang(name)`
-- [ ] T502 serve: preset lang autofills request lang when omitted
+- [x] T502 serve: preset lang autofills request lang when omitted
 - [ ] T503 eval: i18n check asserts question hint lines
 - [ ] T504 cli: preset-lang vs --lang mismatch prints stderr note
 - [ ] T505 demo: preset switch sets language dropdown to preset lang

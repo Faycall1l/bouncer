@@ -291,10 +291,14 @@ def predict(req: ModReq, request: Request):
     _check_model(req.model)  # T459
     _check_lang(req.lang)  # T496
     rules, preset_name = _resolve_rules(req.rules, req.preset)  # T472
+    lang = req.lang
+    if lang is None and preset_name is not None:  # T502: pack knows its language
+        from .presets import preset_lang
+        lang = preset_lang(preset_name)
     try:
         res = moderate(req.message, rules, req.context,
                        config=GateConfig(allow_threshold=allow_t, delete_threshold=delete_t),
-                       lang=req.lang, model=req.model)
+                       lang=lang, model=req.model)
     except RuleError as e:
         raise HTTPException(status_code=422,  # T256: machine-readable code
                             detail={"code": getattr(e, "code", "E_RULES"),
