@@ -30,6 +30,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
     names = sorted(list_presets())
     preset_text = {n: "\n".join(f"{k}: {v}" for k, v in get_preset(n).items()) for n in names}
     stash: dict = {}  # T356: latest real result for the review button
+    tally = [0, 0]  # T362: regex-baseline agree [hits, total]
 
     def run(msg, preset, rules_t, allow_thr, delete_thr, lang):  # T351+T357
         if not (msg or "").strip():  # T360: don't spend a model call on nothing
@@ -60,7 +61,11 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         meters += f" margin={r.get('margin', '?')}"  # T352
         from gatekeeper.normalize import caps_flood, extract_links  # T175: regex baseline
         base = "delete" if extract_links(msg) else ("flag" if caps_flood(msg) else "allow")
-        meters += f"\nregex-baseline={base} agree={base == r['action']}"
+        agree = base == r["action"]
+        meters += f"\nregex-baseline={base} agree={agree}"
+        tally[0] += agree  # T362: running [hits, total]
+        tally[1] += 1
+        meters += f" ({tally[0]}/{tally[1]})"
         return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"], bars, meters, f"{r.get('latency_ms', '?')} ms"
 
     with gr.Blocks(title="bouncer", theme=gr.themes.Soft()) as app:  # T091
