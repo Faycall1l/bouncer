@@ -15,6 +15,12 @@ def ece(probs, golds, n=10):
         if m.sum(): e += abs(probs[m].mean() - golds[m].mean()) * m.mean()
     return float(e)
 
+
+def brier(probs, golds):  # T375
+    import numpy as np
+    probs, golds = np.array(probs), np.array(golds)
+    return float(((probs - golds) ** 2).mean()) if len(probs) else 0.0
+
 if __name__ == "__main__":
     import argparse  # T371
     ap = argparse.ArgumentParser(prog="eval_gatekeeper")
@@ -55,6 +61,7 @@ if __name__ == "__main__":
               "thresholds": {"allow": cfg.allow_threshold,  # T372
                              "delete": cfg.delete_threshold},
               "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),
+              "brier": round(brier(confs, golds), 3),  # T375
               "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
               "actions": dict(sorted(actions.items())),  # T373
               "abstention_rate": round(abstained_n / len(rows), 3),  # T374

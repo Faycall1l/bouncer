@@ -415,7 +415,7 @@
 - [x] T372 eval: report includes threshold snapshot
 - [x] T373 eval: report includes per-action counts
 - [x] T374 eval: report includes abstention rate
-- [ ] T375 eval: report includes Brier score
+- [x] T375 eval: report includes Brier score
 - [ ] T376 eval: confusion pairs include mean confidence
 - [ ] T377 eval: report includes latency p95
 - [ ] T378 eval: rows with missing keys skipped + counted
