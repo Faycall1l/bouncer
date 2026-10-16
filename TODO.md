@@ -587,7 +587,7 @@
 - [x] T530 test: P28 reliability sweep
 
 ## P29 CLI (T531–T550)
-- [ ] T531 cli: `check --config FILE` (JSON → from_dict)
+- [x] T531 cli: `check --config FILE` (JSON → from_dict)
 - [ ] T532 cli: `watch --config FILE`
 - [ ] T533 cli: `check --user` (strikes attribution)
 - [ ] T534 cli: `watch --user`

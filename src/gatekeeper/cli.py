@@ -32,8 +32,20 @@ def _load_rules(args) -> dict:
 def _cfg_from_args(args):
     """T223: split gates; unset flags fall back to the single --threshold."""
     from gatekeeper import GateConfig
-    allow = args.threshold if args.allow_threshold is None else args.allow_threshold
-    delete = args.threshold if args.delete_threshold is None else args.delete_threshold
+    if getattr(args, "config", None):  # T531+T532: file is the base, flags override
+        import json as _json
+        with open(args.config) as f:
+            cfg = GateConfig.from_dict(_json.load(f))
+    else:
+        cfg = GateConfig()
+    if args.allow_threshold is not None:
+        cfg.allow_threshold = args.allow_threshold
+    if args.delete_threshold is not None:
+        cfg.delete_threshold = args.delete_threshold
+    if (args.allow_threshold is None and args.delete_threshold is None
+            and (args.threshold != 0.85 or getattr(args, "config", None) is None)):
+        cfg.allow_threshold = cfg.delete_threshold = args.threshold
+    cfg.validate()
     sev = {}  # T313: ["no-scams=high", ...] -> {"no-scams": "high"}
     for item in getattr(args, "severity", None) or []:
         if "=" not in item:
@@ -41,7 +53,8 @@ def _cfg_from_args(args):
             sys.exit(4)
         rid, level = item.split("=", 1)
         sev[rid.strip()] = level.strip()
-    cfg = GateConfig(allow_threshold=allow, delete_threshold=delete, severity=sev)
+    if sev:
+        cfg.severity = sev
     if getattr(args, "history", None) is not None:  # T329
         cfg.history_n = args.history
     return cfg
@@ -272,6 +285,7 @@ def main(argv=None) -> int:
     c.add_argument("--history", type=int, default=None)  # T329: override history_n
     c.add_argument("--model", default=None)  # T460: pin checkpoint
     c.add_argument("--timeout", type=float, default=None)  # T516: inference budget
+    c.add_argument("--config", default=None)  # T531: JSON gate config file
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
