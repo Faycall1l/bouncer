@@ -20,3 +20,17 @@ def test_pool_stats():  # T453
     p.get(device="cpu")
     s = p.stats()
     assert (s["hits"], s["creates"], s["size"]) == (1, 1, 1)
+
+
+def test_pooled_identity():  # T454
+    import gatekeeper.pool as _pool
+    from gatekeeper.pool import get_pooled_router
+    _pool.POOL.clear()
+    made = []
+    _pool.POOL._factory = lambda **kw: made.append(kw) or object()
+    try:
+        assert get_pooled_router(device="cpu") is get_pooled_router(device="cpu")
+        assert len(made) == 1
+    finally:
+        _pool.POOL._factory = None
+        _pool.POOL.clear()
