@@ -427,7 +427,7 @@
 - [x] T384 bench: batch-size sweep script with stub router
 - [x] T385 docs: BENCHMARKS stub-latency table filled from measured runs
 - [x] T386 kaggle: `train.py` documents expected input schema (docstring)
-- [ ] T387 notebooks: `finetune_kaggle.py` file handling via context managers
+- [x] T387 notebooks: `finetune_kaggle.py` file handling via context managers
 - [ ] T388 repo: `ruff check .` fully green (notebooks/eval/kaggle/data)
 - [ ] T389 repo: `eval/reports/*.json` gitignored (keep dir via README)
 - [ ] T390 test: P21 eval-helper coverage (ece/brier/baseline/validate, no weights)
