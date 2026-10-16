@@ -524,7 +524,7 @@
 - [x] T471 serve: ModReq rules optional + `preset` field
 - [x] T472 serve: preset resolve, unknown → 422 `E_PRESET`
 - [x] T473 serve: BatchReq same preset support
-- [ ] T474 serve: decision log includes resolved preset
+- [x] T474 serve: decision log includes resolved preset
 - [ ] T475 serve: `BOUNCER_DEFAULT_PRESET` env when request has neither
 - [ ] T476 serve: preset validated against list_presets (422)
 - [ ] T477 serve: `GET /presets/{name}` (404 + E_PRESET when missing)
