@@ -21,13 +21,18 @@ def add(message: str, res: dict) -> None:  # T170
                             "ms": res.get("latency_ms", 0.0)}) + "\n")  # T244
 
 
-def list_queue(limit: int = 20, action: str | None = None) -> list:  # T170+T243
+def list_queue(limit: int = 20, action: str | None = None,
+               since: float = 0, rule: str | None = None) -> list:  # T537+T543
     if not os.path.exists(_PATH):
         return []
     with open(_PATH) as f:  # T229: tail via deque, no full-file list in memory
         rows = [json.loads(line) for line in deque(f, maxlen=1000)]
     if action:  # T243
         rows = [r for r in rows if r.get("action") == action]
+    if since:  # T537: rows at/after this epoch second
+        rows = [r for r in rows if r.get("t", 0) >= since]
+    if rule:  # T543: rows for this rule id only
+        rows = [r for r in rows if r.get("rule") == rule]
     return rows[-max(limit, 1):]
 
 

@@ -137,7 +137,9 @@ def cmd_review(args) -> int:
             return 4
         print(f"cleared {clear_queue()} queued rows")
         return 0
-    for row in list_queue(args.limit, action=args.action):  # T317
+    for row in list_queue(args.limit, action=args.action,
+                          since=getattr(args, "since", 0) or 0,  # T537
+                          rule=getattr(args, "rule", None)):  # T543
         print(f"{row['action']:8} {row['rule']}@{row['conf']:.2f} {row['message'][:100]}")
     return 0
 
@@ -315,6 +317,8 @@ def main(argv=None) -> int:
     r = sub.add_parser("review")  # T170
     r.add_argument("--limit", type=int, default=20)
     r.add_argument("--action", default=None)  # T317
+    r.add_argument("--since", type=float, default=0)  # T537: epoch seconds
+    r.add_argument("--rule", default=None)  # T543
     r.add_argument("--clear", action="store_true")  # T318
     r.add_argument("--yes", action="store_true")  # T318
     r.set_defaults(fn=cmd_review)
