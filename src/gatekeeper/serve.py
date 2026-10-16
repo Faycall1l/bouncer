@@ -145,6 +145,18 @@ def presets():
     return {n: get_preset(n) for n in list_presets()}
 
 
+@app.get("/presets/{name}")  # T477+T478
+def preset_one(name: str):
+    from fastapi import HTTPException
+
+    from . import get_preset, list_presets
+    if name not in list_presets():
+        raise HTTPException(status_code=404,
+                            detail={"code": "E_PRESET",
+                                    "message": f"unknown preset {name!r}"})
+    return {"name": name, "rules": get_preset(name)}
+
+
 @app.get("/metrics")  # T178: prometheus-style text
 def metrics():
     from fastapi.responses import PlainTextResponse
