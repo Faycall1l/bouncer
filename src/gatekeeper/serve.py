@@ -185,6 +185,7 @@ class ModReq(BaseModel):
     delete_threshold: float | None = None
     lang: str | None = None
     model: str | None = None  # T459: pin a checkpoint or omit for auto-routing
+    timeout_s: float | None = None  # T515: per-request budget (0.5–60s)
 
     model_config = {"json_schema_extra": {"examples": [  # T063
         {"message": "FREE NITRO http://x.gg", "rules": {"no-spam": "no ads or links"},
@@ -253,6 +254,22 @@ def _check_model(model: str | None) -> None:
                                     "message": f"unknown model {model!r} (pick from {list(MODELS)})"})
 
 
+def _request_timeout(req_timeout: float | None) -> float:
+    """T515+T524: per-request budget, else BOUNCER_TIMEOUT, else 10s. Capped 0.5–60."""
+    import os as _os
+    if req_timeout is not None:
+        if not 0.5 <= req_timeout <= 60:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=422,
+                                detail={"code": "E_TIMEOUT",
+                                        "message": "timeout_s must be in [0.5, 60]"})
+        return req_timeout
+    try:
+        return max(0.5, min(60.0, float(_os.environ.get("BOUNCER_TIMEOUT", "10.0"))))
+    except (TypeError, ValueError):
+        return 10.0
+
+
 def _check_lang(lang: str | None) -> None:
     """T496: lang hints are short slugs, not sentences."""
     import re as _re
@@ -295,9 +312,10 @@ def predict(req: ModReq, request: Request):
     if lang is None and preset_name is not None:  # T502: pack knows its language
         from .presets import preset_lang
         lang = preset_lang(preset_name)
+    cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t,
+                     timeout_s=_request_timeout(req.timeout_s))  # T515
     try:
-        res = moderate(req.message, rules, req.context,
-                       config=GateConfig(allow_threshold=allow_t, delete_threshold=delete_t),
+        res = moderate(req.message, rules, req.context, config=cfg,
                        lang=lang, model=req.model)
     except RuleError as e:
         raise HTTPException(status_code=422,  # T256: machine-readable code
@@ -319,6 +337,7 @@ class BatchReq(BaseModel):
     allow_threshold: float | None = None  # T223
     delete_threshold: float | None = None
     model: str | None = None  # T459
+    timeout_s: float | None = None  # T515
 
 
 @app.post("/predict/batch")  # T050

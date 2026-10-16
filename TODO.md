@@ -569,7 +569,7 @@
 - [x] T512 breaker: short-circuit in moderate (no model call while open)
 - [x] T513 breaker: fallback cause `breaker-open` while tripped
 - [x] T514 breaker: success closes, resets count
-- [ ] T515 serve: `timeout_s` request field (0.5–60 cap, 422 else)
+- [x] T515 serve: `timeout_s` request field (0.5–60 cap, 422 else)
 - [ ] T516 cli: `check --timeout` flag
 - [ ] T517 engine: 0.05s backoff between predict retries
 - [ ] T518 serve: `GET /ready` (model loadable + pool size)
