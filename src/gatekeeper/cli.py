@@ -9,13 +9,17 @@ import sys
 
 def _load_rules(args) -> dict:
     from gatekeeper import get_preset
+    if args.preset and getattr(args, "rules", None):  # T483: explicit conflict
+        print("bouncer: pass --preset or --rules, not both", file=sys.stderr)
+        sys.exit(4)
     if args.preset:
         return get_preset(args.preset)
-    if not __import__("os").path.exists(args.rules):  # T214
-        print(f"bouncer: no rules file {args.rules!r} — pass --rules PATH or --preset NAME",
+    path = args.rules or "rules.json"  # T483: None default = not passed
+    if not __import__("os").path.exists(path):  # T214
+        print(f"bouncer: no rules file {path!r} — pass --rules PATH or --preset NAME",
               file=sys.stderr)
         sys.exit(4)
-    with open(args.rules) as f:
+    with open(path) as f:
         rules = json.load(f)
     from gatekeeper.rules import RuleError, validate_rules  # T314: fail fast, not per-line
     try:
@@ -249,7 +253,7 @@ def main(argv=None) -> int:
     sub.required = False
     c = sub.add_parser("check")
     c.add_argument("message")
-    c.add_argument("--rules", default="rules.json")
+    c.add_argument("--rules", default=None)  # T483: None = not passed (conflict check)
     c.add_argument("--preset")
     _add_threshold_flags(c)
     c.add_argument("--lang", default=None)  # T311
@@ -272,7 +276,7 @@ def main(argv=None) -> int:
     d.add_argument("--share", action="store_true")  # T323
     d.set_defaults(fn=lambda a: (_demo(a), 0))
     w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail
-    w.add_argument("--rules", default="rules.json")
+    w.add_argument("--rules", default=None)  # T483
     w.add_argument("--preset")
     _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)
