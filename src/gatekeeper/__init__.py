@@ -55,6 +55,9 @@ def _breaker_tripped() -> bool:
     with _BREAKER_LOCK:
         if _BREAKER["half_open"]:  # T521: trial probe owns the call
             return False
+        if _BREAKER["fails"] > 0 and _t.time() >= _BREAKER["open_until"]:
+            _BREAKER["half_open"] = True  # T521: cooldown over, one trial call
+            return False
         return _t.time() < _BREAKER["open_until"]
 
 
