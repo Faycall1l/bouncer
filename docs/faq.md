@@ -15,3 +15,16 @@ on your data brings ~0.08. Never trust raw conf — use gates + margin abstentio
 
 **NSFW/CSAM?** This tool flags; it does not replace human review or platform
 reporting flows for illegal content. Escalate, don't automate, high-stakes calls.
+
+**Why split allow/delete thresholds?** (T406) Precision needs differ: a false
+allow (missed spam) costs less than a false delete (censored user). Set delete
+high (0.9) and allow lower (0.8) to auto-allow the obvious while only deleting
+the certain.
+
+**Why is batch capped at 32?** (T406) One request = one chunked loop over a
+shared Router; unbounded batches let a single caller hog inference and blow
+padding memory. 32 keeps p95 fair for everyone behind the rate limiter.
+
+**Can cached decisions go stale?** (T406) No — since T221 the key covers every
+decision input (both thresholds, lang, context, quiet state, gate knobs). Same
+text under different settings recomputes instead of reusing.

@@ -448,7 +448,7 @@
 - [x] T403 docs: SECURITY.md `BOUNCER_*` env table
 - [x] T404 docs: CONTRIBUTING tick+push-per-box convention note
 - [x] T405 docs: glossary gains flag band, coalescing, quiet-hours, fastpath, margin
-- [ ] T406 docs: FAQ gains 3 entries (split gates, batch cap, stale-cache fix)
+- [x] T406 docs: FAQ gains 3 entries (split gates, batch cap, stale-cache fix)
 - [ ] T407 docs: BENCHMARKS honest-limits refresh
 - [ ] T408 docs: adapters README (discord stats, twitch reconnect, webhook escalate)
 - [ ] T409 docs: `api.md` auth + rate-limit headers section
