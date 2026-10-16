@@ -530,7 +530,7 @@
 - [x] T477 serve: `GET /presets/{name}` (404 + E_PRESET when missing)
 - [x] T478 serve: unknown preset path returns structured 404
 - [x] T479 engine: `moderate(..., preset=)` resolves via get_preset
-- [ ] T480 test: preset endpoint + resolve paths
+- [x] T480 test: preset endpoint + resolve paths
 - [ ] T481 serve: preset requests still honor split thresholds
 - [ ] T482 serve: preset + rules together → 422 (exactly one source)
 - [ ] T483 cli: `check` preset+rules conflict exits 4

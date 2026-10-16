@@ -51,6 +51,29 @@ def test_preset_singleton_endpoint():  # T477+T478
     assert r.status_code == 404 and r.json()["detail"]["code"] == "E_PRESET"
 
 
+def test_moderate_preset_paths():  # T479+T480
+    import pytest
+
+    from gatekeeper import moderate
+    from gatekeeper.cache import CACHE
+    from gatekeeper.rules import RuleError
+    CACHE.clear()
+
+    class S:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    r = moderate("p26 lib preset msg", preset="gaming", router=S())
+    assert r["action"] == "allow"
+    with pytest.raises(RuleError, match="E_PRESET"):
+        moderate("x", {"a": "rule a text"}, preset="gaming", router=S())
+    with pytest.raises(RuleError, match="E_PRESET"):
+        moderate("x", preset="nope", router=S())
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})
