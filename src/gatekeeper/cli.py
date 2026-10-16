@@ -118,6 +118,37 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def cmd_snapshot(args) -> int:  # T437+T438
+    import json as _json
+    import time as _t
+
+    from gatekeeper import __version__
+    from gatekeeper import strikes as _strikes
+    from gatekeeper.persist import SnapshotError, atomic_write, read_json
+    from gatekeeper.stats import restore as _restore
+    from gatekeeper.stats import snapshot as _snap
+    if args.action == "save":
+        snap = _snap()
+        doc = {"v": 1, "t": int(_t.time()), "bouncer": __version__,
+               "stats": snap, "strikes": dict(_strikes._strikes)}
+        atomic_write(args.file, _json.dumps(doc, indent=2))
+        print(f"snapshot -> {args.file} "
+              f"(total={sum(snap['counts'].values())}, users={len(doc['strikes'])})")
+        return 0
+    data = read_json(args.file)
+    if data.get("v") != 1:  # T438+T449: version mismatch warns, never fails
+        raise SnapshotError(f"E_SNAPSHOT: unsupported snapshot version {data.get('v')!r}")
+    if data.get("bouncer") != __version__:
+        print(f"bouncer: snapshot from {data.get('bouncer')} (running {__version__})",
+              file=sys.stderr)
+    _restore(data.get("stats", {}))
+    for user, n in (data.get("strikes", {}) or {}).items():
+        if isinstance(n, int) and n > 0:
+            _strikes._strikes[user] = max(_strikes._strikes.get(user, 0), n)
+    print(f"snapshot <- {args.file}")
+    return 0
+
+
 def cmd_export(args) -> int:
     import csv
 
@@ -221,6 +252,10 @@ def main(argv=None) -> int:
     ex.add_argument("--out", default="audit.csv")
     ex.add_argument("--since", type=float, default=0)  # T327: epoch seconds
     ex.set_defaults(fn=cmd_export)
+    sn = sub.add_parser("snapshot")  # T437+T438
+    sn.add_argument("action", choices=["save", "load"])
+    sn.add_argument("file")
+    sn.set_defaults(fn=cmd_snapshot)
     pk = sub.add_parser("pack")  # T173+T174
     pk.add_argument("action", choices=["show", "lint"])
     pk.add_argument("--preset", default="gaming")

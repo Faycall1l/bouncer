@@ -483,7 +483,7 @@
 - [x] T434 stats: `snapshot()` + `restore()` (validated shape)
 - [x] T435 stats: `save()` / `load()` file round-trip
 - [x] T436 cache: `save()` / `load()` entries (expired pruned on load)
-- [ ] T437 cli: `snapshot save FILE` (stats + strikes + version + ts)
+- [x] T437 cli: `snapshot save FILE` (stats + strikes + version + ts)
 - [ ] T438 cli: `snapshot load FILE` (version-mismatch warning, not failure)
 - [ ] T439 serve: `/stats` gains strikes_summary (counts only, no user ids)
 - [ ] T440 audit: `tail(n)` helper (deque, no full read)
