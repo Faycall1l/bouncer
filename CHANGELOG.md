@@ -1,5 +1,20 @@
 # Changelog (T146/T168)
 
+## 0.2.0 — UNRELEASED (draft, T400)
+* Observability: joint action×rule counts, latency p50/p95, cheap-path counter,
+  escalate causes, richer audit lines (lang/ctx/thresholds), metrics + /stats
+  growth, harm in reasons, review filters.
+* Robustness: severity + full config validation (`E_CONFIG`), structured
+  422/500s, timeout-named fallbacks observed + queued, shared inference pool.
+* Engine: flag band / severity offset / require_calm knobs, margin + thresholds
+  + lang + quiet in results, `user_id` strikes, lang-aware questions.
+* API/CLI/demo: split gates everywhere, batch/context/size caps, gzip, security
+  headers, key hygiene, 20 CLI flags, split demo sliders, language picker.
+* Adapters: discord stats + perms fallback, twitch reconnect + redaction,
+  webhook headers + escalate forwarding, slack validation.
+* Eval/data: argparse everywhere, Brier/p95/abstention/actions/confusions,
+  schema checker, `--seed`, stub benches (0.08ms p50 overhead).
+
 ## 0.1.2 — 2026-10-14
 * Correctness: cache key covers all decision inputs (both thresholds, lang,
   context, quiet-state) — same message under other settings no longer gets a
