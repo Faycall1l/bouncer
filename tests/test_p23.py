@@ -36,3 +36,12 @@ def test_all_get_routes():  # T415
     for path in ("/health", "/version", "/models", "/stats", "/presets", "/metrics"):
         r = client.get(path)
         assert r.status_code == 200, path
+
+
+def test_demo_import_without_gradio():  # T416
+    import sys as _sys
+    assert "gradio" not in _sys.modules, "import gradio only inside launch()"
+    import gatekeeper.demo_app as _da
+    assert callable(_da.launch) and callable(_da.parse_rules)
+    import inspect
+    assert "port" in inspect.signature(_da.launch).parameters
