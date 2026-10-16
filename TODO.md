@@ -424,7 +424,7 @@
 - [x] T381 data: `eval/validate_data.py` schema checker (state/rules/labels)
 - [x] T382 data: `synth_rules.py --seed` reproducibility flag
 - [x] T383 bench: 1-question vs 5-question timing script
-- [ ] T384 bench: batch-size sweep script with stub router
+- [x] T384 bench: batch-size sweep script with stub router
 - [ ] T385 docs: BENCHMARKS stub-latency table filled from measured runs
 - [ ] T386 kaggle: `train.py` documents expected input schema (docstring)
 - [ ] T387 notebooks: `finetune_kaggle.py` file handling via context managers
