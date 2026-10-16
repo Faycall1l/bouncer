@@ -122,3 +122,28 @@ def test_breaker_cool_and_probe():  # T521+T527
     assert r2["cause"] == "fallback"  # probe failed → re-tripped
     assert gatekeeper._breaker_tripped() is True
     _reset_breaker()
+
+
+def test_timeout_caps_and_ready():  # T515+T518+T519+T528
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    class S:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    gatekeeper._router = S()
+    serve._BUCKETS.clear()
+    client = TestClient(serve.app)
+    r = client.post("/predict", json={"message": "hi", "rules": {"a": "rule a text"},
+                                      "timeout_s": 100})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_TIMEOUT"
+    r = client.get("/ready")
+    body = r.json()
+    assert r.status_code == 200 and body["ready"] is True
+    assert set(body["pool"]) == {"size", "max_n", "hits", "creates", "evictions"}
