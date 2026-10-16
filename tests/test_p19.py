@@ -44,3 +44,12 @@ def test_severity_deletes_sooner():  # T346
     sev = moderate("p19 sev msg", rules,
                    config=GateConfig(severity={"no-scams": "high"}), router=Viol())
     assert (plain["action"], sev["action"]) == ("flag", "delete")
+
+
+def test_all_presets_validate():  # T349
+    from gatekeeper import get_preset, list_presets
+    from gatekeeper.rules import validate_rules
+    for name in list_presets():
+        rules = get_preset(name)
+        validate_rules(rules)
+        assert all(len(t) <= 280 for t in rules.values()), name
