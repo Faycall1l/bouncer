@@ -79,3 +79,17 @@ def test_review_round_trip(tmp_path, monkeypatch):  # T419
     assert len(_rv.list_queue()) == 2
     assert [r["action"] for r in _rv.list_queue(action="escalate")] == ["escalate"]
     assert _rv.clear_queue() == 2 and _rv.list_queue() == []
+
+
+def test_strikes_lifecycle():  # T420
+    from gatekeeper import strikes
+    strikes.reset()
+    assert strikes.add_strike("u1")["strikes"] == 1
+    assert strikes.add_strike("u1", 2)["suggest_ban"] is True
+    assert strikes.standing("u1") == {"user": "u1", "strikes": 3, "suggest_ban": True}
+    strikes._last_decay[0] -= 7200  # 2h idle
+    strikes.add_strike("u2")
+    assert strikes.standing("u1")["strikes"] == 1  # decayed by 2
+    assert strikes.standing("u2")["strikes"] == 1  # fresh clock, not wiped
+    strikes.reset()
+    assert strikes.standing("u1")["strikes"] == 0
