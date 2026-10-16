@@ -59,3 +59,15 @@ def test_breaker_closes_on_success():  # T514
     moderate("p28 flaky two", rules, config=cfg, router=Flaky())
     assert gatekeeper._BREAKER["fails"] == 0
     _reset_breaker()
+
+
+def test_breaker_off(monkeypatch):  # T523
+    CACHE.clear()
+    _reset_breaker()
+    monkeypatch.setenv("BOUNCER_BREAKER", "off")
+    gatekeeper._BREAKER.update({"fails": 99, "open_until": 9999999999.0,
+                                "half_open": False})
+    try:
+        assert gatekeeper._breaker_tripped() is False
+    finally:
+        _reset_breaker()
