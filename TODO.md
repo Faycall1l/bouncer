@@ -434,7 +434,7 @@
 
 ## P22 Docs + packaging (T391–T410)
 - [x] T391 docs: README split-threshold examples (CLI + API)
-- [ ] T392 docs: README batch cap + 413/429 codes
+- [x] T392 docs: README batch cap + 413/429 codes
 - [ ] T393 docs: README error table gains E_CONFIG/E_WEBHOOK/E_SLACK/E_INTERNAL
 - [ ] T394 docs: `api.md` updated (split gates, caps, guards, Retry-After)
 - [ ] T395 docs: `architecture.md` diagram updated (key inputs, early observability, precedence)

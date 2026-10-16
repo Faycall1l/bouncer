@@ -51,6 +51,10 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 | `E_MODEL` | inference failed twice → escalated | 200 + action=escalate |
 | 429/413 | rate limited / body too long | as numbered |
 
+Batch: `POST /predict/batch` takes ≤32 messages (413 beyond), each ≤8000 chars;
+context lists cap at 20 items (422 beyond). Empty batches are 422. 429s carry
+`Retry-After: 60`.
+
 ## Quickstart (30 seconds, zero-shot — no training)
 
 ```bash
