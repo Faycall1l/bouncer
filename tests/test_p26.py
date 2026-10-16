@@ -89,6 +89,13 @@ def test_preset_rules_conflict():  # T482
     assert r.status_code == 422 and r.json()["detail"]["code"] == "E_PRESET"
 
 
+def test_batch_preset():  # T473+T485
+    r = client.post("/predict/batch", json={"messages": ["p26 bb1", "p26 bb2"],
+                                            "preset": "study"})
+    assert r.status_code == 200 and len(r.json()) == 2
+    assert all("raw" not in row for row in r.json())
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})

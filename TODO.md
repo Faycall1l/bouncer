@@ -535,7 +535,7 @@
 - [x] T482 serve: preset + rules together → 422 (exactly one source)
 - [x] T483 cli: `check` preset+rules conflict exits 4
 - [x] T484 engine: preset severity auto-attach? no — explicit only (docstring note)
-- [ ] T485 serve: batch preset applies to every message
+- [x] T485 serve: batch preset applies to every message
 - [ ] T486 test: batch preset e2e
 - [ ] T487 test: default-preset env e2e
 - [ ] T488 test: preset/rules conflict 422s
