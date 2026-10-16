@@ -35,6 +35,9 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
     def run(msg, preset, rules_t, allow_thr, delete_thr, lang):  # T351+T357
         if not (msg or "").strip():  # T360: don't spend a model call on nothing
             return "⚪ EMPTY", "ok @ 0.00", "empty message", "n/a", "", "0.0 ms"
+        note = ""  # T366
+        if len(msg) > 2000:
+            msg, note = msg[:2000], " (trimmed to 2000 chars)"
         rules = parse_rules(rules_t) or get_preset(preset)
         lang = lang if lang != "auto" else None  # T357
         from gatekeeper.rules import RuleError, validate_rules
@@ -66,7 +69,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         tally[0] += agree  # T362: running [hits, total]
         tally[1] += 1
         meters += f" ({tally[0]}/{tally[1]})"
-        return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"], bars, meters, f"{r.get('latency_ms', '?')} ms"
+        return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"] + note, bars, meters, f"{r.get('latency_ms', '?')} ms"
 
     with gr.Blocks(title="bouncer", theme=gr.themes.Soft()) as app:  # T091
         from gatekeeper import __version__  # T365
