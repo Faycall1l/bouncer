@@ -511,7 +511,7 @@
 - [x] T460 cli: `check --model` flag (validated)
 - [x] T461 cli: `stats` shows pool section
 - [x] T462 serve: `/stats` pool section
-- [ ] T463 pool: `clear()` for tests
+- [x] T463 pool: `clear()` for tests
 - [ ] T464 engine: `BOUNCER_DEVICE` env → default router kwargs
 - [ ] T465 test: pool thread-safety (2 threads, 1 construction)
 - [ ] T466 test: `model=` reaches router.predict (stub captures kwarg)

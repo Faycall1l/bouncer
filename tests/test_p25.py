@@ -54,3 +54,12 @@ def test_model_for_lang():  # T457
     assert model_for_lang("en") is None
     assert model_for_lang(None) is None
     assert model_for_lang("fr") is None  # latin scripts auto-route
+
+
+def test_pool_clear():  # T463
+    from gatekeeper.pool import RouterPool
+    p = RouterPool(max_n=2, factory=lambda **kw: object())
+    p.get(device="a")
+    assert p.stats()["size"] == 1
+    p.clear()
+    assert p.stats()["size"] == 0
