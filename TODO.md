@@ -458,7 +458,7 @@
 - [x] T411 pkg: version 0.2.0 (`pyproject.toml` + `__init__.py`)
 - [x] T412 suite: full run green (fix fallout)
 - [x] T413 lint: `ruff check .` fully green (verify T388)
-- [ ] T414 test: every CLI subcommand `--help` exits 0
+- [x] T414 test: every CLI subcommand `--help` exits 0
 - [ ] T415 test: every server GET route 200 with stub
 - [ ] T416 test: demo import smoke (no gradio installed)
 - [ ] T417 test: eval helpers import-safe + `ece()` golden value
