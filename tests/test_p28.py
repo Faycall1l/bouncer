@@ -147,3 +147,13 @@ def test_timeout_caps_and_ready():  # T515+T518+T519+T528
     body = r.json()
     assert r.status_code == 200 and body["ready"] is True
     assert set(body["pool"]) == {"size", "max_n", "hits", "creates", "evictions"}
+
+
+def test_breaker_metric_and_stats():  # T520+T522+T529
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import serve
+    client = TestClient(serve.app)
+    assert "bouncer_breaker_open 0" in client.get("/metrics").text
+    st = client.get("/stats").json()
+    assert set(st["breaker"]) == {"fails", "open", "half_open"}

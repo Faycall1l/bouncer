@@ -583,7 +583,7 @@
 - [x] T526 test: breaker opens after N failures
 - [x] T527 test: breaker cools + half-open probe
 - [x] T528 test: timeout caps + /ready shapes
-- [ ] T529 test: breaker metric + stats section
+- [x] T529 test: breaker metric + stats section
 - [ ] T530 test: P28 reliability sweep
 
 ## P29 CLI (T531–T550)
