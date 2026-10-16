@@ -96,22 +96,23 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
                    "full list in BENCHMARKS.md (`#honest-limits`).")
         preset = gr.Dropdown(names, value=names[0], label="preset")
         rules = gr.Textbox(value=preset_text[names[0]], lines=5, label="rules (id: text)")
+        lang = gr.Dropdown(["auto", "en", "es", "fr", "ar"], value="auto",  # T357+T505
+                           label="language hint")
         dirty = []  # T358: hand-edits survive preset switches
 
         def _on_preset(n):
+            from gatekeeper.presets import preset_lang  # T505: pack sets the hint too
             if dirty:
-                return gr.skip()
-            return preset_text[n]
+                return gr.skip(), gr.skip()
+            return preset_text[n], preset_lang(n)
 
         def _on_edit():
             if not dirty:
                 dirty.append(True)
 
-        preset.change(_on_preset, preset, rules)
+        preset.change(_on_preset, preset, [rules, lang])
         rules.change(_on_edit, None, None)
         msg = gr.Textbox(label="chat message")
-        lang = gr.Dropdown(["auto", "en", "es", "fr", "ar"], value="auto",  # T357
-                           label="language hint")
         allow_thr = gr.Slider(0.5, 0.99, 0.85, label="allow threshold")  # T351
         delete_thr = gr.Slider(0.5, 0.99, 0.85, label="delete threshold")  # T351
         btn = gr.Button("Moderate")
