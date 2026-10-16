@@ -58,7 +58,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
                  "escalate": "⚪ ESCALATE"}[r["action"]]
         dist = r.get("rule_dist") or {}
         bars = "\n".join(f"{k}: {'█' * int(v * 20)} {v:.2f}" for k, v in
-                         sorted(dist.items(), key=lambda kv: -kv[1])[:8])
+                         sorted(dist.items(), key=lambda kv: -kv[1])[:8]) or "n/a"  # T368
         meters = (f"harm={r['harm']} jail={r['jailbreak_p']:.2f} "  # T086
                   f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
         meters += f" margin={r.get('margin', '?')}"  # T352
