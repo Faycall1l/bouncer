@@ -121,3 +121,9 @@ def test_invalid_model_422():  # T467
                                                      "rules": {"a": "rule a text"},
                                                      "model": "gpt-9"})
     assert r.status_code == 422 and r.json()["detail"]["code"] == "E_MODEL_NAME"
+
+
+def test_pool_stats_shape():  # T468
+    import gatekeeper.pool as _pool
+    s = _pool.POOL.stats()
+    assert set(s) == {"size", "max_n", "hits", "creates", "evictions"}
