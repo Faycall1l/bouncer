@@ -450,7 +450,7 @@
 - [x] T405 docs: glossary gains flag band, coalescing, quiet-hours, fastpath, margin
 - [x] T406 docs: FAQ gains 3 entries (split gates, batch cap, stale-cache fix)
 - [x] T407 docs: BENCHMARKS honest-limits refresh
-- [ ] T408 docs: adapters README (discord stats, twitch reconnect, webhook escalate)
+- [x] T408 docs: adapters README (discord stats, twitch reconnect, webhook escalate)
 - [ ] T409 docs: `api.md` auth + rate-limit headers section
 - [ ] T410 test: docs-consistency test (codes + presets match code)
 
