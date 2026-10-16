@@ -19,6 +19,8 @@ def explain(res: dict, rules: dict) -> str:
         base = f"{action}: violates '{rule}' — {rules.get(rule, '')} (conf {conf:.2f})"
     if res.get("harm"):  # T241
         base += f" [harm={res['harm']}]"
+    if res.get("lang"):  # T491
+        base += f" [lang={res['lang']}]"
     probs = res.get("rule_dist") or {}
     if probs and conf < 0.9:
         top2 = sorted(probs.items(), key=lambda kv: -kv[1])[:2]
