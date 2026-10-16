@@ -77,19 +77,21 @@ DEFAULT_HARM = ["safe", "suspicious", "harmful"]
 DEFAULT_HYPE = ["dead", "chill", "hyped"]
 
 
-def build_questions(rules: dict[str, str]) -> dict:
+def build_questions(rules: dict[str, str], lang: str | None = None) -> dict:
     """Read-only result (backed by an lru_cache): pass to predict, do not mutate."""
-    return _cached_questions(tuple(sorted(rules.items())))
+    return _cached_questions(tuple(sorted(rules.items())), lang or "")
 
 
 @lru_cache(maxsize=128)  # T274: same rule-set rebuilds no dicts per message
-def _cached_questions(items: tuple) -> dict:
+def _cached_questions(items: tuple, lang: str) -> dict:
     criteria = dict(items)
     criteria["ok"] = "message follows all rules, nothing violated"
     n = len(criteria)  # T347
+    instr = (f"Which single rule is violated? Pick ok if none. ({n} options: rule ids below.)")
+    if lang:  # T348: tell the router what language to expect
+        instr += f" Message language hint: {lang}."
     return {
-        "rule": {"type": "choice", "instructions": "Which single rule is violated? "
-                 f"Pick ok if none. ({n} options: rule ids below.)",
+        "rule": {"type": "choice", "instructions": instr,
                  "criteria": criteria},
         "harm": {"type": "score", "instructions": "How harmful is this message?",
                  "criteria": DEFAULT_HARM},
@@ -291,7 +293,7 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     if lang:
         state["lang_hint"] = lang  # T041: nudge multilingual routing
     try:
-        out = _predict_safe(r, state, build_questions(rules), cfg.timeout_s)
+        out = _predict_safe(r, state, build_questions(rules, lang), cfg.timeout_s)
     except ModelError as e:
         fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
         record("escalate", "ok", 0.0, cause="fallback")  # T260: failures are visible
