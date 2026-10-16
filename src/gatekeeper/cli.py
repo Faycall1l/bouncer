@@ -302,6 +302,7 @@ def main(argv=None) -> int:
     w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail
     w.add_argument("--rules", default=None)  # T483
     w.add_argument("--preset")
+    w.add_argument("--config", default=None)  # T532
     _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)
     r = sub.add_parser("review")  # T170
