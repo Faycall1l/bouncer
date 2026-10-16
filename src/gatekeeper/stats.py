@@ -2,7 +2,12 @@
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
+import os
 import threading
+
+from .persist import atomic_write, read_json  # T435: json/os only, no cycle
+
+_PATH = os.environ.get("BOUNCER_STATS", "bouncer-stats.json")  # T435
 
 _lock = threading.Lock()
 _counts = {"allow": 0, "flag": 0, "delete": 0, "escalate": 0}
@@ -92,3 +97,16 @@ def restore(snap: dict) -> None:  # T434
         _causes.clear()
         _causes.update(snap.get("causes", {}))
         _cheap = int(snap.get("cheap", 0))
+
+
+def save(path: str | None = None) -> str:  # T435
+    """Persist counters atomically; returns the path written."""
+    import json as _json
+    target = path or _PATH
+    atomic_write(target, _json.dumps(snapshot()))
+    return target
+
+
+def load(path: str | None = None) -> None:  # T435
+    """Restore counters from a file written by save()."""
+    restore(read_json(path or _PATH))
