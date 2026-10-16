@@ -192,3 +192,24 @@ def test_batch_mixed_cached_fresh():  # T425
     second = moderate_batch(["p23 b1", "p23 b3"], rules, router=Seq())
     assert len(seen) == 3  # b1 served from cache
     assert [r.get("cached") for r in second] == [True, False]
+
+
+def test_i18n_presets():  # T426
+    from gatekeeper import get_preset, moderate
+    from gatekeeper.cache import CACHE
+    from gatekeeper.rules import validate_rules
+    CACHE.clear()
+
+    class S:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    for name, lang, msg in (("es", "es", "buena partida"), ("fr", "fr", "bien joué"),
+                            ("ar", "ar", "مباراة جيدة")):
+        rules = get_preset(name)
+        validate_rules(rules)
+        r = moderate(f"p23 {name} {msg}", rules, lang=lang, router=S())
+        assert r["action"] == "allow" and r["lang"] == lang
