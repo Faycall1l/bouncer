@@ -113,8 +113,9 @@ def cmd_review(args) -> int:
 
 def cmd_stats(args) -> int:
     from gatekeeper.cache import CACHE
+    from gatekeeper.pool import POOL  # T461
     from gatekeeper.stats import get_stats
-    snap = {"decisions": get_stats(), "cache": CACHE.stats()}
+    snap = {"decisions": get_stats(), "cache": CACHE.stats(), "pool": POOL.stats()}
     if getattr(args, "json", False):  # T315
         print(json.dumps(snap, indent=2))
         return 0
@@ -125,6 +126,8 @@ def cmd_stats(args) -> int:
     from gatekeeper import strikes as _st  # T443
     users = len(_st._strikes)
     print(f"strikes: {users} users, {sum(_st._strikes.values())} total")
+    print(f"pool: size={snap['pool']['size']}/{snap['pool']['max_n']} "  # T461
+          f"hits={snap['pool']['hits']} creates={snap['pool']['creates']}")
     return 0
 
 

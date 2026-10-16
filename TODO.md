@@ -509,7 +509,7 @@
 - [x] T458 engine: auto `model_for_lang(lang)` when model omitted
 - [x] T459 serve: `model` field on ModReq/BatchReq (allowlist, 422 else)
 - [x] T460 cli: `check --model` flag (validated)
-- [ ] T461 cli: `stats` shows pool section
+- [x] T461 cli: `stats` shows pool section
 - [ ] T462 serve: `/stats` pool section
 - [ ] T463 pool: `clear()` for tests
 - [ ] T464 engine: `BOUNCER_DEVICE` env → default router kwargs
