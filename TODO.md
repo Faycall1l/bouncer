@@ -590,7 +590,7 @@
 - [x] T531 cli: `check --config FILE` (JSON → from_dict)
 - [x] T532 cli: `watch --config FILE`
 - [x] T533 cli: `check --user` (strikes attribution)
-- [ ] T534 cli: `watch --user`
+- [x] T534 cli: `watch --user`
 - [ ] T535 cli: `watch --action` filter (comma list)
 - [ ] T536 cli: `export --format json` (raw audit JSON array)
 - [ ] T537 cli: `review --since TS` filter
