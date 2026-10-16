@@ -66,7 +66,10 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=2000)
     ap.add_argument("--out", default="data/gatekeeper-12k.jsonl")
     ap.add_argument("--template-only", action="store_true")
+    ap.add_argument("--seed", type=int, default=None)  # T382: reproducible bootstraps
     a = ap.parse_args()
+    if a.seed is not None:
+        random.seed(a.seed)
     rows = template_rows(a.n) if a.template_only or not os.environ.get("OPENAI_API_KEY") else template_rows(a.n//3) + llm_rows(2*a.n//3)
     random.shuffle(rows)
     with open(a.out, "w") as f:
