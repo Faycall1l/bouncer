@@ -286,7 +286,8 @@ def predict(req: ModReq, request: Request):
 
 class BatchReq(BaseModel):
     messages: list[str]
-    rules: dict[str, str]
+    rules: dict[str, str] | None = None  # T473: rules XOR preset
+    preset: str | None = None  # T473
     threshold: float = 0.85
     allow_threshold: float | None = None  # T223
     delete_threshold: float | None = None
@@ -312,8 +313,9 @@ def predict_batch(req: BatchReq, request: Request):
     from .config import GateConfig
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
     _check_model(req.model)  # T459
+    rules, _ = _resolve_rules(req.rules, req.preset)  # T473+T485: one pack, all msgs
     cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t)
-    return [_clean(r) for r in moderate_batch(req.messages, req.rules, config=cfg,
+    return [_clean(r) for r in moderate_batch(req.messages, rules, config=cfg,
                                               model=req.model)]
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
