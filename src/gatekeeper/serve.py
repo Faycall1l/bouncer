@@ -185,6 +185,35 @@ def _clean(res: dict) -> dict:
     return res
 
 
+def _resolve_rules(rules: dict | None, preset: str | None) -> tuple[dict, str | None]:
+    """T472+T476: exactly one of rules/preset; unknown presets are 422 E_PRESET."""
+    from fastapi import HTTPException
+
+    from . import get_preset, list_presets
+    if rules is not None and preset is not None:  # T482: ambiguous source rejected
+        raise HTTPException(status_code=422,
+                            detail={"code": "E_PRESET",
+                                    "message": "pass rules or preset, not both"})
+    if preset is not None:
+        if preset not in list_presets():  # T476
+            raise HTTPException(status_code=422,
+                                detail={"code": "E_PRESET",
+                                        "message": f"unknown preset {preset!r}"})
+        return get_preset(preset), preset
+    if rules is not None:
+        return rules, None
+    default = __import__("os").environ.get("BOUNCER_DEFAULT_PRESET", "")  # T475
+    if default:
+        if default not in list_presets():
+            raise HTTPException(status_code=422,
+                                detail={"code": "E_PRESET",
+                                        "message": f"bad BOUNCER_DEFAULT_PRESET {default!r}"})
+        return get_preset(default), default
+    raise HTTPException(status_code=422,
+                        detail={"code": "E_PRESET",
+                                "message": "pass rules or preset"})
+
+
 def _thresholds(threshold: float, allow: float | None,
                 delete: float | None) -> tuple[float, float]:
     """T223: split gates with back-compat single float; 422 on out-of-range."""
@@ -238,18 +267,20 @@ def predict(req: ModReq, request: Request):
     from .rules import RuleError
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
     _check_model(req.model)  # T459
+    rules, preset_name = _resolve_rules(req.rules, req.preset)  # T472
     try:
-        res = moderate(req.message, req.rules, req.context,
+        res = moderate(req.message, rules, req.context,
                        config=GateConfig(allow_threshold=allow_t, delete_threshold=delete_t),
                        lang=req.lang, model=req.model)
     except RuleError as e:
         raise HTTPException(status_code=422,  # T256: machine-readable code
                             detail={"code": getattr(e, "code", "E_RULES"),
                                     "message": str(e)})
-    res["reason"] = explain(res, req.rules)
+    res["reason"] = explain(res, rules)
     import json as _json  # T246: decision line for operators (no message text)
     print(_json.dumps({"event": "decision", "action": res["action"], "rule": res["rule"],
-                       "conf": round(res["confidence"], 3)}), flush=True)
+                       "conf": round(res["confidence"], 3),
+                       "preset": preset_name}), flush=True)  # T474
     return _clean(res)
 
 
