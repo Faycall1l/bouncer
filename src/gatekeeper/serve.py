@@ -165,7 +165,8 @@ def metrics():
 
 class ModReq(BaseModel):
     message: str
-    rules: dict[str, str]
+    rules: dict[str, str] | None = None  # T471: rules XOR preset
+    preset: str | None = None  # T471: server-side pack by name
     context: list[str] = []
     threshold: float = 0.85
     allow_threshold: float | None = None  # T223: split gates; None falls back to threshold

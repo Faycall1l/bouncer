@@ -521,7 +521,7 @@
 - [x] T470 test: P25 pool coverage sweep
 
 ## P26 Server multitenancy (T471–T490)
-- [ ] T471 serve: ModReq rules optional + `preset` field
+- [x] T471 serve: ModReq rules optional + `preset` field
 - [ ] T472 serve: preset resolve, unknown → 422 `E_PRESET`
 - [ ] T473 serve: BatchReq same preset support
 - [ ] T474 serve: decision log includes resolved preset
