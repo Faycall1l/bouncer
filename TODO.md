@@ -517,7 +517,7 @@
 - [x] T466 test: `model=` reaches router.predict (stub captures kwarg)
 - [x] T467 test: invalid model 422 on /predict
 - [x] T468 test: pool stats counters
-- [ ] T469 test: device env honored by get_router
+- [x] T469 test: device env honored by get_router
 - [ ] T470 test: P25 pool coverage sweep
 
 ## P26 Server multitenancy (T471–T490)

@@ -127,3 +127,22 @@ def test_pool_stats_shape():  # T468
     import gatekeeper.pool as _pool
     s = _pool.POOL.stats()
     assert set(s) == {"size", "max_n", "hits", "creates", "evictions"}
+
+
+def test_device_env(monkeypatch):  # T469
+    import sys as _sys
+    import types as _types
+
+    import gatekeeper
+    fake = _types.ModuleType("laya")
+    seen = {}
+    fake.Router = lambda **kw: seen.setdefault("kw", kw) or object()
+    monkeypatch.setitem(_sys.modules, "laya", fake)
+    monkeypatch.setenv("BOUNCER_DEVICE", "cpu")
+    gatekeeper._router = None
+    try:
+        gatekeeper.get_router()
+        assert seen["kw"] == {"device": "cpu"}
+    finally:
+        gatekeeper._router = None
+        monkeypatch.delenv("BOUNCER_DEVICE", raising=False)
