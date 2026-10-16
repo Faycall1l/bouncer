@@ -283,6 +283,18 @@ def cmd_export(args) -> int:
 def cmd_pack(args) -> int:
     from gatekeeper import get_preset
     from gatekeeper.rules import validate_rules, warn_overlapping
+    if args.action == "init":  # T545: template pack to edit, based on a preset
+        import os
+        if os.path.exists(args.file) and not getattr(args, "force", False):
+            print(f"bouncer: {args.file!r} exists (pass --force to overwrite)",
+                  file=sys.stderr)
+            return 4
+        from gatekeeper.persist import atomic_write
+        template = get_preset(args.preset)
+        atomic_write(args.file, json.dumps(template, indent=2, ensure_ascii=False))
+        print(f"pack -> {args.file} ({len(template)} template rules from "
+              f"{args.preset!r}); edit ids/text then `bouncer pack lint --rules {args.file}`")
+        return 0
     if args.rules:
         with open(args.rules) as f:
             rules = json.load(f)
@@ -385,7 +397,9 @@ def main(argv=None) -> int:
     sn.add_argument("file")
     sn.set_defaults(fn=cmd_snapshot)
     pk = sub.add_parser("pack")  # T173+T174
-    pk.add_argument("action", choices=["show", "lint"])
+    pk.add_argument("action", choices=["show", "lint", "init"])  # T545
+    pk.add_argument("file", nargs="?", default=None)  # T545: init target path
+    pk.add_argument("--force", action="store_true")  # T545: overwrite on init
     pk.add_argument("--preset", default="gaming")
     pk.add_argument("--rules")
     pk.add_argument("--strict", action="store_true")  # T319: exit 2 on warnings

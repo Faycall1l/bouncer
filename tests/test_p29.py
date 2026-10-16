@@ -47,3 +47,15 @@ def test_export_action_filter(monkeypatch, tmp_path):  # T544
     assert main(["export", "--out", str(out), "--action", "delete"]) == 0
     body = out.read_text().splitlines()
     assert len(body) == 2 and "delete" in body[1] and "allow" not in body[1]
+
+
+def test_pack_init(tmp_path):  # T545
+    import json as _json
+
+    from gatekeeper.cli import main
+    f = str(tmp_path / "pack.json")
+    assert main(["pack", "init", f, "--preset", "study"]) == 0
+    rules = _json.loads((tmp_path / "pack.json").read_text())
+    assert isinstance(rules, dict) and len(rules) >= 3
+    assert main(["pack", "init", f, "--preset", "study"]) == 4  # refuses overwrite
+    assert main(["pack", "init", f, "--preset", "study", "--force"]) == 0
