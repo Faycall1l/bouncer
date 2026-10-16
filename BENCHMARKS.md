@@ -40,7 +40,7 @@ with a stub router (it matters for real-model padding — see T106/T107).
 Dumb links/caps rules beat uncalibrated zero-shot (0.305) on template data —
 exactly why the demo shows both side by side, and why calibration + finetune matter.
 
-## Honest limits (T109)
+## Honest limits (T109, refreshed T407)
 
 * Template bootstrap: 6 message shapes × 3 rule-sets. Zero-shot numbers measure
   transfer to unseen phrasings, not open-world chat.
@@ -48,3 +48,7 @@ exactly why the demo shows both side by side, and why calibration + finetune mat
 * Base Laya is English-first; non-English routes to multilingual checkpoint (~23/51 usable alone).
 * Keep choice questions ≤20 options (256-token head budget; Banking77 lesson).
 * Refit temperatures on your own held-out data before trusting probabilities.
+* Stub-overhead numbers (T385) measure engine cost only — add your model's
+  forward-pass latency (base Laya: ~1000ms CPU, ~33ms T4) for honest totals.
+* Regex baseline (0.48) beats zero-shot (0.305) on template data by construction:
+  templates are link/caps-shaped. It says nothing about open chat.
