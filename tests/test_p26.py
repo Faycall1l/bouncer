@@ -119,6 +119,13 @@ def test_default_preset_batch(monkeypatch):  # T487
     assert r.status_code == 200 and len(r.json()) == 1
 
 
+def test_batch_preset_conflict():  # T488
+    r = client.post("/predict/batch", json={"messages": ["hi"],
+                                            "rules": {"a": "rule a text"},
+                                            "preset": "gaming"})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_PRESET"
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})
