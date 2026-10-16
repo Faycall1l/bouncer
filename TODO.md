@@ -558,7 +558,7 @@
 - [x] T503 eval: i18n check asserts question hint lines
 - [x] T504 cli: preset-lang vs --lang mismatch prints stderr note
 - [x] T505 demo: preset switch sets language dropdown to preset lang
-- [ ] T506 test: preset lang tags
+- [x] T506 test: preset lang tags
 - [ ] T507 test: serve preset-lang autofill
 - [ ] T508 test: CLI mismatch note
 - [ ] T509 eval: i18n script argparse parity (--limit/--out/--json)

@@ -49,3 +49,15 @@ def test_question_hints_all_langs():  # T503
         q = build_questions({"a": "rule a text"}, lang)
         assert lang in q["rule"]["instructions"]
     assert "hint" not in build_questions({"a": "rule a text"})["rule"]["instructions"]
+
+
+def test_preset_lang_tags():  # T501+T506
+    import pytest
+
+    from gatekeeper import list_presets
+    from gatekeeper.presets import preset_lang
+    assert preset_lang("es") == "es" and preset_lang("ar") == "ar"
+    assert preset_lang("gaming") == "en"
+    assert {preset_lang(n) for n in list_presets()} <= {"en", "es", "fr", "ar"}
+    with pytest.raises(KeyError):
+        preset_lang("nope")
