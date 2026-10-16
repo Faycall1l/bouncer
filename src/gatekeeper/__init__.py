@@ -31,6 +31,7 @@ from .cache import CACHE  # T023/T024 decision cache
 from .config import GateConfig
 from .explain import explain as _explain  # T273
 from .normalize import clean_text, extract_links
+from .pool import model_for_lang  # T458: json/os only, no cycle
 from .presets import get_preset, list_presets
 from .review import add as _qadd  # T273
 from .rules import RuleError, validate_rules
@@ -41,6 +42,28 @@ _INFLIGHT: dict = {}  # T180: key -> [event, result]
 import threading as _th
 
 _FLY_LOCK = _th.Lock()
+_MODEL_OK: dict = {}  # T458: id(router) -> (router, accepts model= kwarg)
+
+
+def _supports_model(router) -> bool:
+    """T458: probe once per router; legacy predict(state, questions) keeps working."""
+    key = id(router)
+    with _FLY_LOCK:
+        hit = _MODEL_OK.get(key)
+        if hit is not None and hit[0] is router:
+            return hit[1]
+    try:
+        import inspect
+        params = inspect.signature(router.predict).parameters
+        ok = any(n == "model" or p.kind == inspect.Parameter.VAR_KEYWORD
+                 for n, p in params.items())
+    except (TypeError, ValueError):
+        ok = False
+    with _FLY_LOCK:
+        if len(_MODEL_OK) > 64:
+            _MODEL_OK.clear()
+        _MODEL_OK[key] = (router, ok)
+    return ok
 
 
 def _fastpath_allow(msg: str, rules: dict) -> dict | None:
@@ -301,6 +324,10 @@ def moderate(message: str, rules: dict[str, str], context: list[str] | None = No
     state = {"message": msg, "history": hist, "rules": rules, "user_turns": turns}
     if lang:
         state["lang_hint"] = lang  # T041: nudge multilingual routing
+    if model is None:  # T458: ar/zh/ru ride multilingual unless pinned
+        model = model_for_lang(lang)
+    if model is not None and not _supports_model(r):  # T458: legacy 2-arg routers
+        model = None  # (lang_hint in state still applies)
     try:
         out = _predict_safe(r, state, build_questions(rules, lang), cfg.timeout_s, model)
     except ModelError as e:
