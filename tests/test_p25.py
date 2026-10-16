@@ -86,3 +86,21 @@ def test_pool_threadsafe():  # T465
     for t in ts:
         t.join()
     assert len(set(map(id, outs))) == 1 and p.stats()["creates"] == 1
+
+
+def test_model_reaches_predict():  # T466
+    from gatekeeper import moderate
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+    seen = {}
+
+    class S:
+        def predict(self, state, questions, model=None):
+            seen["model"] = model
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    moderate("p25 model msg", {"plain-chat": "normal talk"}, model="multilingual", router=S())
+    assert seen["model"] == "multilingual"
