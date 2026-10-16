@@ -53,6 +53,9 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
     model = getattr(args, "model", None)
+    if getattr(args, "timeout", None) is not None:  # T516
+        cfg.timeout_s = args.timeout
+        cfg.validate()
     if args.preset and getattr(args, "lang", None):  # T504: pack/language mismatch note
         from gatekeeper.presets import preset_lang
         want = preset_lang(args.preset)
@@ -268,6 +271,7 @@ def main(argv=None) -> int:
     c.add_argument("--quiet", action="store_true")  # T320: action word only
     c.add_argument("--history", type=int, default=None)  # T329: override history_n
     c.add_argument("--model", default=None)  # T460: pin checkpoint
+    c.add_argument("--timeout", type=float, default=None)  # T516: inference budget
     c.add_argument("--json", action="store_true")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
