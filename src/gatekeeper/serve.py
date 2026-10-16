@@ -380,7 +380,8 @@ def predict_batch(req: BatchReq, request: Request):
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
     _check_model(req.model)  # T459
     rules, _ = _resolve_rules(req.rules, req.preset)  # T473+T485: one pack, all msgs
-    cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t)
+    cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t,
+                     timeout_s=_request_timeout(req.timeout_s))  # T525
     return [_clean(r) for r in moderate_batch(req.messages, rules, config=cfg,
                                               model=req.model)]
 
