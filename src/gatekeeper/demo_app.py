@@ -31,8 +31,9 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
     preset_text = {n: "\n".join(f"{k}: {v}" for k, v in get_preset(n).items()) for n in names}
     stash: dict = {}  # T356: latest real result for the review button
 
-    def run(msg, preset, rules_t, allow_thr, delete_thr):  # T351: split gates
+    def run(msg, preset, rules_t, allow_thr, delete_thr, lang):  # T351+T357
         rules = parse_rules(rules_t) or get_preset(preset)
+        lang = lang if lang != "auto" else None  # T357
         from gatekeeper.rules import RuleError, validate_rules
         try:
             validate_rules(rules)
@@ -41,7 +42,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         try:  # T285: model errors become a badge, never a traceback
             from gatekeeper import GateConfig
             r = moderate(msg, rules, config=GateConfig(allow_threshold=allow_thr,
-                                                       delete_threshold=delete_thr))
+                                                       delete_threshold=delete_thr),
+                         lang=lang)
         except Exception as e:  # noqa: BLE001 — demo must stay up without weights
             return "⚪ ERROR", "-", f"{type(e).__name__}: {e}", "", "", ""
         r["reason"] = explain(r, rules)
@@ -69,6 +71,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         rules = gr.Textbox(value=preset_text[names[0]], lines=5, label="rules (id: text)")
         preset.change(lambda n: preset_text[n], preset, rules)
         msg = gr.Textbox(label="chat message")
+        lang = gr.Dropdown(["auto", "en", "es", "fr", "ar"], value="auto",  # T357
+                           label="language hint")
         allow_thr = gr.Slider(0.5, 0.99, 0.85, label="allow threshold")  # T351
         delete_thr = gr.Slider(0.5, 0.99, 0.85, label="delete threshold")  # T351
         btn = gr.Button("Moderate")
@@ -83,8 +87,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
         lats = []  # T353: session latencies for the p50 line
         _orig_run = run
 
-        def run_h(msg, preset, rules_t, allow_thr, delete_thr):
-            out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr)
+        def run_h(msg, preset, rules_t, allow_thr, delete_thr, lang):
+            out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr, lang)
             trail.append(f"{out[0]} {out[1]} {msg[:60]}")  # T354: badge + rule@conf
             ms = out[5]
             try:
@@ -95,7 +99,7 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
             head = f"session p50 {p50:.1f}ms over {len(lats)} decisions"
             return out + (head + "\n" + "\n".join(trail[-8:]),)
 
-        btn.click(run_h, [msg, preset, rules, allow_thr, delete_thr],
+        btn.click(run_h, [msg, preset, rules, allow_thr, delete_thr, lang],
                   [badge, rule, reason, dist, meters, lat, hist])
         flag_btn = gr.Button("🚩 send to review queue")  # T095
         flag_out = gr.Textbox(label="review")

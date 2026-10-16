@@ -395,7 +395,7 @@
 - [x] T354 demo: history entries include rule@conf
 - [x] T355 demo: 8 examples (add jailbreak + empty message)
 - [x] T356 demo: review button queues the real current result
-- [ ] T357 demo: language dropdown (auto/en/es/fr/ar) -> lang_hint
+- [x] T357 demo: language dropdown (auto/en/es/fr/ar) -> lang_hint
 - [ ] T358 demo: preset switch preserves hand-edited rules (dirty flag)
 - [ ] T359 demo: footer links BENCHMARKS honest-limits
 - [ ] T360 demo: empty message returns early EMPTY badge
