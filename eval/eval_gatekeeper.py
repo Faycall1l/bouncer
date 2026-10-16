@@ -38,6 +38,7 @@ if __name__ == "__main__":
     actions = Counter()  # T373
     abstained_n = 0  # T374
     conf_pairs, overconf = Counter(), 0  # T104+T105
+    conf_sums: dict = {}  # T376: pair -> sum of confs (for the mean)
     per_rule, per_rule_ok = Counter(), Counter()  # T098
     t0 = time.time()
     for row in rows:
@@ -52,6 +53,7 @@ if __name__ == "__main__":
         per_rule[lab["rule"]] += 1; per_rule_ok[lab["rule"]] += good  # T098
         if not good:
             conf_pairs[(lab["rule"], pred)] += 1
+            conf_sums[(lab["rule"], pred)] = conf_sums.get((lab["rule"], pred), 0) + conf  # T376
         if conf >= 0.9 and not good:
             overconf += 1
         if conf >= 0.85:
@@ -65,7 +67,9 @@ if __name__ == "__main__":
               "gate": {"prec": round(gated_ok / max(1, gated_n), 3), "n": gated_n},
               "actions": dict(sorted(actions.items())),  # T373
               "abstention_rate": round(abstained_n / len(rows), 3),  # T374
-              "top_confusions": [[list(k), v] for k, v in conf_pairs.most_common(5)],
+              "top_confusions": [[list(k), v,  # T376: + mean conf
+                                    round(conf_sums[k] / v, 2)] for k, v in
+                                   conf_pairs.most_common(5)],
               "overconfident_errors": overconf,
               "per_rule": {k: [per_rule_ok[k], per_rule[k]] for k in per_rule}}
     import os
