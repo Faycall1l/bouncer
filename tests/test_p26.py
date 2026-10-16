@@ -40,3 +40,12 @@ def test_preset_predict_and_log(capsys):  # T472+T474
 def test_unknown_preset_422():  # T472+T476
     r = client.post("/predict", json={"message": "hi", "preset": "nope"})
     assert r.status_code == 422 and r.json()["detail"]["code"] == "E_PRESET"
+
+
+def test_default_preset_env(monkeypatch):  # T475
+    monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
+    r = client.post("/predict", json={"message": "p26 default msg"})
+    assert r.status_code == 200
+    monkeypatch.delenv("BOUNCER_DEFAULT_PRESET")
+    r = client.post("/predict", json={"message": "p26 nodefault msg"})
+    assert r.status_code == 422
