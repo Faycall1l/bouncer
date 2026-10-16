@@ -112,7 +112,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
             except (ValueError, IndexError):
                 pass
             p50 = sorted(lats)[len(lats) // 2] if lats else 0  # T353
-            head = f"session p50 {p50:.1f}ms over {len(lats)} decisions"
+            head = (f"session: {len(lats)} decisions, "  # T361: live counter
+                    f"p50 {p50:.1f}ms")
             return out + (head + "\n" + "\n".join(trail[-8:]),)
 
         btn.click(run_h, [msg, preset, rules, allow_thr, delete_thr, lang],

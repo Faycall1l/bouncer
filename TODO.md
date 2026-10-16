@@ -399,7 +399,7 @@
 - [x] T358 demo: preset switch preserves hand-edited rules (dirty flag)
 - [x] T359 demo: footer links BENCHMARKS honest-limits
 - [x] T360 demo: empty message returns early EMPTY badge
-- [ ] T361 demo: live session decision counter in history header
+- [x] T361 demo: live session decision counter in history header
 - [ ] T362 demo: regex-baseline running agree tally
 - [ ] T363 demo: gate precedence list in explainer text
 - [ ] T364 test: Space entry imports without gradio (`parse_rules`, badge helper)
