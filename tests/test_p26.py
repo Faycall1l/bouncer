@@ -44,6 +44,13 @@ def test_unknown_preset_422():  # T472+T476
     assert r.status_code == 422
 
 
+def test_preset_singleton_endpoint():  # T477+T478
+    r = client.get("/presets/gaming")
+    assert r.status_code == 200 and "no-spam" in r.json()["rules"]
+    r = client.get("/presets/nope")
+    assert r.status_code == 404 and r.json()["detail"]["code"] == "E_PRESET"
+
+
 def test_default_preset_env(monkeypatch):  # T475
     monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "study")
     r = client.post("/predict", json={"message": "p26 default msg"})

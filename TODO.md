@@ -528,7 +528,7 @@
 - [x] T475 serve: `BOUNCER_DEFAULT_PRESET` env when request has neither
 - [x] T476 serve: preset validated against list_presets (422)
 - [x] T477 serve: `GET /presets/{name}` (404 + E_PRESET when missing)
-- [ ] T478 serve: unknown preset path returns structured 404
+- [x] T478 serve: unknown preset path returns structured 404
 - [ ] T479 engine: `moderate(..., preset=)` resolves via get_preset
 - [ ] T480 test: preset endpoint + resolve paths
 - [ ] T481 serve: preset requests still honor split thresholds
