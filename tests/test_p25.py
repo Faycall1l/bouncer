@@ -34,3 +34,15 @@ def test_pooled_identity():  # T454
     finally:
         _pool.POOL._factory = None
         _pool.POOL.clear()
+
+
+def test_pool_eviction_lru():  # T456
+    from gatekeeper.pool import RouterPool
+    p = RouterPool(max_n=2, factory=lambda **kw: dict(kw))
+    p.get(device="a")
+    p.get(device="b")
+    p.get(device="a")  # a is now MRU
+    p.get(device="c")  # evicts b
+    s = p.stats()
+    assert s == {"size": 2, "max_n": 2, "hits": 1, "creates": 3, "evictions": 1}
+    assert p.get(device="a")["device"] == "a"  # still resident
