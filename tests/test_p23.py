@@ -51,3 +51,18 @@ def test_eval_ece_golden():  # T417: import-safe (no router built) + golden valu
     sys.path.insert(0, "eval")
     from eval_gatekeeper import ece
     assert ece([0.9, 0.9, 0.1, 0.1], [True, False, False, False]) == pytest.approx(0.25)
+
+
+def test_audit_rotation(tmp_path):  # T418
+    import os as _os
+
+    import gatekeeper.audit as _au
+    p = str(tmp_path / "audit.jsonl")
+    old_path, old_max = _au._PATH, _au._MAX_BYTES
+    _au._PATH, _au._MAX_BYTES = p, 50
+    try:
+        _au.log_decision("one", "ok", 0.9, "allow", 1.0)
+        _au.log_decision("two", "ok", 0.9, "allow", 1.0)
+        assert _os.path.exists(p + ".1")
+    finally:
+        _au._PATH, _au._MAX_BYTES = old_path, old_max
