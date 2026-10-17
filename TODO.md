@@ -727,7 +727,7 @@
 - [x] T656 ft: `scripts/check_kaggle_env.py` verifies secrets + instance
 - [x] T657 ft: data upload step (kaggle datasets create) scripted
 - [x] T658 ft: training script accepts `--max-samples` smoke flag
-- [ ] T659 ft: smoke run path (50 rows, 1 epoch) documented + tested shape
+- [x] T659 ft: smoke run path (50 rows, 1 epoch) documented + tested shape
 - [ ] T660 ft: eval-after-train cell runs `eval_gatekeeper.py` on test split
 - [ ] T661 ft: regression gate — new model must beat regex baseline 0.480
 - [ ] T662 ft: calibration cell (temperature refit) writes temp.json

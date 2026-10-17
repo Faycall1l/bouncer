@@ -14,3 +14,8 @@ records = to_laya_records("/kaggle/input/gatekeeper-12k.jsonl")
 4. Run all → temperature refit on dev → push `YOUR_HF/gatekeeper-laya-421m`.
 
 `finetune_kaggle.py` here = the 3 cells you paste (converter + train call + push). Full loop already proven by Laya; your novelty is the dynamic-K dataset.
+
+**Smoke first (T659):** before any full run, execute
+`kaggle/train/train.py --max-samples 50` — 50 rows, 1 epoch, the exact same code
+path (data → items → train → calibrate → eval → gate). If it can't print
+`TRAIN_OK`, the 4-5h run won't either. Pre-flight checks: `scripts/check_kaggle_env.py` (T656).

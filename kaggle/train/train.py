@@ -7,6 +7,10 @@ Input schema (T386): JSONL rows from data/synth_rules.py —
    labels: {rule: rule_id | "ok", harm: safe|suspicious|harmful,
             hype: dead|chill|hyped, jailbreak: bool, escalate: bool}}
 Input is read from the first /kaggle/input/**/*.jsonl file; 1500 train / 500 test.
+Smoke path (T659): `--max-samples 50` truncates to 50 rows (40/5/5 split) and
+forces 1 epoch — validates data -> items -> train -> calibrate -> eval for a
+fraction of the quota. Run it first, every time; if it can't print TRAIN_OK,
+the full run won't either.
 """
 import subprocess
 import sys
@@ -145,7 +149,8 @@ model.to(device).train()
 
 train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.1, seed=20260922)
 assert train_items and calib_items, "empty train or calibration split"
-EPOCHS, MICRO, ACCUM = 3, 8, 8  # eff batch 64, same as 2xT4 recipe
+EPOCHS = 1 if MAX_SAMPLES else 3  # T659: smoke runs are 50 rows, 1 epoch
+MICRO, ACCUM = 8, 8  # eff batch 64, same as 2xT4 recipe
 PATIENCE = 1  # T653: stop after N epochs without dev rule_acc improvement
 DEV_FLOOR = 0.35  # T655: below this, the checkpoint is not worth shipping
 assert len(train_items) >= MICRO, "fewer items than one micro-batch"
