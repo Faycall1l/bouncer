@@ -26,6 +26,8 @@ if __name__ == "__main__":
     ap.add_argument("path", nargs="?", default="data/gatekeeper-12k.jsonl")
     ap.add_argument("--limit", type=int, default=500)
     ap.add_argument("--out", default="eval/reports/zero-shot.json")
+    ap.add_argument("--model", default=None,  # T576: pin a checkpoint for the run
+                    help="english | multilingual | typed-decisions (default: base router)")
     a = ap.parse_args()
     path = a.path
     with open(path) as f:
@@ -48,7 +50,8 @@ if __name__ == "__main__":
         except (KeyError, TypeError):
             skipped += 1
             continue
-        res = moderate(s["message"], s["rules"], s.get("history"), config=cfg, router=r)
+        res = moderate(s["message"], s["rules"], s.get("history"), config=cfg, router=r,
+                       model=a.model)  # T576: None = base router, else pinned checkpoint
         lat.append(res.get("latency_ms", 0))
         actions[res["action"]] += 1  # T373
         abstained_n += bool(res.get("abstained"))  # T374
@@ -65,6 +68,7 @@ if __name__ == "__main__":
             gated_n += 1; gated_ok += good
     lat.sort()
     report = {"n": len(rows), "rule_acc": round(ok / len(rows), 3),  # T100: JSON report
+              "model": a.model or "base-router",  # T576+T583: which checkpoint ran
               "thresholds": {"allow": cfg.allow_threshold,  # T372
                              "delete": cfg.delete_threshold},
               "ece": round(ece(confs, golds), 3), "p50_ms": round(lat[len(lat) // 2], 1),

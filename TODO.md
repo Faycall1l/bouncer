@@ -636,7 +636,7 @@
 - [x] T573 eval: `validate_data --limit` flag
 - [x] T574 data: `synth_rules --report` prints label distribution
 - [x] T575 docs: BENCHMARKS pool/breaker notes
-- [ ] T576 eval: `eval_gatekeeper --model` (passes model= through)
+- [x] T576 eval: `eval_gatekeeper --model` (passes model= through)
 - [ ] T577 eval: `baseline --limit` flag
 - [ ] T578 docs: eval/reports README lists new artifacts
 - [ ] T579 docs: data/README documents i18n file
