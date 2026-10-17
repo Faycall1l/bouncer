@@ -8,3 +8,5 @@
   `eval/` + Kaggle kernels, never in unit tests.
 * No secrets in code — tokens via env only.
 * Rule packs: add to `presets.py` + fixtures + docs catalogue.
+* Releases follow `docs/RELEASE-CHECKLIST.md` (T669): accuracy numbers must be
+  refreshed from a measured eval report before any tag — never vibes.

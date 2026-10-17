@@ -737,7 +737,7 @@
 - [x] T666 ft: costs block — 2xT4 hours + estimated HF storage
 - [x] T667 ft: failure modes documented (OOM, token cap, label noise)
 - [x] T668 ft: base-vs-finetune eval comparison script (weights optional)
-- [ ] T669 ft: RELEASE checklist item "accuracy numbers refreshed"
+- [x] T669 ft: RELEASE checklist item "accuracy numbers refreshed"
 - [ ] T670 test: P35 fine-tune plumbing sweep (weightless)
 
 ## P36 Eval gates (T671–T690)

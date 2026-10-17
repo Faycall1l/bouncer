@@ -244,6 +244,13 @@ def test_compare_models_deltas(tmp_path):  # T668: weightless base-vs-ft diff
     assert r.returncode == 2 and "cannot read" in r.stderr
 
 
+def test_release_checklist_accuracy_item():  # T669: numbers refreshed before tags
+    doc = _src("docs/RELEASE-CHECKLIST.md")
+    assert "accuracy numbers refreshed" in doc
+    assert "eval_gatekeeper.py" in doc and "never vibes" in doc
+    assert "docs/RELEASE-CHECKLIST.md" in _src("CONTRIBUTING.md")
+
+
 def test_eval_after_train_cell():  # T660: CI metrics on the held-out split
     src = _src("kaggle/train/train.py")
     assert "test_split.jsonl" in src  # split always written OUT
