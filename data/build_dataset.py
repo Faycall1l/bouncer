@@ -29,10 +29,12 @@ def server_key(row: dict) -> tuple:
 def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0) -> dict:
     """Server-disjoint split: every rule-set lands in exactly one split.
 
-    The two smallest rule-sets are reserved for dev/test (when there are enough
-    to leave train at least one), then the rest fill largest-first into whichever
-    split is furthest below its row target. Tiny template sets (3 rule-sets) get
-    a usable dev/test; larger teacher sets converge on the ratios.
+    Ratios are relative weights (need not sum to 1) — 2/1/0 gives a 2:1
+    train/test split and skips dev. The two smallest rule-sets are reserved for
+    dev/test (when there are enough to leave train at least one), then the rest
+    fill largest-first into whichever split is furthest below its row target.
+    Tiny template sets (3 rule-sets) get a usable dev/test; larger teacher sets
+    converge on the weights.
     """
     if len(ratios) != 3 or any(x < 0 for x in ratios) or sum(ratios) <= 0:
         raise ValueError("ratios must be 3 non-negative numbers summing > 0")
