@@ -1,5 +1,7 @@
 # Gatekeeper-ChatMix dataset
 
+Full dataset card (splits, labels, license, limits): [`CARD.md`](CARD.md) (T638).
+
 `gatekeeper-12k.jsonl`: one row = one message + THAT server's rule-set (K varies 3-6) + 5 labels.
 
 ```json
@@ -11,7 +13,9 @@ Splits: 10k train / 1k dev / 1k test, server-disjoint (test rule-sets unseen). T
 
 Why classical fails: fixed 77-way classifier memorizes labels; here criteria text + K change per row. Must read rules, not memorize ids.
 
-Build: `python data/synth_rules.py --n 12000 --out data/gatekeeper-12k.jsonl`
+Build (one command: synth → validate → server-disjoint split, T631):
+`python data/build_dataset.py --n 12000 --seed 42`
+Low-level synth only: `python data/synth_rules.py --n 12000 --out data/gatekeeper-12k.jsonl`
 Distribution check (no write): `python data/synth_rules.py --n 2000 --template-only --report` (T574)
 HF push: `huggingface-cli upload YOUR_HF/gatekeeper-chatmix-12k data/gatekeeper-12k.jsonl`
 
