@@ -98,3 +98,28 @@ def test_ci_release_attaches_wheel_and_sbom():  # T736
     # re-runs stay idempotent: an existing release gets --clobber uploads
     assert "--clobber" in job
     assert "GH_TOKEN" in job
+
+
+def test_ci_tag_must_match_pyproject():  # T737
+    import subprocess
+    import sys
+
+    import tomllib
+    text = (WORKFLOWS / "publish.yml").read_text()
+    assert 'python scripts/check_tag.py "$GITHUB_REF_NAME"' in text
+    with open("pyproject.toml", "rb") as f:
+        ver = tomllib.load(f)["project"]["version"]
+
+    def run(*args):
+        return subprocess.run([sys.executable, "scripts/check_tag.py", *args],
+                              check=False, capture_output=True, text=True,
+                              timeout=30)
+    # the current version passes with and without the v prefix...
+    assert run(f"v{ver}").returncode == 0
+    assert run(ver).returncode == 0
+    # ...a mismatch refuses the release, naming both sides...
+    r = run("v9.9.9")
+    assert r.returncode == 1
+    assert "E_TAG" in r.stderr and "9.9.9" in r.stderr and ver in r.stderr
+    # ...and a missing tag is a usage error, not a silent pass
+    assert run().returncode == 2
