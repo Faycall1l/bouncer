@@ -71,3 +71,88 @@ def test_discord_module_still_importable_without_dep():  # T691: guard is lazy
 def test_adapters_readme_mentions_shared_guard():  # T691: docs stay honest
     text = (ADAPTERS / "README.md").read_text()
     assert "require_env" in text and "E_ADAPTER" in text
+
+
+def _tg_message(text, chat_id=1, message_id=7):
+    return {"message": {"text": text, "chat": {"id": chat_id},
+                        "message_id": message_id}}
+
+
+def test_telegram_commands_answer_in_place():  # T692: / commands, no model
+    sys.path.insert(0, "src")
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.telegram_bot import handle_update
+    rules = get_preset("gaming")
+    for cmd, expect in (("/rules", "active:"), ("/stats", "decisions:"),
+                        ("/help", "BOUNCER_TG_DELETE")):
+        res = handle_update(_tg_message(cmd), rules)
+        assert res["action"] == "command" and res["command"] == cmd.lstrip("/")
+        assert expect in res["reply"]
+    # unknown commands are ignored, not moderated as content
+    res = handle_update(_tg_message("/definitely-not-a-command"), rules)
+    assert res == {"action": "ignored", "reason": "unknown-command"}
+    # with a token, replies go through the (injectable) api, not print
+    calls = []
+    res = handle_update(_tg_message("/rules"), rules, token="t",
+                        api_fn=lambda *a, **k: calls.append((a, k)))
+    assert calls and calls[0][0][1:] == ("sendMessage",)
+    assert calls[0][1]["chat_id"] == 1
+
+
+def test_telegram_flag_only_by_default(monkeypatch):  # T692: delete is opt-in
+    sys.path.insert(0, "src")
+    import gatekeeper
+    from gatekeeper.adapters import telegram_bot as tg
+    monkeypatch.setattr(gatekeeper, "moderate",
+                        lambda text, rules: {"action": "delete",
+                                             "rule": "sin-spam",
+                                             "confidence": 0.99})
+    rules = {"sin-spam": "t"}
+    calls = []
+    # default: the delete decision is printed, never executed
+    res = tg.handle_update(_tg_message("buy followers now"), rules)
+    assert res["action"] == "delete" and res["deleted"] is False
+    assert calls == []  # no api call happened
+    # opt-in with a token: exactly one deleteMessage call
+    res = tg.handle_update(_tg_message("buy followers now"), rules,
+                           token="t", can_delete=True,
+                           api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["deleted"] is True
+    assert calls[0][0][1:] == ("deleteMessage",)
+    assert calls[0][1] == {"chat_id": 1, "message_id": 7}
+    # without a token even can_delete=True cannot fire (nothing to auth with)
+    res = tg.handle_update(_tg_message("buy followers now"), rules,
+                           can_delete=True)
+    assert res["deleted"] is False
+
+
+def test_telegram_ignores_non_text_updates():  # T692: stickers carry no text
+    sys.path.insert(0, "src")
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.telegram_bot import handle_update
+    rules = get_preset("gaming")
+    res = handle_update({"message": {"sticker": {}}}, rules)
+    assert res == {"action": "ignored", "reason": "no-text"}
+    res = handle_update({}, rules)
+    assert res["action"] == "ignored"
+
+
+def test_telegram_adapter_is_stdlib_only():  # T692: no pip extra to run it
+    src = (ADAPTERS / "telegram_bot.py").read_text()
+    for banned in ("import telegram", "import aiogram", "import aiohttp",
+                   "import httpx", "import requests"):
+        assert banned not in src
+    # every top-level import is stdlib
+    top = [l.strip() for l in src.splitlines()
+           if l.startswith(("import ", "from ")) and "future" not in l]
+    allowed = {"json", "os", "sys", "urllib.request"}
+    for line in top:
+        mod = line.split()[1]
+        assert mod in allowed, line
+
+
+def test_telegram_missing_token_fails_e_adapter():  # T692: T691 guard applies
+    r = _run_py("-m", "gatekeeper.adapters.telegram_bot")
+    assert r.returncode != 0
+    assert "E_ADAPTER" in r.stderr and "TELEGRAM_TOKEN" in r.stderr
+    assert "KeyError" not in r.stderr

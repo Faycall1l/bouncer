@@ -764,7 +764,7 @@
 
 ## P37 Adapters (T691–T710)
 - [x] T691 adp: shared `require_env()` — missing adapter tokens fail with `E_ADAPTER`, not raw `KeyError`
-- [ ] T692 adp: telegram adapter (long-poll, / commands, flag-only default)
+- [x] T692 adp: telegram adapter (long-poll, / commands, flag-only default)
 - [ ] T693 adp: matrix/melement adapter (room timeline → moderate)
 - [ ] T694 adp: mattermost adapter (websocket + slash command)
 - [ ] T695 adp: zulip adapter (stream messages, bot mentions)
