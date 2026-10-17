@@ -70,15 +70,20 @@ def _watch_once(sock, rules) -> None:
 
 def run(retries: int = 3):
     from gatekeeper.adapters.common import (
+        cfg_get,
         install_shutdown,
+        load_config,
         load_rules,
         require_env,
     )
-    rules = load_rules("twitch", "stream")  # T698: env may override the preset
+    cfg = load_config()  # T709: bouncer.toml defaults; env still wins
+    rules = load_rules("twitch", "stream", cfg=cfg)  # T698+T709
     host, port = "irc.chat.twitch.tv", 6667
     # T691: all three checked up-front — fail before the first connect attempt
-    nick, chan = require_env("TWITCH_NICK"), require_env("TWITCH_CHAN")
-    tok = require_env("TWITCH_TOKEN")
+    nick = require_env("TWITCH_NICK", cfg_get(cfg, "adapter", "twitch", "nick"))
+    chan = require_env("TWITCH_CHAN", cfg_get(cfg, "adapter", "twitch", "chan"))
+    tok = require_env("TWITCH_TOKEN", cfg_get(cfg, "adapter", "twitch",
+                                              "token"))
     stopping = install_shutdown("twitch")  # T702: SIGTERM -> clean exit
     for attempt in range(max(1, retries)):  # T299: reconnect with backoff
         if stopping():  # T702: exit between reconnect attempts, not mid-retry

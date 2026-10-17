@@ -13,7 +13,6 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 import hmac
 import json
-import os
 import sys
 import urllib.parse
 import urllib.request
@@ -102,8 +101,11 @@ def run():
     from gatekeeper.adapters.common import (
         AdapterError,
         Health,
+        cfg_get,
         install_shutdown,
+        load_config,
         load_rules,
+        opt_in,
         rate_cap_from_env,
         require_env,
     )
@@ -113,11 +115,15 @@ def run():
         raise AdapterError(
             "E_ADAPTER: mattermost needs the websockets extra — "
             "pip install -e .[mattermost]") from e
-    server = require_env("MATTERMOST_SERVER").rstrip("/")  # T691: named failure
-    token = require_env("MATTERMOST_TOKEN")
-    rules = load_rules("mattermost")  # T698: BOUNCER_RULES[_MATTERMOST] or preset
-    can_delete = os.environ.get("BOUNCER_MM_DELETE") == "1"  # T694: opt-in
-    cap = rate_cap_from_env()  # T701: per-user model-call budget
+    cfg = load_config()  # T709: bouncer.toml defaults; env still wins
+    server = require_env(
+        "MATTERMOST_SERVER",
+        cfg_get(cfg, "adapter", "mattermost", "server")).rstrip("/")
+    token = require_env(
+        "MATTERMOST_TOKEN", cfg_get(cfg, "adapter", "mattermost", "token"))
+    rules = load_rules("mattermost", cfg=cfg)  # T698+T709
+    can_delete = opt_in("BOUNCER_MM_DELETE", cfg, "mattermost", "delete")
+    cap = rate_cap_from_env(cfg)  # T701+T709
     health = Health("mattermost")  # T699: same counters as run_loop's
     stopping = install_shutdown("mattermost")  # T702: SIGTERM -> clean exit
 

@@ -40,10 +40,17 @@ def run(token: str | None = None, preset: str = "gaming"):
     import discord  # optional dep; ImportError message tells the extra
 
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import install_shutdown, load_rules
+    from gatekeeper.adapters.common import (
+        cfg_get,
+        install_shutdown,
+        load_config,
+        load_rules,
+        require_env,
+    )
 
     install_shutdown("discord", hard=True)  # T702: discord.py owns the loop
-    rules = load_rules("discord", preset)  # T698: preset arg is just the default
+    cfg = load_config()  # T709: bouncer.toml defaults; env still wins
+    rules = load_rules("discord", preset, cfg=cfg)  # T698+T709
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
@@ -89,8 +96,8 @@ def run(token: str | None = None, preset: str = "gaming"):
         elif res["action"] in ("flag", "escalate"):
             await msg.add_reaction("⚠️")
 
-    from gatekeeper.adapters.common import require_env
-    client.run(token or require_env("DISCORD_TOKEN"))  # T075+T691: env, named
+    client.run(token or require_env(
+        "DISCORD_TOKEN", cfg_get(cfg, "adapter", "discord", "token")))  # T691+T709
 
 
 if __name__ == "__main__":

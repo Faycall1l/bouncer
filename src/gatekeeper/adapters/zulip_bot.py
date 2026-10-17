@@ -12,7 +12,6 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 import base64
 import json
-import os
 import urllib.parse
 import urllib.request
 
@@ -102,18 +101,25 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
 def run():
     from gatekeeper.adapters.common import (
         Health,
+        cfg_get,
         install_shutdown,
+        load_config,
         load_rules,
+        opt_in,
         rate_cap_from_env,
         require_env,
         run_loop,
     )
-    email = require_env("ZULIP_EMAIL")  # T691: named failure, not a crash
-    key = require_env("ZULIP_API_KEY")
-    site = require_env("ZULIP_SITE").rstrip("/")
-    rules = load_rules("zulip")  # T698: BOUNCER_RULES[_ZULIP] or preset
-    can_delete = os.environ.get("BOUNCER_ZL_DELETE") == "1"  # T695: opt-in
-    cap = rate_cap_from_env()  # T701: per-sender model-call budget
+    cfg = load_config()  # T709: bouncer.toml defaults; env still wins
+    email = require_env(
+        "ZULIP_EMAIL", cfg_get(cfg, "adapter", "zulip", "email"))
+    key = require_env(
+        "ZULIP_API_KEY", cfg_get(cfg, "adapter", "zulip", "api_key"))
+    site = require_env(
+        "ZULIP_SITE", cfg_get(cfg, "adapter", "zulip", "site")).rstrip("/")
+    rules = load_rules("zulip", cfg=cfg)  # T698+T709
+    can_delete = opt_in("BOUNCER_ZL_DELETE", cfg, "zulip", "delete")
+    cap = rate_cap_from_env(cfg)  # T701+T709
     stopping = install_shutdown("zulip")  # T702: SIGTERM -> clean exit
     own_id = api(email, key, site, "GET", "/users/me").get("user_id")
     q = api(email, key, site, "POST", "/register",

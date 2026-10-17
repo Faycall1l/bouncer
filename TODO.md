@@ -781,7 +781,7 @@
 - [x] T706 adp: twitch mention/whisper handling documented
 - [x] T707 adp: `forward_if_interesting` fires on breaker-open too
 - [x] T708 adp: adapter integration test per platform (stubbed transports)
-- [ ] T709 adp: config file support (`bouncer.toml`) for adapters
+- [x] T709 adp: config file support (`bouncer.toml`) for adapters
 - [ ] T710 test: P37 adapters sweep
 
 ## P38 Packaging (T711–T730)

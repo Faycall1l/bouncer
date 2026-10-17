@@ -44,10 +44,10 @@ def test_require_env_names_the_missing_variable(monkeypatch):  # T691
 def test_adapters_use_require_env_not_raw_indexing():  # T691: wired for real
     discord = (ADAPTERS / "discord_bot.py").read_text()
     twitch = (ADAPTERS / "twitch_irc.py").read_text()
-    assert 'require_env("DISCORD_TOKEN")' in discord
+    assert 'require_env(' in discord and '"DISCORD_TOKEN"' in discord
     assert "environ[" not in discord  # no raw KeyError path left
     for var in ("TWITCH_NICK", "TWITCH_CHAN", "TWITCH_TOKEN"):
-        assert f'require_env("{var}")' in twitch, var
+        assert 'require_env(' in twitch and f'"{var}"' in twitch, var
     assert 'environ["TWITCH_' not in twitch  # tokens read via the guard
 
 
@@ -776,7 +776,7 @@ def test_rate_cap_blocks_model_calls(monkeypatch, capsys):  # T701 e2e
 def test_adapters_wire_rate_cap():  # T701: all four pollers carry a cap
     for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot"):
         src = (ADAPTERS / f"{name}.py").read_text()
-        assert "rate_cap_from_env()" in src, name
+        assert "rate_cap_from_env(" in src, name
         assert 'reason": "rate-limited"' in src, name
 
 
@@ -859,7 +859,8 @@ def test_adapter_matrix_is_complete_and_honest():  # T703
     # the SDK column only names helpers that actually exist in common.py
     common = (ADAPTERS / "common.py").read_text()
     for fn in ("require_env", "load_rules", "run_loop", "Health", "RateCap",
-               "redact", "dry_run", "install_shutdown", "verify_signature"):
+               "redact", "dry_run", "install_shutdown", "verify_signature",
+               "load_config"):
         assert f"def {fn}" in common or f"class {fn}" in common, fn
         assert fn in text, fn
     # env opt-ins named in the matrix are real env vars in the sources
@@ -1301,3 +1302,115 @@ def test_discord_full_session_stubbed_sdk(monkeypatch):  # T708
     assert spam.deleted is True
     assert sent == ["removed (no-spam @ 0.99)",
                     "active: " + ", ".join(get_preset("gaming"))]
+
+
+def test_load_config_missing_broken_and_env_path(monkeypatch, tmp_path):  # T709
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import AdapterError, load_config
+    monkeypatch.delenv("BOUNCER_CONFIG", raising=False)
+    # a missing file is {} — config is additive, never required
+    assert load_config(str(tmp_path / "nope.toml")) == {}
+    # a real file parses into a dict
+    f = tmp_path / "bouncer.toml"
+    f.write_text('[adapter.telegram]\ntoken = "abc"\ndelete = true\n'
+                 "[tuning]\nrate_cap = 3\n")
+    cfg = load_config(str(f))
+    assert cfg["adapter"]["telegram"]["token"] == "abc"
+    assert cfg["tuning"]["rate_cap"] == 3
+    # broken TOML is E_ADAPTER naming the file, never a raw traceback
+    f.write_text("[adapter.telegram\n")
+    try:
+        load_config(str(f))
+    except AdapterError as e:
+        assert e.code == "E_ADAPTER" and "unreadable" in str(e)
+        assert str(f) in str(e)
+    else:
+        raise AssertionError("broken TOML must fail loudly")
+    # BOUNCER_CONFIG overrides the default path
+    f.write_text('[tuning]\nrate_cap = 7\n')
+    monkeypatch.setenv("BOUNCER_CONFIG", str(f))
+    assert load_config()["tuning"]["rate_cap"] == 7
+
+
+def test_config_fills_env_gaps_but_env_wins(monkeypatch, tmp_path):  # T709
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import (
+        AdapterError,
+        cfg_get,
+        opt_in,
+        rate_cap_from_env,
+        require_env,
+    )
+    cfg = {"adapter": {"telegram": {"token": "from-file", "delete": True},
+                       "zulip": {"site": "https://z.example.org"}},
+           "tuning": {"rate_cap": 3}}
+    # missing env -> the file value fills in
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+    assert require_env("TELEGRAM_TOKEN",
+                       cfg_get(cfg, "adapter", "telegram", "token")) == \
+        "from-file"
+    # a non-empty env var always wins over the file
+    monkeypatch.setenv("TELEGRAM_TOKEN", "from-env")
+    assert require_env("TELEGRAM_TOKEN",
+                       cfg_get(cfg, "adapter", "telegram", "token")) == \
+        "from-env"
+    # exported-but-blank + no file value -> still E_ADAPTER (T691 unchanged)
+    monkeypatch.setenv("ZULIP_API_KEY", "")
+    try:
+        require_env("ZULIP_API_KEY",
+                    cfg_get(cfg, "adapter", "zulip", "api_key"))
+    except AdapterError as e:
+        assert "ZULIP_API_KEY" in str(e)
+    else:
+        raise AssertionError("blank env with no file value must raise")
+    # the rate cap reads the file when the env is unset; env still wins
+    monkeypatch.delenv("BOUNCER_RATE_CAP", raising=False)
+    assert rate_cap_from_env(cfg).max_calls == 3
+    monkeypatch.setenv("BOUNCER_RATE_CAP", "9")
+    assert rate_cap_from_env(cfg).max_calls == 9
+    monkeypatch.setenv("BOUNCER_RATE_CAP", "0")
+    assert rate_cap_from_env(cfg) is None  # env opt-out beats the file
+    # opt-in flags: a set env var decides whatever its value; else the file
+    monkeypatch.delenv("BOUNCER_TG_DELETE", raising=False)
+    assert opt_in("BOUNCER_TG_DELETE", cfg, "telegram", "delete") is True
+    monkeypatch.setenv("BOUNCER_TG_DELETE", "0")
+    assert opt_in("BOUNCER_TG_DELETE", cfg, "telegram", "delete") is False
+    monkeypatch.setenv("BOUNCER_TG_DELETE", "1")
+    assert opt_in("BOUNCER_TG_DELETE", cfg, "telegram", "delete") is True
+    # no env, no file entry -> off (flag-only defaults survive T709)
+    monkeypatch.delenv("BOUNCER_TG_DELETE", raising=False)
+    assert opt_in("BOUNCER_TG_DELETE", {"adapter": {}}, "telegram",
+                  "delete") is False
+
+
+def test_config_rules_source_falls_back_to_file(monkeypatch):  # T709
+    sys.path.insert(0, "src")
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.common import load_rules
+    cfg = {"adapter": {"matrix": {"rules": "study"}}}
+    for var in ("BOUNCER_RULES", "BOUNCER_RULES_MATRIX"):
+        monkeypatch.delenv(var, raising=False)
+    # no env -> the file's rules source is used
+    assert load_rules("matrix", cfg=cfg) == get_preset("study")
+    # env still beats the file
+    monkeypatch.setenv("BOUNCER_RULES", "stream")
+    assert load_rules("matrix", cfg=cfg) == get_preset("stream")
+    # no env, no file entry -> the adapter default (T698 behavior intact)
+    monkeypatch.delenv("BOUNCER_RULES", raising=False)
+    assert load_rules("matrix", cfg={}) == get_preset("gaming")
+
+
+def test_adapters_load_config():  # T709: wired into every adapter
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+                 "twitch_irc", "discord_bot"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "load_config()" in src, name
+        assert "cfg=cfg" in src, name  # the config reaches load_rules
+    # the per-adapter opt-in flags now flow through opt_in(), not raw env
+    for name, env in (("telegram_bot", "BOUNCER_TG_DELETE"),
+                      ("matrix_bot", "BOUNCER_MX_REDACT"),
+                      ("mattermost", "BOUNCER_MM_DELETE"),
+                      ("zulip_bot", "BOUNCER_ZL_DELETE")):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "opt_in(" in src and env in src, name
+        assert f'environ.get("{env}")' not in src  # no raw env read left

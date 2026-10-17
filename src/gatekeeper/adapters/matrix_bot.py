@@ -10,7 +10,6 @@ from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
 import json
-import os
 import sys
 import urllib.request
 
@@ -119,17 +118,24 @@ def dispatch_page(page: dict, rules: dict, **kw) -> list:
 def run():
     from gatekeeper.adapters.common import (
         Health,
+        cfg_get,
         install_shutdown,
+        load_config,
         load_rules,
+        opt_in,
         rate_cap_from_env,
         require_env,
         run_loop,
     )
-    token = require_env("MATRIX_TOKEN")  # T691: named failure, not a crash
-    homeserver = require_env("MATRIX_HOMESERVER").rstrip("/")
-    rules = load_rules("matrix")  # T698: BOUNCER_RULES[_MATRIX] or preset
-    can_redact = os.environ.get("BOUNCER_MX_REDACT") == "1"  # T693: opt-in
-    cap = rate_cap_from_env()  # T701: per-sender model-call budget
+    cfg = load_config()  # T709: bouncer.toml defaults; env still wins
+    token = require_env(
+        "MATRIX_TOKEN", cfg_get(cfg, "adapter", "matrix", "token"))
+    homeserver = require_env(
+        "MATRIX_HOMESERVER",
+        cfg_get(cfg, "adapter", "matrix", "homeserver")).rstrip("/")
+    rules = load_rules("matrix", cfg=cfg)  # T698+T709
+    can_redact = opt_in("BOUNCER_MX_REDACT", cfg, "matrix", "redact")
+    cap = rate_cap_from_env(cfg)  # T701+T709
     stopping = install_shutdown("matrix")  # T702: SIGTERM -> clean exit
     since = None
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
 import json
-import os
 import urllib.request
 
 API_URL = "https://api.telegram.org/bot{token}/{method}"
@@ -87,16 +86,21 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
 def run():
     from gatekeeper.adapters.common import (
         Health,
+        cfg_get,
         install_shutdown,
+        load_config,
         load_rules,
+        opt_in,
         rate_cap_from_env,
         require_env,
         run_loop,
     )
-    token = require_env("TELEGRAM_TOKEN")  # T691: named failure, not a crash
-    rules = load_rules("telegram")  # T698: BOUNCER_RULES[_TELEGRAM] or preset
-    can_delete = os.environ.get("BOUNCER_TG_DELETE") == "1"  # T692: opt-in
-    cap = rate_cap_from_env()  # T701: per-chat model-call budget
+    cfg = load_config()  # T709: bouncer.toml defaults; env still wins
+    token = require_env(
+        "TELEGRAM_TOKEN", cfg_get(cfg, "adapter", "telegram", "token"))
+    rules = load_rules("telegram", cfg=cfg)  # T698+T709
+    can_delete = opt_in("BOUNCER_TG_DELETE", cfg, "telegram", "delete")
+    cap = rate_cap_from_env(cfg)  # T701+T709: per-chat model-call budget
     stopping = install_shutdown("telegram")  # T702: SIGTERM -> clean exit
     offset = 0
 

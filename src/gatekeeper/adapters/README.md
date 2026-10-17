@@ -10,13 +10,57 @@
 | Zulip | `adapters/zulip_bot.py` | stdlib only. `ZULIP_EMAIL=... ZULIP_API_KEY=... ZULIP_SITE=... python -m gatekeeper.adapters.zulip_bot` (event-queue poll, stream messages moderated, PMs/mentions are `bouncer` commands; `BOUNCER_ZL_DELETE=1` opts into delete) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver; pass `secret`+`raw`+`ts`+`signature` to enforce Slack v0 signature verification (fail-closed) | dry-run, redact, verify_signature |
 | Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events; breaker-open results fire too and carry `cause` | dry-run, redact |
-| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, Health, RateCap, redact, dry_run, install_shutdown, verify_signature |
+| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, Health, RateCap, redact, dry_run, install_shutdown, verify_signature, load_config |
 
-The matrix's SDK column is the T703 truth: `common.py` (T691–T702) is the
-whole shared surface — `require_env`/`load_rules` at startup, `run_loop` +
-`Health` + `RateCap` + `install_shutdown` around the loop, `redact` +
-`dry_run` on every outbound line. A new adapter gets all of it by importing
-from `common`; nothing in the column may name a helper that doesn't exist.
+The matrix's SDK column is the T703 truth: `common.py` (T691–T709) is the
+whole shared surface — `require_env`/`load_rules`/`load_config` at startup,
+`run_loop` + `Health` + `RateCap` + `install_shutdown` around the loop,
+`redact` + `dry_run` on every outbound line. A new adapter gets all of it by
+importing from `common`; nothing in the column may name a helper that
+doesn't exist.
+
+## Config file (T709)
+
+Every adapter reads `bouncer.toml` from the working directory (override the
+path with `BOUNCER_CONFIG`) via the shared `load_config()`, stdlib `tomllib`.
+The precedence is always: **env var > file > default** — the file supplies
+defaults, the environment is the deployment. A missing file is fine (`{}`);
+broken TOML fails at startup with `E_ADAPTER` naming the file.
+
+```toml
+# bouncer.toml — adapter defaults; env vars always win (T709)
+[adapter.telegram]
+token = "123456:AA..."          # instead of TELEGRAM_TOKEN
+delete = true                   # instead of BOUNCER_TG_DELETE=1
+rules = "gaming"                # preset name or JSON file path (T698)
+
+[adapter.matrix]
+token = "syt_..."
+homeserver = "https://matrix.example.org"
+redact = true                   # BOUNCER_MX_REDACT
+
+[adapter.mattermost]
+server = "https://mm.example.org"
+token = "..."
+delete = false                  # flag-only default stands
+
+[adapter.zulip]
+email = "bouncer-bot@example.org"
+api_key = "..."
+site = "https://zulip.example.org"
+delete = false
+
+[adapter.twitch]
+nick = "bouncerbot"
+chan = "#gaming"
+token = "oauth:..."
+
+[adapter.discord]
+token = "..."
+
+[tuning]
+rate_cap = 10                   # per-user model calls/min (T701); 0 disables
+```
 
 Tokens always from env, never logged — every printed line passes the shared
 `redact()` (T700). Missing tokens fail at startup via the shared

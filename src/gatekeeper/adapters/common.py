@@ -13,14 +13,60 @@ class AdapterError(Exception):
     code = "E_ADAPTER"
 
 
-def require_env(name: str) -> str:
+def require_env(name: str, cfg_value=None) -> str:
     """T691: adapter tokens come from env; a missing one is a startup error
-    naming the variable — not a raw KeyError from deep inside the run loop."""
+    naming the variable — not a raw KeyError from deep inside the run loop.
+    T709: a value from bouncer.toml fills in when the env var is missing or
+    blank; a non-empty env var always wins."""
     v = os.environ.get(name)
     if not v:  # unset and exported-but-blank are both misconfigurations
-        raise AdapterError(f"E_ADAPTER: {name} is not set — export it before "
-                           f"starting the adapter")
+        if isinstance(cfg_value, str) and cfg_value.strip():
+            return cfg_value.strip()
+        raise AdapterError(f"E_ADAPTER: {name} is not set — export it or set "
+                           f"it in bouncer.toml before starting the adapter")
     return v
+
+
+def load_config(path: str | None = None) -> dict:
+    """T709: optional per-adapter config from bouncer.toml (stdlib tomllib).
+
+    A missing file is {} — config is additive, never required. Broken TOML
+    is E_ADAPTER naming the file, never a raw traceback. BOUNCER_CONFIG
+    overrides the default path. Env vars always beat file values: the file
+    supplies defaults, the environment is the deployment.
+    """
+    import tomllib
+    p = path or os.environ.get("BOUNCER_CONFIG", "").strip() or "bouncer.toml"
+    try:
+        with open(p, "rb") as f:
+            data = tomllib.load(f)
+    except FileNotFoundError:
+        return {}
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        raise AdapterError(f"E_ADAPTER: config {p} is unreadable: {e}") from e
+    if not isinstance(data, dict):
+        raise AdapterError(f"E_ADAPTER: config {p} must be a TOML table")
+    return data
+
+
+def cfg_get(cfg, *keys, default=None):
+    """T709: dotted lookup into a loaded config; anything missing = default."""
+    cur = cfg
+    for k in keys:
+        if not isinstance(cur, dict) or k not in cur:
+            return default
+        cur = cur[k]
+    return cur
+
+
+def opt_in(env_name: str, cfg, adapter: str, name: str) -> bool:
+    """T709: BOUNCER_*_DELETE/REDACT env beats bouncer.toml [adapter.x] flags.
+    An env var that is set decides, whatever its value; unset falls to the
+    file's boolean."""
+    v = os.environ.get(env_name)
+    if v is not None:
+        return v == "1"
+    return bool(cfg_get(cfg, "adapter", adapter, name))
 
 
 def dry_run() -> bool:
@@ -78,14 +124,17 @@ def verify_signature(secret: str, header: str, body, *, prefix: str = "",
     return hmac.compare_digest(header, expected)
 
 
-def load_rules(adapter: str, default: str = "gaming") -> dict:
-    """T698: where an adapter's rules come from, per adapter.
+def load_rules(adapter: str, default: str = "gaming", cfg=None) -> dict:
+    """T698+T709: where an adapter's rules come from, per adapter.
 
     `BOUNCER_RULES_<ADAPTER>` (e.g. BOUNCER_RULES_MATRIX) overrides the shared
     `BOUNCER_RULES`; either names a preset or points at a JSON file of rules.
+    With no env, bouncer.toml `[adapter.<name>] rules` is consulted (T709).
     """
-    spec = os.environ.get(f"BOUNCER_RULES_{adapter.upper()}",
-                          os.environ.get("BOUNCER_RULES", default))
+    spec = os.environ.get(f"BOUNCER_RULES_{adapter.upper()}") \
+        or os.environ.get("BOUNCER_RULES") \
+        or (cfg_get(cfg, "adapter", adapter, "rules") or "") \
+        or default  # T709: env beats file, file beats default
     if os.path.isfile(spec):
         import json
         try:
@@ -253,11 +302,15 @@ class RateCap:
         return True
 
 
-def rate_cap_from_env() -> RateCap | None:
+def rate_cap_from_env(cfg=None) -> RateCap | None:
     """T701: BOUNCER_RATE_CAP = max model calls per user per minute;
-    0 disables the cap. A typo'd value must not crash a running bot."""
+    0 disables the cap. A typo'd value must not crash a running bot.
+    T709: with no env, bouncer.toml `[tuning] rate_cap` is consulted."""
+    raw = os.environ.get("BOUNCER_RATE_CAP")
+    if raw is None or not raw.strip():
+        raw = cfg_get(cfg, "tuning", "rate_cap")
     try:
-        n = int(os.environ.get("BOUNCER_RATE_CAP", "10"))
-    except ValueError:
+        n = int(raw)
+    except (TypeError, ValueError):
         n = 10
     return RateCap(max_calls=n) if n > 0 else None
