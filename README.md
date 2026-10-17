@@ -84,6 +84,23 @@ Split gates: `--allow-threshold` / `--delete-threshold` (and the same JSON keys
 on `POST /predict` + `/predict/batch`) tune the two bars independently;
 bare `--threshold` sets both. Higher allow = fewer auto-allows, more escalations.
 
+## Router pools (T592)
+
+Routers (one per checkpoint × device) are expensive to build, so bouncer keeps an
+LRU pool keyed by constructor kwargs:
+
+* `BOUNCER_POOL_MAX` (default `2`) — slots in the pool. Size it to every
+  checkpoint your traffic actually reaches; fewer slots than hot checkpoints means
+  an eviction storm where every request pays a full reload (`eval/bench_pool.py`
+  demonstrates both: 5.4× speedup with hits, ~1× thrashing without).
+* `BOUNCER_DEVICE` (e.g. `cuda`, `mps`, `cpu`) — default device for pool builds.
+* `model=` — pin a checkpoint per request: `moderate(msg, rules, model="multilingual")`,
+  `POST /predict {"model": "typed-decisions"}`, `bouncer check --model english`.
+  `None`/`auto` routes by language hint: non-latin scripts (ar/zh/ru/fa/ur/he) pin
+  `multilingual`, latin rides laya's own auto-routing.
+* Pool size/hits/evictions appear in `GET /stats`, `GET /ready`, and
+  `bouncer models`.
+
 ## Persistence (T591)
 
 Nothing persists by default — bouncer is in-memory per process. Two opt-in files:
