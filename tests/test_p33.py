@@ -103,6 +103,47 @@ def test_preset_as_rules_e2e_and_default(monkeypatch):  # T618
     assert r.status_code == 422 and r.json()["detail"]["code"] == "E_PRESET"
 
 
+def test_breaker_e2e_full_cycle():  # T620: storm -> open -> cool -> probe -> closed
+    import time as _t
+
+    import gatekeeper
+    from gatekeeper import GateConfig, moderate
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+    gatekeeper._BREAKER.update({"fails": 0, "open_until": 0.0, "half_open": False})
+    rules = {"plain-chat": "normal talk"}
+    cfg = GateConfig(breaker_n=2, breaker_cool_s=0.05)
+
+    class Boom:
+        def predict(self, state, questions):
+            raise RuntimeError("e2e outage")
+
+    class Ok:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95,
+                         "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    # storm: two failing moderations trip it at breaker_n
+    for i in range(2):
+        r = moderate(f"p33 storm {i}", rules, config=cfg, router=Boom())
+        assert r["action"] == "escalate" and r["cause"] == "fallback"
+    assert gatekeeper._breaker_tripped() is True
+    # while open: no model call, escalate with the breaker's own cause
+    r = moderate("p33 while open", rules, config=cfg, router=Ok())
+    assert r["cause"] == "breaker-open" and r["action"] == "escalate"
+    # cooldown -> half-open trial reaches a healthy router -> closed
+    _t.sleep(0.06)
+    r = moderate("p33 probe", rules, config=cfg, router=Ok())
+    assert r["cause"] == "ok" and r["action"] == "allow"
+    assert gatekeeper._breaker_tripped() is False
+    assert gatekeeper._BREAKER["half_open"] is False  # success cleared it
+    gatekeeper._BREAKER.update({"fails": 0, "open_until": 0.0, "half_open": False})
+
+
 def test_pool_eviction_under_max():  # T616
     from gatekeeper.pool import RouterPool
     built = []

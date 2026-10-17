@@ -684,7 +684,7 @@
 - [x] T617 test: snapshot round-trip (stats+strikes) — covered by T588
 - [x] T618 test: preset-as-rules e2e + default preset
 - [x] T619 test: i18n eval report keys — covered by T587 (per_lang + errors + n)
-- [ ] T620 test: breaker e2e (storm → open → cool → probe)
+- [x] T620 test: breaker e2e (storm → open → cool → probe)
 - [ ] T621 test: timeout + model fields e2e
 - [ ] T622 test: multitenancy isolation (preset A vs B same text)
 - [ ] T623 test: persistence files ignored by git
