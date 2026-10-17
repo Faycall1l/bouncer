@@ -219,3 +219,28 @@ def test_ci_matrix_reports_every_leg():  # T741
     assert "fail-fast: false" in job
     # only the matrix needs it — single-leg jobs can't cancel each other
     assert ci.count("fail-fast") == 1
+
+
+def test_workflow_badge_in_readme():  # T742
+    import re
+    import subprocess
+    readme = Path("README.md").read_text()
+    # the badge exists, links back to the runs page, and names a workflow
+    # that actually lives in .github/workflows/ (a renamed file would
+    # otherwise ship a silently dead image)
+    m = re.search(
+        r"\[!\[ci\]\(https://github\.com/([\w.-]+/[\w.-]+)/actions/workflows/"
+        r"([\w.-]+)/badge\.svg\)\]"
+        r"\(https://github\.com/\1/actions/workflows/\2\)", readme)
+    assert m, "no ci workflow badge (or malformed) in README"
+    slug, workflow = m.group(1), m.group(2)
+    assert (WORKFLOWS / workflow).exists(), f"badge names missing {workflow}"
+    # and the slug matches this repo's origin — the badge doesn't go stale
+    # after a rename or move
+    r = subprocess.run(["git", "remote", "get-url", "origin"],
+                       check=False, capture_output=True, text=True, timeout=30)
+    if r.returncode == 0:
+        u = re.search(r"github\.com[:/]([\w.-]+/[\w.-]+?)(?:\.git)?$",
+                      r.stdout.strip())
+        if u:  # only github origins make a badge claim
+            assert u.group(1) == slug, (u.group(1), slug)
