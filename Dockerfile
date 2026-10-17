@@ -6,9 +6,12 @@ WORKDIR /app
 RUN useradd --create-home --shell /usr/sbin/nologin bouncer
 COPY pyproject.toml README.md LICENSE MANIFEST.in ./
 COPY src/ src/
+# T717: volume mount points are pre-created and chowned so the named
+# volumes inherit the non-root user's ownership on first use.
 RUN pip install --no-cache-dir . \
     && python -c "import gatekeeper" \
-    && chown -R bouncer:bouncer /app
+    && mkdir -p /app/snapshots /home/bouncer/.cache \
+    && chown -R bouncer:bouncer /app /home/bouncer/.cache
 USER bouncer
 ENV HOME=/home/bouncer
 EXPOSE 8000

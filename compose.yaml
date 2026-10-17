@@ -1,4 +1,7 @@
-# T061: server + demo. HF cache persists in ./hf-cache.
+# T061+T717: server + demo. Weights cache and snapshots persist as named
+# volumes (both dirs are pre-created in the image, owned by the non-root
+# user, so the volume init inherits that ownership). Secrets never live in
+# this file — compose interpolates them from .env (gitignored, T717).
 services:
   server:
     build: .
@@ -6,10 +9,17 @@ services:
     environment:
       BOUNCER_KEY: ${BOUNCER_KEY:-}
     volumes:
-      - ./hf-cache:/root/.cache
+      - hf-cache:/home/bouncer/.cache    # T716: non-root home, not root's
+      - snapshots:/app/snapshots         # T717: bouncer snapshot save lives here
   demo:
     build: .
     ports: ["7860:7860"]
     command: ["python", "-c", "from gatekeeper.demo_app import launch; launch()"]
+    environment:
+      BOUNCER_KEY: ${BOUNCER_KEY:-}
     volumes:
-      - ./hf-cache:/root/.cache
+      - hf-cache:/home/bouncer/.cache
+      - snapshots:/app/snapshots
+volumes:
+  hf-cache: {}
+  snapshots: {}

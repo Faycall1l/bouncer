@@ -202,3 +202,36 @@ def test_dockerfile_slim_nonroot_healthcheck():  # T716
     # and it still serves the same app the compose file expects
     assert 'CMD ["uvicorn", "gatekeeper.serve:app"' in text
     assert "EXPOSE 8000" in text
+
+
+def test_compose_snapshot_volumes_and_secrets():  # T717
+    import re
+    import shutil
+    import subprocess
+    text = Path("compose.yaml").read_text()
+    # secrets never live in the file: compose interpolates them from .env...
+    assert "BOUNCER_KEY: ${BOUNCER_KEY:-}" in text
+    assert "BOUNCER_KEY: " in text and "change-me" not in text
+    gitignore = Path(".gitignore").read_text().splitlines()
+    assert ".env" in gitignore, ".env must stay gitignored"
+    # ...and .env.example documents what an operator fills in
+    env_ex = Path(".env.example").read_text()
+    assert "BOUNCER_KEY" in env_ex and "copy to .env" in env_ex
+    # both persisted dirs are named volumes, declared top-level...
+    m = re.search(r"^volumes:\n((?:  \S.*\n)+)", text, re.MULTILINE)
+    assert m, "no top-level volumes section"
+    declared = set(re.findall(r"^  (\S+?):", m.group(1), re.MULTILINE))
+    assert declared == {"hf-cache", "snapshots"}, declared
+    # ...and every service mounts them under the T716 non-root paths —
+    # the old /root/.cache bind is gone with the root user
+    assert text.count("- hf-cache:/home/bouncer/.cache") == 2
+    assert text.count("- snapshots:/app/snapshots") == 2
+    assert "/root" not in text, "compose still targets the root user's home"
+    # when docker is present, the real parser validates the structure
+    docker = shutil.which("docker")
+    if docker:
+        r = subprocess.run([docker, "compose", "-f", "compose.yaml",
+                            "config", "--quiet"],
+                           check=False, capture_output=True, text=True,
+                           timeout=60)
+        assert r.returncode == 0, r.stderr
