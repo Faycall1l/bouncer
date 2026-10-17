@@ -23,3 +23,21 @@ shapes around them grew: results now carry `cause`, `margin`, `thresholds`,
 invisible before); the same message under different thresholds/context/lang no
 longer reuses a stale cached verdict (T221). Re-record the transcript only when
 a gate behavior changes, not when fields are added.
+
+## 0.3.0 behavior notes (T625)
+
+Verdicts on this transcript are unchanged on 0.3.0 too — pools, presets and the
+breaker are plumbing around the ladder, not new gates. What differs at the
+edges:
+
+* Results additionally carry `script` (latin/arabic detection); `cause` gains
+  `breaker-open` when the circuit breaker is tripped (requests then escalate
+  without a model call — never allow). The `model` pin lives on the *request*
+  and in pool stats, not in the result body.
+* With `preset=` instead of `rules=`, the same text can get a *different*
+  verdict — that's tenant config, not drift (each request's pack is what
+  reached the router; see T622 test).
+* Latency: pool hits skip router construction; a cold pool pays one build on
+  first use. Cached/fastpath/breaker paths don't reach the model at all.
+* Nothing here re-records the table: same base model, same gates, same
+  thresholds. Re-record only if a gate row in `docs/gates.md` changes.
