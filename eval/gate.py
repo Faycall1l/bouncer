@@ -72,6 +72,24 @@ def collect(report: dict, args) -> list:
     le("p95_ms", ("p95_ms",), args.max_p95_ms)  # T674: latency budget (T4 target)
     band("abstention_rate", ("abstention_rate",),  # T675: honest band
          args.min_abstention, args.max_abstention)
+    # --- T676: per-rule worst-case — no eligible rule may sit below the floor ---
+    # per_rule is {label: [ok, n]}; rules below the support floor are noise.
+    pr = _get(report, "per_rule")
+    worst, worst_name = None, None
+    if isinstance(pr, dict):
+        for rule, pair in pr.items():
+            if (isinstance(pair, (list, tuple)) and len(pair) == 2
+                    and isinstance(pair[0], (int, float))
+                    and isinstance(pair[1], (int, float))
+                    and pair[1] >= args.per_rule_min_n):
+                acc = pair[0] / pair[1]
+                if worst is None or acc < worst:
+                    worst, worst_name = acc, rule
+    if worst is None:
+        add("per_rule_worst", f">= {args.min_per_rule_acc}", None, None)  # SKIP
+    else:
+        add("per_rule_worst", f">= {args.min_per_rule_acc} (worst: {worst_name})",
+            round(worst, 3), worst >= args.min_per_rule_acc)
     return checks
 
 
@@ -117,6 +135,10 @@ def main(argv=None) -> int:
                          "the model never hedges — suspicious, not laudable")
     ap.add_argument("--max-abstention", type=float, default=0.3,  # T675
                     help="abstention_rate ceiling: past this the gate is all abstain")
+    ap.add_argument("--min-per-rule-acc", type=float, default=0.3,  # T676
+                    help="floor for the worst per-rule accuracy")
+    ap.add_argument("--per-rule-min-n", type=int, default=5,  # T676
+                    help="ignore rules with fewer than N samples (noise floor)")
     a = ap.parse_args(argv)
 
     try:

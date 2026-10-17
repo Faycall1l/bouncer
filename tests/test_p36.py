@@ -23,7 +23,7 @@ def test_gate_pass_on_healthy_report(tmp_path):  # T671: exit 0, PASS lines
     assert "PASS rule_acc" in r.stdout  # 0.403 meets the floor exactly (T672)
     assert "SKIP ece" in r.stdout  # absent metric -> skipped, never passed (T673)
     assert "SKIP p95_ms" in r.stdout  # absent metric -> skipped (T674)
-    assert "3 passed, 0 failed, 3 skipped -> PASS" in r.stdout
+    assert "3 passed, 0 failed, 4 skipped -> PASS" in r.stdout
 
 
 def test_gate_fails_loud_on_threshold(tmp_path):  # T671: exit 1 + stderr blame
@@ -97,7 +97,7 @@ def test_gate_ece_ceiling(tmp_path):  # T673: after calibration, probs stay hone
     path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
     r = _run_gate(path, "--json")
     verdict = json.loads(r.stdout)
-    assert verdict["ok"] is True and verdict["skipped"] == 3  # ece+p95+abstention
+    assert verdict["ok"] is True and verdict["skipped"] == 4  # +per_rule_worst
     assert any(c["name"] == "ece" and c["ok"] is None for c in verdict["checks"])
 
 
@@ -135,3 +135,31 @@ def test_gate_abstention_band(tmp_path):  # T675: not 0, not > 0.3
     # band is flag-adjustable
     r = _run_gate(path, "--max-abstention", "0.2")
     assert r.returncode == 1
+
+
+def test_gate_per_rule_worst_case(tmp_path):  # T676: no eligible rule below floor
+    # a weak rule (1/10) fails loudly, and names itself in the blame line
+    per_rule = {"ok": [180, 200], "sin-spam": [12, 20], "se-amable": [1, 10]}
+    path = _report(tmp_path, {"n": 230, "rule_acc": 0.84, "per_rule": per_rule})
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL per_rule_worst" in r.stderr
+    assert "se-amable" in r.stderr  # the worst rule is named, not averaged away
+    # everyone above the floor -> pass
+    per_rule = {"ok": [180, 200], "sin-spam": [12, 20]}
+    path = _report(tmp_path, {"n": 220, "rule_acc": 0.87, "per_rule": per_rule})
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    # rules under the support floor are noise, not evidence
+    per_rule = {"ok": [180, 200], "rare": [0, 2]}
+    path = _report(tmp_path, {"n": 202, "rule_acc": 0.89, "per_rule": per_rule})
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    # both knobs are flag-settable
+    per_rule = {"ok": [180, 200], "sin-spam": [12, 20]}
+    path = _report(tmp_path, {"n": 220, "rule_acc": 0.87, "per_rule": per_rule})
+    r = _run_gate(path, "--min-per-rule-acc", "0.65")
+    assert r.returncode == 1
+    per_rule = {"ok": [180, 200], "rare": [0, 2]}
+    path = _report(tmp_path, {"n": 202, "rule_acc": 0.89, "per_rule": per_rule})
+    r = _run_gate(path, "--per-rule-min-n", "1")
+    assert r.returncode == 1 and "rare" in r.stderr  # support floor lowered: now judged

@@ -746,7 +746,7 @@
 - [x] T673 eval: gate ECE <= 0.15 after calibration
 - [x] T674 eval: gate p95 latency <= budget (ms, flag-settable)
 - [x] T675 eval: gate abstention_rate within band (not 0, not > 0.3)
-- [ ] T676 eval: gate per-rule worst-case (no rule below floor)
+- [x] T676 eval: gate per-rule worst-case (no rule below floor)
 - [ ] T677 eval: `gate.py --ci` exit codes documented (0/1/2)
 - [ ] T678 eval: baseline report format normalized (`n`, `acc`, `per_label`)
 - [ ] T679 eval: compare two reports (`--against`) prints deltas
