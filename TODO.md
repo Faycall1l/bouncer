@@ -777,7 +777,7 @@
 - [x] T702 adp: graceful shutdown on SIGTERM for every adapter
 - [x] T703 adp: adapter matrix table updated in adapters README
 - [x] T704 adp: webhook signature verification helper (hmac compare)
-- [ ] T705 adp: discord prefix + slash-command parity check test
+- [x] T705 adp: discord prefix + slash-command parity check test
 - [ ] T706 adp: twitch mention/whisper handling documented
 - [ ] T707 adp: `forward_if_interesting` fires on breaker-open too
 - [ ] T708 adp: adapter integration test per platform (stubbed transports)

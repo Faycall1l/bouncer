@@ -4,6 +4,38 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 
 
+def parse_command(text: str) -> str | None:  # T705: one parser, both surfaces
+    """`!bouncer <cmd>` (prefix message) and `/bouncer <cmd>` (slash-form)
+    parse identically; the bare prefix lists the commands. Returns the
+    subcommand name, or None when the text isn't a command at all."""
+    t = (text or "").strip()
+    low = t.lower()
+    for prefix in ("!bouncer", "/bouncer"):
+        if low == prefix:
+            return "help"
+        if low.startswith(prefix + " "):
+            rest = t[len(prefix):].strip()
+            return rest.split()[0].lower() if rest else "help"
+    return None
+
+
+def command_reply(cmd: str, rules: dict, stats=None) -> str | None:  # T705
+    """The single command table — the prefix handler and the slash handler
+    both call this, so the two surfaces cannot drift apart."""
+    if cmd == "rules":
+        return "active: " + ", ".join(rules)
+    if cmd == "stats":
+        if stats is None:
+            from gatekeeper.stats import get_stats
+            stats = get_stats()["actions"]
+        return "decisions: " + ", ".join(
+            f"{a}={n}" for a, n in sorted(stats.items()))
+    if cmd == "help":
+        return ("commands: !bouncer rules | !bouncer stats | !bouncer help "
+                "(slash: /bouncer command:)")
+    return None
+
+
 def run(token: str | None = None, preset: str = "gaming"):
     import discord  # optional dep; ImportError message tells the extra
 
@@ -16,20 +48,27 @@ def run(token: str | None = None, preset: str = "gaming"):
     intents.message_content = True
     client = discord.Client(intents=intents)
 
+    @client.tree.command(name="bouncer",  # T705: slash surface
+                         description="moderation bot commands")
+    @discord.app_commands.choices(command=[
+        discord.app_commands.Choice(name=c, value=c)
+        for c in ("rules", "stats", "help")
+    ])
+    async def bouncer_slash(interaction, command: str):
+        """Same table as the prefix surface — parity by construction."""
+        await interaction.response.send_message(
+            command_reply(command, rules) or command_reply("help", rules))
+
     @client.event
     async def on_message(msg):  # T073
         if msg.author.bot:
             return
         if not msg.content.strip():  # T298: embeds/stickers carry no text
             return
-        if msg.content.strip() == "!bouncer rules":  # T074
-            await msg.channel.send("active: " + ", ".join(rules))
-            return
-        if msg.content.strip() == "!bouncer stats":  # T297
-            from gatekeeper.stats import get_stats
-            s = get_stats()["actions"]
-            await msg.channel.send("decisions: " + ", ".join(f"{a}={n}" for a, n in
-                                                             sorted(s.items())))
+        cmd = parse_command(msg.content)  # T705: prefix surface
+        if cmd is not None:
+            await msg.channel.send(command_reply(cmd, rules)
+                                   or command_reply("help", rules))  # T705
             return
         res = moderate(msg.content, rules)
         from gatekeeper.adapters.common import dry_run

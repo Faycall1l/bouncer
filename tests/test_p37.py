@@ -952,3 +952,49 @@ def test_slack_signature_scheme_and_replay_window(monkeypatch):  # T704
         pass
     else:
         raise AssertionError("missing raw body must fail closed")
+
+
+def test_discord_prefix_and_slash_parse_identically():  # T705
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.discord_bot import command_reply, parse_command
+    # T705 parity: prefix and slash forms yield the same subcommand...
+    for sub in ("rules", "stats", "help"):
+        assert parse_command(f"!bouncer {sub}") == sub
+        assert parse_command(f"/bouncer {sub}") == sub
+        assert parse_command(f"!BOUNCER {sub.upper()}") == sub  # case-proof
+    # ...and the same table answers both
+    rules = {"sin-spam": "t", "no-doxx": "t"}
+    for sub in ("rules", "stats", "help"):
+        a = command_reply(parse_command(f"!bouncer {sub}"), rules)
+        b = command_reply(parse_command(f"/bouncer {sub}"), rules)
+        assert a == b and a, sub
+    # the bare prefix on either surface asks for help
+    assert parse_command("!bouncer") == "help"
+    assert parse_command("/bouncer") == "help"
+    assert parse_command("  /bouncer  ") == "help"
+    # trailing text after the subcommand doesn't break parsing
+    assert parse_command("!bouncer rules now") == "rules"
+    # non-commands pass through to moderation untouched
+    assert parse_command("just talking") is None
+    assert parse_command("!bouncerx") is None  # not our prefix
+    assert parse_command("") is None
+    # the table itself
+    assert command_reply("rules", rules) == "active: sin-spam, no-doxx"
+    assert command_reply("stats", rules,
+                         stats={"allow": 2, "flag": 1}) == \
+        "decisions: allow=2, flag=1"
+    assert "bouncer" in command_reply("help", rules)
+    assert command_reply("bogus", rules) is None  # unknown -> the handler's
+    # `or command_reply("help", rules)` fallback answers instead
+
+
+def test_discord_surfaces_share_the_command_table():  # T705: wired for real
+    src = (ADAPTERS / "discord_bot.py").read_text()
+    # on_message routes commands through parse_command + command_reply...
+    assert "cmd = parse_command(msg.content)" in src
+    assert "command_reply(cmd, rules)" in src
+    # ...and the slash command answers from the same table
+    assert "client.tree.command" in src
+    assert "command_reply(command, rules)" in src
+    # no hardcoded "!bouncer ..." message checks left in the handler
+    assert '"!bouncer rules"' not in src and '"!bouncer stats"' not in src
