@@ -314,3 +314,38 @@ def test_ci_secret_scan_job(tmp_path):  # T746
     assert r.returncode == 1, r.stdout
     assert "github token" in r.stdout and "leak.txt:1" in r.stdout
     assert secret not in r.stdout + r.stderr, "scanner leaked the secret"
+
+
+def test_ci_coverage_job_posts_number(tmp_path):  # T747
+    import importlib.util
+    import json
+    import os
+    import re
+    import subprocess
+    import sys
+
+    import pytest
+    ci = (WORKFLOWS / "ci.yml").read_text()
+    m = re.search(r"^  coverage:(.*?)(?=^  \w|\Z)", ci, re.MULTILINE | re.DOTALL)
+    assert m, "no coverage job"
+    job = m.group(1)
+    # the box: a run + the number posted + an artifact — and explicitly
+    # NO floor yet (nothing fail-under anywhere)
+    assert "--cov=gatekeeper" in job and "--cov-report=json" in job
+    assert "GITHUB_STEP_SUMMARY" in job and "upload-artifact" in job
+    assert "--cov-fail" not in job
+    assert "pytest-cov" in job  # rides in the dev extra (T747)
+    if importlib.util.find_spec("pytest_cov") is None:
+        pytest.skip("pytest-cov absent (CI installs it via .[dev])")
+    # the wiring really runs: a file that imports gatekeeper in-process,
+    # measured under coverage, yields a totals block the summary prints
+    out = tmp_path / "cov.json"
+    r = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "tests/test_cli.py",
+         "--cov=gatekeeper", f"--cov-report=json:{out}"],
+        check=False, capture_output=True, text=True, timeout=300,
+        env={**os.environ, "PYTHONPATH": "src"})
+    assert r.returncode == 0, r.stderr
+    totals = json.loads(out.read_text())["totals"]
+    assert totals["percent_covered"] >= 0.0
+    assert totals["num_statements"] > 100, "coverage measured nothing"

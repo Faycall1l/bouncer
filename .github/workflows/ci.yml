@@ -86,3 +86,24 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: python scripts/secret_scan.py
+  coverage:  # T747: report the number, upload the json — no floor yet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: "pip" }
+      - run: pip install -e ".[dev]"  # pytest-cov rides in dev (T747)
+      - run: pytest -q --cov=gatekeeper --cov-report=term --cov-report=json:coverage.json
+      - name: post the number (no threshold to flake on)
+        if: always()
+        run: |
+          [ -f coverage.json ] || exit 0
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d = json.load(open("coverage.json"))["totals"]
+          print(f"## Coverage (T747)\n\n**{d['percent_covered']:.1f}%** lines "
+                f"({d['covered_lines']}/{d['num_statements']} statements)")
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: coverage, path: coverage.json }
