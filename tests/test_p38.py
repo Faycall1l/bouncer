@@ -162,3 +162,24 @@ def test_sdist_includes_license_readme_and_data_examples():  # T714
         assert "src/gatekeeper/__init__.py" in members
         assert not any(m.startswith((".git/", "model", "build/"))
                        for m in members), "heavy paths leaked into the sdist"
+
+
+def test_license_year_and_holder():  # T715
+    import re
+    text = Path("LICENSE").read_text()
+    # the copyright line names a sane year: project start (2026) to now —
+    # no future-dated claim, no pre-project drift
+    from datetime import datetime
+    m = re.search(r"Copyright (\d{4}) (.+?)\. ", text)
+    assert m, "LICENSE has no 'Copyright <year> <holder>.' line"
+    year, holder = int(m.group(1)), m.group(2).strip()
+    assert 2026 <= year <= datetime.now().year, year
+    # the holder is the same one pyproject.toml ships
+    py = _pyproject()
+    assert holder == py["project"]["authors"][0]["name"], (holder,
+                                                           py["project"])
+    # and the license pointer agrees with the metadata (Apache-2.0 everywhere)
+    assert "apache.org/licenses/LICENSE-2.0" in text
+    assert py["project"]["license"]["text"] == "Apache-2.0"
+    assert any("Apache Software License" in c
+               for c in py["project"]["classifiers"])
