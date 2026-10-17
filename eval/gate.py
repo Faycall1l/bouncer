@@ -64,6 +64,7 @@ def collect(report: dict, args) -> list:
     # --- T672-T676 register their threshold gates here ---
     ge("rule_acc", ("rule_acc",), args.min_rule_acc)  # T672: must beat the regex bar
     le("ece", ("ece",), args.max_ece)  # T673: after calibration, probs stay honest
+    le("p95_ms", ("p95_ms",), args.max_p95_ms)  # T674: latency budget (T4 target)
     return checks
 
 
@@ -101,6 +102,9 @@ def main(argv=None) -> int:
                          "(0.403 post-T637; older notes say 0.480, pre-hard-negatives)")
     ap.add_argument("--max-ece", type=float, default=0.15,  # T673
                     help="ECE ceiling after calibration (uncalibrated reports will fail)")
+    ap.add_argument("--max-p95-ms", type=float, default=44.0,  # T674
+                    help="p95 latency budget in ms (44 = T4 product target; "
+                         "CPU zero-shot reports will fail)")
     a = ap.parse_args(argv)
 
     try:

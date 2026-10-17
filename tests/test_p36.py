@@ -22,7 +22,8 @@ def test_gate_pass_on_healthy_report(tmp_path):  # T671: exit 0, PASS lines
     assert "PASS report_n" in r.stdout and "PASS report_rule_acc" in r.stdout
     assert "PASS rule_acc" in r.stdout  # 0.403 meets the floor exactly (T672)
     assert "SKIP ece" in r.stdout  # absent metric -> skipped, never passed (T673)
-    assert "3 passed, 0 failed, 1 skipped -> PASS" in r.stdout
+    assert "SKIP p95_ms" in r.stdout  # absent metric -> skipped (T674)
+    assert "3 passed, 0 failed, 2 skipped -> PASS" in r.stdout
 
 
 def test_gate_fails_loud_on_threshold(tmp_path):  # T671: exit 1 + stderr blame
@@ -96,5 +97,19 @@ def test_gate_ece_ceiling(tmp_path):  # T673: after calibration, probs stay hone
     path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
     r = _run_gate(path, "--json")
     verdict = json.loads(r.stdout)
-    assert verdict["ok"] is True and verdict["skipped"] == 1
+    assert verdict["ok"] is True and verdict["skipped"] == 2  # ece + p95 absent
     assert any(c["name"] == "ece" and c["ok"] is None for c in verdict["checks"])
+
+
+def test_gate_p95_latency_budget(tmp_path):  # T674: flag-settable latency budget
+    # on-target T4 latency passes
+    path = _report(tmp_path, {"n": 500, "rule_acc": 0.51, "p95_ms": 41.5})
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    # CPU zero-shot latency blows the 44ms budget loudly
+    path = _report(tmp_path, {"n": 200, "rule_acc": 0.45, "p95_ms": 1284.0})
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL p95_ms" in r.stderr
+    # the budget is flag-settable (e.g. CPU hosts get an honest larger one)
+    r = _run_gate(path, "--max-p95-ms", "2000")
+    assert r.returncode == 0, r.stderr
