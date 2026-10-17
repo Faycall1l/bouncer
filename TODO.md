@@ -664,7 +664,7 @@
 - [x] T599 docs: glossary (pool, breaker, half-open, snapshot, multitenancy)
 - [x] T600 docs: FAQ (restore, breaker tripped, which model?)
 - [x] T601 docs: CHANGELOG 0.3.0 entry drafted
-- [ ] T602 docs: thresholds guide breaker knobs
+- [x] T602 docs: thresholds guide breaker knobs
 - [ ] T603 docs: presets catalogue preset-lang tags
 - [ ] T604 docs: adapters README model routing note
 - [ ] T605 docs: data README i18n + report flags

@@ -21,3 +21,28 @@ One slider, two gates: `allow_threshold` (ok + confident → auto-allow),
   (PII leaks), lower it when severity is a weak signal.
 * `require_calm` (default off): allow only when `harm == safe`. Turn it on for
   support desks where a suspicious-but-clean verdict should still see a human.
+
+## Reliability knobs (T602)
+
+Not thresholds on confidence — thresholds on *failure*. They trade availability
+against honesty: bouncer never lets a broken model silently allow anything.
+
+* `breaker_n` (default 5, ≥1): consecutive model failures that trip the
+  breaker. Lower it (2–3) when outages are cheap to observe and escalations are
+  cheap to review — you stop paying timeouts sooner. Raise it (10) for flaky
+  hardware where single-digit failures are noise.
+* `breaker_cool_s` (default 30.0): seconds requests short-circuit to
+  `escalate` (`cause=breaker-open`) before one half-open trial probes the
+  model. Short cooldown (5s) recovers fast but re-hammers a dying model;
+  long cooldown (120s) protects it but queues more escalations for humans.
+* `timeout_s` (per-request, 0.5–60s, env `BOUNCER_TIMEOUT`, default 10):
+  budget for one model call. Overruns count as failures toward `breaker_n`.
+  Set it near your p95 latency — much higher and slow calls stack up before
+  the breaker can trip.
+* `BOUNCER_BREAKER=off`: disables the guard entirely. Only for benchmarks or
+  when you have an outer health-check that does the same job.
+
+Tuning instinct: escalation volume during an outage ≈ `requests × breaker_cool_s`
+per recovery cycle. If that queue is too big, shorten the cooldown *or* lower
+`breaker_n` (trips earlier, less wasted time before the trip). Simulate before
+changing anything: `eval/breaker_sim.py --storm 3 --cool 0.2`.
