@@ -7,6 +7,10 @@ Method (this docstring and the BENCHMARKS entry ARE the documentation):
 * WARM — N further end-to-end `pool.get()` + `moderate()` calls through
   the warm resident (pool hit, no rebuild; lookup cost included, exactly
   what a serve request pays). p50/p95 over those N.
+* CACHE — replay of the first warm message (same rules): the TTL cache
+  serves the decision without waking the router. The report's
+  `cache_hit: true` is the receipt that the number is a real cache hit
+  (T752), never a model call in disguise.
 * Real numbers come from the target hardware with real weights:
 
       python eval/bench_warm.py --n 50            # weights required
@@ -86,13 +90,20 @@ def main(argv: list[str] | None = None) -> int:
         lat.append((time.perf_counter() - t0) * 1000.0)
     lat.sort()
     n = args.n
+    # T752: cache-hit latency — replay warm message 0 with identical rules;
+    # it was cached during the loop, so this call must come back cached
+    t0 = time.perf_counter()
+    replay = moderate("warm-pool bench message 0", RULES, router=pool.get())
+    cache_hit_ms = (time.perf_counter() - t0) * 1000.0
     rep = {
         "mode": mode,  # stub = mechanics only; real = measured with weights
         "n": n,
         "cold_ms": round(cold_ms, 2),  # pool miss: incl. checkpoint load
         "p50_ms": round(lat[n // 2], 3),
         "p95_ms": round(lat[min(n - 1, int(n * 0.95))], 3),
-        "pool": pool.stats(),  # creates==1 + hits==n is the warm-path proof
+        "cache_hit_ms": round(cache_hit_ms, 3),  # T752: repeat-serve cost
+        "cache_hit": bool(replay.get("cached")),  # the receipt, not a claim
+        "pool": pool.stats(),  # creates==1 + hits==n+1: warm-path proof
     }
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:

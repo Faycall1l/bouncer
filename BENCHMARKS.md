@@ -83,8 +83,13 @@ halves that matter:
 
 * **COLD** — first `pool.get()`: checkpoint load included, timed once.
 * **WARM** — N × (`pool.get()` hit + `moderate()`): p50/p95, lookup cost
-  included, exactly what a serve request pays. `creates==1` and `hits==n`
-  in the report's `pool` block prove the warm path was the one measured.
+  included, exactly what a serve request pays. `creates==1` and `hits==n+1`
+  in the report's `pool` block prove the warm path was the one measured
+  (N loop calls + the cache replay below).
+* **CACHE** — one replay of warm message 0 (identical rules): the TTL
+  cache serves the decision without waking the router. `cache_hit_ms` is
+  that call's latency; `cache_hit: true` is the receipt that it really
+  came from the cache (T752).
 
 ```bash
 python eval/bench_warm.py --n 50        # real weights required

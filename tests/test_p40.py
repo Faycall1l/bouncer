@@ -26,8 +26,9 @@ def test_bench_warm_stub_mechanics_and_refusal(tmp_path):  # T751
     assert rep["n"] == 10
     for k in ("cold_ms", "p50_ms", "p95_ms", "pool"):
         assert k in rep, k
-    # the warm path is the one measured: one resident, every call a hit
-    assert rep["pool"]["creates"] == 1 and rep["pool"]["hits"] == 10
+    # the warm path is the one measured: one resident, every loop call a
+    # hit (10) plus the cache-replay call (1) — T752 rides along here too
+    assert rep["pool"]["creates"] == 1 and rep["pool"]["hits"] == 11
     # real mode without weights refuses loudly and writes nothing —
     # E_WARM, no invented report (this env has no laya at all)
     out2 = tmp_path / "warm-real.json"
@@ -41,6 +42,22 @@ def test_bench_warm_stub_mechanics_and_refusal(tmp_path):  # T751
                   re.DOTALL)
     assert m, "no Warm-pool section in BENCHMARKS.md"
     section = m.group(1)
-    for needle in ("bench_warm.py", "COLD", "WARM", "--stub", "E_WARM",
-                   "mode: \"real\"", "hits==n"):
+    for needle in ("bench_warm.py", "COLD", "WARM", "CACHE", "--stub",
+                   "E_WARM", "mode: \"real\"", "hits==n+1", "cache_hit_ms"):
         assert needle in section, needle
+
+
+def test_bench_warm_reports_cache_hit_latency(tmp_path):  # T752
+    out = tmp_path / "warm.json"
+    r = _run("eval/bench_warm.py", "--stub", "--n", "5", "--json",
+             "--out", str(out))
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(out.read_text())
+    # the cache-hit number is in the report — and the receipt says it was
+    # a genuine cache hit (message 0 replayed with identical rules),
+    # never a model call in disguise
+    assert isinstance(rep["cache_hit_ms"], (int, float))
+    assert rep["cache_hit"] is True
+    # the replay also went through the warm pool: one more hit, still one
+    # resident — the cache number isn't a cold-path number either
+    assert rep["pool"]["hits"] == 6 and rep["pool"]["creates"] == 1
