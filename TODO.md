@@ -782,7 +782,7 @@
 - [x] T707 adp: `forward_if_interesting` fires on breaker-open too
 - [x] T708 adp: adapter integration test per platform (stubbed transports)
 - [x] T709 adp: config file support (`bouncer.toml`) for adapters
-- [ ] T710 test: P37 adapters sweep
+- [x] T710 test: P37 adapters sweep
 
 ## P38 Packaging (T711–T730)
 - [ ] T711 pkg: `pyproject` optional-deps groups audited (server/demo/adapters)

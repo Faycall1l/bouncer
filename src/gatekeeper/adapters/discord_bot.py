@@ -81,9 +81,10 @@ def run(token: str | None = None, preset: str = "gaming"):
         from gatekeeper.adapters.common import dry_run
         if dry_run():  # T697: print the intent, never the act
             if res["action"] in ("delete", "flag", "escalate"):
+                from gatekeeper.adapters.common import redact
                 print(f"[dry-run] discord {res['action']} "
                       f"({res['rule']}@{res['confidence']:.2f}): "
-                      f"{msg.content[:80]}")
+                      f"{redact(msg.content[:80])}")  # T700: pass, not leak
             return
         if res["action"] == "delete":
             try:  # T296: missing perms must not crash the bot loop

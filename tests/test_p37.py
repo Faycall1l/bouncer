@@ -1414,3 +1414,57 @@ def test_adapters_load_config():  # T709: wired into every adapter
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "opt_in(" in src and env in src, name
         assert f'environ.get("{env}")' not in src  # no raw env read left
+
+
+def test_p37_sweep_adapter_invariants():  # T710: cross-cutting consistency
+    import ast
+    import re
+    readme = (ADAPTERS / "README.md").read_text()
+    files = sorted(p for p in ADAPTERS.glob("*.py"))
+    assert len(files) >= 7  # six run-able adapters + webhooks + common
+    for path in files:
+        name, src = path.name, path.read_text()
+        tree = ast.parse(src)
+        # 1) top-level imports stay stdlib-only — platform SDKs and optional
+        #    deps load lazily inside run(), so importing never needs extras
+        stdlib = set(sys.stdlib_module_names)
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                mods = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                mods = [(node.module or "").split(".")[0]]
+            else:
+                continue
+            for m in mods:
+                assert m in stdlib or m == "gatekeeper", (name, m)
+        # 2) no secret is ever printed via an f-string/format of a token var
+        assert not re.search(r"print\(f?[\"'][^\"']*\{(tok|token|key)\b",
+                             src), name
+        # 3) every env var an adapter reads is documented in the README
+        for var in re.findall(r'"((?:BOUNCER|TELEGRAM|MATRIX|MATTERMOST|'
+                              r'ZULIP|TWITCH|DISCORD)_[A-Z_]+)"', src):
+            assert var in readme, (name, var)
+    # 4) the shared SDK has no dead surface: every public helper in
+    #    common.py is referenced beyond its own definition — by an adapter
+    #    or by another common.py helper (RateCap lives behind rate_cap_from_env)
+    common_src = (ADAPTERS / "common.py").read_text()
+    tree = ast.parse(common_src)
+    public = {n.name for n in tree.body
+              if isinstance(n, (ast.FunctionDef, ast.ClassDef))
+              and not n.name.startswith("_")}
+    assert public  # the glob didn't hand us an empty module
+    wired = "\n".join(p.read_text() for p in files
+                      if p.name != "common.py")
+    for helper in public:
+        refs = wired.count(helper) + common_src.count(helper) - 1  # its def
+        assert refs > 0, f"dead SDK helper: {helper}"
+    # 5) every adapter file passes the P37 startup checklist — the shared
+    #    sequence that makes an adapter operator-safe, in one assertion set
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+                 "twitch_irc", "discord_bot"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        for invariant in ("require_env(", "load_rules(", "load_config()",
+                          "install_shutdown(", "redact("):
+            assert invariant in src, (name, invariant)
+        # dry_run is wired everywhere; twitch's is the documented no-op
+        assert "dry_run" in src.lower(), name
