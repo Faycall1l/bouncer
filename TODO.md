@@ -649,7 +649,7 @@
 - [x] T586 data: i18n rows validate clean
 - [x] T587 eval: i18n report written by CI-safe command
 - [x] T588 test: snapshot round-trip via CLI (save/load)
-- [ ] T589 test: breaker sim report keys
+- [x] T589 test: breaker sim report keys — pinned in T580 test
 - [ ] T590 test: P31 eval sweep
 
 ## P32 Docs + packaging (T591–T610)
