@@ -240,3 +240,27 @@ def test_synth_quarantine_file_written(tmp_path):  # T645: CLI end-to-end
     with open(out) as f:
         rows = [json.loads(l) for l in f]
     assert len(rows) == 1  # the valid template row still ships
+
+
+def test_12k_template_build_end_to_end(tmp_path):  # T647: full-size pipeline run
+    out = str(tmp_path / "gatekeeper-12k.jsonl")
+    r = _run("data/build_dataset.py", "--n", "12000", "--template-only",
+             "--seed", "42", "--out", out)
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(r.stdout)
+    assert rep["n"] == 13200  # 12000 template + 1200 default hard negatives
+    assert rep["errors"] == 0 and rep["disjoint"] is True and rep["seed"] == 42
+    # splits exist, reconcile with the full file, and are server-disjoint
+    keys, total = {}, 0
+    for name in ("train", "dev", "test"):
+        with open(f"{out.removesuffix('.jsonl')}.{name}.jsonl") as f:
+            part = [json.loads(l) for l in f]
+        total += len(part)
+        keys[name] = {tuple(sorted(x["state"]["rules"])) for x in part}
+    assert total == rep["n"]
+    assert not keys["train"] & keys["dev"] and not keys["train"] & keys["test"]
+    assert not keys["dev"] & keys["test"]
+    # every row stamped (T640) and carries history (T635)
+    with open(out) as f:
+        all_rows = [json.loads(l) for l in f]
+    assert all(x["v"] == 1 and 2 <= len(x["state"]["history"]) <= 4 for x in all_rows)
