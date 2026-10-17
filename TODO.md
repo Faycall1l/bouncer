@@ -672,7 +672,7 @@
 - [x] T607 docs: gates.md breaker demotion row
 - [x] T608 docs: api.md snapshot/export-stats section
 - [x] T609 test: docs-consistency extended (codes/routes/presets/env) — also caught + fixed `--key-file` writing the wrong env var
-- [ ] T610 test: README command list matches CLI parsers
+- [x] T610 test: README command list matches CLI parsers (extracted `build_parser()`)
 
 ## P33 Release 0.3.0 (T611–T630)
 - [ ] T611 pkg: version 0.3.0

@@ -58,3 +58,26 @@ def test_docs_consistency_extended():  # T609: codes, routes, presets, env vars
     docs = readme + api + _read("docs/thresholds.md") + _read("docs/SECURITY.md")
     missing = {e for e in envs if e not in docs}
     assert not missing, f"undocumented env vars: {sorted(missing)}"
+
+
+def test_readme_command_list_matches_cli():  # T610
+    import argparse
+    import re
+
+    from gatekeeper.cli import build_parser
+    p = build_parser()
+    subs = next(a for a in p._actions
+                if isinstance(a, argparse._SubParsersAction)).choices
+    readme = _read("README.md")
+    # collect `bouncer <word>` only from fenced code blocks and `inline code`
+    # spans — prose ("bouncer keeps…") is not a command list
+    spans = re.findall(r"```.*?```", readme, re.DOTALL)
+    spans += re.findall(r"`[^`\n]+`", readme)
+    mentioned = {m for s in spans
+                 for m in re.findall(r"\bbouncer ([a-z][a-z-]*)\b", s)}
+    unknown = mentioned - set(subs) - {"self-hosted"}  # table label, not a command
+    assert not unknown, f"README mentions non-existent commands: {sorted(unknown)}"
+    # the command list added in T606 covers the core operator workflow
+    for cmd in ("check", "watch", "review", "snapshot", "export", "serve",
+                "demo", "models", "presets"):
+        assert cmd in mentioned, f"`bouncer {cmd}` missing from README"

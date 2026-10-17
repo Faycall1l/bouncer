@@ -344,7 +344,7 @@ def _cmd_serve(args) -> int:  # T547+T549: secrets/flags applied before uvicorn 
     return 0
 
 
-def main(argv=None) -> int:
+def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatch
     p = argparse.ArgumentParser(prog="bouncer",  # T321: exit codes up front
                                 epilog="exit codes: 0 allow · 2 delete/flag · 3 escalate · "
                                        "4 usage/rules error")
@@ -427,6 +427,11 @@ def main(argv=None) -> int:
     pk.add_argument("--strict", action="store_true")  # T319: exit 2 on warnings
     pk.add_argument("--format", choices=["json", "lines"], default="json")  # T325
     pk.set_defaults(fn=cmd_pack)
+    return p
+
+
+def main(argv=None) -> int:
+    p = build_parser()
     args = p.parse_args(argv)
     if args.version or args.cmd is None:
         if args.version:
