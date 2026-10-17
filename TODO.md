@@ -615,7 +615,7 @@
 - [x] T554 demo: history download button (txt export)
 - [x] T555 demo: review queue viewer (last 5 rows)
 - [x] T556 demo: model dropdown (auto/english/multilingual/typed-decisions)
-- [ ] T557 demo: night-mode checkbox (quiet_hours 22–7)
+- [x] T557 demo: night-mode checkbox (quiet_hours 22–7)
 - [ ] T558 demo: require_calm checkbox
 - [ ] T559 demo: severity box (`RULE=high` lines)
 - [ ] T560 demo: meters shows cause
