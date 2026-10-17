@@ -695,3 +695,223 @@
 - [x] T628 test: breaker + pool metrics lines
 - [x] T629 suite: final full green + stats — 189 passed, `ruff check .` clean, 637 commits
 - [x] T630 final: push v0.3.0
+
+## P34 Dataset build (T631–T650)
+- [ ] T631 data: `build_dataset.py` orchestrates synth → validate → split
+- [ ] T632 data: server-disjoint split verifier (no rule-set leaks train→test)
+- [ ] T633 data: label balance report per split (`--report` + thresholds)
+- [ ] T634 data: dedupe near-identical messages (normalized hash)
+- [ ] T635 data: history-window synthesis (2–4 turns) instead of empty []
+- [ ] T636 data: hard-negative injection (linkless spam, polite insults)
+- [ ] T637 data: `examples.jsonl` regenerated through the same pipeline
+- [ ] T638 data: dataset card fields (splits, labels, license, limits)
+- [ ] T639 data: HF upload script dry-run mode (`--dry-run` prints plan)
+- [ ] T640 data: schema version stamp in every row (`v: 1`)
+- [ ] T641 data: row count + size assertion in CI-safe test
+- [ ] T642 data: rule-set vocabulary extractor (unseen-K measurement)
+- [ ] T643 data: stratified split option (label-preserving)
+- [ ] T644 data: `validate_data` warns on empty history (T635 fix check)
+- [ ] T645 data: corrupted-row quarantine file instead of silent skip
+- [ ] T646 data: seed logged in report for full reproducibility
+- [ ] T647 data: 12k build script runs `--template-only` end-to-end in test
+- [ ] T648 data: class-weight hints emitted for the finetune notebook
+- [ ] T649 data: i18n rows flow through build pipeline (not hand-kept)
+- [ ] T650 test: P34 build pipeline sweep
+
+## P35 Fine-tune run (T651–T670)
+- [ ] T651 ft: notebook review — every cell has an assert before training
+- [ ] T652 ft: LoRA rank/alpha configurable at notebook top (single block)
+- [ ] T653 ft: early-stopping on dev rule_acc (patience constant)
+- [ ] T654 ft: loss logged as JSONL per epoch (not just wandb)
+- [ ] T655 ft: checkpoint upload gated on dev metric >= floor
+- [ ] T656 ft: `scripts/check_kaggle_env.py` verifies secrets + instance
+- [ ] T657 ft: data upload step (kaggle datasets create) scripted
+- [ ] T658 ft: training script accepts `--max-samples` smoke flag
+- [ ] T659 ft: smoke run path (50 rows, 1 epoch) documented + tested shape
+- [ ] T660 ft: eval-after-train cell runs `eval_gatekeeper.py` on test split
+- [ ] T661 ft: regression gate — new model must beat regex baseline 0.480
+- [ ] T662 ft: calibration cell (temperature refit) writes temp.json
+- [ ] T663 ft: `load finetuned` path in engine via `BOUNCER_MODEL_DIR`
+- [ ] T664 ft: pool builds from BOUNCER_MODEL_DIR when set
+- [ ] T665 ft: honest docs — what a real run changes in BENCHMARKS (draft)
+- [ ] T666 ft: costs block — 2xT4 hours + estimated HF storage
+- [ ] T667 ft: failure modes documented (OOM, token cap, label noise)
+- [ ] T668 ft: base-vs-finetune eval comparison script (weights optional)
+- [ ] T669 ft: RELEASE checklist item "accuracy numbers refreshed"
+- [ ] T670 test: P35 fine-tune plumbing sweep (weightless)
+
+## P36 Eval gates (T671–T690)
+- [ ] T671 eval: `gate.py` — pass/fail thresholds over a report JSON
+- [ ] T672 eval: gate rule_acc >= 0.480 (must beat regex) configurable
+- [ ] T673 eval: gate ECE <= 0.15 after calibration
+- [ ] T674 eval: gate p95 latency <= budget (ms, flag-settable)
+- [ ] T675 eval: gate abstention_rate within band (not 0, not > 0.3)
+- [ ] T676 eval: gate per-rule worst-case (no rule below floor)
+- [ ] T677 eval: `gate.py --ci` exit codes documented (0/1/2)
+- [ ] T678 eval: baseline report format normalized (`n`, `acc`, `per_label`)
+- [ ] T679 eval: compare two reports (`--against`) prints deltas
+- [ ] T680 eval: report diff appears in CHANGELOG when gates re-run
+- [ ] T681 eval: i18n gate — wiring eval must stay 0 errors
+- [ ] T682 eval: breaker sim gate — trip and close both true
+- [ ] T683 eval: pool bench gate — speedup >= 2x in the hits scenario
+- [ ] T684 eval: `gate.py` reads BENCHMARKS table for known numbers
+- [ ] T685 eval: stale-report warning (older than N days)
+- [ ] T686 eval: `eval/reports/latest.json` pointer file (gitignored)
+- [ ] T687 eval: negative-test — gate fails loudly on bad report
+- [ ] T688 eval: docs section "running the gates" in BENCHMARKS
+- [ ] T689 eval: make-style single command `python eval/gate.py --all`
+- [ ] T690 test: P36 eval-gate sweep
+
+## P37 Adapters (T691–T710)
+- [ ] T391-fix note: box ids continue; see T692
+- [ ] T692 adp: telegram adapter (long-poll, / commands, flag-only default)
+- [ ] T693 adp: matrix/melement adapter (room timeline → moderate)
+- [ ] T694 adp: mattermost adapter (websocket + slash command)
+- [ ] T695 adp: zulip adapter (stream messages, bot mentions)
+- [ ] T696 adp: shared adapter SDK — one `run_loop()` for all pollers
+- [ ] T697 adp: `BOUNCER_DRY_RUN=1` prints actions, never posts
+- [ ] T698 adp: per-adapter rules source (preset name or file path)
+- [ ] T699 adp: adapter health line in logs (decisions/min, last error)
+- [ ] T700 adp: redaction pass shared across adapters (tokens, emails)
+- [ ] T701 adp: per-user rate cap in adapters (protects the model)
+- [ ] T702 adp: graceful shutdown on SIGTERM for every adapter
+- [ ] T703 adp: adapter matrix table updated in adapters README
+- [ ] T704 adp: webhook signature verification helper (hmac compare)
+- [ ] T705 adp: discord prefix + slash-command parity check test
+- [ ] T706 adp: twitch mention/whisper handling documented
+- [ ] T707 adp: `forward_if_interesting` fires on breaker-open too
+- [ ] T708 adp: adapter integration test per platform (stubbed transports)
+- [ ] T709 adp: config file support (`bouncer.toml`) for adapters
+- [ ] T710 test: P37 adapters sweep
+
+## P38 Packaging (T711–T730)
+- [ ] T711 pkg: `pyproject` optional-deps groups audited (server/demo/adapters)
+- [ ] T712 pkg: console-script entry point `bouncer` in wheel metadata
+- [ ] T713 pkg: wheel builds clean (`python -m build` smoke test)
+- [ ] T714 pkg: sdist includes LICENSE, README, data/examples
+- [ ] T715 pkg: LICENSE year + holder check
+- [ ] T716 pkg: Dockerfile (slim, non-root, healthcheck)
+- [ ] T717 pkg: docker-compose with volume for snapshots + secrets
+- [ ] T718 pkg: `.dockerignore` excludes models/, data dumps, git
+- [ ] T719 pkg: container start runs `bouncer check` self-test
+- [ ] T720 pkg: image labels (org.opencontainers) in Dockerfile
+- [ ] T721 pkg: `pip install .` produces working `bouncer --version` (test)
+- [ ] T722 pkg: dependency floor pins (`>=`) for fastapi/gradio/pydantic
+- [ ] T723 pkg: no hard dep on numpy/laya for core import (weightless check)
+- [ ] T724 pkg: `pip index` metadata — keywords/classifiers filled
+- [ ] T725 pkg: py.typed marker + typed public API
+- [ ] T726 pkg: SBOM-ish dep list exported in release workflow
+- [ ] T727 pkg: `bouncer doctor` — env/dep/route self-diagnosis command
+- [ ] T728 pkg: doctor output documented in README
+- [ ] T729 pkg: install extra `.[finetune]` pins training deps separately
+- [ ] T730 test: P38 packaging sweep (build + import matrix)
+
+## P39 CI/CD (T731–T750)
+- [ ] T731 ci: GitHub Actions workflow — pytest + ruff on push/PR
+- [ ] T732 ci: Python version matrix (3.10–3.12)
+- [ ] T733 ci: ruff `check .` job (not just src/tests)
+- [ ] T734 ci: docs-consistency + CLI tests run without weights (label)
+- [ ] T735 ci: wheel build artifact on tags
+- [ ] T736 ci: release job attaches wheel + SBOM to GitHub Release
+- [ ] T737 ci: tag-vs-version guard (tag must match pyproject)
+- [ ] T738 ci: benchmark job (optional, weightless stubs) posts summary
+- [ ] T739 ci: eval-gate job runs `gate.py --ci` on reports committed
+- [ ] T740 ci: cache pip + uv in workflow
+- [ ] T741 ci: fail-fast off, so all matrix legs report
+- [ ] T742 ci: workflow badge in README
+- [ ] T743 ci: PR template (tests? docs? boxes ticked?)
+- [ ] T744 ci: issue template for bug reports (rid + version + config)
+- [ ] T745 ci: CODEOWNERS / branch protection notes in CONTRIBUTING
+- [ ] T746 ci: secret scan job (gitleaks or grep-based fallback)
+- [ ] T747 ci: coverage run + artifact (no % floor yet, just the number)
+- [ ] T748 ci: nightly stub-suite workflow (catches drift, not flake)
+- [ ] T749 ci: release-notes check (CHANGELOG touched when version bumps)
+- [ ] T750 test: P39 CI wiring (workflow YAML parses + key jobs exist)
+
+## P40 Performance (T751–T770)
+- [ ] T751 perf: warm-pool latency bench with real weights (documented method)
+- [ ] T752 perf: cache hit latency printed in bench reports
+- [ ] T753 perf: batch size sweep re-run + table refresh
+- [ ] T754 perf: coalescing effectiveness metric (joined/total) in /stats
+- [ ] T755 perf: question count knob (5 vs 3) benchmarked honestly
+- [ ] T756 perf: token-budget guard on context (truncate + report)
+- [ ] T757 perf: `watch` throughput lines/sec summary
+- [ ] T758 perf: audit write batching (fsync every N lines) behind flag
+- [ ] T759 perf: review queue append without full-file read
+- [ ] T760 perf: /stats response time under load (locust-less, threaded)
+- [ ] T761 perf: pool `clear()` on memory pressure hook (documented)
+- [ ] T762 perf: lazy gradio import — demo extras only (import-time bench)
+- [ ] T763 perf: CLI `--version` cold-start time measured
+- [ ] T764 perf: wheel import time budget (< 200ms) test
+- [ ] T765 perf: bench report schema (fixed keys) + docs
+- [ ] T766 perf: perf-regression gate in gate.py (T674) wired to reports
+- [ ] T767 perf: README perf section with measured, dated numbers
+- [ ] T768 perf: honest note — all numbers before finetune vs after columns
+- [ ] T769 perf: memory footprint of pool (max_n × model size) documented
+- [ ] T770 test: P40 perf sweep (weightless paths only)
+
+## P41 Security & ops (T771–T790)
+- [ ] T771 sec: threat model doc (assets, actors, trust boundaries)
+- [ ] T772 sec: input fuzzing on /predict (random bytes + deep nesting)
+- [ ] T773 sec: rules value length cap (rule text bombs)
+- [ ] T774 sec: history item cap enforced server-side (not just docs)
+- [ ] T775 sec: context item + key length validation hardening
+- [ ] T776 sec: API key rotation without downtime (two-key window) design
+- [ ] T777 sec: trusted-proxy IP handling (`BOUNCER_TRUSTED_PROXY`)
+- [ ] T778 sec: /metrics exposure gate (bind-local or key by default)
+- [ ] T779 sec: log injection guard (control chars stripped from reasons)
+- [ ] T780 sec: demo share mode warning (public gradio = public rules)
+- [ ] T781 sec: dependency audit job (pip-audit/uv audit) in CI
+- [ ] T782 sec: rate-limit bypass test via X-Forwarded-For spoofing
+- [ ] T783 sec: snapshot file permissions check (0600 by default)
+- [ ] T784 sec: review queue never contains raw message? (documented, tested)
+- [ ] T785 sec: SSRF guard on webhook forward URL (scheme + opt-in allowlist)
+- [ ] T786 sec: adversarial rule pack test (huge K, recursive-looking ids)
+- [ ] T787 sec: error messages leak nothing (path/version sweep test)
+- [ ] T788 sec: SECURITY.md threat-model link + disclosure contact
+- [ ] T789 sec: ops runbook (backup, restore, rotate, drain) in docs
+- [ ] T790 test: P41 security sweep
+
+## P42 Docs site (T791–T810)
+- [ ] T791 docs: mkdocs-material skeleton (nav from docs/*.md)
+- [ ] T792 docs: `mkdocs.yml` nav covers every doc file (checked by test)
+- [ ] T793 docs: getting-started page (install → first decision → serve)
+- [ ] T794 docs: cookbook page (5 recipes: discord, self-host, gates, i18n, backup)
+- [ ] T795 docs: API reference page renders api.md unchanged
+- [ ] T796 docs: glossary page linked from every relevant page
+- [ ] T797 docs: version switcher note for 0.1/0.2/0.3 behavior deltas
+- [ ] T798 docs: internal link checker (relative md links, test-enforced)
+- [ ] T799 docs: code blocks language-tagged (lint)
+- [ ] T800 docs: diagram images fallback (mermaid + ascii pre block)
+- [ ] T801 docs: docs deploy workflow (GitHub Pages) behind flag
+- [ ] T802 docs: search-friendly headings (no duplicate H1s) lint
+- [ ] T803 docs: README anchors tested (badges + section links)
+- [ ] T804 docs: CONTRIBUTING (boxes workflow, verify.sh, code style)
+- [ ] T805 docs: ROADMAP.md for post-0.4.0 (finetune results, plugins)
+- [ ] T806 docs: examples/ directory with 3 copy-paste scripts
+- [ ] T807 docs: every env var documented table (from T609 list) in one page
+- [ ] T808 docs: error-code index page (E_* → meaning → fix)
+- [ ] T809 docs: doc freshness header (last-checked version) per page
+- [ ] T810 test: P42 docs-site sweep
+
+## P43 Release 0.4.0 (T811–T830)
+- [ ] T811 pkg: version 0.4.0
+- [ ] T812 suite: full run green + count recorded
+- [ ] T813 lint: `ruff check .` green
+- [ ] T814 ci: workflow green on the release commit (status recorded)
+- [ ] T815 eval: gates run — numbers table refreshed (or explicitly stale)
+- [ ] T816 docs: CHANGELOG 0.4.0 dated
+- [ ] T817 docs: release notes draft (drafts/release-0.4.0.md)
+- [ ] T818 docs: README version-sensitive claims re-checked
+- [ ] T819 test: version strings consistent (0.4.0 everywhere)
+- [ ] T820 test: adapters matrix table matches runnable stubs
+- [ ] T821 test: docs link checker green (T798)
+- [ ] T822 test: packaging smoke (wheel builds + installs + --version)
+- [ ] T823 test: env-var docs coverage still enforced (extends T609)
+- [ ] T824 test: golden note for 0.4.0 behavior deltas
+- [ ] T825 pkg: tag-vs-version CI guard passes for v0.4.0
+- [ ] T826 sec: SECURITY.md updated for 0.4.0 surface
+- [ ] T827 docs: BENCHMARKS honest-limits refreshed for this release
+- [ ] T828 suite: final full green + stats line
+- [ ] T829 final: push release commit
+- [ ] T830 final: tag v0.4.0 + release notes published
