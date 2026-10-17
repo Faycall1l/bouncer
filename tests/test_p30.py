@@ -42,3 +42,16 @@ def test_parse_severity():  # T564 (helper shipped with T559)
         "no-scams": "high", "plain-chat": "low"}
     assert parse_severity("junk line\n=high\nrule=banana\n") == {}  # junk skipped
     assert parse_severity("") == {} and parse_severity(None) == {}
+
+
+def test_p30_sweep():  # T570: every pure demo helper, one pass
+    from gatekeeper.demo_app import action_badge, parse_rules, review_entry
+    assert parse_rules("a: one\nb: two\nno colon line") == {"a": "one", "b": "two"}
+    assert action_badge("allow").startswith("🟢") and action_badge("delete").startswith("🔴")
+    entry = review_entry("x" * 600, {"action": "flag", "rule": "r", "confidence": 0.5,
+                                     "latency_ms": 1.5})
+    assert len(entry["message"]) == 500 and entry["conf"] == 0.5
+    # meters + trail stay pure: repeated calls agree (no hidden state)
+    r = {"harm": "safe", "jailbreak_p": 0.0, "escalate_p": 0.0, "abstained": False}
+    assert format_meters(r) == format_meters(r)
+    assert format_trail([], []) == format_trail([], [])

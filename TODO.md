@@ -628,7 +628,7 @@
 - [x] T567 demo: review viewer empty-state text — shipped in T555
 - [x] T568 demo: download filename includes date
 - [x] T569 demo: night-mode label explains demotion — shipped in T557
-- [ ] T570 test: P30 demo-helper sweep
+- [x] T570 test: P30 demo-helper sweep
 
 ## P31 Eval + data (T571–T590)
 - [ ] T571 eval: `eval/breaker_sim.py` (failure storm → opens, report JSON)
