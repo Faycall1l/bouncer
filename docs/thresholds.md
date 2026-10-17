@@ -46,6 +46,13 @@ against honesty: bouncer never lets a broken model silently allow anything.
   it when real-model padding/token cost dominates; with a stub the end-to-end
   delta is ~0.1ms (BENCHMARKS, T755). 3q and 5q decisions never share a
   cache entry.
+* `max_context_tokens` (default 1000, 0 = unlimited): token budget for the
+  history window that reaches the model — newest lines are kept first and
+  the oldest drop out; the newest line is never dropped. The count is a
+  documented chars/4 estimate (no tokenizer dependency), and every
+  decision reports what actually shipped as
+  `context: {items, tokens_est, cap, dropped}` — a guard you can audit,
+  not a silent truncate.
 * `BOUNCER_BREAKER=off`: disables the guard entirely. Only for benchmarks or
   when you have an outer health-check that does the same job.
 

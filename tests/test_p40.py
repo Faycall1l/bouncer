@@ -208,3 +208,52 @@ def test_question_count_knob(tmp_path, monkeypatch):  # T755
     doc = Path("BENCHMARKS.md").read_text()
     for needle in ("T755", "BOUNCER_QUESTIONS", "not\nclaimed", "require_calm"):
         assert needle in doc, needle
+
+
+def test_context_token_budget_truncates_and_reports():  # T756
+    import pytest
+
+    from gatekeeper import GateConfig, moderate
+    from gatekeeper.config import ConfigError
+
+    def ans(qid):
+        if qid == "rule":
+            return {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}}
+        if qid in ("jailbreak", "escalate"):
+            return {"noul": 0.0}
+        return {"score": "safe", "probabilities": []}
+
+    class S:
+        def __init__(self):
+            self.hist = None
+
+        def predict(self, state, questions):
+            self.hist = list(state["history"])
+            return {"answers": {qid: ans(qid) for qid in questions}}
+
+    ctx = [f"u: line {i} " + "x" * 360 for i in range(20)]  # ~92 est tokens each
+    # the default budget keeps the whole history_n window: nothing drops
+    s1 = S()
+    r1 = moderate("p756 default", {"a": "r"}, context=ctx,
+                  config=GateConfig(), router=s1)
+    assert r1["context"] == {"items": 4, "tokens_est": 368, "cap": 1000,
+                             "dropped": 0}
+    assert len(s1.hist) == 4  # the report matches what the model received
+    # a tight budget keeps the NEWEST line and drops the rest — and the
+    # decision reports the drop instead of hiding it
+    s2 = S()
+    r2 = moderate("p756 tight", {"a": "r"}, context=ctx,
+                  config=GateConfig(max_context_tokens=150), router=s2)
+    assert r2["context"] == {"items": 1, "tokens_est": 92, "cap": 150,
+                             "dropped": 3}
+    assert s2.hist == [ctx[19][:500]]  # newest kept, oldest gone
+    # 0 = unlimited (documented), negative is a config error
+    r3 = moderate("p756 off", {"a": "r"}, context=ctx,
+                  config=GateConfig(max_context_tokens=0), router=S())
+    assert r3["context"]["dropped"] == 0 and r3["context"]["items"] == 4
+    with pytest.raises(ConfigError):
+        GateConfig(max_context_tokens=-1)
+    # docs carry the auditable-guard description
+    doc = Path("docs/thresholds.md").read_text()
+    for needle in ("max_context_tokens", "tokens_est", "chars/4"):
+        assert needle in doc, needle

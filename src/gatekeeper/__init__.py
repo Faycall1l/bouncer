@@ -309,6 +309,31 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
             "cause": cause, "margin": round(_margin(a), 3)}
 
 
+def _est_tokens(text: str) -> int:  # T756: chars/4 estimate — no tokenizer dep
+    return max(1, len(text) // 4)
+
+
+def _trim_hist(hist: list[str], cap: int) -> tuple[list[str], int]:
+    """T756: newest lines first until the budget runs out; (kept, dropped).
+
+    The newest line is always kept (it is bounded by clean_text anyway);
+    cap<=0 disables the guard. Documented as an estimate, not a tokenizer.
+    """
+    if cap <= 0:
+        return hist, 0
+    kept: list[str] = []
+    used = dropped = 0
+    for line in reversed(hist):
+        t = _est_tokens(line)
+        if kept and used + t > cap:
+            dropped += 1
+            continue
+        used += t
+        kept.append(line)
+    kept.reverse()
+    return kept, dropped
+
+
 def coalesce_stats() -> dict:  # T754: joined/total effectiveness for /stats
     with _FLY_LOCK:
         joined, total = _COAL["joined"], _COAL["total"]
@@ -378,6 +403,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     import time as _t
     t0 = _t.time()
     hist = [clean_text(h, 500) for h in (context or [])[-cfg.history_n:]]  # T018: bounded clean window
+    hist, ctx_dropped = _trim_hist(hist, cfg.max_context_tokens)  # T756: token budget
     turns: dict = {}  # T019: per-user turn counts from "user: text" lines
     for h in list(context or [])[:200]:  # T262: bound the scan, not just the window
         if ":" in h:
@@ -438,6 +464,9 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     res["lang"] = lang  # T337: echo the hint that shaped routing
     res["script"] = detect_script(msg)  # T494
     res["quiet_active"] = _quiet_active(cfg)  # T344
+    res["context"] = {"items": len(hist),  # T756: what actually reached the model
+                      "tokens_est": sum(_est_tokens(h) for h in hist),
+                      "cap": cfg.max_context_tokens, "dropped": ctx_dropped}
     if user_id and res["action"] in ("flag", "delete"):  # T340: per-user strikes
         res["strikes"] = add_strike(user_id, weight_for_action(res["action"]))
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)

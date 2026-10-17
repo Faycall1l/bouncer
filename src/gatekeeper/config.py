@@ -41,6 +41,7 @@ class GateConfig:
     max_rule_chars: int = 280
     max_msg_chars: int = 2000
     history_n: int = 4
+    max_context_tokens: int = 1000  # T756: history token budget (0 = unlimited)
     timeout_s: float = 10.0
     severity: dict = field(default_factory=dict)  # rule_id -> "low" | "high"
     # T484: severity is NEVER inferred from presets — callers attach it explicitly
@@ -66,6 +67,9 @@ class GateConfig:
         if self.questions not in (3, 5):  # T755: two supported sets, no silent 4
             raise ConfigError(f"E_CONFIG: questions={self.questions!r} must be 3 "
                               "(light: rule+jailbreak+escalate) or 5 (full)")
+        if self.max_context_tokens < 0:  # T756: 0 means unlimited, not negative
+            raise ConfigError(f"E_CONFIG: max_context_tokens="
+                              f"{self.max_context_tokens!r} must be >= 0")
         if self.history_n < 0:  # T254
             raise ConfigError(f"E_CONFIG: history_n={self.history_n!r} must be >= 0")
         if self.breaker_n < 1:  # T511
