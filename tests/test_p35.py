@@ -116,3 +116,19 @@ def test_check_kaggle_env_preflight():  # T656: pre-flight plan is honest JSON
     assert "dataset_artifact" in json.loads(r.stdout)["failed_required"]
     r = _run_py("scripts/check_kaggle_env.py", "--dataset", "data/examples.jsonl", "--json")
     assert "dataset_artifact" not in json.loads(r.stdout)["failed_required"]
+
+
+def test_upload_dataset_kaggle_dry_run():  # T657: publish plan, dry-run default
+    r = _run_py("scripts/upload_dataset_kaggle.py")
+    rep = json.loads(r.stdout)
+    assert rep["slug"] == "gatekeeper-chatmix-12k"
+    assert set(rep) == {"slug", "files", "missing", "total_rows", "kaggle_cli", "credentials"}
+    assert r.returncode == 1  # unbuilt 12k dataset fails loud
+    assert "data/gatekeeper-12k.jsonl" in rep["missing"]
+    # shipped artifact dry-runs clean (exit 0, no kaggle call without --yes)
+    r = _run_py("scripts/upload_dataset_kaggle.py", "--dataset", "data/examples.jsonl")
+    rep = json.loads(r.stdout)
+    assert r.returncode == 0 and rep["missing"] == [] and rep["total_rows"] == 300
+    # --yes without the CLI on PATH fails loud before staging anything
+    r = _run_py("scripts/upload_dataset_kaggle.py", "--dataset", "data/examples.jsonl", "--yes")
+    assert r.returncode == 1 and "kaggle CLI" in r.stderr
