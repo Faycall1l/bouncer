@@ -11,6 +11,8 @@ jobs:
         with: { python-version: "3.11" }
       - name: tag-vs-version guard  # T737: refuse to release a mismatch
         run: python scripts/check_tag.py "$GITHUB_REF_NAME"
+      - name: release-notes guard  # T749: no section, no tag
+        run: python scripts/check_changelog.py
       - run: pip install build && python -m build --sdist
       - run: python -m build --wheel  # T735: the wheel ships as an artifact too
       - uses: actions/upload-artifact@v4

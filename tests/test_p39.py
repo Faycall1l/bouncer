@@ -369,3 +369,33 @@ def test_nightly_stub_suite_workflow():  # T748
     # no network), so red means upstream drift, not flake
     assert "pytest -q" in job
     assert '.[dev]' in job  # open floors resolve the latest deps, on purpose
+
+
+def test_release_notes_check(tmp_path):  # T749
+    import subprocess
+    import sys
+    text = (WORKFLOWS / "publish.yml").read_text()
+    # the release guards run in order: tag == version, version documented,
+    # and only then does anything build
+    assert text.index("check_tag.py") < \
+        text.index("check_changelog.py") < \
+        text.index("python -m build")
+
+    def run(*args, cwd=None):
+        return subprocess.run(
+            [sys.executable, str(Path("scripts/check_changelog.py").resolve()),
+             *args],
+            check=False, capture_output=True, text=True, timeout=30,
+            cwd=cwd or str(Path.cwd()))
+    # the current version IS documented → the gate passes...
+    r = run()
+    assert r.returncode == 0, r.stderr
+    # ...an undocumented version refuses the release by name...
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\nversion = "9.9.9"\n')
+    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n\n## Unreleased\n")
+    r = run(cwd=str(tmp_path))
+    assert r.returncode == 1
+    assert "E_CHANGELOG" in r.stderr and "9.9.9" in r.stderr
+    # ...and stray arguments are a usage error, not a silent pass
+    assert run("extra").returncode == 2
