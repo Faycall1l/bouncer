@@ -3,7 +3,7 @@ on:
   push:
     tags: ["v*"]
 jobs:
-  sdist:  # T217+T735: build sdist + wheel on tag; upload needs PYPI_TOKEN
+  build:  # T217+T735+T750: sdist + wheel on tag; upload needs PYPI_TOKEN
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: sbom, path: dist/sbom.json }
   release:  # T736: attach wheel + SBOM to the GitHub Release for the tag
-    needs: sdist
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write  # creating a release needs it; nothing else does

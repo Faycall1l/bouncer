@@ -13,7 +13,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - run: uvx ruff check .  # T402+T731+T733: same gate, same tool as local
-  test:  # T154: 3.10/3.11/3.12 matrix; T162: pip cache
+  test:  # T154+T402: 3.10–3.13 matrix; T162: pip cache; T750: comment fixed
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false  # T741: one red leg never cancels the others

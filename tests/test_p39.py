@@ -89,8 +89,8 @@ def test_ci_release_attaches_wheel_and_sbom():  # T736
     m = re.search(r"^  release:(.*?)(?=^  \w|\Z)", text, re.MULTILINE | re.DOTALL)
     assert m, "no release job"
     job = m.group(1)
-    # it runs after the build and attaches exactly the box's two files
-    assert "needs: sdist" in job
+    # it runs after the build job and attaches exactly the box's two files
+    assert "needs: build" in job  # T750: the job builds both, not just sdist
     assert "gh release create" in job
     assert "dist/*.whl" in job and "dist/sbom.json" in job
     # the write is explicitly permitted, and only for it
@@ -399,3 +399,42 @@ def test_release_notes_check(tmp_path):  # T749
     assert "E_CHANGELOG" in r.stderr and "9.9.9" in r.stderr
     # ...and stray arguments are a usage error, not a silent pass
     assert run("extra").returncode == 2
+
+
+def test_p39_workflow_yaml_parses_and_key_jobs_exist():  # T750
+    import json
+    import shutil
+    import subprocess
+
+    import pytest
+    ruby = shutil.which("ruby")
+    if ruby is None:
+        pytest.skip("no ruby — macOS and GH runners both ship one, "
+                    "but a box without a YAML parser can't prove parsing")
+
+    def jobs_of(path):
+        # Psych (YAML 1.1) rewrites the `on:` key to boolean true — so
+        # assert on jobs, which is exactly what this box is about
+        r = subprocess.run(
+            [ruby, "-ryaml", "-rjson", "-e",
+             'print JSON.generate(YAML.load_file(ARGV[0])["jobs"].keys)',
+             path],
+            check=False, capture_output=True, text=True, timeout=60)
+        assert r.returncode == 0, f"{path}: {r.stderr}"
+        return json.loads(r.stdout)
+    # every workflow parses as real YAML (not just string-matched)...
+    ci = jobs_of(str(WORKFLOWS / "ci.yml"))
+    pub = jobs_of(str(WORKFLOWS / "publish.yml"))
+    nightly = jobs_of(str(WORKFLOWS / "nightly.yml"))
+    # ...and the key jobs of each P39 stage exist: T731-T734/T738/T740,
+    # T739, T746, T747 in ci.yml; T735+T749 build and T736 release here;
+    # T748's one scheduled job
+    for job in ("lint", "test", "weightless", "bench", "smoke",
+                "eval-gate", "secret-scan", "coverage"):
+        assert job in ci, f"ci.yml lost job {job}"
+    assert "build" in pub and "release" in pub
+    assert nightly == ["stub-suite"], nightly
+    # the whole set is stable enough to pin — order included (readability
+    # of the pipeline: lint/test first, reporting at the tail)
+    assert ci == ["lint", "test", "weightless", "bench", "smoke",
+                  "eval-gate", "secret-scan", "coverage"], ci

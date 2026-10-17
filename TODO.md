@@ -826,7 +826,7 @@
 - [x] T747 ci: coverage run + artifact (no % floor yet, just the number)
 - [x] T748 ci: nightly stub-suite workflow (catches drift, not flake)
 - [x] T749 ci: release-notes check (CHANGELOG touched when version bumps)
-- [ ] T750 test: P39 CI wiring (workflow YAML parses + key jobs exist)
+- [x] T750 test: P39 CI wiring (workflow YAML parses + key jobs exist)
 
 ## P40 Performance (T751–T770)
 - [ ] T751 perf: warm-pool latency bench with real weights (documented method)
