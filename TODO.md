@@ -626,7 +626,7 @@
 - [x] T565 demo: model dropdown default auto — shipped in T556
 - [x] T566 demo: user box placeholder text — shipped in T551
 - [x] T567 demo: review viewer empty-state text — shipped in T555
-- [ ] T568 demo: download filename includes date
+- [x] T568 demo: download filename includes date
 - [ ] T569 demo: night-mode label explains demotion
 - [ ] T570 test: P30 demo-helper sweep
 

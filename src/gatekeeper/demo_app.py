@@ -240,7 +240,8 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
             from gatekeeper.persist import atomic_write
             stamp = _t.strftime("%Y-%m-%d %H:%M:%S")
             lines = trail + [f"--- {len(trail)} decisions, saved {stamp}"]
-            handle = tempfile.mkstemp(prefix="bouncer-history-", suffix=".txt")
+            day = _t.strftime("%Y-%m-%d")  # T568: date in the filename
+            handle = tempfile.mkstemp(prefix=f"bouncer-history-{day}-", suffix=".txt")
             path = handle[1]
             __import__("os").close(handle[0])  # atomic_write reopens it
             atomic_write(path, "\n".join(lines) + "\n")
