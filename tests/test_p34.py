@@ -166,3 +166,20 @@ def test_stratify_keeps_label_mix():  # T643: label-preserving split beats plain
          for n, part in strat.items()}
     assert not k["train"] & k["dev"] and not k["train"] & k["test"]
     assert sum(len(v) for v in strat.values()) == len(rows)
+
+
+def test_validate_warns_on_empty_history(tmp_path):  # T644: advisory, exit 0
+    # shipped examples carry history (T635) -> zero warnings
+    r = _run("eval/validate_data.py", "data/examples.jsonl", "--json")
+    assert r.returncode == 0
+    assert json.loads(r.stdout)["warnings"] == 0
+    # a pre-T635 row (history: []) warns but never fails the run
+    old = tmp_path / "old.jsonl"
+    old.write_text(json.dumps(
+        {"state": {"message": "x", "history": [], "rules": {"r": "t"}},
+         "labels": {"rule": "ok"}}) + "\n")
+    r = _run("eval/validate_data.py", str(old), "--json")
+    assert r.returncode == 0
+    rep = json.loads(r.stdout)
+    assert rep["errors"] == 0 and rep["warnings"] == 1
+    assert "empty history" in r.stderr
