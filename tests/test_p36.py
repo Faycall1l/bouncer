@@ -236,3 +236,34 @@ def test_gate_against_prints_deltas(tmp_path):  # T679: informational ref diff
     # an unreadable reference is unusable input -> exit 2
     r = _run_gate(cur, "--against", str(tmp_path / "nope.json"))
     assert r.returncode == 2 and "--against" in r.stderr
+
+
+def test_gate_changelog_appends_delta(tmp_path):  # T680: re-run -> diff in CHANGELOG
+    ref = _report(tmp_path, {"model": "base-router", "n": 500, "rule_acc": 0.305},
+                  name="ref.json")
+    cur = _report(tmp_path, {"model": "bouncer-421m", "n": 500, "rule_acc": 0.512},
+                  name="cur.json")
+    log = tmp_path / "CHANGELOG.md"
+    log.write_text("# Changelog\n\n## 0.3.0 — 2026-10-17\n* old entry\n")
+    r = _run_gate(cur, "--against", ref, "--changelog", str(log),
+                  "--min-rule-acc", "0.4")
+    assert r.returncode == 0, r.stderr
+    text = log.read_text()
+    assert "## Unreleased" in text  # section created above the first release
+    assert text.index("## Unreleased") < text.index("## 0.3.0")
+    assert "verdict: PASS" in text
+    assert "rule_acc: 0.305 -> 0.512 (+0.207)" in text
+    # re-running appends a second block without duplicating the heading
+    r = _run_gate(cur, "--against", ref, "--changelog", str(log),
+                  "--min-rule-acc", "0.4")
+    assert r.returncode == 0
+    text = log.read_text()
+    assert text.count("## Unreleased") == 1 and text.count("verdict: PASS") == 2
+    # a failing run is still changelog history (verdict FAIL recorded)
+    r = _run_gate(cur, "--against", ref, "--changelog", str(log),
+                  "--min-rule-acc", "0.9")
+    assert r.returncode == 1 and "verdict: FAIL" in log.read_text()
+    # --changelog without --against is a usage error -> exit 2, no output noise
+    r = _run_gate(cur, "--changelog", str(log))
+    assert r.returncode == 2 and "--changelog requires --against" in r.stderr
+    assert r.stdout == ""

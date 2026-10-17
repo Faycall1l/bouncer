@@ -7,6 +7,8 @@ not be read/parsed at all.
   python eval/gate.py eval/reports/zero-shot.json
   python eval/gate.py REPORT --json          # machine-readable verdict
   python eval/gate.py REPORT --ci            # exactly one line of verdict JSON
+  python eval/gate.py REPORT --against REF   # + informational metric delta table
+  python eval/gate.py REPORT --against REF --changelog   # diff also lands in CHANGELOG
 
 Each gate reads its value from the report and compares against a flag-settable
 threshold (T672-T676 register theirs here). A metric absent from the report is
@@ -106,6 +108,31 @@ def gate_report(report: dict, args) -> dict:
             "skipped": skipped, "checks": checks}
 
 
+def append_changelog(path: str, report: str, ref: str, delta: dict, verdict: dict):
+    """T680: when gates re-run, the report diff lands in the CHANGELOG — dated
+    and fenced under an Unreleased section (created if missing)."""
+    import datetime as _dt
+
+    lines = [(f"### Eval gates re-run — {report} vs {ref} "
+              f"({_dt.date.today().isoformat()})"), "",
+             (f"verdict: {'PASS' if verdict['ok'] else 'FAIL'} "
+              f"({verdict['passed']} passed, {verdict['failed']} failed, "
+              f"{verdict['skipped']} skipped)")]
+    for key, m in delta["metrics"].items():
+        lines.append(f"* {key}: {m['base']} -> {m['finetuned']} "
+                     f"({m['delta']:+g}) [{m['verdict']}]")
+    block = "\n".join(lines)
+    with open(path) as f:
+        text = f.read()
+    if "\n## Unreleased\n" in text:
+        text = text.replace("\n## Unreleased\n", f"\n## Unreleased\n\n{block}\n", 1)
+    else:
+        head, sep, rest = text.partition("\n## ")  # insert above first release
+        text = f"{head}\n## Unreleased\n\n{block}\n{sep}{rest}"
+    with open(path, "w") as f:
+        f.write(text)
+
+
 def render(verdict: dict) -> str:
     lines = []
     for c in verdict["checks"]:
@@ -134,6 +161,9 @@ def main(argv=None) -> int:
     ap.add_argument("--against", default=None,  # T679: informational delta table
                     help="reference report to diff against: prints metric deltas "
                          "(informational — never changes the exit code)")
+    ap.add_argument("--changelog", default=None, nargs="?", const="CHANGELOG.md",  # T680
+                    help="also append the --against delta block to this CHANGELOG "
+                         "(default CHANGELOG.md); requires --against")
     ap.add_argument("--min-n", type=int, default=1,
                     help="report must cover at least N rows")
     ap.add_argument("--min-rule-acc", type=float, default=0.403,  # T672
@@ -154,6 +184,10 @@ def main(argv=None) -> int:
     ap.add_argument("--per-rule-min-n", type=int, default=5,  # T676
                     help="ignore rules with fewer than N samples (noise floor)")
     a = ap.parse_args(argv)
+    if a.changelog and not a.against:  # T680: usage error, before any output
+        print("gate: --changelog requires --against (nothing to diff)",
+              file=sys.stderr)
+        return 2
 
     try:
         with open(a.report) as f:
@@ -200,6 +234,13 @@ def main(argv=None) -> int:
     print(payload)
     if delta is not None and not (a.json or a.ci):
         print(render_delta(delta))
+    if a.changelog:  # T680: re-run gates -> the diff becomes changelog history
+        try:
+            append_changelog(a.changelog, a.report, a.against, delta, verdict)
+        except OSError as e:
+            print(f"gate: cannot write {a.changelog}: {e}", file=sys.stderr)
+            return 1
+        print(f"gate: delta appended to {a.changelog}", file=sys.stderr)
     return 0 if verdict["ok"] else 1
 
 
