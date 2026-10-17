@@ -139,3 +139,30 @@ def test_examples_row_count_and_size():  # T641: shipped fixtures stay pinned
         irows = [json.loads(l) for l in f]
     assert len(irows) == 12 and all(r.get("v") == 1 for r in irows)
     assert q.stat().st_size < 50_000
+
+
+def test_stratify_keeps_label_mix():  # T643: label-preserving split beats plain
+    from collections import Counter
+
+    sys.path.insert(0, "data")
+    from build_dataset import split_rows
+    rows = []
+    for s in range(30):  # 30 servers: all-ok / all-be-kind / all-no-spam thirds
+        lab = ("ok", "be-kind", "no-spam")[s // 10]
+        rules = {f"srv{s}-a": "t", f"srv{s}-b": "t"}
+        rows += [{"state": {"message": f"m{s}.{i}", "history": [], "rules": dict(rules)},
+                  "labels": {"rule": lab}} for i in range(20)]
+
+    def dev_distance(splits):  # squared distance of dev's label mix from global
+        c = Counter(r["labels"]["rule"] for r in splits["dev"])
+        n = len(splits["dev"]) or 1
+        return sum((c[l] / n - 1 / 3) ** 2 for l in ("ok", "be-kind", "no-spam"))
+
+    plain = split_rows(rows, seed=0)
+    strat = split_rows(rows, seed=0, stratify=True)
+    assert dev_distance(strat) < dev_distance(plain)  # dev is not a single label
+    # server disjointness still holds under stratification
+    k = {n: {tuple(sorted(x["state"]["rules"])) for x in part}
+         for n, part in strat.items()}
+    assert not k["train"] & k["dev"] and not k["train"] & k["test"]
+    assert sum(len(v) for v in strat.values()) == len(rows)

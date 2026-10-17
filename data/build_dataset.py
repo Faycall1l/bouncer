@@ -29,7 +29,8 @@ def server_key(row: dict) -> tuple:
     return tuple(sorted(row["state"]["rules"]))
 
 
-def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0) -> dict:
+def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0,
+               stratify: bool = False) -> dict:
     """Server-disjoint split: every rule-set lands in exactly one split.
 
     Ratios are relative weights (need not sum to 1) — 2/1/0 gives a 2:1
@@ -50,15 +51,31 @@ def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0) -> dict:
 
     keys = sorted(groups, key=lambda k: (len(groups[k]), k))  # ascending, stable
     reserve = [n for n in NAMES[1:] if targets[n] > 0]
+    lab_counts = {n: Counter() for n in NAMES}
     if len(groups) > len(reserve):  # train keeps at least one rule-set
         for n in reserve:
             key = keys.pop(0)  # smallest remaining -> n
             assign[key] = n
             counts[n] += len(groups[key])
+            lab_counts[n].update(r["labels"]["rule"] for r in groups[key])
+    global_share = Counter(r["labels"]["rule"] for r in rows)
+    gtotal = len(rows) or 1
+
+    def penalty(n: str, labs: Counter) -> float:
+        """T643: squared distance of the split's label mix from the global mix."""
+        after = lab_counts[n] + labs
+        na = sum(after.values()) or 1
+        return sum((c - na * global_share[l] / gtotal) ** 2 for l, c in after.items()) / na
+
     for key in sorted(keys, key=lambda k: -len(groups[k])):  # largest first
-        best = max(NAMES, key=lambda n: targets[n] - counts[n])
+        if stratify:  # T643: keep label shares close to the global mix
+            labs = Counter(r["labels"]["rule"] for r in groups[key])
+            best = min(NAMES, key=lambda n: (penalty(n, labs), -counts[n]))
+        else:
+            best = max(NAMES, key=lambda n: targets[n] - counts[n])
         assign[key] = best
         counts[best] += len(groups[key])
+        lab_counts[best].update(r["labels"]["rule"] for r in groups[key])
 
     out = {n: [] for n in NAMES}
     for key, part in groups.items():
@@ -130,6 +147,8 @@ def main(argv=None) -> int:
                     help="keep first row per normalized message (see dedupe_rows)")
     ap.add_argument("--hard-n", type=int, default=None,  # T636: hard negatives
                     help="hard-negative rows to inject (default: n//10, 0 disables)")
+    ap.add_argument("--stratify", action="store_true",  # T643: label-preserving
+                    help="place servers to keep label shares close to the global mix")
     a = ap.parse_args(argv)
 
     if a.seed is not None:
@@ -159,7 +178,7 @@ def main(argv=None) -> int:
         return 1
 
     if a.report:  # T633: balance check without generating any dataset file
-        splits = split_rows(rows, tuple(a.ratios), a.seed or 0)
+        splits = split_rows(rows, tuple(a.ratios), a.seed or 0, stratify=a.stratify)
         rep = {"n": len(rows),
                "servers": len({server_key(r) for r in rows}),
                **balance_report(splits, a.min_share)}
@@ -180,7 +199,7 @@ def main(argv=None) -> int:
     if deduped is not None:
         report["deduped"] = deduped
     if not a.no_split:
-        splits = split_rows(rows, tuple(a.ratios), a.seed or 0)
+        splits = split_rows(rows, tuple(a.ratios), a.seed or 0, stratify=a.stratify)
         base = a.out.removesuffix(".jsonl")
         files = {}
         for name, part in splits.items():
