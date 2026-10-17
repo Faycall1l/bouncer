@@ -17,6 +17,21 @@
   set (constant-time compare; <16 chars warns at boot). 60 req/min/IP with
   `Retry-After: 60` on 429. Gzip above 1000 bytes.
 
+## Presets + language (T595)
+
+* `rules` and `preset` are **mutually exclusive** on `/predict` and
+  `/predict/batch`: pass a built-in pack by name (`{"preset": "gaming"}`) or your
+  own rules, never both — mixing is `422 {code: "E_PRESET"}` (packs are
+  single-sourced; nothing is silently merged). Neither given → uses
+  `BOUNCER_DEFAULT_PRESET` env if set, else the same `E_PRESET` error.
+* Unknown preset name → `422 E_PRESET` (message lists valid names).
+  `GET /presets` lists packs; `GET /presets/{name}` returns one.
+* `lang` is a short lowercase slug (`[a-z-]{2,16}`, e.g. `es`, `fr`, `pt-br`) or
+  omitted to infer from the message script; longer or uppercase input →
+  `422 {code: "E_LANG"}`. Presets tagged `es`/`fr`/`ar` autofill the hint —
+  passing an explicit `lang` still wins. (The demo UI offers an `auto` option;
+  the API simply omits the field.)
+
 ## Auth + rate limits (T409)
 
 * No key configured → open API (demo default). Set `BOUNCER_KEY` → every

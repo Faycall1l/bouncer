@@ -657,7 +657,7 @@
 - [x] T592 docs: README pools section (max, device, model=)
 - [x] T593 docs: README preset-as-rules + default preset
 - [x] T594 docs: README i18n + breaker sections
-- [ ] T595 docs: api.md preset field + E_PRESET/E_LANG
+- [x] T595 docs: api.md preset field + E_PRESET/E_LANG
 - [ ] T596 docs: api.md /ready + timeout_s + model fields
 - [ ] T597 docs: architecture pools + breaker diagram
 - [ ] T598 docs: SECURITY key-file + rotation notes
