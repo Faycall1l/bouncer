@@ -733,7 +733,7 @@
 - [x] T662 ft: calibration cell (temperature refit) writes temp.json
 - [x] T663 ft: `load finetuned` path in engine via `BOUNCER_MODEL_DIR`
 - [x] T664 ft: pool builds from BOUNCER_MODEL_DIR when set
-- [ ] T665 ft: honest docs — what a real run changes in BENCHMARKS (draft)
+- [x] T665 ft: honest docs — what a real run changes in BENCHMARKS (draft)
 - [ ] T666 ft: costs block — 2xT4 hours + estimated HF storage
 - [ ] T667 ft: failure modes documented (OOM, token cap, label noise)
 - [ ] T668 ft: base-vs-finetune eval comparison script (weights optional)

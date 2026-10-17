@@ -13,6 +13,8 @@ Kernel `faycal00/bouncer-eval-zero` (CPU, 200 rows, 1 choice question). COMPLETE
 | overconfident errors | 0 |
 
 Takeaway: zero-shot base is a demo, not a product. Fine-tune (`kaggle/train`) is the product.
+What the fine-tune is expected to change — and what it cannot — is spelled out
+in `docs/drafts/finetune-run-impact.md` (T665 draft, unmeasured until the run).
 
 ## Stub overhead (T385, local CPU, no weights)
 
