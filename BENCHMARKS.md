@@ -51,6 +51,29 @@ arabic is pinned to `multilingual` via `model_for_lang()` because base
 detection under-routes it. Accuracy numbers need the finetune + real
 checkpoints; this table pins the plumbing, not the quality.
 
+## pool + breaker (T575, `eval/bench_pool.py` / `eval/breaker_sim.py`)
+
+Both use fake 50ms router builds / injected failures — they time our
+bookkeeping, not model inference.
+
+**Pool** (`--max-n 2 --requests 10`, 2 devices): pooled 0.10s vs rebuild-
+every-time 0.56s → **5.4×** (hits=8, creates=2, evictions=0). With 3 devices
+in 2 slots it thrashes: 0 hits, 10 creates, 8 evictions, speedup ≈ 1.0.
+That's the whole point of the knob — `BOUNCER_POOL_MAX` must cover every
+checkpoint your traffic actually reaches, or you pay the load every request
+(mirrors laya's own `max_loaded` docstring).
+
+**Breaker** (`--storm 3 --cool 0.2`): 3 failing moderations (6 predict
+calls — one retry each) trip the breaker; the 4th moderation never touches
+the model (`cause=breaker-open`, calls stay at 6). After the 0.2s cooldown
+a half-open probe reaches a healthy router and the breaker closes
+(`cause=ok`). Trip threshold and cooldown are `breaker_n` / `breaker_cool_s`
+in `GateConfig`; `BOUNCER_BREAKER=off` disables it entirely.
+
+Honest limit: these reports pin control-flow behavior, not throughput under
+real weights. The real numbers need the finetune + checkpoints; run the
+scripts yourself — they're deterministic given the flags.
+
 ## Regex baseline (T210, local, no weights)
 
 `python eval/baseline_regex.py data/examples.jsonl` → **0.480** on 300 rows.

@@ -635,7 +635,7 @@
 - [x] T572 eval: `eval/bench_pool.py` (pooled construction timing + eviction demo)
 - [x] T573 eval: `validate_data --limit` flag
 - [x] T574 data: `synth_rules --report` prints label distribution
-- [ ] T575 docs: BENCHMARKS pool/breaker notes
+- [x] T575 docs: BENCHMARKS pool/breaker notes
 - [ ] T576 eval: `eval_gatekeeper --model` (passes model= through)
 - [ ] T577 eval: `baseline --limit` flag
 - [ ] T578 docs: eval/reports README lists new artifacts
