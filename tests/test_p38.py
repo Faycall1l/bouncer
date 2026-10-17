@@ -87,3 +87,46 @@ def test_console_script_entry_point():  # T712
         env={"PATH": "/usr/bin:/bin", "PYTHONPATH": "src"})
     assert r.returncode == 0, r.stderr
     assert f"bouncer {__version__}" in r.stdout
+
+
+def test_wheel_builds_clean():  # T713
+    import glob
+    import os
+    import shutil
+    import subprocess
+    import sys
+    import tempfile
+    import zipfile
+
+    import pytest
+    sys.path.insert(0, "src")
+    uv = shutil.which("uv") or os.path.expanduser("~/.local/bin/uv")
+    if not os.path.exists(uv):
+        pytest.skip("uv not available — the wheel smoke needs a PEP 517 builder")
+    with tempfile.TemporaryDirectory() as td:
+        r = subprocess.run([uv, "build", "--wheel", "-o", td],
+                           check=False, capture_output=True, text=True,
+                           timeout=300, cwd=str(Path.cwd()))
+        assert r.returncode == 0, r.stderr  # T713: the build is clean
+        wheels = glob.glob(os.path.join(td, "*.whl"))
+        assert len(wheels) == 1, wheels
+        with zipfile.ZipFile(wheels[0]) as z:
+            names = z.namelist()
+            # the package and the adapter SDK made it into the wheel...
+            assert "gatekeeper/__init__.py" in names
+            assert "gatekeeper/adapters/common.py" in names
+            # ...the console script is in the wheel metadata...
+            ep = [n for n in names if n.endswith("entry_points.txt")]
+            assert ep, "no entry_points.txt in the wheel"
+            body = z.read(ep[0])
+            assert b"bouncer" in body and b"gatekeeper.cli:main" in body
+            # ...and the version metadata matches the running package
+            md = [n for n in names if n.endswith("dist-info/METADATA")]
+            assert md, "no METADATA in the wheel"
+            from gatekeeper import __version__
+            meta = z.read(md[0])
+            assert b"Name: gatekeeper-1" in meta
+            assert f"Version: {__version__}".encode() in meta
+            # nothing heavy leaked in: tests, weights, VCS stay out (T713+T718)
+            assert not any(n.startswith(("tests/", ".git/", "model"))
+                           for n in names), "heavy paths leaked into the wheel"

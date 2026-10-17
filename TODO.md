@@ -787,7 +787,7 @@
 ## P38 Packaging (T711–T730)
 - [x] T711 pkg: `pyproject` optional-deps groups audited (server/demo/adapters)
 - [x] T712 pkg: console-script entry point `bouncer` in wheel metadata
-- [ ] T713 pkg: wheel builds clean (`python -m build` smoke test)
+- [x] T713 pkg: wheel builds clean (`uv build` PEP 517 smoke test)
 - [ ] T714 pkg: sdist includes LICENSE, README, data/examples
 - [ ] T715 pkg: LICENSE year + holder check
 - [ ] T716 pkg: Dockerfile (slim, non-root, healthcheck)
