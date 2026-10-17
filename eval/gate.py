@@ -21,6 +21,10 @@ import sys
 MISSING = object()
 
 
+def _add(checks, name, expected, value, ok):
+    checks.append({"name": name, "expected": expected, "value": value, "ok": ok})
+
+
 def _get(report: dict, *keys):
     cur = report
     for k in keys:
@@ -47,7 +51,7 @@ def collect(report: dict, args) -> list:
     checks = []
 
     def add(name, expected, value, ok):
-        checks.append({"name": name, "expected": expected, "value": value, "ok": ok})
+        _add(checks, name, expected, value, ok)
 
     def le(name, keys, threshold):
         v = _num(report, *keys)
@@ -99,8 +103,32 @@ def collect(report: dict, args) -> list:
     return checks
 
 
+def collect_i18n(report: dict, args) -> list:
+    """T681: the i18n wiring eval must stay 0 errors — that's the whole gate."""
+    checks = []
+    n = _num(report, "n")
+    _add(checks, "report_n", f">= {args.min_n}", n,
+         False if n is None else n >= args.min_n)
+    errors = _get(report, "errors")
+    if isinstance(errors, list):
+        _add(checks, "i18n_errors", "== 0", len(errors), len(errors) == 0)
+    else:
+        _add(checks, "i18n_errors", "== 0", None, False)  # absent = bad shape, FAIL
+    return checks
+
+
+def detect_kind(report: dict) -> str:
+    """Gate family by report shape (T681: i18n; more families follow)."""
+    if "per_lang" in report:
+        return "i18n"  # only eval_i18n.py produces per_lang
+    return "eval"
+
+
+COLLECTORS = {"eval": collect, "i18n": collect_i18n}  # T681: dispatch table
+
+
 def gate_report(report: dict, args) -> dict:
-    checks = collect(report, args)
+    checks = COLLECTORS[detect_kind(report)](report, args)
     passed = sum(1 for c in checks if c["ok"] is True)
     failed = sum(1 for c in checks if c["ok"] is False)
     skipped = sum(1 for c in checks if c["ok"] is None)

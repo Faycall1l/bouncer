@@ -751,7 +751,7 @@
 - [x] T678 eval: baseline report format normalized (`n`, `acc`, `per_label`)
 - [x] T679 eval: compare two reports (`--against`) prints deltas
 - [x] T680 eval: report diff appears in CHANGELOG when gates re-run
-- [ ] T681 eval: i18n gate — wiring eval must stay 0 errors
+- [x] T681 eval: i18n gate — wiring eval must stay 0 errors
 - [ ] T682 eval: breaker sim gate — trip and close both true
 - [ ] T683 eval: pool bench gate — speedup >= 2x in the hits scenario
 - [ ] T684 eval: `gate.py` reads BENCHMARKS table for known numbers

@@ -267,3 +267,27 @@ def test_gate_changelog_appends_delta(tmp_path):  # T680: re-run -> diff in CHAN
     r = _run_gate(cur, "--changelog", str(log))
     assert r.returncode == 2 and "--changelog requires --against" in r.stderr
     assert r.stdout == ""
+
+
+def test_gate_i18n_zero_errors(tmp_path):  # T681: wiring eval must stay 0 errors
+    # generate a real i18n report through the weightless wiring eval (T498)
+    r = _run_py("eval/eval_i18n.py", "--json", "--out", str(tmp_path / "i18n.json"))
+    assert r.returncode == 0, r.stderr
+    report = json.loads(r.stdout)
+    assert report["errors"] == []  # precondition: current fixtures are clean
+    path = _report(tmp_path, report, name="i18n-real.json")
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    r = _run_gate(path, "--json")
+    checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+    assert checks["i18n_errors"]["ok"] is True and checks["i18n_errors"]["value"] == 0
+    assert "rule_acc" not in checks  # eval-family gates don't apply here
+    # one error fails loudly, and names its count
+    bad = dict(report, errors=["es: E_PRESET missing"])
+    path = _report(tmp_path, bad, name="i18n-bad.json")
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL i18n_errors: value=1" in r.stderr
+    # missing errors list = bad shape = FAIL, never a silent pass
+    path = _report(tmp_path, {"n": 12, "per_lang": {}}, name="i18n-noshape.json")
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL i18n_errors" in r.stderr
