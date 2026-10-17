@@ -73,3 +73,10 @@ def test_early_stopping_wiring():  # T653: dev carve + patience + best restore
     assert loop < dev_call < calib  # dev eval inside the loop
     restore = src.index("ship the best epoch")
     assert restore < calib  # best weights restored before calibration/save
+
+
+def test_loss_jsonl_logging():  # T654: JSONL trail independent of wandb
+    src = _src("kaggle/train/train.py")
+    assert 'kind="step"' in src and 'kind="epoch"' in src
+    assert 'kind="early_stop"' in src and 'kind="test"' in src
+    assert 'json.dumps(kw)' in src and "train_log.jsonl" in src

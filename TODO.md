@@ -722,7 +722,7 @@
 - [x] T651 ft: notebook review — every cell has an assert before training
 - [x] T652 ft: LoRA rank/alpha configurable at notebook top (single block)
 - [x] T653 ft: early-stopping on dev rule_acc (patience constant)
-- [ ] T654 ft: loss logged as JSONL per epoch (not just wandb)
+- [x] T654 ft: loss logged as JSONL per epoch (not just wandb)
 - [ ] T655 ft: checkpoint upload gated on dev metric >= floor
 - [ ] T656 ft: `scripts/check_kaggle_env.py` verifies secrets + instance
 - [ ] T657 ft: data upload step (kaggle datasets create) scripted

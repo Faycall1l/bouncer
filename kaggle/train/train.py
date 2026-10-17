@@ -88,6 +88,13 @@ with open(os.path.join(model_dir, "rl_agent_config.json")) as f:
 cfg.update({"gradient_checkpointing": True, "max_tokens_per_batch": 4096,
             "max_len": 1024, "head_max_len": 256})
 OUT = "/kaggle/working/bouncer-421m"
+LOG = os.path.join(OUT, "train_log.jsonl")  # T654: loss trail, no wandb required
+
+
+def log_rec(**kw):  # T654: append-only JSONL — one object per line
+    kw.setdefault("t", round(time.time() - t0, 1))
+    with open(LOG, "a") as f:
+        f.write(json.dumps(kw) + "\n")
 
 items, skipped = items_from_rows(tok, [to_row(r) for r in train_rows],
                                  cfg["max_len"], cfg["head_max_len"])
@@ -158,10 +165,13 @@ for epoch in range(EPOCHS):
             opt.zero_grad(set_to_none=True)
         if nb % 50 == 0:
             print(f"ep{epoch+1}/{EPOCHS} step{nb} loss={float(loss):.4f}", flush=True)
+            log_rec(kind="step", epoch=epoch + 1, step=nb, loss=round(float(loss), 4))
     save_checkpoint(model, tok, dict(cfg), os.path.join(OUT, "checkpoint_latest"))
     print(f"EPOCH {epoch+1} done in {time.time()-t0:.0f}s avg={eloss/max(1,nb):.4f}", flush=True)
     dev_acc = dev_rule_acc(os.path.join(OUT, "checkpoint_latest"), dev_rows)
     print(f"EP{epoch+1} dev_rule_acc={dev_acc:.3f} best={best_dev:.3f}", flush=True)
+    log_rec(kind="epoch", epoch=epoch + 1, avg_loss=round(eloss / max(1, nb), 4),
+            dev_rule_acc=round(dev_acc, 4), best_dev=round(best_dev, 4))
     if dev_acc > best_dev:  # T653: remember the best epoch on CPU (VRAM is precious)
         best_dev, wait = dev_acc, 0
         best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
@@ -170,6 +180,7 @@ for epoch in range(EPOCHS):
         if wait >= PATIENCE:
             print(f"EARLY_STOP at epoch {epoch+1}: no dev improvement in "
                   f"{PATIENCE} epoch(s); best dev={best_dev:.3f}", flush=True)
+            log_rec(kind="early_stop", epoch=epoch + 1, best_dev=round(best_dev, 4))
             break
 
 # --- calibrate + save ---
@@ -203,6 +214,8 @@ for r in test_rows:
     if conf >= 0.85:
         gated_n += 1; gated_ok += good
 print(f"TEST n={len(test_rows)} rule_acc={ok/len(test_rows):.3f} gate@0.85={gated_ok}/{gated_n}", flush=True)
+log_rec(kind="test", n=len(test_rows), rule_acc=round(ok / len(test_rows), 4),
+        gate85=f"{gated_ok}/{gated_n}")  # T654: final number lands in the trail too
 
 # --- HF push (needs HF_TOKEN in Kaggle Secrets) ---
 try:
