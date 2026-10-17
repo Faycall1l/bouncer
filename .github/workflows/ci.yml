@@ -79,3 +79,10 @@ jobs:
           python eval/breaker_sim.py
       - name: gate them (one-line verdict, stable exits)
         run: python eval/gate.py --all --ci
+  secret-scan:  # T746: grep-based, stdlib-only — same command locally and here
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python scripts/secret_scan.py

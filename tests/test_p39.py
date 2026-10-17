@@ -283,3 +283,34 @@ def test_codeowners_and_branch_protection_notes():  # T745
     # the documented verify gate matches what the repo actually lints with
     # (the stale "ruff check src tests" wording died here, at T745)
     assert "ruff check ." in con and "ruff check src tests" not in con
+
+
+def test_ci_secret_scan_job(tmp_path):  # T746
+    import re
+    import subprocess
+    import sys
+    ci = (WORKFLOWS / "ci.yml").read_text()
+    m = re.search(r"^  secret-scan:(.*?)(?=^  \w|\Z)", ci, re.MULTILINE | re.DOTALL)
+    assert m, "no secret-scan job"
+    assert "secret_scan.py" in m.group(1)
+    # the scan runs green on the tracked tree right now...
+    r = subprocess.run([sys.executable, "scripts/secret_scan.py"],
+                       check=False, capture_output=True, text=True,
+                       timeout=120)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "clean" in r.stdout
+    # ...and really catches what it claims: a planted fake github token in
+    # a throwaway repo trips it — reported as file:line:LABEL, and the
+    # credential itself never appears in the output
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    secret = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2"
+    (tmp_path / "leak.txt").write_text(f"token = {secret!r}\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "leak.txt"],
+                   check=True)
+    scanner = str(Path("scripts/secret_scan.py").resolve())
+    r = subprocess.run([sys.executable, scanner], check=False,
+                       capture_output=True, text=True, timeout=60,
+                       cwd=str(tmp_path))
+    assert r.returncode == 1, r.stdout
+    assert "github token" in r.stdout and "leak.txt:1" in r.stdout
+    assert secret not in r.stdout + r.stderr, "scanner leaked the secret"
