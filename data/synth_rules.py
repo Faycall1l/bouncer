@@ -70,11 +70,23 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="data/gatekeeper-12k.jsonl")
     ap.add_argument("--template-only", action="store_true")
     ap.add_argument("--seed", type=int, default=None)  # T382: reproducible bootstraps
+    ap.add_argument("--report", action="store_true",  # T574: distribution, no write
+                    help="print per-label distribution instead of writing rows")
     a = ap.parse_args()
     if a.seed is not None:
         random.seed(a.seed)
     rows = template_rows(a.n) if a.template_only or not os.environ.get("OPENAI_API_KEY") else template_rows(a.n//3) + llm_rows(2*a.n//3)
     random.shuffle(rows)
+    if a.report:  # T574: balance check without generating a dataset file
+        from collections import Counter
+        labs = Counter(r["labels"]["rule"] for r in rows)
+        harms = Counter(r["labels"]["harm"] for r in rows)
+        print(json.dumps({"n": len(rows), "rule": dict(labs.most_common()),
+                          "harm": dict(harms.most_common()),
+                          "jailbreak": sum(r["labels"]["jailbreak"] for r in rows),
+                          "escalate": sum(r["labels"]["escalate"] for r in rows)},
+                         indent=2))
+        raise SystemExit(0)
     with open(a.out, "w") as f:
         f.writelines(json.dumps(r) + "\n" for r in rows)
     print(f"wrote {len(rows)} -> {a.out}")
