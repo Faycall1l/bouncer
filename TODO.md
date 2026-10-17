@@ -836,7 +836,7 @@
 - [x] T755 perf: question count knob (5 vs 3) benchmarked honestly
 - [x] T756 perf: token-budget guard on context (truncate + report)
 - [x] T757 perf: `watch` throughput lines/sec summary
-- [ ] T758 perf: audit write batching (fsync every N lines) behind flag
+- [x] T758 perf: audit write batching (fsync every N lines) behind flag
 - [ ] T759 perf: review queue append without full-file read
 - [ ] T760 perf: /stats response time under load (locust-less, threaded)
 - [ ] T761 perf: pool `clear()` on memory pressure hook (documented)

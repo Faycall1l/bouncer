@@ -289,3 +289,41 @@ def test_watch_throughput_summary(monkeypatch, capsys):  # T757
     assert float(hits[1][2]) >= 0.0
     # the rate is a summary, never pipe noise: stdout stays clean (T286)
     assert "lines/sec" not in out and "throughput:" not in out
+
+
+def test_audit_fsync_batching(tmp_path, monkeypatch):  # T758
+    import json
+
+    import gatekeeper.audit as au
+    path = tmp_path / "audit.jsonl"
+    monkeypatch.setattr(au, "_PATH", str(path))
+    monkeypatch.setattr(au, "_F", None)
+    monkeypatch.setattr(au, "_SINCE", 0)
+    fsyncs = []
+    monkeypatch.setattr(au.os, "fsync", lambda fd: fsyncs.append(fd))
+    # legacy default (N=0): no handle kept, no fsync — exact T029 behavior
+    monkeypatch.setattr(au, "_FSYNC_N", 0)
+    au.log_decision("legacy", "ok", 1.0, "allow", 1.0)
+    assert au._F is None and fsyncs == []
+    # batching N=3: the handle stays open; only the 3rd line syncs to disk
+    monkeypatch.setattr(au, "_FSYNC_N", 3)
+    for i in range(5):
+        au.log_decision(f"m{i}", "ok", 1.0, "allow", 1.0)
+    assert au._F is not None, "batching must keep one handle open"
+    assert len(fsyncs) == 1
+    # flush() drains the pending tail — the shutdown-hook contract
+    au.flush()
+    assert len(fsyncs) == 2 and au._SINCE == 0
+    rows = [json.loads(x) for x in path.read_text().splitlines()]
+    assert len(rows) == 6 and all(r["rule"] == "ok" for r in rows)
+    # rotation drops the stale handle: the next line lands in the fresh
+    # file, never silently inside the rotated-away one
+    monkeypatch.setattr(au, "_MAX_BYTES", 200)
+    au.log_decision("big" * 100, "ok", 1.0, "allow", 1.0)
+    assert (tmp_path / "audit.jsonl.1").exists()
+    assert au._F is not None
+    au._close_handle()
+    # the flag ships with its durability contract in the README
+    readme = Path("README.md").read_text()
+    for needle in ("BOUNCER_AUDIT_FSYNC", "process-crash", "power-loss"):
+        assert needle in readme, needle
