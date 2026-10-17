@@ -47,6 +47,11 @@ calls per user per minute (default 10, `0` disables). Over-cap messages
 are logged as `[rate-limited]` and skipped — a flood can't monopolize the
 model. Command replies bypass the cap; they never reach the model anyway.
 
+SIGTERM shuts every adapter down cleanly (T702): the poll loops finish the
+current page and exit; a second SIGTERM force-exits (128+sig, uvicorn
+style). Discord's handler is hard — discord.py owns its own loop and
+cleanup. Ctrl-C works everywhere, as always.
+
 ## Notes (T408)
 
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision

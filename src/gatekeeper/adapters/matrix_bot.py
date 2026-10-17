@@ -119,6 +119,7 @@ def dispatch_page(page: dict, rules: dict, **kw) -> list:
 def run():
     from gatekeeper.adapters.common import (
         Health,
+        install_shutdown,
         load_rules,
         rate_cap_from_env,
         require_env,
@@ -129,6 +130,7 @@ def run():
     rules = load_rules("matrix")  # T698: BOUNCER_RULES[_MATRIX] or preset
     can_redact = os.environ.get("BOUNCER_MX_REDACT") == "1"  # T693: opt-in
     cap = rate_cap_from_env()  # T701: per-sender model-call budget
+    stopping = install_shutdown("matrix")  # T702: SIGTERM -> clean exit
     since = None
 
     def fetch():
@@ -144,7 +146,7 @@ def run():
                      can_redact=can_redact, cap=cap)  # T701
 
     run_loop(fetch, handle, name="matrix",  # T696 loop, T699 health line
-             health=Health("matrix"))
+             health=Health("matrix"), stopping=stopping)  # T702
 
 
 if __name__ == "__main__":

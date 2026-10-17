@@ -774,7 +774,7 @@
 - [x] T699 adp: adapter health line in logs (decisions/min, last error)
 - [x] T700 adp: redaction pass shared across adapters (tokens, emails)
 - [x] T701 adp: per-user rate cap in adapters (protects the model)
-- [ ] T702 adp: graceful shutdown on SIGTERM for every adapter
+- [x] T702 adp: graceful shutdown on SIGTERM for every adapter
 - [ ] T703 adp: adapter matrix table updated in adapters README
 - [ ] T704 adp: webhook signature verification helper (hmac compare)
 - [ ] T705 adp: discord prefix + slash-command parity check test

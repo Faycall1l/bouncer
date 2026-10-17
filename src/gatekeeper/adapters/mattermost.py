@@ -102,6 +102,7 @@ def run():
     from gatekeeper.adapters.common import (
         AdapterError,
         Health,
+        install_shutdown,
         load_rules,
         rate_cap_from_env,
         require_env,
@@ -118,6 +119,7 @@ def run():
     can_delete = os.environ.get("BOUNCER_MM_DELETE") == "1"  # T694: opt-in
     cap = rate_cap_from_env()  # T701: per-user model-call budget
     health = Health("mattermost")  # T699: same counters as run_loop's
+    stopping = install_shutdown("mattermost")  # T702: SIGTERM -> clean exit
 
     async def _loop():
         async with websockets.connect(
@@ -126,6 +128,10 @@ def run():
             await ws.send(json.dumps({"action": "authentication", "seq": 1,
                                       "data": {"token": token}}))
             async for raw in ws:
+                if stopping():  # T702: message boundary exit
+                    print("mattermost: shutdown requested — exiting cleanly",
+                          file=sys.stderr, flush=True)
+                    break
                 msg = json.loads(raw)
                 if msg.get("event") != "posted":
                     continue

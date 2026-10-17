@@ -51,13 +51,21 @@ def _watch_once(sock, rules) -> None:
 
 
 def run(retries: int = 3):
-    from gatekeeper.adapters.common import load_rules, require_env
+    from gatekeeper.adapters.common import (
+        install_shutdown,
+        load_rules,
+        require_env,
+    )
     rules = load_rules("twitch", "stream")  # T698: env may override the preset
     host, port = "irc.chat.twitch.tv", 6667
     # T691: all three checked up-front — fail before the first connect attempt
     nick, chan = require_env("TWITCH_NICK"), require_env("TWITCH_CHAN")
     tok = require_env("TWITCH_TOKEN")
+    stopping = install_shutdown("twitch")  # T702: SIGTERM -> clean exit
     for attempt in range(max(1, retries)):  # T299: reconnect with backoff
+        if stopping():  # T702: exit between reconnect attempts, not mid-retry
+            print("twitch: shutdown requested — exiting cleanly", flush=True)
+            return
         try:
             sock = socket.create_connection((host, port), timeout=15)
             sock.sendall(f"PASS {tok}\r\nNICK {nick}\r\nJOIN {chan}\r\n".encode())

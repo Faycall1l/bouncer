@@ -102,6 +102,7 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
 def run():
     from gatekeeper.adapters.common import (
         Health,
+        install_shutdown,
         load_rules,
         rate_cap_from_env,
         require_env,
@@ -113,6 +114,7 @@ def run():
     rules = load_rules("zulip")  # T698: BOUNCER_RULES[_ZULIP] or preset
     can_delete = os.environ.get("BOUNCER_ZL_DELETE") == "1"  # T695: opt-in
     cap = rate_cap_from_env()  # T701: per-sender model-call budget
+    stopping = install_shutdown("zulip")  # T702: SIGTERM -> clean exit
     own_id = api(email, key, site, "GET", "/users/me").get("user_id")
     q = api(email, key, site, "POST", "/register",
             event_types=json.dumps(["message"]),
@@ -127,7 +129,7 @@ def run():
                      can_delete=can_delete, cap=cap)  # T701
 
     run_loop(fetch, handle, name="zulip",  # T696 loop, T699 health line
-             health=Health("zulip"))
+             health=Health("zulip"), stopping=stopping)  # T702
 
 
 if __name__ == "__main__":

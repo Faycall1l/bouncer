@@ -86,8 +86,35 @@ def load_rules(adapter: str, default: str = "gaming") -> dict:
             f"{sorted(presets.PRESETS)} or a JSON file path") from e
 
 
+def install_shutdown(name: str, log=print, hard: bool = False):
+    """T702: SIGTERM -> clean stop; returns `stopping()` for the loops.
+
+    Default (soft): the flag flips, loops finish their current page and exit
+    at the next page boundary. A second SIGTERM force-exits (128+sig), like
+    uvicorn. `hard=True` exits immediately instead — right for adapters whose
+    runner (discord.py) owns its own loop and cleanup.
+    """
+    import signal
+    state = {"stop": False}
+
+    def _handler(signum, frame):  # frame unused — signal API shape
+        if hard or state["stop"]:
+            raise SystemExit(128 + signum)
+        state["stop"] = True
+        log(f"{name}: SIGTERM — finishing current page, then exiting")
+
+    def stopping() -> bool:
+        return state["stop"]
+
+    try:
+        signal.signal(signal.SIGTERM, _handler)
+    except ValueError:  # not on the main thread (tests, embedding)
+        pass
+    return stopping
+
+
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
-             sleep=time.sleep, health=None):
+             sleep=time.sleep, health=None, stopping=None):
     """T696: one poll loop for every sync adapter (telegram/matrix/zulip).
 
     `fetch()` returns the next page of events (or None); `handle()` consumes
@@ -96,15 +123,25 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
     passes through — Ctrl-C must stop a bot. The Mattermost websocket adapter
     is async and keeps its own loop; its per-event guard matches this one.
     T699: `health` (if given) counts real decisions, records errors, and
-    emits its health line when due.
+    emits its health line when due. T702: `stopping` (if given) is polled at
+    page boundaries — SIGTERM (via install_shutdown) finishes the current
+    page, then exits cleanly.
     """
     while True:
+        if stopping is not None and stopping():  # T702: page boundary exit
+            print(f"{name}: shutdown requested — exiting cleanly",
+                  file=sys.stderr, flush=True)
+            return
         try:
             page = fetch()
         except Exception as e:  # noqa: BLE001 — network blips must not kill the bot
             print(f"{name} error: {redact(e)}", file=sys.stderr, flush=True)
             if health is not None:
                 health.error(redact(e))  # T700: no secrets in the health line
+            if stopping is not None and stopping():
+                print(f"{name}: shutdown requested — exiting cleanly",
+                      file=sys.stderr, flush=True)
+                return  # T702: the long-poll died because we're shutting down
             sleep(backoff_s)
             continue
         for ev in page or []:

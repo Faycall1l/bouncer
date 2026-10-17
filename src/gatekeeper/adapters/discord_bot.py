@@ -8,8 +8,9 @@ def run(token: str | None = None, preset: str = "gaming"):
     import discord  # optional dep; ImportError message tells the extra
 
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import load_rules
+    from gatekeeper.adapters.common import install_shutdown, load_rules
 
+    install_shutdown("discord", hard=True)  # T702: discord.py owns the loop
     rules = load_rules("discord", preset)  # T698: preset arg is just the default
     intents = discord.Intents.default()
     intents.message_content = True

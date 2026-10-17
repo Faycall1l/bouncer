@@ -87,6 +87,7 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
 def run():
     from gatekeeper.adapters.common import (
         Health,
+        install_shutdown,
         load_rules,
         rate_cap_from_env,
         require_env,
@@ -96,6 +97,7 @@ def run():
     rules = load_rules("telegram")  # T698: BOUNCER_RULES[_TELEGRAM] or preset
     can_delete = os.environ.get("BOUNCER_TG_DELETE") == "1"  # T692: opt-in
     cap = rate_cap_from_env()  # T701: per-chat model-call budget
+    stopping = install_shutdown("telegram")  # T702: SIGTERM -> clean exit
     offset = 0
 
     def fetch():  # ack the whole page up front: at-most-once, never re-read
@@ -112,7 +114,7 @@ def run():
                       cap=cap)  # T701
 
     run_loop(fetch, handle, name="telegram",  # T696 loop, T699 health line
-             health=Health("telegram"))
+             health=Health("telegram"), stopping=stopping)  # T702
 
 
 if __name__ == "__main__":

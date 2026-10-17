@@ -778,3 +778,72 @@ def test_adapters_wire_rate_cap():  # T701: all four pollers carry a cap
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "rate_cap_from_env()" in src, name
         assert 'reason": "rate-limited"' in src, name
+
+
+def test_install_shutdown_soft_flag_and_force():  # T702
+    sys.path.insert(0, "src")
+    import signal
+
+    from gatekeeper.adapters.common import install_shutdown
+    orig = signal.getsignal(signal.SIGTERM)
+    try:
+        lines = []
+        stopping = install_shutdown("testadp", log=lines.append)
+        assert stopping() is False
+        handler = signal.getsignal(signal.SIGTERM)
+        assert handler is not orig and callable(handler)
+        handler(signal.SIGTERM, None)  # simulate the first SIGTERM
+        assert stopping() is True
+        assert lines == [("testadp: SIGTERM — finishing current page, "
+                          "then exiting")]
+        # a second SIGTERM force-exits (128+sig), like uvicorn
+        try:
+            handler(signal.SIGTERM, None)
+        except SystemExit as e:
+            assert e.code == 128 + signal.SIGTERM
+        else:
+            raise AssertionError("second SIGTERM must force-exit")
+        # hard mode: the first SIGTERM exits immediately (discord's runner)
+        hard = install_shutdown("testadp2", log=lines.append, hard=True)
+        assert hard() is False
+        try:
+            signal.getsignal(signal.SIGTERM)(signal.SIGTERM, None)
+        except SystemExit as e:
+            assert e.code == 128 + signal.SIGTERM
+        else:
+            raise AssertionError("hard shutdown must exit immediately")
+    finally:
+        signal.signal(signal.SIGTERM, orig)  # never leak into other tests
+
+
+def test_run_loop_stops_cleanly_on_shutdown(capsys):  # T702
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import run_loop
+    state = {"stop": False, "fetched": 0}
+
+    def fetch():
+        state["fetched"] += 1
+        state["stop"] = True  # the signal lands mid long-poll...
+        raise OSError("connection reset")  # ...which often dies like this
+
+    sleeps = []
+    run_loop(fetch, lambda ev: None, name="testadp", sleep=sleeps.append,
+             stopping=lambda: state["stop"])
+    err = capsys.readouterr().err
+    # exited at the error path without the backoff sleep, then cleanly
+    assert state["fetched"] == 1 and sleeps == []
+    assert "shutdown requested — exiting cleanly" in err
+
+
+def test_adapters_install_shutdown():  # T702: every adapter, one way or another
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+                 "twitch_irc", "discord_bot"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "install_shutdown(" in src, name
+    # the pollers hand the flag to run_loop; mattermost/twitch/discord check
+    # it in their own loops (discord's is hard: discord.py owns cleanup)
+    for name in ("telegram_bot", "matrix_bot", "zulip_bot"):
+        assert "stopping=stopping)" in (ADAPTERS / f"{name}.py").read_text()
+    assert "hard=True" in (ADAPTERS / "discord_bot.py").read_text()
+    assert "if stopping():" in (ADAPTERS / "twitch_irc.py").read_text()
+    assert "if stopping():" in (ADAPTERS / "mattermost.py").read_text()
