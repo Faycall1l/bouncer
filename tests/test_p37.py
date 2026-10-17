@@ -847,3 +847,24 @@ def test_adapters_install_shutdown():  # T702: every adapter, one way or another
     assert "hard=True" in (ADAPTERS / "discord_bot.py").read_text()
     assert "if stopping():" in (ADAPTERS / "twitch_irc.py").read_text()
     assert "if stopping():" in (ADAPTERS / "mattermost.py").read_text()
+
+
+def test_adapter_matrix_is_complete_and_honest():  # T703
+    text = (ADAPTERS / "README.md").read_text()
+    # every adapter file in the package is a row in the matrix
+    files = sorted(p.name for p in ADAPTERS.glob("*.py"))
+    assert files  # the glob isn't silently empty
+    for name in files:
+        assert f"`adapters/{name}`" in text, name
+    # the SDK column only names helpers that actually exist in common.py
+    common = (ADAPTERS / "common.py").read_text()
+    for fn in ("require_env", "load_rules", "run_loop", "Health", "RateCap",
+               "redact", "dry_run", "install_shutdown"):
+        assert f"def {fn}" in common or f"class {fn}" in common, fn
+        assert fn in text, fn
+    # env opt-ins named in the matrix are real env vars in the sources
+    for env in ("BOUNCER_TG_DELETE", "BOUNCER_MX_REDACT", "BOUNCER_MM_DELETE",
+                "BOUNCER_ZL_DELETE"):
+        assert env in text
+        assert any(env in (ADAPTERS / f).read_text()
+                   for f in files), env

@@ -1,20 +1,27 @@
 # Adapters (T080)
 
-| Platform | File | Setup |
-|---|---|---|
-| Discord | `adapters/discord_bot.py` | `pip install -e .[discord]`, `DISCORD_TOKEN=... python -m gatekeeper.adapters.discord_bot` |
-| Twitch | `adapters/twitch_irc.py` | stdlib only. `TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc` (flag-only, never bans) |
-| Telegram | `adapters/telegram_bot.py` | stdlib only. `TELEGRAM_TOKEN=... python -m gatekeeper.adapters.telegram_bot` (long-poll, `/rules` `/stats` `/help`, flag-only default; `BOUNCER_TG_DELETE=1` opts into deleteMessage) |
-| Matrix | `adapters/matrix_bot.py` | stdlib only. `MATRIX_TOKEN=... MATRIX_HOMESERVER=... python -m gatekeeper.adapters.matrix_bot` (sync timeline, `!bouncer rules` `!bouncer stats`, flag-only default; `BOUNCER_MX_REDACT=1` opts into redactions) |
-| Mattermost | `adapters/mattermost.py` | `pip install -e .[mattermost]`. `MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.mattermost` (websocket `posted` events + `/bouncer` slash webhook; `BOUNCER_MM_DELETE=1` opts into deletePost) |
-| Zulip | `adapters/zulip_bot.py` | stdlib only. `ZULIP_EMAIL=... ZULIP_API_KEY=... ZULIP_SITE=... python -m gatekeeper.adapters.zulip_bot` (event-queue poll, stream messages moderated, PMs/mentions are `bouncer` commands; `BOUNCER_ZL_DELETE=1` opts into delete) |
-| Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver |
-| Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events |
+| Platform | File | Setup | SDK features (T691–T702) |
+|---|---|---|---|
+| Discord | `adapters/discord_bot.py` | `pip install -e .[discord]`, `DISCORD_TOKEN=... python -m gatekeeper.adapters.discord_bot` | require_env, load_rules, dry-run, redact, SIGTERM (hard — discord.py owns cleanup) |
+| Twitch | `adapters/twitch_irc.py` | stdlib only. `TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc` (flag-only, never bans) | require_env, load_rules, redact (delegates to shared pass), dry-run (no-op — print-only), SIGTERM (between reconnects) |
+| Telegram | `adapters/telegram_bot.py` | stdlib only. `TELEGRAM_TOKEN=... python -m gatekeeper.adapters.telegram_bot` (long-poll, `/rules` `/stats` `/help`, flag-only default; `BOUNCER_TG_DELETE=1` opts into deleteMessage) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
+| Matrix | `adapters/matrix_bot.py` | stdlib only. `MATRIX_TOKEN=... MATRIX_HOMESERVER=... python -m gatekeeper.adapters.matrix_bot` (sync timeline, `!bouncer rules` `!bouncer stats`, flag-only default; `BOUNCER_MX_REDACT=1` opts into redactions) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
+| Mattermost | `adapters/mattermost.py` | `pip install -e .[mattermost]`. `MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.mattermost` (websocket `posted` events + `/bouncer` slash webhook, `MATTERMOST_SLASH_TOKEN` compared constant-time; `BOUNCER_MM_DELETE=1` opts into deletePost) | own async loop (per-event guard matches run_loop), Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
+| Zulip | `adapters/zulip_bot.py` | stdlib only. `ZULIP_EMAIL=... ZULIP_API_KEY=... ZULIP_SITE=... python -m gatekeeper.adapters.zulip_bot` (event-queue poll, stream messages moderated, PMs/mentions are `bouncer` commands; `BOUNCER_ZL_DELETE=1` opts into delete) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
+| Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver | dry-run, redact |
+| Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events | dry-run, redact |
+| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, Health, RateCap, redact, dry_run, install_shutdown |
 
-Tokens always from env, never logged (twitch redacts, discord never prints).
-Missing tokens fail at startup via the shared `require_env()` guard
-(`gatekeeper.adapters.common`, `E_ADAPTER`) — the error names the variable
-instead of a raw `KeyError`; blank counts as missing (T691).
+The matrix's SDK column is the T703 truth: `common.py` (T691–T702) is the
+whole shared surface — `require_env`/`load_rules` at startup, `run_loop` +
+`Health` + `RateCap` + `install_shutdown` around the loop, `redact` +
+`dry_run` on every outbound line. A new adapter gets all of it by importing
+from `common`; nothing in the column may name a helper that doesn't exist.
+
+Tokens always from env, never logged — every printed line passes the shared
+`redact()` (T700). Missing tokens fail at startup via the shared
+`require_env()` guard (`gatekeeper.adapters.common`, `E_ADAPTER`) — the error
+names the variable instead of a raw `KeyError`; blank counts as missing (T691).
 
 The shared SDK (`common.py`) is `require_env()` + `run_loop()` (T696): every
 sync poller (telegram, matrix, zulip) runs the same fetch/handle loop —
@@ -57,7 +64,7 @@ cleanup. Ctrl-C works everywhere, as always.
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision
   counts. Deletes fall back to ⚠️ on missing perms; empty messages ignored.
 * Twitch: reconnects 3× with backoff, then exits 1. All console output passes
-  `redact()` (exact token + any `oauth:` secret masked).
+  `redact()` — the T077 helper now delegates to the shared T700 pass.
 * Webhooks: `forward()` sends `User-Agent: bouncer/<ver>` + `X-Bouncer-Event`;
   failures raise `E_WEBHOOK`. Slack ignores `bot_message` subtypes
   (explicit `ignored` shape) and rejects malformed bodies with `E_SLACK`.
