@@ -766,7 +766,7 @@
 - [x] T691 adp: shared `require_env()` — missing adapter tokens fail with `E_ADAPTER`, not raw `KeyError`
 - [x] T692 adp: telegram adapter (long-poll, / commands, flag-only default)
 - [x] T693 adp: matrix/melement adapter (room timeline → moderate)
-- [ ] T694 adp: mattermost adapter (websocket + slash command)
+- [x] T694 adp: mattermost adapter (websocket + slash command)
 - [ ] T695 adp: zulip adapter (stream messages, bot mentions)
 - [ ] T696 adp: shared adapter SDK — one `run_loop()` for all pollers
 - [ ] T697 adp: `BOUNCER_DRY_RUN=1` prints actions, never posts

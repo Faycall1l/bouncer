@@ -35,6 +35,7 @@ dev = ["pytest", "ruff"]
 server = ["fastapi", "uvicorn"]  # T153
 demo = ["gradio"]  # T153
 discord = ["discord.py"]  # T153
+mattermost = ["websockets>=12"]  # T694: the only dep the MM adapter wants
 
 [project.scripts]
 bouncer = "gatekeeper.cli:main"  # T152

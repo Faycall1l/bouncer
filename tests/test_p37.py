@@ -248,3 +248,78 @@ def test_matrix_adapter_is_stdlib_only_and_guarded():  # T693: no extra, T691 gu
     assert r.returncode != 0
     assert "E_ADAPTER" in r.stderr and "MATRIX_TOKEN" in r.stderr
     assert "KeyError" not in r.stderr
+
+
+def _mm_post(message="hello channel", ptype="", pid="p1"):
+    return {"id": pid, "type": ptype, "user_id": "u1", "message": message}
+
+
+def test_mattermost_posts_moderated_flag_only(monkeypatch):  # T694
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "_router", _StubRouter())
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.mattermost import handle_post
+    rules = get_preset("gaming")
+    # system posts and empties never reach the model
+    assert handle_post(_mm_post(ptype="system_join_channel"), rules) == \
+        {"action": "ignored", "reason": "system-post"}
+    assert handle_post(_mm_post("   "), rules)["reason"] == "no-text"
+    # normal posts are moderated; delete is opt-in (flag-only default)
+    res = handle_post(_mm_post("just chatting"), rules)
+    assert res["action"] in ("allow", "flag", "delete", "escalate")
+    assert res["deleted"] is False
+    monkeypatch.setattr(gatekeeper, "moderate",
+                        lambda text, r: {"action": "delete", "rule": "sin-spam",
+                                         "confidence": 0.99})
+    calls = []
+    res = handle_post(_mm_post("buy followers", pid="p9"), rules)
+    assert res["deleted"] is False and calls == []
+    res = handle_post(_mm_post("buy followers", pid="p9"), rules,
+                      token="t", server="https://mm", can_delete=True,
+                      api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["deleted"] is True
+    assert calls[0][0][2:] == ("DELETE", "/posts/p9")
+
+
+def test_mattermost_slash_token_and_replies():  # T694: constant-time compare
+    sys.path.insert(0, "src")
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.mattermost import handle_slash
+    rules = get_preset("gaming")
+    # wrong webhook token is rejected before anything else happens
+    assert handle_slash({"token": "evil", "text": "/bouncer rules"}, rules,
+                        slash_token="sekrit") == \
+        {"action": "ignored", "reason": "bad-token"}
+    # correct token answers in the channel via api_fn
+    calls = []
+    res = handle_slash({"token": "sekrit", "text": "/bouncer rules",
+                        "channel_id": "c1"}, rules, slash_token="sekrit",
+                       token="t", server="https://mm",
+                       api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["action"] == "command" and res["reply"].startswith("active:")
+    assert calls[0][0][2:4] == ("POST", "/posts")
+    assert calls[0][1]["channel_id"] == "c1"
+    # canonical Mattermost shape: text carries only the args after the trigger
+    res = handle_slash({"token": "sekrit", "text": "rules"}, rules,
+                       slash_token="sekrit")
+    assert res["command"] == "rules" and res["reply"].startswith("active:")
+    # unknown subcommand gets usage, not a model call
+    res = handle_slash({"token": "sekrit", "text": "/bouncer wat"}, rules,
+                       slash_token="sekrit")
+    assert "usage:" in res["reply"]
+
+
+def test_mattermost_dep_is_optional_and_fail_fast():  # T694: named extra
+    src = (ADAPTERS / "mattermost.py").read_text()
+    # websockets is imported lazily inside run(); the module itself is importable
+    assert src.index("import websockets") > src.index("def run(")
+    r = _run_py("-c", "import gatekeeper.adapters.mattermost")
+    assert r.returncode == 0, r.stderr
+    # missing extra fails with the exact install line; the raw ImportError is
+    # kept as the __cause__ for diagnostics, but the loud error is ours
+    r = _run_py("-m", "gatekeeper.adapters.mattermost")
+    assert r.returncode != 0
+    assert "E_ADAPTER" in r.stderr and "pip install -e .[mattermost]" in r.stderr
+    assert r.stderr.strip().splitlines()[-1].startswith(
+        "gatekeeper.adapters.common.AdapterError")  # our error, last word
