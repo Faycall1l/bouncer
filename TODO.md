@@ -785,7 +785,7 @@
 - [x] T710 test: P37 adapters sweep
 
 ## P38 Packaging (T711–T730)
-- [ ] T711 pkg: `pyproject` optional-deps groups audited (server/demo/adapters)
+- [x] T711 pkg: `pyproject` optional-deps groups audited (server/demo/adapters)
 - [ ] T712 pkg: console-script entry point `bouncer` in wheel metadata
 - [ ] T713 pkg: wheel builds clean (`python -m build` smoke test)
 - [ ] T714 pkg: sdist includes LICENSE, README, data/examples

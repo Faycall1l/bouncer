@@ -32,10 +32,11 @@ Issues = "https://github.com/Faycall1l/bouncer/issues"
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
-server = ["fastapi", "uvicorn"]  # T153
-demo = ["gradio"]  # T153
-discord = ["discord.py"]  # T153
+server = ["fastapi>=0.110", "uvicorn>=0.29"]  # T153+T711: floors match core
+demo = ["gradio>=4.44.0"]  # T153+T711: floor matches core
+discord = ["discord.py>=2.0"]  # T153+T711: app commands need the 2.x tree
 mattermost = ["websockets>=12"]  # T694: the only dep the MM adapter wants
+adapters = ["discord.py>=2.0", "websockets>=12"]  # T711: every adapter SDK dep
 
 [project.scripts]
 bouncer = "gatekeeper.cli:main"  # T152
