@@ -616,7 +616,7 @@
 - [x] T555 demo: review queue viewer (last 5 rows)
 - [x] T556 demo: model dropdown (auto/english/multilingual/typed-decisions)
 - [x] T557 demo: night-mode checkbox (quiet_hours 22–7)
-- [ ] T558 demo: require_calm checkbox
+- [x] T558 demo: require_calm checkbox
 - [ ] T559 demo: severity box (`RULE=high` lines)
 - [ ] T560 demo: meters shows cause
 - [ ] T561 demo: `format_meters(res)` pure helper extracted

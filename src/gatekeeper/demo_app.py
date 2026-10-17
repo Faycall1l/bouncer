@@ -40,7 +40,7 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
     tally = [0, 0]  # T362: regex-baseline agree [hits, total]
 
     def run(msg, preset, rules_t, allow_thr, delete_thr, lang, user="",  # T551
-            model="auto", night=False):  # T556+T557
+            model="auto", night=False, calm=False):  # T556+T557+T558
         if not (msg or "").strip():  # T360: don't spend a model call on nothing
             return "⚪ EMPTY", "ok @ 0.00", "empty message", "n/a", "", "0.0 ms"
         note = ""  # T366
@@ -59,7 +59,8 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
             r = moderate(msg, rules, config=GateConfig(allow_threshold=allow_thr,
                                                        delete_threshold=delete_thr,
                                                        quiet_hours=(22, 7)
-                                                       if night else ()),  # T557
+                                                       if night else (),  # T557
+                                                       require_calm=calm),  # T558
                          lang=lang, user_id=uid,
                          model=None if model in ("auto", "", None) else model)  # T556
         except Exception as e:  # noqa: BLE001 — demo must stay up without weights
@@ -114,6 +115,8 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                                info="auto = router picks; pin to compare checkpoints")
         night = gr.Checkbox(value=False, label="night mode (22–7)",  # T557
                             info="demotes confident deletes to escalate overnight")
+        calm = gr.Checkbox(value=False, label="require calm",  # T558
+                           info="allow only when harm=safe; suspicious becomes flag")
         dirty = []  # T358: hand-edits survive preset switches
         thr_mem: dict = {}  # T553: last thresholds per preset, restored on return
         cur_preset = [first]
@@ -157,9 +160,9 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
         _orig_run = run
 
         def run_h(msg, preset, rules_t, allow_thr, delete_thr, lang, user="",
-                  model="auto", night=False):
+                  model="auto", night=False, calm=False):
             out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr, lang, user,
-                            model, night)
+                            model, night, calm)
             trail.append(f"{out[0]} {out[1]} {msg[:60]}")  # T354: badge + rule@conf
             del trail[:-50]  # T367: bounded session memory
             ms = out[5]
@@ -172,9 +175,9 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                     f"p50 {p50:.1f}ms")
             return out + (head + "\n" + "\n".join(trail[-8:]),)
 
-        btn.click(run_h,  # T551+T556+T557
+        btn.click(run_h,  # T551+T556+T557+T558
                   [msg, preset, rules, allow_thr, delete_thr, lang, user, model_dd,
-                   night],
+                   night, calm],
                   [badge, rule, reason, dist, meters, lat, hist])
         flag_btn = gr.Button("🚩 send to review queue")  # T095
         flag_out = gr.Textbox(label="review")
