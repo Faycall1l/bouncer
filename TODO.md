@@ -653,7 +653,7 @@
 - [x] T590 test: P31 eval sweep
 
 ## P32 Docs + packaging (T591–T610)
-- [ ] T591 docs: README persistence section (snapshot CLI + files)
+- [x] T591 docs: README persistence section (snapshot CLI + files)
 - [ ] T592 docs: README pools section (max, device, model=)
 - [ ] T593 docs: README preset-as-rules + default preset
 - [ ] T594 docs: README i18n + breaker sections

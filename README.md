@@ -84,6 +84,23 @@ Split gates: `--allow-threshold` / `--delete-threshold` (and the same JSON keys
 on `POST /predict` + `/predict/batch`) tune the two bars independently;
 bare `--threshold` sets both. Higher allow = fewer auto-allows, more escalations.
 
+## Persistence (T591)
+
+Nothing persists by default — bouncer is in-memory per process. Two opt-in files:
+
+* **Audit log** (`BOUNCER_AUDIT`, default `bouncer-audit.jsonl`): one JSON line per
+  decision — timestamp, hashed message (never raw text), action, rule, confidence,
+  latency. `bouncer export --out decisions.csv` (also `--format json`, `--since`,
+  `--action`, `--limit`) reads it back.
+* **Review queue** (`BOUNCER_REVIEW`, default `review-queue.jsonl`): flag/escalate
+  rows queued for a human; `bouncer review --since/--rule/--action/--prune` filters
+  it, `--clear --yes` empties it. The demo's 🚩 button writes here too.
+* **Snapshots**: `bouncer snapshot save snap.json` freezes decision counters +
+  per-user strikes; `bouncer snapshot load snap.json` restores them (version-mismatch
+  warns, never fails; corrupt files raise `E_SNAPSHOT`). Programmatic equivalent:
+  `gatekeeper.stats.save()/load()` writing `BOUNCER_STATS` (default
+  `bouncer-stats.json`).
+
 ## Fine-tune (Kaggle 2xT4, 4-5h)
 
 1. `python data/synth_rules.py --n 12000 --out data/gatekeeper-12k.jsonl` (needs `OPENAI_BASE_URL`+key, or `--template-only`)
