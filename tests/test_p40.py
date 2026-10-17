@@ -327,3 +327,32 @@ def test_audit_fsync_batching(tmp_path, monkeypatch):  # T758
     readme = Path("README.md").read_text()
     for needle in ("BOUNCER_AUDIT_FSYNC", "process-crash", "power-loss"):
         assert needle in readme, needle
+
+
+def test_review_append_never_reads_the_file(tmp_path, monkeypatch):  # T759
+    import builtins
+    import json
+    import os
+
+    import gatekeeper.review as rv
+    path = tmp_path / "queue.jsonl"
+    monkeypatch.setattr(rv, "_PATH", str(path))
+    # a queue that already has history: a full-file read would be visible
+    old = json.dumps({"t": 1, "message": "old", "action": "flag", "rule": "r",
+                      "conf": 0.9, "cause": "x", "ms": 1.0}) + "\n"
+    path.write_text(old * 2000)
+    real_open = builtins.open
+
+    def spy(file, mode="r", *a, **kw):
+        if os.fspath(file) == os.fspath(path) and mode != "a":
+            raise AssertionError(f"append opened the queue for {mode!r}")
+        return real_open(file, mode, *a, **kw)
+
+    monkeypatch.setattr(builtins, "open", spy)
+    rv.add("p759 new", {"action": "escalate", "rule": "r", "confidence": 0.9,
+                        "latency_ms": 1.0})
+    rows = real_open(path).read().splitlines()  # verification reads, add must not
+    assert len(rows) == 2001
+    row = json.loads(rows[-1])
+    assert row["message"] == "p759 new" and row["action"] == "escalate"
+    assert row["cause"] == "" and row["t"] >= 1  # T441/T448 shape intact
