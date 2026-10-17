@@ -70,3 +70,14 @@ def test_ci_weightless_docs_cli_job():  # T734
     assert "laya" not in job and ".[dev]" not in job
     assert 'pip install pytest "fastapi>=0.110"' in job
     assert "PYTHONPATH=src" in job
+
+
+def test_ci_wheel_artifact_on_tags():  # T735
+    text = (WORKFLOWS / "publish.yml").read_text()
+    # tags trigger the workflow, and the wheel is built and uploaded —
+    # disjoint globs so the sdist artifact can't swallow the wheel
+    assert 'tags: ["v*"]' in text
+    assert "python -m build --wheel" in text
+    assert "name: wheel" in text and "dist/*.whl" in text
+    assert "dist/*.tar.gz" in text
+    assert "path: dist/* }" not in text, "undifferentiated artifact glob"

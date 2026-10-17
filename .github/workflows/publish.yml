@@ -3,15 +3,18 @@ on:
   push:
     tags: ["v*"]
 jobs:
-  sdist:  # T217: build on tag; upload needs PYPI_TOKEN secret
+  sdist:  # T217+T735: build sdist + wheel on tag; upload needs PYPI_TOKEN
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: pip install build && python -m build --sdist
+      - run: python -m build --wheel  # T735: the wheel ships as an artifact too
       - uses: actions/upload-artifact@v4
-        with: { name: sdist, path: dist/* }
+        with: { name: sdist, path: dist/*.tar.gz }
+      - uses: actions/upload-artifact@v4
+        with: { name: wheel, path: dist/*.whl }
       # T726: SBOM-ish declared-dependency manifest — deterministic, no
       # network; the release job attaches it alongside the wheel (T736).
       - name: export SBOM
