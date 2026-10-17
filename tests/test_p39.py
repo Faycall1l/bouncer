@@ -255,3 +255,15 @@ def test_pr_template_checklist():  # T743
     assert "TODO.md" in t and "its own commit" in t
     assert "secrets" in t
     assert t.count("- [ ]") >= 6, "checklist too thin"
+
+
+def test_issue_template_bug_report():  # T744
+    t = Path(".github/ISSUE_TEMPLATE/bug_report.yml").read_text()
+    # the box's three fields — version, rid (request id from server logs,
+    # rule id when a decision is implicated), config — all exist...
+    for fid in ("version", "rid", "config"):
+        assert f"id: {fid}" in t, fid
+    # ...version and rid gate triage, so they are required...
+    assert t.count("required: true") >= 3
+    # ...and the form demands redaction: no tokens ever land in issues
+    assert "Redaction" in t and "Tokens" in t

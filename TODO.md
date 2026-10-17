@@ -820,7 +820,7 @@
 - [x] T741 ci: fail-fast off, so all matrix legs report
 - [x] T742 ci: workflow badge in README (existed; now pinned by test)
 - [x] T743 ci: PR template (tests? docs? boxes ticked?)
-- [ ] T744 ci: issue template for bug reports (rid + version + config)
+- [x] T744 ci: issue template for bug reports (rid + version + config)
 - [ ] T745 ci: CODEOWNERS / branch protection notes in CONTRIBUTING
 - [ ] T746 ci: secret scan job (gitleaks or grep-based fallback)
 - [ ] T747 ci: coverage run + artifact (no % floor yet, just the number)
