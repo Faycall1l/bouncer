@@ -344,7 +344,10 @@ def test_ci_coverage_job_posts_number(tmp_path):  # T747
         [sys.executable, "-m", "pytest", "-q", "tests/test_cli.py",
          "--cov=gatekeeper", f"--cov-report=json:{out}"],
         check=False, capture_output=True, text=True, timeout=300,
-        env={**os.environ, "PYTHONPATH": "src"})
+        # COVERAGE_FILE keeps the sqlite data file in tmp — the repo root
+        # must stay clean even when the gate commits everything changed
+        env={**os.environ, "PYTHONPATH": "src",
+             "COVERAGE_FILE": str(tmp_path / ".coverage")})
     assert r.returncode == 0, r.stderr
     totals = json.loads(out.read_text())["totals"]
     assert totals["percent_covered"] >= 0.0

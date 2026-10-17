@@ -20,3 +20,9 @@ audit.csv
 eval/reports/*.json
 eval/reports/*.jsonl
 !eval/reports/README.md
+
+# T747: coverage artifacts are generated, never committed
+.coverage
+.coverage.*
+coverage.json
+htmlcov/
