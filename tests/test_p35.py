@@ -149,3 +149,13 @@ def test_smoke_run_path_documented():  # T659: 50 rows, 1 epoch, documented shap
     assert "--max-samples 50" in src  # train.py docstring documents the path
     readme = _src("notebooks/README.md")
     assert "--max-samples 50" in readme and "TRAIN_OK" in readme
+
+
+def test_eval_after_train_cell():  # T660: CI metrics on the held-out split
+    src = _src("kaggle/train/train.py")
+    assert "test_split.jsonl" in src  # split always written OUT
+    assert "eval_gatekeeper.py" in src and '"--model", OUT' in src
+    cell = src.index("(T660): CI's own metrics")
+    push = src.index("token and best_dev >= DEV_FLOOR")
+    assert cell < push  # eval cell runs before the push gate (T661 hooks here)
+    assert "not reachable — run locally" in src  # honest fallback command

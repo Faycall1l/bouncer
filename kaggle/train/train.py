@@ -238,6 +238,31 @@ print(f"TEST n={len(test_rows)} rule_acc={ok/len(test_rows):.3f} gate@0.85={gate
 log_rec(kind="test", n=len(test_rows), rule_acc=round(ok / len(test_rows), 4),
         gate85=f"{gated_ok}/{gated_n}")  # T654: final number lands in the trail too
 
+# --- eval-after-train (T660): CI's own metrics on the held-out 500 ---
+# Kernels can't see the repo, so the split is always written OUT and
+# eval_gatekeeper.py runs when reachable (add the repo as a kernel input, or
+# run locally): python eval/eval_gatekeeper.py $OUT/test_split.jsonl --model $OUT
+test_path = os.path.join(OUT, "test_split.jsonl")
+with open(test_path, "w") as f:
+    f.writelines(json.dumps(r) + "\n" for r in test_rows)
+_here = os.path.dirname(os.path.abspath(__file__))
+ev_script = next((p for p in [_here] + glob.glob("/kaggle/input/**", recursive=True)
+                  if os.path.exists(os.path.join(p, "eval_gatekeeper.py"))), None)
+if ev_script:
+    env = dict(os.environ)
+    src = os.path.abspath(os.path.join(ev_script, "..", "src"))
+    if os.path.isdir(src):
+        env["PYTHONPATH"] = src + os.pathsep + env.get("PYTHONPATH", "")
+    ev = subprocess.run([sys.executable, os.path.join(ev_script, "eval_gatekeeper.py"),
+                         test_path, "--limit", "500",
+                         "--out", os.path.join(OUT, "eval_test.json"), "--model", OUT],
+                        env=env, check=False)
+    log_rec(kind="eval_gatekeeper", returncode=ev.returncode)
+    print("eval_gatekeeper on test split:", "OK" if ev.returncode == 0 else "FAILED", flush=True)
+else:
+    print("eval_gatekeeper.py not reachable — run locally:", flush=True)
+    print(f"  python eval/eval_gatekeeper.py {test_path} --model {OUT}", flush=True)
+
 # --- HF push (needs HF_TOKEN in Kaggle Secrets) ---
 try:
     from kaggle_secrets import UserSecretsClient
