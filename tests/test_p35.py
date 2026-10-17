@@ -61,3 +61,15 @@ def test_lora_single_block_at_top():  # T652: knobs live in one editable block
         assert key in src
     # optimizer only touches trainable params (full FT no-op, LoRA-correct)
     assert src.count("p.requires_grad") == 2
+
+
+def test_early_stopping_wiring():  # T653: dev carve + patience + best restore
+    src = _src("kaggle/train/train.py")
+    assert "PATIENCE = 1" in src
+    assert "train_rows[:-200], train_rows[-200:]" in src  # dev carved, test held out
+    assert "dev_rule_acc(" in src and "EARLY_STOP" in src
+    loop, calib = src.index("for epoch in range(EPOCHS)"), src.index("model.eval()")
+    dev_call = src.index("dev_rule_acc(os.path.join")
+    assert loop < dev_call < calib  # dev eval inside the loop
+    restore = src.index("ship the best epoch")
+    assert restore < calib  # best weights restored before calibration/save

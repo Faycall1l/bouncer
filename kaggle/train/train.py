@@ -48,6 +48,7 @@ assert set(sample["labels"]) >= {"rule", "harm", "hype", "jailbreak", "escalate"
     "labels missing heads"
 random.seed(7); random.shuffle(rows_raw)
 train_rows, test_rows = rows_raw[:1500], rows_raw[1500:2000]
+train_rows, dev_rows = train_rows[:-200], train_rows[-200:]  # T653: dev from train tail
 
 def to_row(r):
     s, lab = r["state"], r["labels"]
@@ -62,6 +63,17 @@ def to_row(r):
             },
             "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]), "hype": HYPE.index(lab["hype"]),
                          "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}
+
+
+def dev_rule_acc(ckpt, rows_dev):  # T653: early-stopping signal, not the final number
+    import laya
+    agent = laya.Agent(ckpt, device="cuda")
+    ok = 0
+    for r in rows_dev:
+        c = to_row(r)
+        pred = agent.predict(c["state"], c["questions"])["answers"]["rule"]["choice"]
+        ok += pred == r["labels"]["rule"]
+    return ok / len(rows_dev)
 
 from huggingface_hub import snapshot_download
 from laya.agent import _fix_tokenizer_config
@@ -112,6 +124,7 @@ model.to(device).train()
 train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.1, seed=20260922)
 assert train_items and calib_items, "empty train or calibration split"
 EPOCHS, MICRO, ACCUM = 3, 8, 8  # eff batch 64, same as 2xT4 recipe
+PATIENCE = 1  # T653: stop after N epochs without dev rule_acc improvement
 assert len(train_items) >= MICRO, "fewer items than one micro-batch"
 enc_p = [p for n, p in model.named_parameters() if "encoder." in n and p.requires_grad]
 head_p = [p for n, p in model.named_parameters() if "encoder." not in n and p.requires_grad]  # T652: LoRA-safe
@@ -119,6 +132,7 @@ opt = torch.optim.AdamW([{"params": enc_p, "lr": 2.5e-5}, {"params": head_p, "lr
 total = (len(train_items) // (MICRO * ACCUM)) * EPOCHS
 sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, total), eta_min=1e-6)
 scaler = torch.amp.GradScaler("cuda", enabled=True)
+best_state, best_dev, wait = None, 0.0, 0  # T653: early-stopping state
 t0 = time.time()
 
 for epoch in range(EPOCHS):
@@ -146,8 +160,21 @@ for epoch in range(EPOCHS):
             print(f"ep{epoch+1}/{EPOCHS} step{nb} loss={float(loss):.4f}", flush=True)
     save_checkpoint(model, tok, dict(cfg), os.path.join(OUT, "checkpoint_latest"))
     print(f"EPOCH {epoch+1} done in {time.time()-t0:.0f}s avg={eloss/max(1,nb):.4f}", flush=True)
+    dev_acc = dev_rule_acc(os.path.join(OUT, "checkpoint_latest"), dev_rows)
+    print(f"EP{epoch+1} dev_rule_acc={dev_acc:.3f} best={best_dev:.3f}", flush=True)
+    if dev_acc > best_dev:  # T653: remember the best epoch on CPU (VRAM is precious)
+        best_dev, wait = dev_acc, 0
+        best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+    else:
+        wait += 1
+        if wait >= PATIENCE:
+            print(f"EARLY_STOP at epoch {epoch+1}: no dev improvement in "
+                  f"{PATIENCE} epoch(s); best dev={best_dev:.3f}", flush=True)
+            break
 
 # --- calibrate + save ---
+if best_state is not None:  # T653: ship the best epoch, not the last
+    model.load_state_dict(best_state, strict=False)
 model.eval()
 try:
     recs = calibration_records(model, tok, calib_items, device, cfg["max_len"], cfg["head_max_len"], batch_size=16)
