@@ -48,3 +48,6 @@ entry (T669 adds the release-checklist hook).
 6. If the run fails the T661 gate (rule_acc < 0.403): ship nothing, document the
    failure in this file (a failed run is data, not shame), and try the next
    config — the gate exists so a bad model never becomes the default.
+
+Run-cost expectations (T666): see `BENCHMARKS.md` § Run costs — 2×T4 ~4–5h per
+full run, minutes for the smoke path, ~1.8GB per uploaded checkpoint.

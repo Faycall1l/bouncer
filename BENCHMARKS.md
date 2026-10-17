@@ -86,6 +86,21 @@ drop to 0.403 is exactly the hard negatives: regex can't see them.
 Dumb links/caps rules still beat uncalibrated zero-shot (0.305) —
 exactly why the demo shows both side by side, and why calibration + finetune matter.
 
+## Run costs (T666, estimates — not receipts)
+
+| item | cost | notes |
+|---|---|---|
+| full run | **2×T4, ~4–5h** | Kaggle quota is 30h/week → ≤6 full runs/week, less if you also eval |
+| smoke run | 1×GPU, minutes | `--max-samples 50`, 1 epoch (T659) — run it before every full run |
+| checkpoint upload | **~1.8GB per push** | 421M params in fp32 safetensors + tokenizer + config |
+| HF storage growth | ~1.8GB × every kept revision | one repo, revisions accumulate — prune or branch old runs |
+| local dev loop | $0 | everything except the fine-tune runs on CPU with the stub router |
+
+Rough GPU-dollar equivalents if you don't have quota: 2×T4 × 5h ≈ 10 T4-hours;
+at common on-demand rates that's a few dollars per run — cheap enough to
+iterate, expensive enough to run the smoke path first (T659) and the pre-flight
+checks (T656/T657) before burning quota.
+
 ## Honest limits (T109, refreshed T407)
 
 * Template bootstrap: 6 message shapes × 3 rule-sets. Zero-shot numbers measure
