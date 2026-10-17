@@ -838,7 +838,7 @@
 - [x] T757 perf: `watch` throughput lines/sec summary
 - [x] T758 perf: audit write batching (fsync every N lines) behind flag
 - [x] T759 perf: review queue append without full-file read
-- [ ] T760 perf: /stats response time under load (locust-less, threaded)
+- [x] T760 perf: /stats response time under load (locust-less, threaded)
 - [ ] T761 perf: pool `clear()` on memory pressure hook (documented)
 - [ ] T762 perf: lazy gradio import — demo extras only (import-time bench)
 - [ ] T763 perf: CLI `--version` cold-start time measured

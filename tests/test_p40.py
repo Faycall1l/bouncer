@@ -356,3 +356,24 @@ def test_review_append_never_reads_the_file(tmp_path, monkeypatch):  # T759
     row = json.loads(rows[-1])
     assert row["message"] == "p759 new" and row["action"] == "escalate"
     assert row["cause"] == "" and row["t"] >= 1  # T441/T448 shape intact
+
+
+def test_stats_load_bench(tmp_path):  # T760
+    import os
+    src = Path("eval/bench_stats.py").read_text()
+    # the box's constraint: no locust (a mention in prose is fine, an import is not)
+    assert "import locust" not in src and "from locust" not in src
+    out = tmp_path / "stats-load.json"
+    r = _run(str(ROOT / "eval/bench_stats.py"), "--threads", "4", "--requests",
+             "25", "--json", "--out", str(out), cwd=tmp_path,
+             env={**os.environ, "PYTHONPATH": str(ROOT / "src")})
+    assert r.returncode == 0, r.stderr  # nonzero when any request failed
+    rep = json.loads(out.read_text())  # the report file is the contract
+    assert rep["n"] == 100 and rep["ok"] == 100 and rep["errors"] == []
+    assert rep["p50_ms"] >= 0 and rep["rps"] > 0
+    # stdout's last line is the same report (access-log noise comes first)
+    assert json.loads(r.stdout.splitlines()[-1])["n"] == 100
+    # BENCHMARKS carries the measured numbers WITH their honest scope
+    doc = Path("BENCHMARKS.md").read_text()
+    for needle in ("T760", "940 rps", "TestClient", "NOT uvicorn"):
+        assert needle in doc, needle

@@ -111,6 +111,20 @@ that has the checkpoint (`mode: "real"` in `eval/reports/warm.json` is the
 receipt). `--stub` reports `mode: "stub"` and times our bookkeeping only,
 like the pool/breaker benches above.
 
+## /stats under load (T760)
+
+`eval/bench_stats.py --threads 8 --requests 100` (locust-less: T threads,
+each with its own in-process TestClient, R sequential GETs, p50/p95 over
+the whole T×R population) on this machine 2026-10-18: **p50 8.2ms, p95
+11.3ms, max 21ms, ~940 rps, 800/800 ok**.
+
+Honest scope: the number includes starlette+httpx in-process round-trips
+and the app's per-request access-log line — it is NOT the naked handler
+cost and NOT uvicorn-over-socket latency. What it does pin: no errors and
+no lock-contention collapse at 8 threads (strikes/cache/pool/breaker
+tables all hold their locks briefly). Rerun the script for your machine;
+the report JSON is the receipt.
+
 ## Regex baseline (T210, refreshed T637, local, no weights)
 
 `python eval/baseline_regex.py data/examples.jsonl` → **0.403** on 300 rows.
