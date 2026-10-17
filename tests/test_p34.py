@@ -3,15 +3,16 @@ import json
 import os
 import subprocess
 import sys
+import types
 
 sys.path.insert(0, "src")
 
 ENV = {**os.environ, "PATH": "/usr/bin:/bin", "PYTHONPATH": "src"}
 
 
-def _run(*args):
+def _run(*args, env=None):
     return subprocess.run([sys.executable, *args], check=False, capture_output=True,
-                          text=True, env=ENV, timeout=60)
+                          text=True, env=env or ENV, timeout=60)
 
 
 def _server(row):
@@ -183,3 +184,58 @@ def test_validate_warns_on_empty_history(tmp_path):  # T644: advisory, exit 0
     rep = json.loads(r.stdout)
     assert rep["errors"] == 0 and rep["warnings"] == 1
     assert "empty history" in r.stderr
+
+
+def test_quarantine_rows_keeps_reason():  # T645: bad rows carry their errors
+    sys.path.insert(0, "data")
+    from build_dataset import quarantine_rows
+    good_row = {"v": 1, "state": {"message": "hi", "history": [], "rules": {"r": "t"}},
+                "labels": {"rule": "ok"}}
+    bad_row = {"v": 1, "state": {"message": "x", "history": [], "rules": {}},
+               "labels": {}}  # empty rules + missing labels.rule
+    good, bad = quarantine_rows([good_row, bad_row])
+    assert good == [good_row]
+    assert len(bad) == 1 and bad[0]["row"] is bad_row
+    assert "rules" in bad[0]["error"] and "labels.rule" in bad[0]["error"]
+
+
+def test_llm_rows_quarantine_collects(monkeypatch):  # T645: no silent skip
+    def create(**kw):
+        msg = types.SimpleNamespace(content="{{ not json")
+        return types.SimpleNamespace(choices=[types.SimpleNamespace(message=msg)])
+
+    fake = types.SimpleNamespace(
+        OpenAI=lambda **kw: types.SimpleNamespace(
+            chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=create))))
+    monkeypatch.setitem(sys.modules, "openai", fake)
+    sys.path.insert(0, "data")
+    import synth_rules
+    q = []
+    rows = synth_rules.llm_rows(3, quarantine=q)
+    assert rows == []  # every teacher row was corrupt -> nothing shipped silently
+    assert {e["i"] for e in q} == {0, 1, 2}
+    assert all(e["raw"] == "{{ not json" and e["error"] for e in q)
+
+
+def test_synth_quarantine_file_written(tmp_path):  # T645: CLI end-to-end
+    (tmp_path / "openai.py").write_text(
+        "from types import SimpleNamespace\n"
+        "class OpenAI:\n"
+        "    def __init__(self, **kw):\n"
+        "        msg = SimpleNamespace(content=\"not valid json {\")\n"
+        "        self.chat = SimpleNamespace(completions=SimpleNamespace(\n"
+        "            create=lambda **kw: SimpleNamespace(\n"
+        "                choices=[SimpleNamespace(message=msg)])))\n")
+    env = {**ENV, "PYTHONPATH": f"{tmp_path}:src",
+           "OPENAI_API_KEY": "x", "OPENAI_BASE_URL": "http://127.0.0.1:0"}
+    out = str(tmp_path / "q.jsonl")
+    r = _run("data/synth_rules.py", "--n", "3", "--out", out, env=env)
+    assert r.returncode == 0, r.stderr
+    assert "quarantined" in r.stderr
+    with open(tmp_path / "q.quarantine.jsonl") as f:
+        q = [json.loads(l) for l in f]
+    assert len(q) == 2  # n=3 -> 1 template row + 2 corrupt teacher rows
+    assert all("raw" in e and "error" in e for e in q)
+    with open(out) as f:
+        rows = [json.loads(l) for l in f]
+    assert len(rows) == 1  # the valid template row still ships

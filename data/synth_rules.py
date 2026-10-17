@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import random
+import sys
 
 RULE_POOLS = [
     {"no-spam": "no ads, links, self-promo, crypto giveaways",
@@ -41,7 +42,7 @@ HARD_NEGATIVES = [
     ("PSA: my tournament starts in 10 min, stream link in bio", "no-spam", "suspicious", "hyped", 0, 0),
 ]
 
-PROMPT = """You are a chat-mod teacher. Given RULES, write a message + labels as JSON: {message, rule, harm(safe|suspicious|harmful), hype(dead|chill|hyped), jailbreak(0/1), escalate(0/1)}.
+PROMPT = """You are a chat-mod teacher. Given RULES, write a message + labels as JSON: {{message, rule, harm(safe|suspicious|harmful), hype(dead|chill|hyped), jailbreak(0/1), escalate(0/1)}}.
 RULES: {rules}. Vary K=3-6 rules, hard negatives, edge cases."""
 
 HIST_USERS = ["nova", "pixel_witch", "draven", "mossy", "kite"]  # T635
@@ -88,22 +89,32 @@ def hard_rows(n):
     return rows
 
 
-def llm_rows(n, model="qwen3-4b"):
+def llm_rows(n, model="qwen3-4b", quarantine=None):
+    """Teacher rows. Failures go to `quarantine` (list) with raw output +
+    error — never a silent skip (T645)."""
     from openai import OpenAI
     c = OpenAI(base_url=os.environ.get("OPENAI_BASE_URL"), api_key=os.environ.get("OPENAI_API_KEY"))
     rows = []
-    for _ in range(n):
+    for i in range(n):
         rules = random.choice(RULE_POOLS)
-        r = c.chat.completions.create(model=model, temperature=0.9,
-            messages=[{"role": "user", "content": PROMPT.format(rules=rules)}])
+        raw = None
         try:
-            d = json.loads(r.choices[0].message.content.strip().strip("`"))
+            r = c.chat.completions.create(model=model, temperature=0.9,
+                messages=[{"role": "user", "content": PROMPT.format(rules=rules)}])
+            raw = r.choices[0].message.content
+            d = json.loads(raw.strip().strip("`"))
             d["rules"] = rules
             rows.append({"v": 1, "state": {"message": d["message"], "history": synth_history(), "rules": rules},
                          "labels": {"rule": d["rule"] if d["rule"] in rules or d["rule"]=="ok" else "ok",
                                     "harm": d["harm"], "hype": d["hype"],
                                     "jailbreak": bool(d["jailbreak"]), "escalate": bool(d["escalate"])}})
-        except Exception:  # noqa: BLE001, S112 — best-effort teacher rows, skip failures
+        except Exception as e:  # noqa: BLE001 — quarantined, not dropped (T645)
+            if quarantine is not None:
+                entry = {"stage": "llm_rows", "i": i, "rules": rules,
+                         "error": f"{type(e).__name__}: {e}"}
+                if raw is not None:
+                    entry["raw"] = str(raw)[:500]
+                quarantine.append(entry)
             continue
     return rows
 
@@ -115,10 +126,22 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=None)  # T382: reproducible bootstraps
     ap.add_argument("--report", action="store_true",  # T574: distribution, no write
                     help="print per-label distribution instead of writing rows")
+    ap.add_argument("--quarantine", default=None,  # T645: corrupt teacher rows
+                    help="quarantine file (default: <out>.quarantine.jsonl)")
     a = ap.parse_args()
     if a.seed is not None:
         random.seed(a.seed)
-    rows = template_rows(a.n) if a.template_only or not os.environ.get("OPENAI_API_KEY") else template_rows(a.n//3) + llm_rows(2*a.n//3)
+    q = []  # T645: llm_rows failures land here instead of vanishing
+    if a.template_only or not os.environ.get("OPENAI_API_KEY"):
+        rows = template_rows(a.n)
+    else:
+        rows = template_rows(a.n//3) + llm_rows(2*a.n//3, quarantine=q)
+    if q:
+        qpath = a.quarantine or a.out.removesuffix(".jsonl") + ".quarantine.jsonl"
+        with open(qpath, "w") as f:
+            f.writelines(json.dumps(e) + "\n" for e in q)
+        print(f"synth_rules: {len(q)} corrupt teacher row(s) quarantined -> {qpath}",
+              file=sys.stderr)
     random.shuffle(rows)
     if a.report:  # T574: balance check without generating a dataset file
         from collections import Counter

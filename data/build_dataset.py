@@ -107,6 +107,22 @@ def dedupe_rows(rows: list) -> tuple:
     return kept, len(rows) - len(kept)
 
 
+def quarantine_rows(rows: list) -> tuple:
+    """T645: split rows into (good, quarantined-with-reason) — never a silent skip.
+
+    A row that fails schema validation is kept whole with its errors attached,
+    so nothing disappears from the build without a trace.
+    """
+    good, bad = [], []
+    for i, r in enumerate(rows):
+        errs = check_row(r, i)
+        if errs:
+            bad.append({"error": "; ".join(errs), "row": r})
+        else:
+            good.append(r)
+    return good, bad
+
+
 def balance_report(splits: dict, min_share: float) -> dict:
     """Per-split label distribution + which rule labels fall under min_share."""
     below = []
@@ -153,10 +169,11 @@ def main(argv=None) -> int:
 
     if a.seed is not None:
         random.seed(a.seed)
+    teacher_bad = []  # T645: llm_rows failures quarantined, never dropped
     if a.template_only or not os.environ.get("OPENAI_API_KEY"):
         rows = template_rows(a.n)
     else:
-        rows = template_rows(a.n // 3) + llm_rows(2 * a.n // 3)
+        rows = template_rows(a.n // 3) + llm_rows(2 * a.n // 3, quarantine=teacher_bad)
     hard = a.hard_n if a.hard_n is not None else a.n // 10  # T636
     if hard > 0:
         rows += hard_rows(hard)
@@ -166,22 +183,29 @@ def main(argv=None) -> int:
         rows, dropped = dedupe_rows(rows)
         deduped = {"kept": len(rows), "dropped": dropped}
 
-    # validate in memory BEFORE writing anything (T645: fail loud, write nothing)
-    errs = []
-    for i, r in enumerate(rows):
-        errs.extend(check_row(r, i))
-    if errs:
-        print(f"build_dataset: {len(errs)} invalid row(s), nothing written",
-              file=sys.stderr)
-        for e in errs[:5]:
-            print(f"  {e}", file=sys.stderr)
-        return 1
+    # T645: corrupted rows are quarantined to a file — loud, never a silent skip
+    good, bad = quarantine_rows(rows)
+    quarantined = teacher_bad + bad
+    if quarantined:
+        qpath = a.out.removesuffix(".jsonl") + ".quarantine.jsonl"
+        with open(qpath, "w") as f:
+            f.writelines(json.dumps(e) + "\n" for e in quarantined)
+        print(f"build_dataset: {len(quarantined)} corrupted row(s) quarantined "
+              f"-> {qpath}", file=sys.stderr)
+        for e in quarantined[:5]:
+            print(f"  {e.get('error')}", file=sys.stderr)
+        if not good:
+            print("build_dataset: no valid rows left, nothing written", file=sys.stderr)
+            return 1
+        rows = good
 
     if a.report:  # T633: balance check without generating any dataset file
         splits = split_rows(rows, tuple(a.ratios), a.seed or 0, stratify=a.stratify)
         rep = {"n": len(rows),
                "servers": len({server_key(r) for r in rows}),
                **balance_report(splits, a.min_share)}
+        if quarantined:
+            rep["quarantined"] = len(quarantined)
         if deduped is not None:
             rep["deduped"] = deduped
         print(json.dumps(rep, indent=2))
@@ -196,6 +220,8 @@ def main(argv=None) -> int:
 
     report = {"n": len(rows), "out": a.out, "errors": 0,
               "servers": len({server_key(r) for r in rows})}
+    if quarantined:
+        report["quarantined"] = len(quarantined)
     if deduped is not None:
         report["deduped"] = deduped
     if not a.no_split:

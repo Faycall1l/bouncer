@@ -711,7 +711,7 @@
 - [x] T642 data: rule-set vocabulary extractor (unseen-K measurement)
 - [x] T643 data: stratified split option (label-preserving)
 - [x] T644 data: `validate_data` warns on empty history (T635 fix check)
-- [ ] T645 data: corrupted-row quarantine file instead of silent skip
+- [x] T645 data: corrupted-row quarantine file instead of silent skip
 - [ ] T646 data: seed logged in report for full reproducibility
 - [ ] T647 data: 12k build script runs `--template-only` end-to-end in test
 - [ ] T648 data: class-weight hints emitted for the finetune notebook
