@@ -81,3 +81,20 @@ def test_ci_wheel_artifact_on_tags():  # T735
     assert "name: wheel" in text and "dist/*.whl" in text
     assert "dist/*.tar.gz" in text
     assert "path: dist/* }" not in text, "undifferentiated artifact glob"
+
+
+def test_ci_release_attaches_wheel_and_sbom():  # T736
+    import re
+    text = (WORKFLOWS / "publish.yml").read_text()
+    m = re.search(r"^  release:(.*?)(?=^  \w|\Z)", text, re.MULTILINE | re.DOTALL)
+    assert m, "no release job"
+    job = m.group(1)
+    # it runs after the build and attaches exactly the box's two files
+    assert "needs: sdist" in job
+    assert "gh release create" in job
+    assert "dist/*.whl" in job and "dist/sbom.json" in job
+    # the write is explicitly permitted, and only for it
+    assert "contents: write" in job
+    # re-runs stay idempotent: an existing release gets --clobber uploads
+    assert "--clobber" in job
+    assert "GH_TOKEN" in job

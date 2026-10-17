@@ -21,3 +21,21 @@ jobs:
         run: python scripts/sbom.py --out dist/sbom.json
       - uses: actions/upload-artifact@v4
         with: { name: sbom, path: dist/sbom.json }
+  release:  # T736: attach wheel + SBOM to the GitHub Release for the tag
+    needs: sdist
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # creating a release needs it; nothing else does
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: wheel, path: dist }
+      - uses: actions/download-artifact@v4
+        with: { name: sbom, path: dist }
+      # create with generated notes; a re-run uploads --clobber instead
+      # of failing on "release already exists"
+      - run: |
+          gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag \
+            dist/*.whl dist/sbom.json \
+          || gh release upload "$GITHUB_REF_NAME" --clobber \
+            dist/*.whl dist/sbom.json
+        env: { GH_TOKEN: "${{ github.token }}" }
