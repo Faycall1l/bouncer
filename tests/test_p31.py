@@ -137,3 +137,14 @@ def test_i18n_rows_validate_clean():  # T586: shipped fixtures stay schema-clean
     with open("data/examples_i18n.jsonl") as f:
         langs = [json.loads(l)["state"]["rules"] for l in f]
     assert len(langs) == 12  # 4 each es/fr/ar (T504)
+
+
+def test_i18n_report_ci_safe(tmp_path):  # T587: no weights, no laya, writes report
+    out = str(tmp_path / "i18n.json")
+    r = _run("eval/eval_i18n.py", "--out", out, "--json")
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(r.stdout)
+    assert rep["errors"] == [] and rep["n"] == 12
+    assert set(rep["per_lang"]) == {"es", "fr", "ar"}  # 3 languages wired
+    with open(out) as f:
+        assert json.load(f) == rep  # report file == stdout
