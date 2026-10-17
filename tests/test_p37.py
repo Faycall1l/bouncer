@@ -998,3 +998,20 @@ def test_discord_surfaces_share_the_command_table():  # T705: wired for real
     assert "command_reply(command, rules)" in src
     # no hardcoded "!bouncer ..." message checks left in the handler
     assert '"!bouncer rules"' not in src and '"!bouncer stats"' not in src
+
+
+def test_twitch_mentions_and_whispers_documented():  # T706
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters import twitch_irc as tw
+    # mentions are ordinary PRIVMSG text — the parser hands them to
+    # moderation unchanged (the @-prefix is just text to the rules pass)
+    assert tw._parse_privmsg(":u!u@h PRIVMSG #c :@bouncer buy followers now") \
+        == ("u", "@bouncer buy followers now")
+    # whispers arrive as WHISPER lines and are dropped pre-moderation:
+    # a flag-only print bot can't act on a private message (T706 scope)
+    assert tw._parse_privmsg(":u!u@h WHISPER #c :secret offer") is None
+    # the docs own the decision — docstring and README both say so
+    doc = (ADAPTERS / "twitch_irc.py").read_text()
+    assert "Whispers (T706)" in doc and "Mentions (T706)" in doc
+    readme = (ADAPTERS / "README.md").read_text()
+    assert "whispers" in readme.lower() and "T706" in readme

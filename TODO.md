@@ -778,7 +778,7 @@
 - [x] T703 adp: adapter matrix table updated in adapters README
 - [x] T704 adp: webhook signature verification helper (hmac compare)
 - [x] T705 adp: discord prefix + slash-command parity check test
-- [ ] T706 adp: twitch mention/whisper handling documented
+- [x] T706 adp: twitch mention/whisper handling documented
 - [ ] T707 adp: `forward_if_interesting` fires on breaker-open too
 - [ ] T708 adp: adapter integration test per platform (stubbed transports)
 - [ ] T709 adp: config file support (`bouncer.toml`) for adapters

@@ -1,6 +1,19 @@
 """Twitch IRC stub, stdlib only (T076-T077). Read-only: flags, never bans.
 Usage: TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc
 Print-only by design, so BOUNCER_DRY_RUN (T697) is a no-op here.
+
+Mentions (T706): "@bouncer ..." arrives as ordinary PRIVMSG text and is
+moderated like any other message — the @-prefix is just text to the rules
+pass, so rules match inside it normally. Twitch never echoes your own
+messages back to your own connection, so the bot cannot moderate itself:
+no self-loop risk, no own-message filter needed.
+
+Whispers (T706): private messages arrive as `WHISPER` IRC lines, which
+_parse_privmsg deliberately ignores (it requires PRIVMSG). A flag-only,
+print-only bot has no useful whisper action anyway: it cannot delete
+another user's whisper and it never sends messages. Documented scope
+limitation — if whisper traffic needs eyes, route it through your own
+receiver and forward_if_interesting() from webhooks.py.
 """
 from __future__ import annotations
 
@@ -15,7 +28,12 @@ def redact(s: str) -> str:  # T077+T300+T700: delegate to the shared pass
 
 
 def _parse_privmsg(line: str) -> tuple | None:
-    """T299: split an IRC line into (user, text); None for non-chat lines."""
+    """T299: split an IRC line into (user, text); None for non-chat lines.
+
+    T706: WHISPER lines (private messages) land here as None too — a
+    flag-only print bot can't act on a whisper, so they're documented
+    scope, not silently-lost work. Mentions are plain PRIVMSG text.
+    """
     if "PRIVMSG" not in line:
         return None
     try:

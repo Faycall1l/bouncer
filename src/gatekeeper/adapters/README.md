@@ -69,10 +69,15 @@ raises `E_SLACK` instead of letting an unsigned event through.
 
 ## Notes (T408)
 
-* Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision
-  counts. Deletes fall back to ⚠️ on missing perms; empty messages ignored.
+* Discord: `!bouncer <cmd>` and the `/bouncer` slash command answer from one
+  table (T705): `rules`, `stats`, `help` (unknown subcommands fall back to
+  help). Deletes fall back to ⚠️ on missing perms; empty messages ignored.
 * Twitch: reconnects 3× with backoff, then exits 1. All console output passes
   `redact()` — the T077 helper now delegates to the shared T700 pass.
+  Mentions are ordinary PRIVMSG text and get moderated like any message;
+  whispers (`WHISPER` lines) are out of scope (T706) — a flag-only bot can't
+  act on them, and the parser drops them before moderation. Need eyes on
+  whispers? Route them through your own receiver + `forward_if_interesting()`.
 * Webhooks: `forward()` sends `User-Agent: bouncer/<ver>` + `X-Bouncer-Event`;
   failures raise `E_WEBHOOK`. Slack ignores `bot_message` subtypes
   (explicit `ignored` shape) and rejects malformed bodies with `E_SLACK`.
