@@ -12,4 +12,25 @@ Splits: 10k train / 1k dev / 1k test, server-disjoint (test rule-sets unseen). T
 Why classical fails: fixed 77-way classifier memorizes labels; here criteria text + K change per row. Must read rules, not memorize ids.
 
 Build: `python data/synth_rules.py --n 12000 --out data/gatekeeper-12k.jsonl`
+Distribution check (no write): `python data/synth_rules.py --n 2000 --template-only --report` (T574)
 HF push: `huggingface-cli upload YOUR_HF/gatekeeper-chatmix-12k data/gatekeeper-12k.jsonl`
+
+## examples_i18n.jsonl (T504+T579)
+
+12 wiring rows for non-English pipelines — 4 each in `es`, `fr`, `ar` (mixed
+latin + arabic scripts). Same schema as `examples.jsonl` (no extra fields —
+`eval_i18n.py` derives the language from the rule ids and asserts
+`detect_script()` agrees with it, T498):
+
+```json
+{"state": {"message": "GG buena partida a todos", "history": [],
+           "rules": {"sin-spam": "sin anuncios…", "se-amable": "sin insultos…"}},
+ "labels": {"rule": "ok", "harm": "safe", "hype": "chill",
+            "jailbreak": false, "escalate": false}}
+```
+
+Purpose: pin `lang` plumbing end-to-end (detect_script → reason → preset-lang
+autofill), **not** quality — base-model accuracy in these languages is unproven
+and stated in `BENCHMARKS.md#honest-limits`. Validate with
+`python eval/validate_data.py data/examples_i18n.jsonl`, wire-check with
+`python eval/eval_i18n.py` (report → `eval/reports/i18n.json`).
