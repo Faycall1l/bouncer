@@ -13,7 +13,6 @@ from __future__ import annotations
 import base64
 import json
 import os
-import sys
 import urllib.parse
 import urllib.request
 
@@ -84,10 +83,8 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
 
 
 def run():
-    import time
-
     from gatekeeper import get_preset
-    from gatekeeper.adapters.common import require_env
+    from gatekeeper.adapters.common import require_env, run_loop
     email = require_env("ZULIP_EMAIL")  # T691: named failure, not a crash
     key = require_env("ZULIP_API_KEY")
     site = require_env("ZULIP_SITE").rstrip("/")
@@ -97,20 +94,16 @@ def run():
     q = api(email, key, site, "POST", "/register",
             event_types=json.dumps(["message"]),
             all_public_streams="true").get("queue_id")
-    while True:  # long-poll; SIGTERM handling is T702's job
-        try:
-            page = api(email, key, site, "GET", "/events", queue_id=q,
-                       timeout=25)
-        except OSError as e:
-            print("zulip error:", e, file=sys.stderr, flush=True)
-            time.sleep(5)
-            continue
-        for ev in page.get("events", []):
-            try:
-                handle_event(ev, rules, own_id=own_id, creds=(email, key, site),
-                             can_delete=can_delete)
-            except Exception as e:  # noqa: BLE001 — one bad event, one line
-                print("event error:", e, file=sys.stderr, flush=True)
+
+    def fetch():
+        page = api(email, key, site, "GET", "/events", queue_id=q, timeout=25)
+        return page.get("events", [])
+
+    def handle(ev):
+        handle_event(ev, rules, own_id=own_id, creds=(email, key, site),
+                     can_delete=can_delete)
+
+    run_loop(fetch, handle, name="zulip")  # T696: the shared poll loop
 
 
 if __name__ == "__main__":

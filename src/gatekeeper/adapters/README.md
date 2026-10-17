@@ -16,6 +16,12 @@ Missing tokens fail at startup via the shared `require_env()` guard
 (`gatekeeper.adapters.common`, `E_ADAPTER`) — the error names the variable
 instead of a raw `KeyError`; blank counts as missing (T691).
 
+The shared SDK (`common.py`) is `require_env()` + `run_loop()` (T696): every
+sync poller (telegram, matrix, zulip) runs the same fetch/handle loop —
+fetch failures log and back off 5s, a bad event costs one log line, Ctrl-C
+always stops the bot. Mattermost's websocket loop is the async exception;
+its per-event guard matches `run_loop()`'s.
+
 ## Notes (T408)
 
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision

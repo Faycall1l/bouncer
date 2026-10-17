@@ -400,3 +400,61 @@ def test_zulip_adapter_is_stdlib_only_and_guarded():  # T695: no extra, T691
     assert r.returncode != 0
     assert "E_ADAPTER" in r.stderr and "ZULIP_EMAIL" in r.stderr
     assert "KeyError" not in r.stderr
+
+
+class _StopLoop(BaseException):
+    """Escape hatch for run_loop tests — deliberately not an Exception."""
+
+
+def test_run_loop_is_the_shared_poll_loop(capsys):  # T696
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import run_loop
+    calls = {"fetches": 0, "handled": []}
+
+    def fetch():
+        calls["fetches"] += 1
+        if calls["fetches"] == 1:
+            raise OSError("net down")
+        if calls["fetches"] == 2:
+            return [{"x": 1}, {"x": 2}, {"x": 3}]
+        raise _StopLoop
+
+    def handle(ev):
+        if ev["x"] == 2:
+            raise ValueError("bad event")
+        calls["handled"].append(ev["x"])
+
+    sleeps = []
+    try:
+        run_loop(fetch, handle, name="testadp", sleep=sleeps.append)
+    except _StopLoop:
+        pass
+    # fetch failure -> one 5s backoff; bad event -> one line; rest still ran
+    assert sleeps == [5.0] and calls["handled"] == [1, 3]
+    err = capsys.readouterr().err
+    assert "testadp error: net down" in err
+    assert "testadp event error: bad event" in err
+
+
+def test_run_loop_lets_ctrl_c_through():  # T696: KeyboardInterrupt is sacred
+    sys.path.insert(0, "src")
+    import pytest
+
+    from gatekeeper.adapters.common import run_loop
+
+    def fetch():
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        run_loop(fetch, lambda ev: None, name="testadp", sleep=lambda s: None)
+
+
+def test_sync_pollers_use_the_shared_loop():  # T696: wired, not aspirational
+    for name in ("telegram_bot", "matrix_bot", "zulip_bot"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "run_loop(fetch, handle" in src, name
+        assert "import require_env, run_loop" in src, name
+        assert "while True" not in src, name  # the loop lives in common.py
+    # mattermost is the documented async exception (websocket, not a poller)
+    mm = (ADAPTERS / "mattermost.py").read_text()
+    assert "while True" not in mm and "async for" in mm

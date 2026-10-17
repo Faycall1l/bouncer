@@ -73,45 +73,53 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
     return res
 
 
-def dispatch_page(page: dict, rules: dict, **kw) -> list:
-    """T693: one sync page -> per-event results; a bad event costs one log
-    line, never the loop."""
-    results = []
+def _flatten_page(page: dict) -> list:
+    """T696: sync page -> flat event list, room_id stamped from the envelope."""
+    events = []
     joined = (page.get("rooms") or {}).get("join") or {}
     for room_id, room in joined.items():
         for ev in (room.get("timeline") or {}).get("events", []):
             ev = dict(ev)
             ev.setdefault("room_id", room_id)
-            try:
-                results.append(handle_event(ev, rules, **kw))
-            except Exception as e:  # noqa: BLE001
-                print("event error:", e, file=sys.stderr, flush=True)
-                results.append({"action": "error", "error": str(e)})
+            events.append(ev)
+    return events
+
+
+def dispatch_page(page: dict, rules: dict, **kw) -> list:
+    """T693: one sync page -> per-event results; a bad event costs one log
+    line, never the loop."""
+    results = []
+    for ev in _flatten_page(page):
+        try:
+            results.append(handle_event(ev, rules, **kw))
+        except Exception as e:  # noqa: BLE001
+            print("event error:", e, file=sys.stderr, flush=True)
+            results.append({"action": "error", "error": str(e)})
     return results
 
 
 def run():
-    import time
-
     from gatekeeper import get_preset
-    from gatekeeper.adapters.common import require_env
+    from gatekeeper.adapters.common import require_env, run_loop
     token = require_env("MATRIX_TOKEN")  # T691: named failure, not a crash
     homeserver = require_env("MATRIX_HOMESERVER").rstrip("/")
     rules = get_preset("gaming")
     can_redact = os.environ.get("BOUNCER_MX_REDACT") == "1"  # T693: opt-in
     since = None
-    while True:  # long-poll sync; SIGTERM handling is T702's job
-        try:
-            path = "/sync?timeout=50000&set_presence=offline"
-            page = api(token, homeserver, "GET",
-                       path + (f"&since={since}" if since else ""))
-        except OSError as e:
-            print("matrix error:", e, file=sys.stderr, flush=True)
-            time.sleep(5)
-            continue
+
+    def fetch():
+        nonlocal since
+        path = "/sync?timeout=50000&set_presence=offline"
+        page = api(token, homeserver, "GET",
+                   path + (f"&since={since}" if since else ""))
         since = page.get("next_batch") or since
-        dispatch_page(page, rules, token=token, homeserver=homeserver,
-                      can_redact=can_redact)
+        return _flatten_page(page)
+
+    def handle(ev):
+        handle_event(ev, rules, token=token, homeserver=homeserver,
+                     can_redact=can_redact)
+
+    run_loop(fetch, handle, name="matrix")  # T696: the shared poll loop
 
 
 if __name__ == "__main__":

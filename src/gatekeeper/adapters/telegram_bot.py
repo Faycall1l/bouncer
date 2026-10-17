@@ -11,7 +11,6 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 import json
 import os
-import sys
 import urllib.request
 
 API_URL = "https://api.telegram.org/bot{token}/{method}"
@@ -73,28 +72,26 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
 
 
 def run():
-    import time
-
     from gatekeeper import get_preset
-    from gatekeeper.adapters.common import require_env
+    from gatekeeper.adapters.common import require_env, run_loop
     token = require_env("TELEGRAM_TOKEN")  # T691: named failure, not a crash
     rules = get_preset("gaming")
     can_delete = os.environ.get("BOUNCER_TG_DELETE") == "1"  # T692: opt-in
     offset = 0
-    while True:  # long-poll loop; SIGTERM handling is T702's job
-        try:
-            page = api(token, "getUpdates", offset=offset, timeout=50,
-                       allowed_updates=["message"])
-        except OSError as e:
-            print("telegram error:", e, file=sys.stderr, flush=True)
-            time.sleep(5)
-            continue
-        for upd in page.get("result", []):
-            offset = upd["update_id"] + 1  # ack before handling: never re-read
-            try:
-                handle_update(upd, rules, token=token, can_delete=can_delete)
-            except Exception as e:  # noqa: BLE001 — one bad update, one log line
-                print("update error:", e, file=sys.stderr, flush=True)
+
+    def fetch():  # ack the whole page up front: at-most-once, never re-read
+        nonlocal offset
+        page = api(token, "getUpdates", offset=offset, timeout=50,
+                   allowed_updates=["message"])
+        result = page.get("result", [])
+        if result:
+            offset = result[-1]["update_id"] + 1
+        return result
+
+    def handle(upd):
+        handle_update(upd, rules, token=token, can_delete=can_delete)
+
+    run_loop(fetch, handle, name="telegram")  # T696: the shared poll loop
 
 
 if __name__ == "__main__":
