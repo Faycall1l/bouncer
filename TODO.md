@@ -661,7 +661,7 @@
 - [x] T596 docs: api.md /ready + timeout_s + model fields
 - [x] T597 docs: architecture pools + breaker diagram
 - [x] T598 docs: SECURITY key-file + rotation notes
-- [ ] T599 docs: glossary (pool, breaker, half-open, snapshot, multitenancy)
+- [x] T599 docs: glossary (pool, breaker, half-open, snapshot, multitenancy)
 - [ ] T600 docs: FAQ (restore, breaker tripped, which model?)
 - [ ] T601 docs: CHANGELOG 0.3.0 entry drafted
 - [ ] T602 docs: thresholds guide breaker knobs
