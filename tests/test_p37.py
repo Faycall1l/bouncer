@@ -323,3 +323,80 @@ def test_mattermost_dep_is_optional_and_fail_fast():  # T694: named extra
     assert "E_ADAPTER" in r.stderr and "pip install -e .[mattermost]" in r.stderr
     assert r.stderr.strip().splitlines()[-1].startswith(
         "gatekeeper.adapters.common.AdapterError")  # our error, last word
+
+
+def _zl_message(text="hello stream", mtype="stream", sender=42, mid=11):
+    return {"type": "message",
+            "message": {"id": mid, "type": mtype, "sender_id": sender,
+                        "content": text}}
+
+
+def test_zulip_stream_moderated_own_skipped(monkeypatch):  # T695
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "_router", _StubRouter())
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.zulip_bot import handle_event
+    rules = get_preset("gaming")
+    res = handle_event(_zl_message("just chatting"), rules)
+    assert res["action"] in ("allow", "flag", "delete", "escalate")
+    assert res["deleted"] is False
+    # the bot's own messages are never re-moderated (no feedback loops)
+    assert handle_event(_zl_message("active: ok", sender=1), rules,
+                        own_id=1) == {"action": "ignored",
+                                      "reason": "own-message"}
+    assert handle_event({"type": "heartbeat"}, rules) == \
+        {"action": "ignored", "reason": "not-message"}
+    assert handle_event(_zl_message("   "), rules)["reason"] == "no-text"
+
+
+def test_zulip_pms_are_commands_only(monkeypatch):  # T695: mention parity
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "_router", _StubRouter())
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.zulip_bot import handle_event
+    rules = get_preset("gaming")
+    calls = []
+    creds = ("bot@x", "key", "https://zulip")
+    # "bouncer rules" as a PM or as a stream mention answers in PM
+    for text, mtype in (("bouncer rules", "private"),
+                        ("/bouncer rules", "stream")):
+        res = handle_event(_zl_message(text, mtype), rules, creds=creds,
+                           api_fn=lambda *a, **k: calls.append((a, k)))
+        assert res["action"] == "command" and res["reply"].startswith("active:")
+    assert calls[0][0][3:5] == ("POST", "/messages")
+    assert calls[0][1]["to"] == 42
+    # a chat PM is ignored, not moderated
+    assert handle_event(_zl_message("hey bot", "private"), rules, creds=creds) == \
+        {"action": "ignored", "reason": "private-needs-command"}
+
+
+def test_zulip_delete_is_opt_in(monkeypatch):  # T695: flag-only default
+    sys.path.insert(0, "src")
+    import gatekeeper
+    from gatekeeper.adapters import zulip_bot as zl
+    monkeypatch.setattr(gatekeeper, "moderate",
+                        lambda text, r: {"action": "delete", "rule": "sin-spam",
+                                         "confidence": 0.99})
+    rules = {"sin-spam": "t"}
+    calls = []
+    creds = ("bot@x", "key", "https://zulip")
+    res = zl.handle_event(_zl_message("buy followers", mid=77), rules)
+    assert res["deleted"] is False and calls == []
+    res = zl.handle_event(_zl_message("buy followers", mid=77), rules,
+                          creds=creds, can_delete=True,
+                          api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["deleted"] is True
+    assert calls[0][0][3:5] == ("DELETE", "/messages/77")
+
+
+def test_zulip_adapter_is_stdlib_only_and_guarded():  # T695: no extra, T691
+    src = (ADAPTERS / "zulip_bot.py").read_text()
+    for banned in ("import zulip", "import aiohttp", "import httpx",
+                   "import requests"):
+        assert banned not in src
+    r = _run_py("-m", "gatekeeper.adapters.zulip_bot")
+    assert r.returncode != 0
+    assert "E_ADAPTER" in r.stderr and "ZULIP_EMAIL" in r.stderr
+    assert "KeyError" not in r.stderr

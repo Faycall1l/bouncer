@@ -767,7 +767,7 @@
 - [x] T692 adp: telegram adapter (long-poll, / commands, flag-only default)
 - [x] T693 adp: matrix/melement adapter (room timeline → moderate)
 - [x] T694 adp: mattermost adapter (websocket + slash command)
-- [ ] T695 adp: zulip adapter (stream messages, bot mentions)
+- [x] T695 adp: zulip adapter (stream messages, bot mentions)
 - [ ] T696 adp: shared adapter SDK — one `run_loop()` for all pollers
 - [ ] T697 adp: `BOUNCER_DRY_RUN=1` prints actions, never posts
 - [ ] T698 adp: per-adapter rules source (preset name or file path)
