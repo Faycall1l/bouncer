@@ -20,6 +20,7 @@ SKIPPED — a missing number never counts as a green light.
 """
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -41,9 +42,13 @@ def _get(report: dict, *keys):
 
 
 def _num(report: dict, *keys):
-    """Nested numeric lookup; None when absent or not a number (=> SKIP)."""
+    """Nested numeric lookup; None when absent, non-numeric, or non-finite
+    (=> SKIP/FAIL downstream — NaN and inf from a corrupt report must never
+    satisfy a `>=` threshold; T687)."""
     v = _get(report, *keys)
     if v is MISSING or not isinstance(v, (int, float)) or isinstance(v, bool):
+        return None
+    if not math.isfinite(v):
         return None
     return v
 
@@ -75,7 +80,9 @@ def collect(report: dict, args) -> list:
     acc = _num(report, "rule_acc")
     if acc is None:
         acc = _num(report, "acc")  # T678: normalized baseline report key
-    add("report_rule_acc", "present", acc, acc is not None)
+    # T687: an accuracy outside [0,1] is a corrupt report, not a green light.
+    add("report_rule_acc", "present, 0..1", acc,
+        acc is not None and 0.0 <= acc <= 1.0)
 
     # --- T672-T676 register their threshold gates here ---
     if acc is None:  # T672: must beat the regex bar (acc covers baselines too)

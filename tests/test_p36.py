@@ -420,3 +420,35 @@ def test_latest_report_pointer(tmp_path):  # T686
     # and eval_gatekeeper's __main__ actually calls it after writing a report
     src = Path("eval/eval_gatekeeper.py").read_text()
     assert "write_latest(report, a.out)" in src
+
+
+def test_gate_fails_loudly_on_bad_reports(tmp_path):  # T687: the battery
+    bad = {
+        "empty": {},  # nothing to gate on
+        "n_only": {"n": 300},  # missing rule_acc
+        "acc_only": {"rule_acc": 0.9},  # missing n
+        "n_is_string": {"n": "300", "rule_acc": 0.9},  # wrong types
+        "acc_is_bool": {"n": 300, "rule_acc": True},  # bool is not a number
+        "acc_is_nan": {"n": 300, "rule_acc": float("nan")},  # never a pass
+        "acc_is_inf": {"n": 300, "rule_acc": float("inf")},  # never a pass
+        "acc_out_of_range": {"n": 300, "rule_acc": 4.2},  # >1 accuracy is fiction
+        "n_negative": {"n": -5, "rule_acc": 0.9},  # nonsense row count
+        "ece_out_of_range": {"n": 300, "rule_acc": 0.9, "ece": 7.5},
+    }
+    for name, report in bad.items():
+        path = _report(tmp_path, report, name=f"{name}.json")
+        r = _run_gate(path, "--json")
+        assert r.returncode == 1, f"{name}: bad report must fail, got 0"
+        assert "FAIL" in r.stderr, f"{name}: failures must be loud on stderr"
+        checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+        assert any(c["ok"] is False for c in checks.values()), name
+    # NaN/inf in a *metric* gate: never satisfied by the comparison, so the
+    # gate skips (ok=None) — and a skip never turns a failing report green.
+    path = _report(tmp_path, {"n": 300, "rule_acc": 0.9, "ece": float("nan")},
+                   name="nan-metric.json")
+    r = _run_gate(path, "--json")
+    checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+    assert checks["ece"]["ok"] is None  # skipped, not passed (T687: NaN-proof)
+    # and the whole run still exits 0 only because nothing else failed — the
+    # structural gates, not the NaN metric, carry that verdict
+    assert r.returncode == 0 and checks["report_rule_acc"]["ok"] is True
