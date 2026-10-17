@@ -631,7 +631,7 @@
 - [x] T570 test: P30 demo-helper sweep
 
 ## P31 Eval + data (T571–T590)
-- [ ] T571 eval: `eval/breaker_sim.py` (failure storm → opens, report JSON)
+- [x] T571 eval: `eval/breaker_sim.py` (failure storm → opens, report JSON)
 - [ ] T572 eval: `eval/bench_pool.py` (pooled construction timing + eviction demo)
 - [ ] T573 eval: `validate_data --limit` flag
 - [ ] T574 data: `synth_rules --report` prints label distribution
