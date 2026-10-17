@@ -11,6 +11,15 @@ Decisions run one ordered ladder. First match wins; later demotions apply after.
 | 5 | `ok` conf `>= allow_threshold` and calm | allow | `ok` |
 | 6 | otherwise | escalate | `low-conf` |
 
+Overrides (before the ladder even runs):
+
+* **Breaker open** — while the circuit breaker is tripped, cache and fastpath
+  still answer, but any request that needs the model short-circuits to escalate
+  (`cause=breaker-open`) instead of timing out. It sits before the ladder
+  because there are no fresh probabilities to ladder on; see
+  [thresholds](thresholds.md#reliability-knobs-t602). Closes via a half-open
+  trial after `breaker_cool_s`.
+
 Demotions (after the ladder):
 
 * **Margin abstention** — top1-top2 gap `< margin_abstain` (0.15) demotes
