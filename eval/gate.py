@@ -117,14 +117,28 @@ def collect_i18n(report: dict, args) -> list:
     return checks
 
 
+def collect_breaker(report: dict, args) -> list:
+    """T682: the sim must show the breaker tripping under a storm AND closing
+    again — a breaker that trips but never closes is a worse outage."""
+    checks = []
+    for key in ("tripped", "closed"):
+        v = _get(report, key)
+        _add(checks, f"breaker_{key}", "is true", None if v is MISSING else v,
+             (v is True) if v is not MISSING else False)
+    return checks
+
+
 def detect_kind(report: dict) -> str:
-    """Gate family by report shape (T681: i18n; more families follow)."""
+    """Gate family by report shape (T681: i18n, T682: breaker; more to follow)."""
     if "per_lang" in report:
         return "i18n"  # only eval_i18n.py produces per_lang
+    if "tripped" in report or "closed" in report:
+        return "breaker"  # only breaker_sim.py produces these
     return "eval"
 
 
-COLLECTORS = {"eval": collect, "i18n": collect_i18n}  # T681: dispatch table
+COLLECTORS = {"eval": collect, "i18n": collect_i18n,  # T681
+              "breaker": collect_breaker}  # T682: dispatch table
 
 
 def gate_report(report: dict, args) -> dict:

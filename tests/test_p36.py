@@ -291,3 +291,27 @@ def test_gate_i18n_zero_errors(tmp_path):  # T681: wiring eval must stay 0 error
     path = _report(tmp_path, {"n": 12, "per_lang": {}}, name="i18n-noshape.json")
     r = _run_gate(path)
     assert r.returncode == 1 and "FAIL i18n_errors" in r.stderr
+
+
+def test_gate_breaker_trips_and_closes(tmp_path):  # T682: both true or it's broken
+    # a real weightless sim (T580) through the gate
+    r = _run_py("eval/breaker_sim.py", "--storm", "3", "--cool", "0.2",
+                "--out", str(tmp_path / "breaker.json"), "--json")
+    assert r.returncode == 0, r.stderr
+    report = json.loads(r.stdout)
+    assert report["tripped"] is True and report["closed"] is True  # precondition
+    path = _report(tmp_path, report, name="breaker-real.json")
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    r = _run_gate(path, "--json")
+    checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+    assert checks["breaker_tripped"]["ok"] is True
+    assert checks["breaker_closed"]["ok"] is True
+    # tripped but never closed = a stuck breaker, fails loudly
+    path = _report(tmp_path, {"tripped": True, "closed": False}, name="b-stuck.json")
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL breaker_closed" in r.stderr
+    # missing field = bad shape = FAIL, not skip
+    path = _report(tmp_path, {"tripped": True}, name="b-short.json")
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL breaker_closed" in r.stderr
