@@ -32,8 +32,9 @@ def test_split_is_server_disjoint(tmp_path):  # T632: no rule-set leaks between 
     assert not keys["train"] & keys["test"]
     assert not keys["dev"] & keys["test"]
     # every row lands in exactly one split (no drops, no dupes)
+    # 150 template rows + 15 default hard negatives (T636: hard-n = n//10)
     total = sum(len(v) for v in parts.values())
-    assert total == 150
+    assert total == 165
     msgs = [x["state"]["message"] for rows in parts.values() for x in rows]
     assert len(set(msgs)) >= 3  # the 3 template messages all survive the split
 
@@ -109,7 +110,7 @@ def test_report_balance_thresholds(tmp_path):  # T633: --report flags thin label
              "--seed", "11", "--report", "--min-share", "1.1")
     assert r.returncode == 0, r.stderr  # advisory without --strict
     rep = json.loads(r.stdout)
-    assert rep["n"] == 120 and rep["servers"] == 3
+    assert rep["n"] == 132 and rep["servers"] == 3  # 120 + 12 default hard negatives
     for name in ("train", "dev", "test"):
         s = rep["splits"][name]
         assert s["n"] > 0 and sum(s["rule"].values()) == s["n"]

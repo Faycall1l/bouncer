@@ -18,7 +18,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 sys.path.insert(0, os.path.join(_HERE, "..", "eval"))
 
-from synth_rules import llm_rows, template_rows
+from synth_rules import hard_rows, llm_rows, template_rows
 from validate_data import check_row
 
 NAMES = ("train", "dev", "test")
@@ -128,6 +128,8 @@ def main(argv=None) -> int:
                     help="with --report: exit 1 when any label is below threshold")
     ap.add_argument("--dedupe", action="store_true",  # T634: drop near-identical rows
                     help="keep first row per normalized message (see dedupe_rows)")
+    ap.add_argument("--hard-n", type=int, default=None,  # T636: hard negatives
+                    help="hard-negative rows to inject (default: n//10, 0 disables)")
     a = ap.parse_args(argv)
 
     if a.seed is not None:
@@ -136,6 +138,9 @@ def main(argv=None) -> int:
         rows = template_rows(a.n)
     else:
         rows = template_rows(a.n // 3) + llm_rows(2 * a.n // 3)
+    hard = a.hard_n if a.hard_n is not None else a.n // 10  # T636
+    if hard > 0:
+        rows += hard_rows(hard)
     random.shuffle(rows)
     deduped = None
     if a.dedupe:  # T634: before validation, so dropped rows never get checked

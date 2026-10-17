@@ -702,7 +702,7 @@
 - [x] T633 data: label balance report per split (`--report` + thresholds)
 - [x] T634 data: dedupe near-identical messages (normalized hash)
 - [x] T635 data: history-window synthesis (2–4 turns) instead of empty []
-- [ ] T636 data: hard-negative injection (linkless spam, polite insults)
+- [x] T636 data: hard-negative injection (linkless spam, polite insults)
 - [ ] T637 data: `examples.jsonl` regenerated through the same pipeline
 - [ ] T638 data: dataset card fields (splits, labels, license, limits)
 - [ ] T639 data: HF upload script dry-run mode (`--dry-run` prints plan)
