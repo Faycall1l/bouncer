@@ -10,6 +10,7 @@ import json
 import os
 import random
 import sys
+from collections import Counter
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
@@ -63,6 +64,25 @@ def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0) -> dict:
     return out
 
 
+def balance_report(splits: dict, min_share: float) -> dict:
+    """Per-split label distribution + which rule labels fall under min_share."""
+    below = []
+    out = {}
+    for name, part in splits.items():
+        n = len(part) or 1
+        rule = Counter(r["labels"]["rule"] for r in part)
+        harm = Counter(r["labels"].get("harm", "?") for r in part)
+        shares = {k: v / n for k, v in rule.items()}
+        out[name] = {"n": len(part), "rule": dict(rule.most_common()),
+                     "harm": dict(harm.most_common()),
+                     "jailbreak": sum(1 for r in part if r["labels"].get("jailbreak")),
+                     "escalate": sum(1 for r in part if r["labels"].get("escalate")),
+                     "min_rule_share": round(min(shares.values(), default=0.0), 4)}
+        below += [f"{name}: rule {k!r} share {s:.3f} < {min_share}"
+                  for k, s in sorted(shares.items()) if s < min_share]
+    return {"splits": out, "below_threshold": below, "balanced": not below}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="build_dataset",
                                  description="synth -> validate -> split (T631)")
@@ -74,6 +94,12 @@ def main(argv=None) -> int:
                     metavar=("TRAIN", "DEV", "TEST"))
     ap.add_argument("--no-split", action="store_true",
                     help="write the full file only, skip the split files")
+    ap.add_argument("--report", action="store_true",  # T633: balance, no write
+                    help="print per-split label balance instead of writing rows")
+    ap.add_argument("--min-share", type=float, default=0.02,  # T633 threshold
+                    help="rule-label share below this is flagged in --report")
+    ap.add_argument("--strict", action="store_true",  # T633: CI gate
+                    help="with --report: exit 1 when any label is below threshold")
     a = ap.parse_args(argv)
 
     if a.seed is not None:
@@ -94,6 +120,14 @@ def main(argv=None) -> int:
         for e in errs[:5]:
             print(f"  {e}", file=sys.stderr)
         return 1
+
+    if a.report:  # T633: balance check without generating any dataset file
+        splits = split_rows(rows, tuple(a.ratios), a.seed or 0)
+        rep = {"n": len(rows),
+               "servers": len({server_key(r) for r in rows}),
+               **balance_report(splits, a.min_share)}
+        print(json.dumps(rep, indent=2))
+        return 1 if a.strict and not rep["balanced"] else 0
 
     parent = os.path.dirname(os.path.abspath(a.out))
     os.makedirs(parent, exist_ok=True)

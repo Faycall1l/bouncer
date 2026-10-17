@@ -699,7 +699,7 @@
 ## P34 Dataset build (T631–T650)
 - [x] T631 data: `build_dataset.py` orchestrates synth → validate → split
 - [x] T632 data: server-disjoint split verifier (no rule-set leaks train→test)
-- [ ] T633 data: label balance report per split (`--report` + thresholds)
+- [x] T633 data: label balance report per split (`--report` + thresholds)
 - [ ] T634 data: dedupe near-identical messages (normalized hash)
 - [ ] T635 data: history-window synthesis (2–4 turns) instead of empty []
 - [ ] T636 data: hard-negative injection (linkless spam, polite insults)
