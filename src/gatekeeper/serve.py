@@ -136,6 +136,7 @@ def models():
 
 @app.get("/stats")  # T057
 def stats():
+    from . import coalesce_stats  # T754: joined/total effectiveness
     from . import strikes as _strikes  # T439: counts only, never user ids
     from .cache import CACHE
     from .stats import get_stats
@@ -149,6 +150,7 @@ def stats():
     return {"name": "bouncer", "version": __version__,  # T240
             "uptime_s": round(time.time() - _START, 1),
             "decisions": get_stats(), "cache": CACHE.stats(), "pool": POOL.stats(),
+            "coalesce": coalesce_stats(),  # T754: joined/total effectiveness
             "breaker": breaker,  # T522
             "strikes": {"users": len(table), "total": sum(table.values()),
                         "ban_suggested": sum(1 for n in table.values()

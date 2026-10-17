@@ -39,6 +39,7 @@ from .stats import record  # T273
 from .strikes import add_strike, weight_for_action  # T340
 
 _INFLIGHT: dict = {}  # T180: key -> [event, result]
+_COAL = {"joined": 0, "total": 0}  # T754: coalescing effectiveness counters
 import threading as _th
 
 _FLY_LOCK = _th.Lock()
@@ -308,6 +309,13 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
             "cause": cause, "margin": round(_margin(a), 3)}
 
 
+def coalesce_stats() -> dict:  # T754: joined/total effectiveness for /stats
+    with _FLY_LOCK:
+        joined, total = _COAL["joined"], _COAL["total"]
+    return {"joined": joined, "total": total,
+            "ratio": round(joined / total, 3) if total else 0.0}
+
+
 def moderate(message: str, rules: dict[str, str] | None = None,
              context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
@@ -352,9 +360,11 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         CACHE.set(key, dict(fp))  # T287: repeats serve from cache
         return fp
     with _FLY_LOCK:  # T180: join identical in-flight call instead of doubling work
+        _COAL["total"] += 1  # T754: every model-path call counts once
         if key in _INFLIGHT:
             ev, box = _INFLIGHT[key]
             joined = True
+            _COAL["joined"] += 1  # T754: this call rode someone else's work
         else:
             ev, box = _th.Event(), {}
             _INFLIGHT[key] = (ev, box)

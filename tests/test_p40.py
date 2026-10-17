@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, "src")
+
 ROOT = Path.cwd()
 
 
@@ -90,3 +92,52 @@ def test_batch_sweep_table_matches_the_sweep(tmp_path):  # T753
         for chunk in (1, 4, 8, 16):
             shown.add((int(batch), chunk))
     assert shown == combos, f"table {sorted(shown)} != sweep {sorted(combos)}"
+
+
+def test_coalescing_effectiveness_metric_in_stats():  # T754
+    import os
+    import threading
+    import time
+
+    from gatekeeper import coalesce_stats, moderate
+
+    class Slow:
+        def predict(self, state, questions):
+            time.sleep(0.3)
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95,
+                         "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    before = coalesce_stats()
+    msg = f"p754 coalesce {os.getpid()}-{time.time_ns()}"  # cache-unique
+    rules = {"plain-chat": "normal talk"}
+    outs = []
+    gate = threading.Barrier(2)  # both calls enter together: the join is
+    # guaranteed (the 0.3s predict dwarfs any thread-start jitter)
+
+    def one():
+        gate.wait()
+        outs.append(moderate(msg, rules, router=Slow()))
+
+    ts = [threading.Thread(target=one) for _ in range(2)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+    after = coalesce_stats()
+    # two model-path calls, one actual computation: total +2, joined +1,
+    # and the ratio is exactly joined/total (0.0 at total==0 is the floor)
+    assert after["total"] == before["total"] + 2
+    assert after["joined"] == before["joined"] + 1
+    assert after["ratio"] == round(after["joined"] / after["total"], 3)
+    assert len(outs) == 2 and any(o.get("coalesced") for o in outs)
+    # /stats carries the metric to operators
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.serve import app
+    coal = TestClient(app).get("/stats").json()["coalesce"]
+    assert set(coal) == {"joined", "total", "ratio"}
+    assert coal["total"] >= after["total"]

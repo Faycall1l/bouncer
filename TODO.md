@@ -832,7 +832,7 @@
 - [x] T751 perf: warm-pool latency bench with real weights (documented method)
 - [x] T752 perf: cache hit latency printed in bench reports
 - [x] T753 perf: batch size sweep re-run + table refresh
-- [ ] T754 perf: coalescing effectiveness metric (joined/total) in /stats
+- [x] T754 perf: coalescing effectiveness metric (joined/total) in /stats
 - [ ] T755 perf: question count knob (5 vs 3) benchmarked honestly
 - [ ] T756 perf: token-budget guard on context (truncate + report)
 - [ ] T757 perf: `watch` throughput lines/sec summary
