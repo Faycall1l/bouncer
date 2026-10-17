@@ -663,7 +663,7 @@
 - [x] T598 docs: SECURITY key-file + rotation notes
 - [x] T599 docs: glossary (pool, breaker, half-open, snapshot, multitenancy)
 - [x] T600 docs: FAQ (restore, breaker tripped, which model?)
-- [ ] T601 docs: CHANGELOG 0.3.0 entry drafted
+- [x] T601 docs: CHANGELOG 0.3.0 entry drafted
 - [ ] T602 docs: thresholds guide breaker knobs
 - [ ] T603 docs: presets catalogue preset-lang tags
 - [ ] T604 docs: adapters README model routing note

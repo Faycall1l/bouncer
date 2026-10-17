@@ -1,4 +1,34 @@
-# Changelog (T146/T168)
+# Changelog (T146/T168/T601)
+
+## 0.3.0 — unreleased (T601)
+* Persistence: atomic writes + `E_SNAPSHOT`, decision/stats snapshots
+  (`bouncer snapshot save/load`), review-queue timestamps + pruning, audit
+  `tail()` bounded reads, `export --format json/--limit/--action`.
+* Router pools: LRU pool keyed by kwargs (`BOUNCER_POOL_MAX`), `BOUNCER_DEVICE`,
+  per-request `model=` (engine/serve/CLI/demo) with capability probe, auto
+  model-by-language routing (`model_for_lang`), `E_MODEL_NAME`, pool stats in
+  `/stats`, `/ready`, `bouncer models`.
+* Multitenancy: `preset` field everywhere rules are accepted (`XOR`, `E_PRESET`),
+  `GET /presets/{name}`, `BOUNCER_DEFAULT_PRESET`, `bouncer presets`,
+  `pack init FILE`.
+* Multilingual: lang in reasons, `detect_script()` (latin/arabic), `E_LANG`,
+  i18n fixtures + `eval/eval_i18n.py`, preset→lang autofill, per-line `lang` in
+  `watch --json-in`, demo language wiring.
+* Reliability: circuit breaker (`breaker_n`/`breaker_cool_s`, half-open probe,
+  `cause=breaker-open`, `BOUNCER_BREAKER=off`), per-request `timeout_s`
+  (0.5–60s, `BOUNCER_TIMEOUT`), `GET /ready`, `bouncer_breaker_open` metric,
+  retry backoff.
+* CLI: `check/watch --config/--user`, `watch --action/--lang/--json-in`,
+  `review --since/--rule/--prune`, `export --format/--action`, `models`,
+  `presets`, `serve --key-file/--cors`, `demo --preset`.
+* Demo: user box + strikes meter, model dropdown, night mode, require-calm,
+  severity box, per-preset threshold memory, history download, queue viewer.
+* Eval/data: `breaker_sim.py`, `bench_pool.py` (5.4× pooled vs rebuild; thrash
+  case), `eval_gatekeeper --model`, `baseline/validate --limit`,
+  `synth_rules --report`, i18n fixtures (12 rows).
+* Docs: README persistence/pools/presets/i18n/breaker, api.md preset + readiness
+  fields, architecture pool/breaker diagram, SECURITY (key-file + rotation),
+  glossary + FAQ additions, eval/reports manifest.
 
 ## 0.2.0 — 2026-10-16 (T428)
 * Observability: joint action×rule counts, latency p50/p95, cheap-path counter,
