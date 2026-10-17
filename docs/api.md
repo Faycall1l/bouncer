@@ -32,6 +32,19 @@
   passing an explicit `lang` still wins. (The demo UI offers an `auto` option;
   the API simply omits the field.)
 
+## Reliability fields (T596)
+
+* `model` (request field, `bouncer check --model`) pins a checkpoint:
+  `english` | `multilingual` | `typed-decisions`. Omitted → auto-routes by
+  language hint. Unknown name → `422 {code: "E_MODEL_NAME"}` (the pool never
+  builds speculative checkpoints).
+* `timeout_s` (request field, 0.5–60s, else `BOUNCER_TIMEOUT` env, else 10s)
+  bounds each model call; overruns count toward the breaker's failure streak.
+* `GET /ready` — load-balancer readiness: `{"ready": bool, "model":
+  "loaded"|"unavailable", "pool": {size, max_n, hits, creates, evictions}}`.
+  Unlike `/health` (process liveness), `/ready` goes false when the model can't
+  answer, so LBs stop routing before requests pile up.
+
 ## Auth + rate limits (T409)
 
 * No key configured → open API (demo default). Set `BOUNCER_KEY` → every
