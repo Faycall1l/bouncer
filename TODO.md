@@ -606,7 +606,7 @@
 - [x] T547 cli: `serve --key-file` (docker-secrets style key load)
 - [x] T548 cli: `demo --preset` default selection
 - [x] T549 cli: `serve --cors` overrides env origins
-- [ ] T550 test: P29 CLI sweep
+- [x] T550 test: P29 CLI sweep
 
 ## P30 Demo (T551–T570)
 - [ ] T551 demo: user_id box → strikes attribution

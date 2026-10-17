@@ -115,3 +115,72 @@ def test_serve_cors_flag(monkeypatch):  # T549
         cors = "https://a.example,https://b.example"
     assert _cmd_serve(Args()) == 0
     assert os.environ["BOUNCER_CORS"] == "https://a.example,https://b.example"
+
+
+def test_cli_config_user_timeout(tmp_path, capsys):  # T531+T533+T550
+    import json as _json
+
+    import gatekeeper
+    from gatekeeper.cli import main
+
+    class S:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    gatekeeper._router = S()
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text(_json.dumps({"allow_threshold": 0.9, "delete_threshold": 0.97,
+                                "history_n": 3}))
+    out = tmp_path / "pack.json"
+    assert main(["pack", "init", str(out)]) == 0
+    assert main(["check", "p29 sweep msg", "--rules", str(out),
+                 "--config", str(cfg), "--user", "u1",
+                 "--timeout", "5", "--json"]) == 0
+    printed = capsys.readouterr().out
+    res = _json.loads(printed[printed.index("{"):])  # --json prints one indented doc
+    assert res["thresholds"] == {"allow": 0.9, "delete": 0.97}
+    from gatekeeper import strikes as _st
+    assert _st.standing("u1")["strikes"] >= 0
+    _st.reset()
+
+
+def test_watch_json_in(monkeypatch, capsys):  # T535+T542+T550
+    import io
+
+    import gatekeeper
+    from gatekeeper.cli import main
+
+    class S:
+        def predict(self, state, questions):
+            assert state.get("lang_hint") == "es"  # T541+T542: per-line lang
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+    gatekeeper._router = S()
+    lines = '{"message": "p29 json msg", "user_id": "u2", "lang": "es"}\nnot json\n'
+    monkeypatch.setattr("sys.stdin", io.StringIO(lines))
+    assert main(["watch", "--preset", "es", "--json-in", "--user", "u1"]) == 0
+    out = capsys.readouterr().out
+    assert "p29 json msg" in out and "bad json" not in out
+
+
+def test_export_json_format(monkeypatch, tmp_path):  # T536+T550
+    import importlib
+    import json as _json
+
+    import gatekeeper.audit as _au
+    from gatekeeper.cli import main
+    monkeypatch.setenv("BOUNCER_AUDIT", str(tmp_path / "a.jsonl"))
+    importlib.reload(_au)
+    _au.log_decision("p29 json exp", "ok", 0.9, "allow", 1.5)
+    out = tmp_path / "rows.json"
+    assert main(["export", "--out", str(out), "--format", "json", "--limit", "1"]) == 0
+    rows = _json.loads(out.read_text())
+    import hashlib
+    want = hashlib.sha256(b"p29 json exp").hexdigest()[:16]  # audit never stores raw text
+    assert rows and rows[-1]["msg"] == want and rows[-1]["ms"] == 1.5
