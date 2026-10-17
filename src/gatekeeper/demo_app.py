@@ -13,6 +13,19 @@ def parse_rules(text: str) -> dict:
     return d
 
 
+def parse_severity(text: str) -> dict:
+    """T559+T564: 'no-scams=high' lines -> {rule_id: level}; junk lines skipped."""
+    out: dict = {}
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if "=" not in line:
+            continue
+        rid, level = (p.strip() for p in line.split("=", 1))
+        if rid and level in ("low", "high"):
+            out[rid] = level
+    return out
+
+
 def review_entry(message: str, res: dict) -> dict:
     """T356: pure payload builder for the review-queue button (testable w/o gradio)."""
     return {"message": message[:500], "action": res["action"], "rule": res["rule"],
@@ -40,7 +53,8 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
     tally = [0, 0]  # T362: regex-baseline agree [hits, total]
 
     def run(msg, preset, rules_t, allow_thr, delete_thr, lang, user="",  # T551
-            model="auto", night=False, calm=False):  # T556+T557+T558
+            model="auto", night=False, calm=False,  # T556+T557+T558
+            severity_t=""):  # T559: 'RULE=high' lines
         if not (msg or "").strip():  # T360: don't spend a model call on nothing
             return "⚪ EMPTY", "ok @ 0.00", "empty message", "n/a", "", "0.0 ms"
         note = ""  # T366
@@ -60,7 +74,9 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                                                        delete_threshold=delete_thr,
                                                        quiet_hours=(22, 7)
                                                        if night else (),  # T557
-                                                       require_calm=calm),  # T558
+                                                       require_calm=calm,  # T558
+                                                       severity=parse_severity(
+                                                           severity_t)),  # T559
                          lang=lang, user_id=uid,
                          model=None if model in ("auto", "", None) else model)  # T556
         except Exception as e:  # noqa: BLE001 — demo must stay up without weights
@@ -117,6 +133,8 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                             info="demotes confident deletes to escalate overnight")
         calm = gr.Checkbox(value=False, label="require calm",  # T558
                            info="allow only when harm=safe; suspicious becomes flag")
+        sev_box = gr.Textbox(value="", lines=2, label="severity (RULE=high lines)",  # T559
+                             placeholder="no-scams=high")
         dirty = []  # T358: hand-edits survive preset switches
         thr_mem: dict = {}  # T553: last thresholds per preset, restored on return
         cur_preset = [first]
@@ -160,9 +178,9 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
         _orig_run = run
 
         def run_h(msg, preset, rules_t, allow_thr, delete_thr, lang, user="",
-                  model="auto", night=False, calm=False):
+                  model="auto", night=False, calm=False, severity_t=""):
             out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr, lang, user,
-                            model, night, calm)
+                            model, night, calm, severity_t)
             trail.append(f"{out[0]} {out[1]} {msg[:60]}")  # T354: badge + rule@conf
             del trail[:-50]  # T367: bounded session memory
             ms = out[5]
@@ -175,9 +193,9 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                     f"p50 {p50:.1f}ms")
             return out + (head + "\n" + "\n".join(trail[-8:]),)
 
-        btn.click(run_h,  # T551+T556+T557+T558
+        btn.click(run_h,  # T551+T556+T557+T558+T559
                   [msg, preset, rules, allow_thr, delete_thr, lang, user, model_dd,
-                   night, calm],
+                   night, calm, sev_box],
                   [badge, rule, reason, dist, meters, lat, hist])
         flag_btn = gr.Button("🚩 send to review queue")  # T095
         flag_out = gr.Textbox(label="review")

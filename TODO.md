@@ -617,7 +617,7 @@
 - [x] T556 demo: model dropdown (auto/english/multilingual/typed-decisions)
 - [x] T557 demo: night-mode checkbox (quiet_hours 22–7)
 - [x] T558 demo: require_calm checkbox
-- [ ] T559 demo: severity box (`RULE=high` lines)
+- [x] T559 demo: severity box (`RULE=high` lines)
 - [ ] T560 demo: meters shows cause
 - [ ] T561 demo: `format_meters(res)` pure helper extracted
 - [ ] T562 demo: `format_trail()` pure helper extracted
