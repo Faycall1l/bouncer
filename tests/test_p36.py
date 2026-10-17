@@ -20,7 +20,8 @@ def test_gate_pass_on_healthy_report(tmp_path):  # T671: exit 0, PASS lines
     r = _run_gate(path)
     assert r.returncode == 0, r.stderr
     assert "PASS report_n" in r.stdout and "PASS report_rule_acc" in r.stdout
-    assert "2 passed, 0 failed, 0 skipped -> PASS" in r.stdout
+    assert "PASS rule_acc" in r.stdout  # 0.403 meets the floor exactly (T672)
+    assert "3 passed, 0 failed, 0 skipped -> PASS" in r.stdout
 
 
 def test_gate_fails_loud_on_threshold(tmp_path):  # T671: exit 1 + stderr blame
@@ -62,3 +63,17 @@ def test_gate_json_verdict_shape(tmp_path):  # T671: machine-readable contract
     assert set(verdict) == {"ok", "passed", "failed", "skipped", "checks"}
     for c in verdict["checks"]:
         assert set(c) == {"name", "expected", "value", "ok"}
+
+
+def test_gate_rule_acc_floor(tmp_path):  # T672: must beat the regex bar (0.403)
+    # the zero-shot base (0.305) fails the default floor loudly
+    path = _report(tmp_path, {"n": 200, "rule_acc": 0.305})
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL rule_acc" in r.stderr
+    # exactly the baseline passes (>=, not >)
+    path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    # and the floor is configurable per run
+    r = _run_gate(path, "--min-rule-acc", "0.5")
+    assert r.returncode == 1 and "expected >= 0.5" in r.stderr

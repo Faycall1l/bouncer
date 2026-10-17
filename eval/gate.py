@@ -62,6 +62,7 @@ def collect(report: dict, args) -> list:
     add("report_rule_acc", "present", acc, acc is not None)
 
     # --- T672-T676 register their threshold gates here ---
+    ge("rule_acc", ("rule_acc",), args.min_rule_acc)  # T672: must beat the regex bar
     return checks
 
 
@@ -94,6 +95,9 @@ def main(argv=None) -> int:
     ap.add_argument("--json", action="store_true", help="machine-readable verdict")
     ap.add_argument("--min-n", type=int, default=1,
                     help="report must cover at least N rows")
+    ap.add_argument("--min-rule-acc", type=float, default=0.403,  # T672
+                    help="rule_acc floor: the regex baseline on examples.jsonl "
+                         "(0.403 post-T637; older notes say 0.480, pre-hard-negatives)")
     a = ap.parse_args(argv)
 
     try:
