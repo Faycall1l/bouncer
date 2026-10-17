@@ -116,6 +116,29 @@ Anywhere bouncer takes `rules`, it also takes `preset` — **never both**:
 * Presets carry a language tag (`PRESET_LANG`): choosing `es`/`fr`/`ar` also hints
   the language downstream (reason language, model routing).
 
+## Multilingual (T594)
+
+`lang=` (API field, `--lang` CLI flag, per-line `"lang"` with `watch --json-in`)
+hints both the reason language and the model route; `auto` (default) infers from
+the message script (`detect_script()`: latin vs arabic at minimum). Presets tagged
+`es`/`fr`/`ar` autofill the hint. Unknown codes are rejected with `422 E_LANG`.
+Fixtures + wiring check: `data/examples_i18n.jsonl` and `eval/eval_i18n.py`.
+Honest limit: base-model accuracy outside English is unmeasured — see
+[BENCHMARKS.md](BENCHMARKS.md#honest-limits).
+
+## Circuit breaker (T594)
+
+When the model misbehaves, the breaker stops wasting latency on it:
+
+* `breaker_n` consecutive failures open the breaker; `breaker_cool_s` cooldown
+  then allows a half-open trial probe — one success closes it again.
+* Open-breaker requests short-circuit to `escalate` with `cause: breaker-open`
+  (never silently allow).
+* `BOUNCER_BREAKER=off` disables it entirely; trip state shows in `GET /stats`,
+  `GET /ready`, and the demo meters.
+* `timeout_s` (API field, 0.5–60s; `BOUNCER_TIMEOUT` env) bounds each model call —
+  timeouts count toward the failure streak.
+
 ## Persistence (T591)
 
 Nothing persists by default — bouncer is in-memory per process. Two opt-in files:
