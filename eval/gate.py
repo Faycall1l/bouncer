@@ -105,10 +105,12 @@ def collect(report: dict, args) -> list:
             if (isinstance(pair, (list, tuple)) and len(pair) == 2
                     and isinstance(pair[0], (int, float))
                     and isinstance(pair[1], (int, float))
+                    and not isinstance(pair[0], bool)  # T690: bools aren't counts
+                    and not isinstance(pair[1], bool)
                     and pair[1] >= args.per_rule_min_n):
-                acc = pair[0] / pair[1]
-                if worst is None or acc < worst:
-                    worst, worst_name = acc, rule
+                rule_acc = pair[0] / pair[1]  # T690: don't shadow report acc
+                if worst is None or rule_acc < worst:
+                    worst, worst_name = rule_acc, rule
     if worst is None:
         add("per_rule_worst", f">= {args.min_per_rule_acc}", None, None)  # SKIP
     else:

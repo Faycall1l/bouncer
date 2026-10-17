@@ -760,7 +760,7 @@
 - [x] T687 eval: negative-test — gate fails loudly on bad report
 - [x] T688 eval: docs section "running the gates" in BENCHMARKS
 - [x] T689 eval: make-style single command `python eval/gate.py --all`
-- [ ] T690 test: P36 eval-gate sweep
+- [x] T690 test: P36 eval-gate sweep
 
 ## P37 Adapters (T691–T710)
 - [ ] T391-fix note: box ids continue; see T692

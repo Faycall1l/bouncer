@@ -1,5 +1,16 @@
 # Changelog (T146/T168/T601)
 
+## Unreleased
+
+* Eval gates (T671-T689): `eval/gate.py` pass/fail runner over report JSONs —
+  exit-code contract 0/1/2 (`--ci` one-liner), threshold flags
+  (`--min-rule-acc` 0.403, `--max-ece` 0.15, `--max-p95-ms` 44, abstention
+  band, per-rule worst-case, pool `--min-speedup` 2x), report-kind dispatch
+  (eval/i18n/breaker/pool), `--against` deltas, `--changelog` diff blocks,
+  `--check-docs` drift check vs the BENCHMARKS Known-numbers table, `--all`
+  make-style run, stale-report warnings. Baseline report normalized to
+  `n`/`acc`/`per_label` (T678); `eval/reports/latest.json` pointer (T686).
+
 ## 0.3.0 — 2026-10-17 (T626)
 * Persistence: atomic writes + `E_SNAPSHOT`, decision/stats snapshots
   (`bouncer snapshot save/load`), review-queue timestamps + pruning, audit

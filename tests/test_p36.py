@@ -501,3 +501,41 @@ def test_gate_all_make_style_command(tmp_path):  # T689: one command, whole dir
     # and a bare invocation is a usage error too — never a silent 0
     r = _run_gate()
     assert r.returncode == 2
+
+
+def test_p36_sweep_gate_invariants():  # T690: cross-cutting consistency
+    sys.path.insert(0, "eval")
+    import argparse
+
+    import gate
+    samples = [{"rule_acc": 0.5}, {"per_lang": {}}, {"tripped": True},
+               {"closed": False}, {"speedup": 3.0}, {"thrash": {}}]
+    # every detectable report shape maps to a registered collector...
+    for rep in samples:
+        assert gate.detect_kind(rep) in gate.COLLECTORS, rep
+    assert set(gate.COLLECTORS) == {"eval", "i18n", "breaker", "pool"}
+    # ...and every collector emits >= 1 check with the shared {name, expected,
+    # value, ok} shape — a family that emits nothing could never fail.
+    args = argparse.Namespace(min_n=1, min_rule_acc=0.403, max_ece=0.15,
+                              max_p95_ms=44.0, min_abstention=0.0,
+                              max_abstention=0.3, min_per_rule_acc=0.3,
+                              per_rule_min_n=5, min_speedup=2.0)
+    for rep in samples:
+        checks = gate.COLLECTORS[gate.detect_kind(rep)](rep, args)
+        assert checks, rep
+        assert all(set(c) == {"name", "expected", "value", "ok"} for c in checks)
+    # the rule_acc gate carries the report accuracy even when per-rule data is
+    # iterated — no loop variable may leak into report-level results (T690)
+    checks = gate.collect({"rule_acc": 0.403, "n": 100,
+                           "per_rule": {"ok": [90, 100]}}, args)
+    by_name = {c["name"]: c for c in checks}
+    assert by_name["rule_acc"]["ok"] is True and by_name["rule_acc"]["value"] == 0.403
+    # every threshold flag appears in both --help and the BENCHMARKS gates
+    # section — the how-to and the runner cannot drift apart
+    text = Path("BENCHMARKS.md").read_text()
+    help_out = _run_gate("--help").stdout
+    for flag in ("--min-rule-acc", "--max-ece", "--max-p95-ms",
+                 "--min-abstention", "--max-abstention", "--min-per-rule-acc",
+                 "--per-rule-min-n", "--min-speedup"):
+        assert flag in help_out, flag
+        assert flag in text, flag

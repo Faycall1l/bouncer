@@ -129,8 +129,9 @@ Report kinds are detected by shape and gated by family:
 | `speedup`/`thrash` (bench_pool.py) | pool | hits-scenario speedup >= 2x |
 
 Every threshold is a flag (`--min-rule-acc`, `--max-ece`, `--max-p95-ms`,
-`--min/--max-abstention`, `--min-per-rule-acc/--per-rule-min-n`,
-`--min-speedup`), with defaults pinned by the Known-numbers table above and
+`--min-abstention`, `--max-abstention`, `--min-per-rule-acc`,
+`--per-rule-min-n`, `--min-speedup`), with defaults pinned by the
+Known-numbers table above and
 drift-checked by `--check-docs`. Reports older than
 `--max-report-age-days` (default 14) warn on stderr without changing the
 verdict. Regenerate any report by rerunning its producer in `eval/`; the
