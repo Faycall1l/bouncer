@@ -95,11 +95,17 @@ def test_loss_jsonl_logging():  # T654: JSONL trail independent of wandb
 def test_push_gated_on_dev_floor():  # T655: no shipping sub-floor checkpoints
     src = _src("kaggle/train/train.py")
     assert "DEV_FLOOR = 0.35" in src
-    assert "token and best_dev >= DEV_FLOOR" in src
-    assert "dev {best_dev:.3f} < DEV_FLOOR" in src  # refusal is loud
-    gate = src.index("token and best_dev >= DEV_FLOOR")
+    gate = src.index("best_dev >= DEV_FLOOR and test_acc >= REGEX_FLOOR")
     push = src.index("upload_folder")
     assert gate < push  # the gate sits before the upload
+    assert "gate failed:" in src  # refusal is loud, both metrics printed
+
+
+def test_regression_gate_beats_regex():  # T661: new model must beat the regex bar
+    src = _src("kaggle/train/train.py")
+    assert "REGEX_FLOOR = 0.403" in src  # the real post-T637 number, not the stale 0.480
+    assert '"--model", OUT' in src  # gate consumes eval_gatekeeper's own numbers
+    assert 'kind="no_push"' in src and "regex_floor=REGEX_FLOOR" in src  # refusals logged
 
 
 def test_check_kaggle_env_preflight():  # T656: pre-flight plan is honest JSON

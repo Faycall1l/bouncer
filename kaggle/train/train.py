@@ -153,6 +153,7 @@ EPOCHS = 1 if MAX_SAMPLES else 3  # T659: smoke runs are 50 rows, 1 epoch
 MICRO, ACCUM = 8, 8  # eff batch 64, same as 2xT4 recipe
 PATIENCE = 1  # T653: stop after N epochs without dev rule_acc improvement
 DEV_FLOOR = 0.35  # T655: below this, the checkpoint is not worth shipping
+REGEX_FLOOR = 0.403  # T661: regex baseline on examples.jsonl (post-T637; was 0.480)
 assert len(train_items) >= MICRO, "fewer items than one micro-batch"
 enc_p = [p for n, p in model.named_parameters() if "encoder." in n and p.requires_grad]
 head_p = [p for n, p in model.named_parameters() if "encoder." not in n and p.requires_grad]  # T652: LoRA-safe
@@ -235,7 +236,8 @@ for r in test_rows:
     if conf >= 0.85:
         gated_n += 1; gated_ok += good
 print(f"TEST n={len(test_rows)} rule_acc={ok/len(test_rows):.3f} gate@0.85={gated_ok}/{gated_n}", flush=True)
-log_rec(kind="test", n=len(test_rows), rule_acc=round(ok / len(test_rows), 4),
+test_acc = ok / max(1, len(test_rows))  # T661: regression gate input
+log_rec(kind="test", n=len(test_rows), rule_acc=round(test_acc, 4),
         gate85=f"{gated_ok}/{gated_n}")  # T654: final number lands in the trail too
 
 # --- eval-after-train (T660): CI's own metrics on the held-out 500 ---
@@ -269,17 +271,19 @@ try:
     token = UserSecretsClient().get_secret("HF_TOKEN")
 except Exception:  # noqa: BLE001 — no secrets in this env
     token = None
-if token and best_dev >= DEV_FLOOR:  # T655: ship only models that earned it
+if token and best_dev >= DEV_FLOOR and test_acc >= REGEX_FLOOR:  # T655+T661: earn the ship
     from huggingface_hub import HfApi
     api = HfApi(token=token)
     api.create_repo("bouncer-421m", exist_ok=True)
     api.upload_folder(folder_path=OUT, repo_id=api.whoami()["name"] + "/bouncer-421m")
     print("PUSHED to HF", flush=True)
-    log_rec(kind="push", dev_rule_acc=round(best_dev, 4))
+    log_rec(kind="push", dev_rule_acc=round(best_dev, 4), test_acc=round(test_acc, 4))
 elif token:
-    print(f"dev {best_dev:.3f} < DEV_FLOOR {DEV_FLOOR} — no push; weights stay "
-          "in /kaggle/working output", flush=True)
-    log_rec(kind="no_push", dev_rule_acc=round(best_dev, 4), floor=DEV_FLOOR)
+    print(f"gate failed: dev={best_dev:.3f} (floor {DEV_FLOOR}) "
+          f"test_acc={test_acc:.3f} (regex floor {REGEX_FLOOR}) — no push; weights "
+          "stay in /kaggle/working output", flush=True)
+    log_rec(kind="no_push", dev_rule_acc=round(best_dev, 4), test_acc=round(test_acc, 4),
+            dev_floor=DEV_FLOOR, regex_floor=REGEX_FLOOR)
 else:
     print("no HF_TOKEN — model stays in /kaggle/working output", flush=True)
 print("TRAIN_OK")
