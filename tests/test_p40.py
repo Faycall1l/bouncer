@@ -61,3 +61,32 @@ def test_bench_warm_reports_cache_hit_latency(tmp_path):  # T752
     # the replay also went through the warm pool: one more hit, still one
     # resident — the cache number isn't a cold-path number either
     assert rep["pool"]["hits"] == 6 and rep["pool"]["creates"] == 1
+
+
+def test_batch_sweep_table_matches_the_sweep(tmp_path):  # T753
+    import os
+    import re
+    # re-run the sweep itself (stub — weightless by design): its combos are
+    # the source of truth the docs table must track. The machine-dependent
+    # numbers are NOT pinned — only the shape can drift silently.
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    r = _run(str(ROOT / "eval/bench_batch.py"), cwd=tmp_path, env=env)
+    assert r.returncode == 0, r.stderr
+    rows = json.loads(r.stdout)["rows"]
+    combos = {tuple(int(x) for x in k.replace("batch", "").split("/chunk"))
+              for k in rows}
+    # the table in BENCHMARKS.md has exactly the sweep's combos, refreshed
+    doc = Path("BENCHMARKS.md").read_text()
+    m = re.search(r"\| batch \|(.*?)~0\.\d+ms/message", doc, re.DOTALL)
+    assert m, "no batch table under Stub overhead"
+    table = m.group(1)
+    assert "table refreshed T753" in doc[:m.end()], "table not marked as re-run"
+    cells = re.findall(r"^\| (\d+) \|(.+)\|$", table, re.MULTILINE)
+    assert cells, "no table rows"
+    shown = set()
+    for batch, rest in cells:
+        nums = re.findall(r"(\d+\.\d+)", rest)
+        assert len(nums) == 4, f"batch {batch}: {rest}"  # 4 chunk columns
+        for chunk in (1, 4, 8, 16):
+            shown.add((int(batch), chunk))
+    assert shown == combos, f"table {sorted(shown)} != sweep {sorted(combos)}"

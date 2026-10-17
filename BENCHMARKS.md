@@ -16,7 +16,7 @@ Takeaway: zero-shot base is a demo, not a product. Fine-tune (`kaggle/train`) is
 What the fine-tune is expected to change — and what it cannot — is spelled out
 in `docs/drafts/finetune-run-impact.md` (T665 draft, unmeasured until the run).
 
-## Stub overhead (T385, local CPU, no weights)
+## Stub overhead (T385, local CPU, no weights; table refreshed T753)
 
 `python eval/bench_stub.py 200` → **p50 0.08ms, p95 0.11ms** per `moderate()`
 (stub router: measures engine overhead — normalize, gates, cache, audit write).
@@ -24,16 +24,17 @@ in `docs/drafts/finetune-run-impact.md` (T665 draft, unmeasured until the run).
 `python eval/bench_questions.py` → 1-question vs 5-question payloads identical
 (<0.01ms): question count costs nothing until a real model runs.
 
-`python eval/bench_batch.py` (unique messages, cold cache per combo):
+`python eval/bench_batch.py` (unique messages, cold cache per combo; re-run
+T753 2026-10-17, Apple-silicon laptop CPU — the old rows dated from T384):
 
 | batch | chunk 1 | chunk 4 | chunk 8 | chunk 16 |
 |---|---|---|---|---|
-| 1 | 7.0 (cold start) | 0.2 | 0.1 | 0.1 |
-| 4 | 0.4 | 0.4 | 0.3 | 0.3 |
-| 8 | 0.6 | 0.7 | 0.6 | 0.6 |
-| 16 | 1.4 | 1.1 | 1.2 | 1.2 |
+| 1 | 9.3 (cold start) | 0.3 | 0.3 | 0.2 |
+| 4 | 0.8 | 1.0 | 1.0 | 0.7 |
+| 8 | 1.8 | 1.9 | 1.5 | 1.5 |
+| 16 | 3.1 | 2.9 | 2.9 | 2.9 |
 
-~0.08ms/message stub overhead, linear in batch size; chunk size is irrelevant
+~0.2ms/message stub overhead, linear in batch size; chunk size is irrelevant
 with a stub router (it matters for real-model padding — see T106/T107).
 
 ## i18n wiring (T499, `python eval/eval_i18n.py --json`)
