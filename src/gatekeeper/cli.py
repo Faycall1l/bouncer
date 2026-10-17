@@ -31,13 +31,13 @@ def _load_rules(args) -> dict:
 
 def _cfg_from_args(args):
     """T223: split gates; unset flags fall back to the single --threshold."""
-    from gatekeeper import GateConfig
+    from gatekeeper import GateConfig, questions_knob
     if getattr(args, "config", None):  # T531+T532: file is the base, flags override
         import json as _json
         with open(args.config) as f:
             cfg = GateConfig.from_dict(_json.load(f))
     else:
-        cfg = GateConfig()
+        cfg = GateConfig(questions=questions_knob())  # T755: BOUNCER_QUESTIONS
     if args.allow_threshold is not None:
         cfg.allow_threshold = args.allow_threshold
     if args.delete_threshold is not None:

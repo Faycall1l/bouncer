@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 
 from .audit import log_decision  # T273: stdlib-only modules, no import cycle
 from .cache import CACHE  # T023/T024 decision cache
-from .config import GateConfig
+from .config import GateConfig, questions_knob
 from .explain import explain as _explain  # T273
 from .normalize import clean_text, detect_script, extract_links
 from .pool import model_for_lang  # T458: json/os only, no cycle
@@ -323,7 +323,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
              user_id: str | None = None,
              model: str | None = None, preset: str | None = None,  # T455+T479
              _prevalidated: bool = False) -> dict:
-    cfg = config or GateConfig()
+    cfg = config or GateConfig(questions=questions_knob())  # T755: env default
     if threshold is not None:  # back-compat single float sets both gates
         cfg.allow_threshold = cfg.delete_threshold = threshold
         cfg.validate()  # T255: mutation bypasses __post_init__; re-check ranges
@@ -348,7 +348,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                     cfg.severity, lang, context or (), cfg.history_n,
                     _quiet_active(cfg), (cfg.jailbreak_threshold, cfg.escalate_threshold,
                                          cfg.margin_abstain, cfg.flag_margin,
-                                         cfg.severity_offset, cfg.require_calm))
+                                         cfg.severity_offset, cfg.require_calm,
+                                         cfg.questions))  # T755: 3q/5q never share
     hit = CACHE.get(key)
     if hit is not None:
         return dict(hit, cached=True)
@@ -396,7 +397,10 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     try:
         if tripped:
             raise ModelError("breaker open (model failing, cooling down)")
-        out = _predict_safe(r, state, build_questions(rules, lang), cfg.timeout_s, model)
+        qs = build_questions(rules, lang)  # T755: light mode trims the payload
+        if cfg.questions == 3:
+            qs = {k: qs[k] for k in ("rule", "jailbreak", "escalate")}
+        out = _predict_safe(r, state, qs, cfg.timeout_s, model)
         _breaker_ok()  # T514: success closes the circuit
     except ModelError as e:
         if not tripped:  # T512: open-state short-circuits don't extend the trip
@@ -419,6 +423,10 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                 del _INFLIGHT[key]
         return fb
     a = out["answers"]
+    if "harm" not in a:  # T755: light mode dropped it — neutral, not silent-5
+        a["harm"] = {"score": "safe", "probabilities": []}
+    if "hype" not in a:  # informational only; never gated on
+        a["hype"] = {"score": "chill", "probabilities": []}
     res = _decide(a, cfg)
     res["harm_dist"] = a["harm"].get("probabilities", [])
     res["harm"] = _level(a["harm"]["score"], DEFAULT_HARM)  # T203: float->label (already in _decide)
@@ -457,7 +465,7 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
                    router: Router | None = None, chunk: int = 8,
                    model: str | None = None) -> list[dict]:
     """T020+T021: shared Router, chunked to bound padding; order preserved."""
-    cfg = config or GateConfig()
+    cfg = config or GateConfig(questions=questions_knob())  # T755: env default
     validate_rules(rules, cfg.max_rules, cfg.max_rule_chars,  # T196: once, not per message
                    cfg.severity)
     r = router or get_router()

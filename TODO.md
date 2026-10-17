@@ -833,7 +833,7 @@
 - [x] T752 perf: cache hit latency printed in bench reports
 - [x] T753 perf: batch size sweep re-run + table refresh
 - [x] T754 perf: coalescing effectiveness metric (joined/total) in /stats
-- [ ] T755 perf: question count knob (5 vs 3) benchmarked honestly
+- [x] T755 perf: question count knob (5 vs 3) benchmarked honestly
 - [ ] T756 perf: token-budget guard on context (truncate + report)
 - [ ] T757 perf: `watch` throughput lines/sec summary
 - [ ] T758 perf: audit write batching (fsync every N lines) behind flag

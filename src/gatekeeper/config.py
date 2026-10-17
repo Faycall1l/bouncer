@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
+import os
 from dataclasses import dataclass, field
 
 
@@ -9,6 +10,17 @@ class ConfigError(ValueError):
     """T255: bad gate configuration. Carries machine-readable code."""
 
     code = "E_CONFIG"
+
+
+def questions_knob() -> int:  # T755: BOUNCER_QUESTIONS env default (3|5)
+    raw = os.environ.get("BOUNCER_QUESTIONS", "").strip()
+    if not raw:
+        return 5
+    try:
+        return int(raw)
+    except ValueError:
+        raise ConfigError(
+            f"E_CONFIG: BOUNCER_QUESTIONS={raw!r} must be 3 or 5") from None
 
 
 @dataclass(slots=True)
@@ -34,6 +46,7 @@ class GateConfig:
     # T484: severity is NEVER inferred from presets — callers attach it explicitly
     # (presets ship text only; high-stakes meanings differ per community).
     quiet_hours: tuple = ()  # T185: e.g. (1, 7) UTC -> delete becomes escalate overnight
+    questions: int = 5  # T755: 5 = full set; 3 = light (rule+jailbreak+escalate)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -50,6 +63,9 @@ class GateConfig:
                               "must be in [0, 1]")
         if self.timeout_s <= 0:  # T254
             raise ConfigError(f"E_CONFIG: timeout_s={self.timeout_s!r} must be > 0")
+        if self.questions not in (3, 5):  # T755: two supported sets, no silent 4
+            raise ConfigError(f"E_CONFIG: questions={self.questions!r} must be 3 "
+                              "(light: rule+jailbreak+escalate) or 5 (full)")
         if self.history_n < 0:  # T254
             raise ConfigError(f"E_CONFIG: history_n={self.history_n!r} must be >= 0")
         if self.breaker_n < 1:  # T511

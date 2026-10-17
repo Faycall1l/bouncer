@@ -141,3 +141,70 @@ def test_coalescing_effectiveness_metric_in_stats():  # T754
     coal = TestClient(app).get("/stats").json()["coalesce"]
     assert set(coal) == {"joined", "total", "ratio"}
     assert coal["total"] >= after["total"]
+
+
+def test_question_count_knob(tmp_path, monkeypatch):  # T755
+    import os
+
+    import pytest
+
+    from gatekeeper import GateConfig, moderate
+    from gatekeeper.config import ConfigError
+
+    def ans(qid):
+        if qid == "rule":
+            return {"choice": "ok", "confidence": 0.95, "probabilities": {"ok": 0.95}}
+        if qid in ("jailbreak", "escalate"):
+            return {"noul": 0.0}
+        return {"score": "safe", "probabilities": []}
+
+    class S:
+        def __init__(self):
+            self.seen = []
+
+        def predict(self, state, questions):
+            self.seen.append(set(questions))
+            return {"answers": {qid: ans(qid) for qid in questions}}
+
+    # light mode sends exactly the decision trio and the result still
+    # decodes — dropped harm/hype default neutral (documented, not hidden)
+    s3 = S()
+    r3 = moderate("p755 light", {"a": "rule a"},
+                  config=GateConfig(questions=3), router=s3)
+    assert s3.seen == [{"rule", "jailbreak", "escalate"}]
+    assert r3["action"] == "allow"
+    assert (r3["harm"], r3["hype"]) == ("safe", "chill")
+    # 5 is the untouched full set
+    s5 = S()
+    moderate("p755 full", {"a": "rule a"},
+             config=GateConfig(questions=5), router=s5)
+    assert len(s5.seen[0]) == 5
+    # no silent 4: only the two supported sets, config and env alike
+    with pytest.raises(ConfigError):
+        GateConfig(questions=4)
+    monkeypatch.setenv("BOUNCER_QUESTIONS", "3")
+    s6 = S()
+    moderate("p755 env", {"a": "rule a"}, router=s6)
+    assert len(s6.seen[0]) == 3
+    monkeypatch.setenv("BOUNCER_QUESTIONS", "banana")
+    with pytest.raises(ConfigError):
+        moderate("p755 env bad", {"a": "rule a"}, router=S())
+    monkeypatch.delenv("BOUNCER_QUESTIONS")
+    # 3q and 5q never share a cache entry: same message+rules asked twice
+    # comes back as two real model calls (pre-T755 the second was a hit)
+    s7 = S()
+    moderate("p755 cache iso", {"a": "rule a"},
+             config=GateConfig(questions=3), router=s7)
+    moderate("p755 cache iso", {"a": "rule a"},
+             config=GateConfig(questions=5), router=s7)
+    assert [len(x) for x in s7.seen] == [3, 5]
+    # the bench reports both knob legs (stub: our overhead only, and the
+    # BENCHMARKS entry says so — real-model savings stay unclaimed)
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    r = _run(str(ROOT / "eval/bench_questions.py"), "20", cwd=tmp_path, env=env)
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(r.stdout)
+    assert rep["p50_knob_3q_ms"] >= 0 and rep["p50_knob_5q_ms"] >= 0
+    doc = Path("BENCHMARKS.md").read_text()
+    for needle in ("T755", "BOUNCER_QUESTIONS", "not\nclaimed", "require_calm"):
+        assert needle in doc, needle

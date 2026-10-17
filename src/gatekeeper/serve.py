@@ -328,7 +328,7 @@ def predict(req: ModReq, request: Request):
                                     "message": f"context capped at {MAX_CONTEXT} items"})
     from fastapi import HTTPException
 
-    from .config import GateConfig
+    from .config import GateConfig, questions_knob
     from .explain import explain
     from .rules import RuleError
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
@@ -340,7 +340,8 @@ def predict(req: ModReq, request: Request):
         from .presets import preset_lang
         lang = preset_lang(preset_name)
     cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t,
-                     timeout_s=_request_timeout(req.timeout_s))  # T515
+                     timeout_s=_request_timeout(req.timeout_s),  # T515
+                     questions=questions_knob())  # T755: BOUNCER_QUESTIONS
     try:
         res = moderate(req.message, rules, req.context, config=cfg,
                        lang=lang, model=req.model)
@@ -383,12 +384,13 @@ def predict_batch(req: BatchReq, request: Request):
     if any(len(m) > 8000 for m in req.messages):  # T309
         raise HTTPException(status_code=413, detail="batch message too long")
     from . import moderate_batch
-    from .config import GateConfig
+    from .config import GateConfig, questions_knob
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
     _check_model(req.model)  # T459
     rules, _ = _resolve_rules(req.rules, req.preset)  # T473+T485: one pack, all msgs
     cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t,
-                     timeout_s=_request_timeout(req.timeout_s))  # T525
+                     timeout_s=_request_timeout(req.timeout_s),  # T525
+                     questions=questions_knob())  # T755: BOUNCER_QUESTIONS
     return [_clean(r) for r in moderate_batch(req.messages, rules, config=cfg,
                                               model=req.model)]
 

@@ -24,6 +24,14 @@ in `docs/drafts/finetune-run-impact.md` (T665 draft, unmeasured until the run).
 `python eval/bench_questions.py` → 1-question vs 5-question payloads identical
 (<0.01ms): question count costs nothing until a real model runs.
 
+**Question knob (T755)** — `GateConfig(questions=3|5)` / `BOUNCER_QUESTIONS`
+trims the payload to the decision trio (rule+jailbreak+escalate; harm/hype
+default neutral, `require_calm` is meaningless in light mode — documented,
+not hidden). End-to-end `moderate()` p50 on this machine: **3q 1.3ms vs
+5q 1.4ms** (stub, T755 re-run 2026-10-18). That ~0.1ms is our own overhead
+only; the real-model saving is padding/tokens per predict and is **not
+claimed** until measured with weights (T751's rule: no invented numbers).
+
 `python eval/bench_batch.py` (unique messages, cold cache per combo; re-run
 T753 2026-10-17, Apple-silicon laptop CPU — the old rows dated from T384):
 

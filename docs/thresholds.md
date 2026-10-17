@@ -39,6 +39,13 @@ against honesty: bouncer never lets a broken model silently allow anything.
   budget for one model call. Overruns count as failures toward `breaker_n`.
   Set it near your p95 latency — much higher and slow calls stack up before
   the breaker can trip.
+* `questions` (default 5, env `BOUNCER_QUESTIONS`, only 3 or 5 accepted):
+  how many questions each predict carries. `3` is the light set
+  (rule+jailbreak+escalate): harm/hype drop out and default neutral — which
+  makes `require_calm` meaningless in light mode (it can't see harm). Worth
+  it when real-model padding/token cost dominates; with a stub the end-to-end
+  delta is ~0.1ms (BENCHMARKS, T755). 3q and 5q decisions never share a
+  cache entry.
 * `BOUNCER_BREAKER=off`: disables the guard entirely. Only for benchmarks or
   when you have an outer health-check that does the same job.
 
