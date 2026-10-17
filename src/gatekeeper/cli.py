@@ -374,6 +374,7 @@ def main(argv=None) -> int:
     d = sub.add_parser("demo")  # T069
     d.add_argument("--port", type=int, default=7860)  # T323
     d.add_argument("--share", action="store_true")  # T323
+    d.add_argument("--preset", default=None)  # T548: default selection on launch
     d.set_defaults(fn=lambda a: (_demo(a), 0))
     w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail
     w.add_argument("--rules", default=None)  # T483
@@ -437,6 +438,13 @@ def main(argv=None) -> int:
 def _demo(args=None):
     from gatekeeper.demo_app import launch
     kw = {} if args is None else {"port": args.port, "share": args.share}  # T323
+    if args is not None and getattr(args, "preset", None):  # T548
+        from gatekeeper import list_presets
+        if args.preset not in list_presets():
+            print(f"bouncer: unknown preset {args.preset!r} "
+                  f"(pick from {sorted(list_presets())})", file=sys.stderr)
+            sys.exit(4)
+        kw["preset"] = args.preset
     launch(**kw)
 
 

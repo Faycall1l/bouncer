@@ -85,3 +85,15 @@ def test_serve_key_file(tmp_path, monkeypatch):  # T547
     empty.write_text("")
     a.key_file = str(empty)
     assert _cmd_serve(a) == 4
+
+
+def test_demo_preset_flag(capsys):  # T548
+    import pytest
+
+    from gatekeeper.cli import _demo
+
+    class Args:
+        port, share, preset = 7860, False, "nope"
+    with pytest.raises(SystemExit) as ei:
+        _demo(Args())
+    assert ei.value.code == 4 and "unknown preset" in capsys.readouterr().err

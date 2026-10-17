@@ -26,14 +26,15 @@ def action_badge(action: str) -> str:
             "escalate": "⚪ ESCALATE"}[action]
 
 
-def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T081-T095
-    """T324: port/share settable for `bouncer demo --port/--share` and Spaces."""
+def launch(port: int = 7860, share: bool = False, preset: str | None = None):  # T548
+    """T324+T548: port/share/preset settable for `bouncer demo` flags and Spaces."""
     import gradio as gr
 
     from gatekeeper import get_preset, list_presets, moderate
     from gatekeeper.explain import explain
 
     names = sorted(list_presets())
+    first = preset if preset in names else names[0]  # T548: launch default
     preset_text = {n: "\n".join(f"{k}: {v}" for k, v in get_preset(n).items()) for n in names}
     stash: dict = {}  # T356: latest real result for the review button
     tally = [0, 0]  # T362: regex-baseline agree [hits, total]
@@ -94,8 +95,8 @@ def launch(port: int = 7860, share: bool = False):  # T069 target; polished by T
                    "see docs/gates.md.")
         gr.Markdown("> Honest limits: template data, 3 violation types, English-first — "  # T359
                    "full list in BENCHMARKS.md (`#honest-limits`).")
-        preset = gr.Dropdown(names, value=names[0], label="preset")
-        rules = gr.Textbox(value=preset_text[names[0]], lines=5, label="rules (id: text)")
+        preset = gr.Dropdown(names, value=first, label="preset")  # T548
+        rules = gr.Textbox(value=preset_text[first], lines=5, label="rules (id: text)")
         lang = gr.Dropdown(["auto", "en", "es", "fr", "ar"], value="auto",  # T357+T505
                            label="language hint")
         dirty = []  # T358: hand-edits survive preset switches
