@@ -385,3 +385,34 @@ def test_dependency_floor_pins():  # T722
         assert floors.get(pkg, "").startswith(">="), pkg
     # ...and pydantic's floor is the v2 stack serve.py actually runs on
     assert floors["pydantic"] == ">=2"
+
+
+def test_core_import_is_weightless(tmp_path):  # T723
+    import subprocess
+    # empirical: numpy and laya are shadowed by modules that raise on
+    # import — a core import that touches either dies loudly here
+    for mod in ("numpy", "laya"):
+        (tmp_path / f"{mod}.py").write_text('raise ImportError("T723")\n')
+    code = ("import gatekeeper\n"
+            "from gatekeeper import moderate, GateConfig, get_preset\n"
+            "import gatekeeper.cli\n"
+            "import gatekeeper.adapters.common\n"
+            "print('ok', gatekeeper.__version__)\n")
+    r = subprocess.run([sys.executable, "-c", code], check=False,
+                       capture_output=True, text=True, timeout=60,
+                       env={"PATH": "/usr/bin:/bin",
+                            "PYTHONPATH": f"{tmp_path}:src"})
+    assert r.returncode == 0, r.stderr
+    assert "ok" in r.stdout
+    # static: no core module imports numpy/laya at module level — lazy is
+    # the only allowed shape, so a bare `import gatekeeper` stays cheap
+    for path in Path("src/gatekeeper").glob("*.py"):
+        for node in ast.parse(path.read_text()).body:
+            if isinstance(node, ast.Import):
+                mods = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                mods = [(node.module or "").split(".")[0]]
+            else:
+                continue
+            assert "numpy" not in mods and "laya" not in mods, (
+                path.name, "imports weights at module level")
