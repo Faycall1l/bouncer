@@ -675,7 +675,7 @@
 - [x] T610 test: README command list matches CLI parsers (extracted `build_parser()`)
 
 ## P33 Release 0.3.0 (T611–T630)
-- [ ] T611 pkg: version 0.3.0
+- [x] T611 pkg: version 0.3.0
 - [ ] T612 suite: full run green
 - [ ] T613 lint: `ruff check .` green
 - [ ] T614 test: new CLI commands --help (snapshot/models/presets)
