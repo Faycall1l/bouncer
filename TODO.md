@@ -780,7 +780,7 @@
 - [x] T705 adp: discord prefix + slash-command parity check test
 - [x] T706 adp: twitch mention/whisper handling documented
 - [x] T707 adp: `forward_if_interesting` fires on breaker-open too
-- [ ] T708 adp: adapter integration test per platform (stubbed transports)
+- [x] T708 adp: adapter integration test per platform (stubbed transports)
 - [ ] T709 adp: config file support (`bouncer.toml`) for adapters
 - [ ] T710 test: P37 adapters sweep
 

@@ -1072,3 +1072,232 @@ def test_forward_fires_on_breaker_open(monkeypatch):  # T707
     # a plain allow stays quiet
     assert wh.forward_if_interesting({"action": "allow", "rule": "ok",
                                       "confidence": 1.0}, "m") is False
+
+
+# T708: one full session per platform against stubbed transports.
+# Each drives the adapter's own entry point through a complete event
+# sequence and asserts the exact outbound transcript — no network, no SDK.
+
+def _no_spam_or_allow(text, rules):  # deterministic session decisions
+    if "buy followers" in text:
+        return {"action": "delete", "rule": "no-spam", "confidence": 0.99}
+    return {"action": "allow", "rule": "ok", "confidence": 1.0}
+
+
+def test_telegram_full_session_stubbed_api(monkeypatch):  # T708
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "moderate", _no_spam_or_allow)
+    from gatekeeper.adapters.telegram_bot import handle_update
+    calls = []
+    rules = {"no-spam": "t"}
+    session = [
+        (_tg_message("/rules"), {}),                                  # command
+        (_tg_message("buy followers now"), {"can_delete": True}),     # spam
+        (_tg_message("hello chat"), {}),                              # normal
+        ({"message": {"sticker": {}}}, {}),                           # embed
+    ]
+    results = [handle_update(u, rules, token="t",
+                             api_fn=lambda *a, **k: calls.append((a, k)),
+                             **kw)
+               for u, kw in session]
+    assert [r["action"] for r in results] == \
+        ["command", "delete", "allow", "ignored"]
+    assert results[1]["deleted"] is True
+    # outbound transcript: the command reply, the delete, nothing else
+    assert [a[1] for a, _ in calls] == ["sendMessage", "deleteMessage"]
+    assert calls[0][1]["chat_id"] == 1 and "active:" in calls[0][1]["text"]
+    assert calls[1][1] == {"chat_id": 1, "message_id": 7}
+
+
+def test_matrix_full_session_stubbed_api(monkeypatch):  # T708
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "moderate", _no_spam_or_allow)
+    from gatekeeper.adapters.matrix_bot import dispatch_page
+    calls = []
+    page = {"rooms": {"join": {
+        "!gaming:example.org": {"timeline": {"events": [
+            _mx_event("buy followers now", event_id="$spam"),
+            _mx_event("hello there", event_id="$ok"),
+            _mx_event(etype="m.room.member", event_id="$join"),
+        ]}},
+        "!dm:example.org": {"timeline": {"events": [
+            _mx_event("an image", msgtype="m.image", event_id="$img"),
+        ]}},
+    }}}
+    results = dispatch_page(page, {"no-spam": "t"}, token="t",
+                            homeserver="https://mx", can_redact=True,
+                            api_fn=lambda *a, **k: calls.append((a, k)))
+    assert [r["action"] for r in results] == \
+        ["delete", "allow", "ignored", "ignored"]
+    assert results[2]["reason"] == "not-message"
+    assert results[3]["reason"] == "no-text"
+    # the session's only outbound call is the redact of the spam event
+    assert len(calls) == 1 and calls[0][0][2] == "PUT"
+    assert "/redact/$spam/" in calls[0][0][3]
+    assert results[0]["redacted"] is True
+
+
+def test_mattermost_full_session_stubbed_api(monkeypatch):  # T708
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "moderate", _no_spam_or_allow)
+    from gatekeeper.adapters.mattermost import handle_post, handle_slash
+    calls = []
+    rules = {"no-spam": "t"}
+    # 1) an unauthenticated slash attempt is rejected outright
+    res = handle_slash({"token": "wrong", "text": "rules"}, rules,
+                       slash_token="sekrit",
+                       api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["reason"] == "bad-token"
+    # 2) the authenticated slash command replies in-channel
+    res = handle_slash({"token": "sekrit", "text": "rules",
+                        "channel_id": "c1"}, rules, slash_token="sekrit",
+                       token="t", server="https://mm",
+                       api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["action"] == "command"
+    # 3) a spam post is moderated and (opt-in) deleted
+    res = handle_post(_mm_post("buy followers now"), rules, token="t",
+                      server="https://mm", can_delete=True,
+                      api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["action"] == "delete" and res["deleted"] is True
+    # outbound transcript: one POST reply + one DELETE, nothing else
+    assert [a[2] for a, _ in calls] == ["POST", "DELETE"]
+    assert calls[0][0][3] == "/posts" and calls[0][1]["channel_id"] == "c1"
+    assert calls[1][0][3] == "/posts/p1"
+
+
+def test_zulip_full_session_stubbed_api(monkeypatch):  # T708
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "moderate", _no_spam_or_allow)
+    from gatekeeper.adapters.zulip_bot import handle_event
+    calls = []
+    creds = ("bot@example.org", "key", "https://z.example.org")
+    rules = {"no-spam": "t"}
+    session = [
+        ({"type": "heartbeat"}, {}),                                  # noise
+        (_zl_message("active: no-spam", sender=1), {"own_id": 1}),     # self
+        (_zl_message("buy followers now", mid=11), {"can_delete": True}),
+        (_zl_message("hello stream", mid=12), {}),                     # normal
+        (_zl_message("bouncer rules", mtype="private", sender=7,
+                     mid=13), {}),                                    # PM cmd
+    ]
+    results = []
+    for event, kw in session:
+        kw.update({"creds": creds,
+                   "api_fn": lambda *a, **k: calls.append((a, k))})
+        results.append(handle_event(event, rules, **kw))
+    assert [r["action"] for r in results] == \
+        ["ignored", "ignored", "delete", "allow", "command"]
+    # outbound transcript: the spam delete, then the PM reply — nothing else
+    assert [a[4] for a, _ in calls] == ["/messages/11", "/messages"]
+    assert calls[1][1]["type"] == "private" and calls[1][1]["to"] == 7
+
+
+def test_twitch_full_session_stubbed_socket(monkeypatch, capsys):  # T708
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "moderate", _no_spam_or_allow)
+    from gatekeeper.adapters import twitch_irc as tw
+
+    class _Sock:  # scripted IRC transcript, then the socket "closes"
+        def __init__(self, lines):
+            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._pos = 0
+            self.sent = []
+
+        def recv(self, n):
+            if self._pos >= len(self._data):
+                raise OSError("transcript over")
+            chunk = self._data[self._pos:self._pos + n]
+            self._pos += len(chunk)
+            return chunk
+
+        def sendall(self, b):
+            self.sent.append(b)
+
+    sock = _Sock(["PING :tmi.twitch.tv",
+                  ":u!u@h PRIVMSG #c :buy followers now",
+                  ":u!u@h PRIVMSG #c :hello chat",
+                  ":u!u@h WHISPER #c :psst"])
+    try:
+        tw._watch_once(sock, {"no-spam": "t"})
+    except OSError:
+        pass  # the transcript ends; run()'s retry loop owns reconnects
+    out = capsys.readouterr().out
+    assert sock.sent == [b"PONG :tmi.twitch.tv\r\n"]  # keepalive answered
+    assert "[delete] <u> buy followers now" in out  # the session's one decision
+    assert "hello chat" not in out and "psst" not in out  # allow + whisper
+
+
+def test_discord_full_session_stubbed_sdk(monkeypatch):  # T708
+    sys.path.insert(0, "src")
+    import asyncio
+    import signal
+    import types
+
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "moderate", _no_spam_or_allow)
+    handlers, sent = {}, []
+
+    class _Msg:
+        def __init__(self, content, bot=False):
+            self.content = content
+            self.author = types.SimpleNamespace(bot=bot)
+            self.channel = types.SimpleNamespace(send=self._send)
+            self.deleted = False
+
+        async def _send(self, text, **kw):
+            sent.append(text)
+
+        async def delete(self):
+            self.deleted = True
+
+        async def add_reaction(self, r):
+            sent.append(f"reacted:{r}")
+
+    class _Tree:
+        def command(self, **kw):
+            return lambda f: f
+
+    class _Client:  # records the handlers run() registers, then "connects"
+        def __init__(self, intents=None):
+            self.tree = _Tree()
+
+        def event(self, f):
+            handlers[f.__name__] = f
+            return f
+
+        def run(self, token):
+            handlers["ran_token"] = token
+
+    fake = types.SimpleNamespace(
+        Intents=types.SimpleNamespace(
+            default=lambda: types.SimpleNamespace(message_content=False)),
+        Client=_Client,
+        app_commands=types.SimpleNamespace(
+            choices=lambda **kw: (lambda f: f), Choice=lambda **kw: kw),
+    )
+    monkeypatch.setitem(sys.modules, "discord", fake)
+    orig = signal.getsignal(signal.SIGTERM)
+    try:
+        from gatekeeper.adapters.discord_bot import run
+        run(token="t")  # registers handlers against the fake SDK
+    finally:
+        signal.signal(signal.SIGTERM, orig)  # T702's hard handler must not leak
+
+    async def session():
+        await handlers["on_message"](_Msg("buy followers now", bot=True))
+        await handlers["on_message"](spam)                 # -> delete + announce
+        await handlers["on_message"](_Msg("hello chat"))   # allow: silent
+        await handlers["on_message"](_Msg("!bouncer rules"))  # command
+
+    spam = _Msg("buy followers now")
+    asyncio.run(session())
+    from gatekeeper import get_preset
+    assert handlers["ran_token"] == "t"  # the session reached connect
+    assert spam.deleted is True
+    assert sent == ["removed (no-spam @ 0.99)",
+                    "active: " + ", ".join(get_preset("gaming"))]
