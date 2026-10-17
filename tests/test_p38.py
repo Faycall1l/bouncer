@@ -556,3 +556,45 @@ def test_doctor_output_documented_in_readme():  # T728
     # the documented summary line is the format doctor actually prints —
     # count values stay free (the T727 test runs the real command)
     assert re.search(r"doctor: \d+ checks, \d+ warn, \d+ fail", section)
+
+
+def test_finetune_extra_pins_training_deps():  # T729
+    py = _pyproject()
+    opt = py["project"]["optional-dependencies"]
+    assert "finetune" in opt, "no finetune extra"
+    core = {_floor(d)[0] for d in py["project"]["dependencies"]}
+    finetune = dict(_floor(d) for d in opt["finetune"])
+    # the kaggle bootstrap's training stack lands in the extra, the
+    # transformers floor stays at its smoke-tested value...
+    for pkg in ("transformers", "torch", "safetensors", "accelerate", "peft"):
+        assert pkg in finetune, pkg
+    assert finetune["transformers"] == ">=4.48.0"
+    # ...and none of it leaks into the runtime core an adapter/server user
+    # installs (training is opt-in, and heavy)
+    for pkg in finetune:
+        assert pkg not in core, f"{pkg} leaked into core dependencies"
+    # coverage audit: every third-party import in the kaggle training and
+    # eval scripts is installable via core ∪ finetune — the one exclusion
+    # is kaggle_secrets, provided by the Kaggle platform, not pip
+    stdlib = set(sys.stdlib_module_names)
+    found = set()
+    for path in sorted(Path("kaggle").rglob("*.py")):
+        if "__pycache__" in str(path):
+            continue
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Import):
+                names = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                names = [(node.module or "").split(".")[0]]
+            else:
+                continue
+            for n in names:
+                if n in stdlib or n in ("__future__", "gatekeeper", ""):
+                    continue
+                found.add((n, str(path)))
+    assert found, "the scan found no third-party kaggle imports"
+    for mod, src in found:
+        if mod == "kaggle_secrets":
+            continue
+        assert mod in core | set(finetune), (
+            src, mod, "neither core nor .[finetune] installs it")

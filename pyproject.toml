@@ -57,6 +57,15 @@ demo = ["gradio>=4.44.0"]  # T153+T711: floor matches core
 discord = ["discord.py>=2.0"]  # T153+T711: app commands need the 2.x tree
 mattermost = ["websockets>=12"]  # T694: the only dep the MM adapter wants
 adapters = ["discord.py>=2.0", "websockets>=12"]  # T711: every adapter SDK dep
+finetune = [  # T729: training stack stays out of the runtime core
+  # floors copied from the smoke-tested kaggle bootstrap (train/smoke scripts);
+  # laya/datasets/huggingface_hub already ride in core
+  "transformers>=4.48.0",
+  "torch",  # direct import in train.py; accelerate pins it transitively
+  "safetensors",
+  "accelerate",  # bootstrap list — setup around torch.amp
+  "peft",  # LoRA path (T652), conditional import in train.py
+]
 
 [project.scripts]
 bouncer = "gatekeeper.cli:main"  # T152
