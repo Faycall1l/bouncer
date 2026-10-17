@@ -2,6 +2,7 @@
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 
 def _run_gate(*args):
@@ -394,3 +395,28 @@ def test_gate_stale_report_warning(tmp_path):  # T685: warn, never re-verdict
     # --ci stdout stays one clean line; the warning lives on stderr
     r = _run_gate(path, "--ci")
     assert len(r.stdout.strip().splitlines()) == 1 and "warning" in r.stderr
+
+
+def test_latest_report_pointer(tmp_path):  # T686
+    sys.path.insert(0, "src")
+    sys.path.insert(0, "eval")
+    from eval_gatekeeper import write_latest
+    report = {"n": 300, "rule_acc": 0.403, "ece": 0.12}
+    out_dir = str(tmp_path / "reports")
+    write_latest(report, "eval/reports/zero-shot-2026-10-17.json", out_dir=out_dir)
+    import os
+    latest = os.path.join(out_dir, "latest.json")
+    doc = json.loads((tmp_path / "reports" / "latest.json").read_text())
+    assert doc["n"] == 300 and doc["rule_acc"] == 0.403  # the report itself...
+    assert doc["_source"].endswith("zero-shot-2026-10-17.json")  # ...plus provenance
+    assert doc["_generated_at"]
+    # a second run overwrites — latest is always the newest
+    write_latest({"n": 9, "rule_acc": 0.5}, "second.json", out_dir=out_dir)
+    doc = json.loads((tmp_path / "reports" / "latest.json").read_text())
+    assert doc["n"] == 9
+    # gate.py consumes it directly: underscore provenance keys are ignored
+    r = _run_gate(latest)
+    assert r.returncode == 0, r.stderr
+    # and eval_gatekeeper's __main__ actually calls it after writing a report
+    src = Path("eval/eval_gatekeeper.py").read_text()
+    assert "write_latest(report, a.out)" in src

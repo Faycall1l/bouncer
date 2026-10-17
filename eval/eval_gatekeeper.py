@@ -1,8 +1,22 @@
 """Eval: accuracy(rule), MAE(harm/hype), ECE, gate precision@0.85, p50 latency."""
+import datetime
 import json
 import time
 
 from gatekeeper import GateConfig, get_router, moderate  # T209: dogfood moderate()
+
+
+def write_latest(report, source, out_dir="eval/reports"):
+    """T686: stable pointer to the newest report — `eval/reports/latest.json`
+    (gitignored). A copy with provenance, not a symlink: rotated-away files
+    can't break `gate.py eval/reports/latest.json`."""
+    import os
+    os.makedirs(out_dir, exist_ok=True)
+    doc = dict(report)
+    doc["_source"] = source
+    doc["_generated_at"] = datetime.datetime.now().astimezone().isoformat()
+    with open(os.path.join(out_dir, "latest.json"), "w") as f:
+        json.dump(doc, f, indent=2)
 
 
 def ece(probs, golds, n=10):
@@ -87,4 +101,5 @@ if __name__ == "__main__":
     os.makedirs("eval/reports", exist_ok=True)
     with open(a.out, "w") as f:
         json.dump(report, f, indent=2)
+    write_latest(report, a.out)  # T686: eval/reports/latest.json pointer
     print(json.dumps(report, indent=2))

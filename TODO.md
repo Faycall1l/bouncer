@@ -756,7 +756,7 @@
 - [x] T683 eval: pool bench gate — speedup >= 2x in the hits scenario
 - [x] T684 eval: `gate.py` reads BENCHMARKS table for known numbers
 - [x] T685 eval: stale-report warning (older than N days)
-- [ ] T686 eval: `eval/reports/latest.json` pointer file (gitignored)
+- [x] T686 eval: `eval/reports/latest.json` pointer file (gitignored)
 - [ ] T687 eval: negative-test — gate fails loudly on bad report
 - [ ] T688 eval: docs section "running the gates" in BENCHMARKS
 - [ ] T689 eval: make-style single command `python eval/gate.py --all`
