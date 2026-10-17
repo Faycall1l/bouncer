@@ -676,7 +676,7 @@
 
 ## P33 Release 0.3.0 (T611–T630)
 - [x] T611 pkg: version 0.3.0
-- [ ] T612 suite: full run green (179 tests)
+- [x] T612 suite: full run green (179 tests)
 - [x] T613 lint: `ruff check .` green
 - [ ] T614 test: new CLI commands --help (snapshot/models/presets)
 - [ ] T615 test: GET /ready + /presets/{name} shapes
