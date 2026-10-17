@@ -90,3 +90,23 @@ def test_eval_model_flag_in_report(tmp_path):  # T583
                        check=False, capture_output=True, text=True, env=env, timeout=60)
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout)["model"] == "base-router"
+
+
+def test_baseline_limit_truncates(tmp_path):  # T584
+    rows = []
+    for i in range(6):
+        rows.append(json.dumps(
+            {"state": {"message": f"msg {i}", "history": [], "rules": {"r": "t"}},
+             "labels": {"rule": "ok", "harm": "safe", "hype": "chill",
+                        "jailbreak": False, "escalate": False}}))
+    data = tmp_path / "rows.jsonl"
+    data.write_text("\n".join(rows) + "\n")
+    full = _run("eval/baseline_regex.py", str(data), "--json")
+    half = _run("eval/baseline_regex.py", str(data), "--limit", "3", "--json")
+    assert full.returncode == half.returncode == 0, full.stderr + half.stderr
+    assert json.loads([l for l in full.stdout.splitlines()
+                       if l.startswith("{")][-1])["n"] == 6
+    assert json.loads([l for l in half.stdout.splitlines()
+                       if l.startswith("{")][-1])["n"] == 3  # T584: truncated
+    empty = _run("eval/baseline_regex.py", str(data), "--limit", "0")
+    assert empty.returncode == 0  # --limit 0 means no truncation (not "zero rows")
