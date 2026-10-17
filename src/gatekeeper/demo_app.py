@@ -52,6 +52,13 @@ def format_meters(r: dict, standing: dict | None = None) -> str:
     return text
 
 
+def format_trail(trail: list, lats: list, last: int = 8) -> str:
+    """T562: pure history textbox text (session head + last N trail rows)."""
+    p50 = sorted(lats)[len(lats) // 2] if lats else 0  # T353
+    head = f"session: {len(lats)} decisions, p50 {p50:.1f}ms"  # T361: live counter
+    return head + "\n" + "\n".join(trail[-last:])
+
+
 def launch(port: int = 7860, share: bool = False, preset: str | None = None):  # T548
     """T324+T548: port/share/preset settable for `bouncer demo` flags and Spaces."""
     import gradio as gr
@@ -197,10 +204,7 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                 lats.append(float(str(ms).split()[0]))
             except (ValueError, IndexError):
                 pass
-            p50 = sorted(lats)[len(lats) // 2] if lats else 0  # T353
-            head = (f"session: {len(lats)} decisions, "  # T361: live counter
-                    f"p50 {p50:.1f}ms")
-            return out + (head + "\n" + "\n".join(trail[-8:]),)
+            return out + (format_trail(trail, lats),)  # T562: pure helper
 
         btn.click(run_h,  # T551+T556+T557+T558+T559
                   [msg, preset, rules, allow_thr, delete_thr, lang, user, model_dd,
