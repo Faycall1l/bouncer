@@ -798,7 +798,7 @@
 - [x] T721 pkg: `pip install .` produces working `bouncer --version` (test)
 - [x] T722 pkg: dependency floor pins (`>=`) for fastapi/gradio/pydantic
 - [x] T723 pkg: no hard dep on numpy/laya for core import (weightless check)
-- [ ] T724 pkg: `pip index` metadata — keywords/classifiers filled
+- [x] T724 pkg: `pip index` metadata — keywords/classifiers filled
 - [ ] T725 pkg: py.typed marker + typed public API
 - [ ] T726 pkg: SBOM-ish dep list exported in release workflow
 - [ ] T727 pkg: `bouncer doctor` — env/dep/route self-diagnosis command

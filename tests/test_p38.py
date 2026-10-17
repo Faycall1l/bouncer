@@ -416,3 +416,28 @@ def test_core_import_is_weightless(tmp_path):  # T723
                 continue
             assert "numpy" not in mods and "laya" not in mods, (
                 path.name, "imports weights at module level")
+
+
+def test_pip_index_metadata_filled():  # T724
+    import re
+    py = _pyproject()
+    kws = py["project"]["keywords"]
+    # pip-index-searchable: one lowercase hyphenated vocabulary, no phrases
+    assert all(re.fullmatch(r"[a-z0-9-]+", k) for k in kws), kws
+    assert {"moderation", "chat-moderation", "content-moderation"} <= set(kws)
+    cls = py["project"]["classifiers"]
+    assert all(" :: " in c and not c.startswith(" :: ") for c in cls)
+    # the fill: maturity, audience, platform, environments, topics
+    for want in ("Development Status :: 4 - Beta",
+                 "Operating System :: OS Independent",
+                 "Intended Audience :: Developers",
+                 "Environment :: Console",
+                 "Environment :: Web Environment",
+                 "Topic :: Communications :: Chat",
+                 "Topic :: Security"):
+        assert want in cls, want
+    # classifier minors track the requires-python floor (no drift below it)
+    floor = py["project"]["requires-python"].split(">=")[1]
+    minors = sorted(c.rsplit(" ", 1)[1] for c in cls
+                    if c.startswith("Programming Language :: Python :: 3."))
+    assert minors and minors[0] == floor, (minors, floor)

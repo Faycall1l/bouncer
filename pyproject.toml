@@ -6,15 +6,34 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "gatekeeper-1 contributors" }]
-keywords = ["moderation", "system-one", "jev", "laya", "typed-decisions", "calibration"]
+keywords = [  # T609+T724: what an operator would actually search for
+  "moderation",
+  "chat-moderation",
+  "content-moderation",
+  "real-time",
+  "system-one",
+  "jev",
+  "laya",
+  "typed-decisions",
+  "calibration",
+]
 classifiers = [
+  "Development Status :: 4 - Beta",  # T724: 0.x, honest about maturity
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",  # T401
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
-  "License :: OSI Approved :: Apache Software License",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Topic :: Communications :: Chat",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Security",
 ]
 dependencies = [  # T216: lower bounds from smoke-tested versions
   "laya>=0.4.3",
