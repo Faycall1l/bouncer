@@ -103,7 +103,7 @@ LRU pool keyed by constructor kwargs:
 * `BOUNCER_MODEL_DIR` (e.g. `/kaggle/working/bouncer-421m`) — load a local
   fine-tuned checkpoint for every request: beats language routing, while an
   explicit `model=` pin still wins. This is how a Kaggle-trained model (P35)
-  becomes the engine's default (T663).
+  becomes the engine's default (T663); pool builds honor it too (T664).
 * `model=` — pin a checkpoint per request: `moderate(msg, rules, model="multilingual")`,
   `POST /predict {"model": "typed-decisions"}`, `bouncer check --model english`.
   `None`/`auto` routes by language hint: non-latin scripts (ar/zh/ru/fa/ur/he) pin

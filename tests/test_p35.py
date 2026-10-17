@@ -143,6 +143,27 @@ def test_bouncer_model_dir_overrides_lang(monkeypatch):  # T663: finetuned dir w
     assert seen["model"] is None  # no dir, en default -> plain base router
 
 
+def test_pool_builds_from_model_dir(monkeypatch):  # T664: pool honors the dir
+    from gatekeeper import pool as P
+    built = []
+
+    def factory(**kw):
+        built.append(kw)
+        return "router"
+
+    monkeypatch.setattr(P, "POOL", P.RouterPool(max_n=2, factory=factory))
+    monkeypatch.setenv("BOUNCER_MODEL_DIR", "/models/bouncer-421m")
+    assert P.get_pooled_router() == "router"
+    assert built[-1]["model"] == "/models/bouncer-421m"
+    P.get_pooled_router()  # same effective kwargs -> pooled hit, no rebuild
+    assert len(built) == 1
+    P.get_pooled_router(model="english")  # explicit pin bypasses the dir
+    assert built[-1]["model"] == "english"
+    monkeypatch.delenv("BOUNCER_MODEL_DIR")
+    P.get_pooled_router()  # dir gone -> plain build, a distinct pool slot
+    assert built[-1] == {}
+
+
 def test_check_kaggle_env_preflight():  # T656: pre-flight plan is honest JSON
     r = _run_py("scripts/check_kaggle_env.py", "--json")
     rep = json.loads(r.stdout)

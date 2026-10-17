@@ -64,6 +64,9 @@ POOL = RouterPool()
 
 
 def get_pooled_router(**kw):  # T454: public constructor cache
+    mdir = os.environ.get("BOUNCER_MODEL_DIR", "").strip()  # T664: finetuned dir
+    if mdir and "model" not in kw:
+        kw = {**kw, "model": mdir}  # explicit model= still wins; dir beats the default
     return POOL.get(**kw)
 
 

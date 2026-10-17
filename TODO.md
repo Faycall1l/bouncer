@@ -732,7 +732,7 @@
 - [x] T661 ft: regression gate — new model must beat regex baseline 0.403 (post-T637; box said 0.480 pre-hard-negatives)
 - [x] T662 ft: calibration cell (temperature refit) writes temp.json
 - [x] T663 ft: `load finetuned` path in engine via `BOUNCER_MODEL_DIR`
-- [ ] T664 ft: pool builds from BOUNCER_MODEL_DIR when set
+- [x] T664 ft: pool builds from BOUNCER_MODEL_DIR when set
 - [ ] T665 ft: honest docs — what a real run changes in BENCHMARKS (draft)
 - [ ] T666 ft: costs block — 2xT4 hours + estimated HF storage
 - [ ] T667 ft: failure modes documented (OOM, token cap, label noise)
