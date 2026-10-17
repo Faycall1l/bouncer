@@ -623,7 +623,7 @@
 - [x] T562 demo: `format_trail()` pure helper extracted
 - [x] T563 demo: threshold memory pure helpers (`remember_thr`)
 - [x] T564 demo: severity parser pure helper (`parse_severity`) — shipped in T559
-- [ ] T565 demo: model dropdown default auto
+- [x] T565 demo: model dropdown default auto — shipped in T556
 - [ ] T566 demo: user box placeholder text
 - [ ] T567 demo: review viewer empty-state text
 - [ ] T568 demo: download filename includes date
