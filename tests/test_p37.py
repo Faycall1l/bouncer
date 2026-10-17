@@ -1,5 +1,6 @@
 """P37 tests (T691-T710): adapters. Weightless — env guards, static wiring,
 stubbed transports; no platform SDK or network in sight."""
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -453,7 +454,7 @@ def test_sync_pollers_use_the_shared_loop():  # T696: wired, not aspirational
     for name in ("telegram_bot", "matrix_bot", "zulip_bot"):
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "run_loop(fetch, handle" in src, name
-        assert "import require_env, run_loop" in src, name
+        assert "require_env, run_loop" in src, name
         assert "while True" not in src, name  # the loop lives in common.py
     # mattermost is the documented async exception (websocket, not a poller)
     mm = (ADAPTERS / "mattermost.py").read_text()
@@ -526,3 +527,62 @@ def test_dry_run_covers_forwarder_and_all_adapters(monkeypatch):  # T697
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "dry_run" in src, name
     assert "no-op" in (ADAPTERS / "twitch_irc.py").read_text()
+
+
+def test_load_rules_preset_file_and_per_adapter(monkeypatch, tmp_path):  # T698
+    sys.path.insert(0, "src")
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.common import AdapterError, load_rules
+    for var in ("BOUNCER_RULES", "BOUNCER_RULES_TESTADP",
+                "BOUNCER_RULES_OTHER", "BOUNCER_RULES_STREAM"):
+        monkeypatch.delenv(var, raising=False)
+    # default: the gaming preset
+    assert load_rules("testadp") == get_preset("gaming")
+    # shared env names another preset
+    monkeypatch.setenv("BOUNCER_RULES", "study")
+    assert load_rules("testadp") == get_preset("study")
+    # a JSON file path loads its rules verbatim
+    f = tmp_path / "rules.json"
+    f.write_text(json.dumps({"my-rule": {"pattern": "buy followers",
+                                         "action": "delete"}}))
+    monkeypatch.setenv("BOUNCER_RULES", str(f))
+    assert load_rules("testadp") == {
+        "my-rule": {"pattern": "buy followers", "action": "delete"}}
+    # per-adapter override beats the shared one; others keep the shared source
+    monkeypatch.setenv("BOUNCER_RULES_STREAM", "stream")
+    assert load_rules("stream") == get_preset("stream")
+    assert load_rules("other") == {"my-rule": {"pattern": "buy followers",
+                                               "action": "delete"}}
+    # unknown preset -> E_ADAPTER naming the options, not a KeyError
+    monkeypatch.setenv("BOUNCER_RULES", "nonsense")
+    try:
+        load_rules("testadp")
+    except AdapterError as e:
+        assert e.code == "E_ADAPTER" and "nonsense" in str(e)
+        assert "gaming" in str(e)  # the valid presets are listed
+    else:
+        raise AssertionError("unknown preset must fail loudly")
+    # a broken rules file -> E_ADAPTER, never a raw json traceback
+    monkeypatch.setenv("BOUNCER_RULES", str(f))
+    f.write_text("{broken")
+    try:
+        load_rules("testadp")
+    except AdapterError as e:
+        assert "unreadable JSON" in str(e)
+    else:
+        raise AssertionError("broken rules file must fail loudly")
+    f.write_text("[1, 2]")  # valid JSON, wrong shape
+    try:
+        load_rules("testadp")
+    except AdapterError as e:
+        assert "non-empty JSON object" in str(e)
+    else:
+        raise AssertionError("non-object rules file must fail loudly")
+
+
+def test_adapters_source_rules_via_load_rules():  # T698: wired for real
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+                 "twitch_irc", "discord_bot"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "load_rules(" in src, name
+        assert 'get_preset("' not in src, name  # no hardcoded presets left

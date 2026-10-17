@@ -92,12 +92,11 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
 
 
 def run():
-    from gatekeeper import get_preset
-    from gatekeeper.adapters.common import require_env, run_loop
+    from gatekeeper.adapters.common import load_rules, require_env, run_loop
     email = require_env("ZULIP_EMAIL")  # T691: named failure, not a crash
     key = require_env("ZULIP_API_KEY")
     site = require_env("ZULIP_SITE").rstrip("/")
-    rules = get_preset("gaming")
+    rules = load_rules("zulip")  # T698: BOUNCER_RULES[_ZULIP] or preset
     can_delete = os.environ.get("BOUNCER_ZL_DELETE") == "1"  # T695: opt-in
     own_id = api(email, key, site, "GET", "/users/me").get("user_id")
     q = api(email, key, site, "POST", "/register",

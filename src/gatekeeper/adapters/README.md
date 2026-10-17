@@ -26,6 +26,12 @@ its per-event guard matches `run_loop()`'s.
 (delete/redact/PM/reply/forward) are printed as `[dry-run] would ...` and
 never performed. Twitch is print-only by design, so it's a no-op there.
 
+Rules come from `load_rules()` (T698): `BOUNCER_RULES` names a preset or
+points at a JSON file of rules; `BOUNCER_RULES_<ADAPTER>` (e.g.
+`BOUNCER_RULES_MATRIX`) overrides it per adapter. An unknown preset or an
+unreadable rules file fails at startup with `E_ADAPTER`, before any loop
+starts.
+
 ## Notes (T408)
 
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision

@@ -28,6 +28,35 @@ def dry_run() -> bool:
     return os.environ.get("BOUNCER_DRY_RUN") == "1"
 
 
+def load_rules(adapter: str, default: str = "gaming") -> dict:
+    """T698: where an adapter's rules come from, per adapter.
+
+    `BOUNCER_RULES_<ADAPTER>` (e.g. BOUNCER_RULES_MATRIX) overrides the shared
+    `BOUNCER_RULES`; either names a preset or points at a JSON file of rules.
+    """
+    spec = os.environ.get(f"BOUNCER_RULES_{adapter.upper()}",
+                          os.environ.get("BOUNCER_RULES", default))
+    if os.path.isfile(spec):
+        import json
+        try:
+            with open(spec) as f:
+                rules = json.load(f)
+        except (OSError, ValueError) as e:
+            raise AdapterError(
+                f"E_ADAPTER: rules file {spec} is unreadable JSON: {e}") from e
+        if not isinstance(rules, dict) or not rules:
+            raise AdapterError(
+                f"E_ADAPTER: rules file {spec} must be a non-empty JSON object")
+        return rules
+    from gatekeeper import get_preset, presets
+    try:
+        return get_preset(spec)
+    except KeyError as e:
+        raise AdapterError(
+            f"E_ADAPTER: unknown rules {spec!r} — a preset "
+            f"{sorted(presets.PRESETS)} or a JSON file path") from e
+
+
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
              sleep=time.sleep):
     """T696: one poll loop for every sync adapter (telegram/matrix/zulip).

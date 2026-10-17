@@ -53,9 +53,8 @@ def _watch_once(sock, rules) -> None:
 
 
 def run(retries: int = 3):
-    from gatekeeper import get_preset
-    from gatekeeper.adapters.common import require_env
-    rules = get_preset("stream")
+    from gatekeeper.adapters.common import load_rules, require_env
+    rules = load_rules("twitch", "stream")  # T698: env may override the preset
     host, port = "irc.chat.twitch.tv", 6667
     # T691: all three checked up-front — fail before the first connect attempt
     nick, chan = require_env("TWITCH_NICK"), require_env("TWITCH_CHAN")

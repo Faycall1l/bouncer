@@ -79,10 +79,9 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
 
 
 def run():
-    from gatekeeper import get_preset
-    from gatekeeper.adapters.common import require_env, run_loop
+    from gatekeeper.adapters.common import load_rules, require_env, run_loop
     token = require_env("TELEGRAM_TOKEN")  # T691: named failure, not a crash
-    rules = get_preset("gaming")
+    rules = load_rules("telegram")  # T698: BOUNCER_RULES[_TELEGRAM] or preset
     can_delete = os.environ.get("BOUNCER_TG_DELETE") == "1"  # T692: opt-in
     offset = 0
 

@@ -90,8 +90,7 @@ def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,
 def run():
     import asyncio
 
-    from gatekeeper import get_preset
-    from gatekeeper.adapters.common import AdapterError, require_env
+    from gatekeeper.adapters.common import AdapterError, load_rules, require_env
     try:
         import websockets  # optional dep: pip install -e .[mattermost]
     except ImportError as e:
@@ -100,7 +99,7 @@ def run():
             "pip install -e .[mattermost]") from e
     server = require_env("MATTERMOST_SERVER").rstrip("/")  # T691: named failure
     token = require_env("MATTERMOST_TOKEN")
-    rules = get_preset("gaming")
+    rules = load_rules("mattermost")  # T698: BOUNCER_RULES[_MATTERMOST] or preset
     can_delete = os.environ.get("BOUNCER_MM_DELETE") == "1"  # T694: opt-in
 
     async def _loop():
