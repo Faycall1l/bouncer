@@ -819,7 +819,7 @@
 - [x] T740 ci: cache pip + uv in workflow
 - [x] T741 ci: fail-fast off, so all matrix legs report
 - [x] T742 ci: workflow badge in README (existed; now pinned by test)
-- [ ] T743 ci: PR template (tests? docs? boxes ticked?)
+- [x] T743 ci: PR template (tests? docs? boxes ticked?)
 - [ ] T744 ci: issue template for bug reports (rid + version + config)
 - [ ] T745 ci: CODEOWNERS / branch protection notes in CONTRIBUTING
 - [ ] T746 ci: secret scan job (gitleaks or grep-based fallback)

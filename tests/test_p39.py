@@ -244,3 +244,14 @@ def test_workflow_badge_in_readme():  # T742
                       r.stdout.strip())
         if u:  # only github origins make a badge claim
             assert u.group(1) == slug, (u.group(1), slug)
+
+
+def test_pr_template_checklist():  # T743
+    t = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text()
+    # the box's three questions — tests? docs? boxes ticked? — all have a
+    # checkbox, plus the repo's standing gates (lint, secrets)
+    assert "pytest" in t and "ruff" in t
+    assert "Docs updated" in t
+    assert "TODO.md" in t and "its own commit" in t
+    assert "secrets" in t
+    assert t.count("- [ ]") >= 6, "checklist too thin"
