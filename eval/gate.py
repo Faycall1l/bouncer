@@ -131,6 +131,9 @@ def main(argv=None) -> int:
     ap.add_argument("--ci", action="store_true",  # T677: one line, stable exits
                     help="CI mode: exactly one line of verdict JSON on stdout; "
                          "failures still blame on stderr; exits 0/1/2 as above")
+    ap.add_argument("--against", default=None,  # T679: informational delta table
+                    help="reference report to diff against: prints metric deltas "
+                         "(informational — never changes the exit code)")
     ap.add_argument("--min-n", type=int, default=1,
                     help="report must cover at least N rows")
     ap.add_argument("--min-rule-acc", type=float, default=0.403,  # T672
@@ -166,7 +169,26 @@ def main(argv=None) -> int:
               f"{type(rep).__name__}", file=sys.stderr)
         return 2
 
+    delta = None
+    render_delta = None
+    if a.against:  # T679: diff vs a reference report, informational only
+        try:
+            with open(a.against) as f:
+                ref = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"gate: cannot read --against {a.against}: {e}", file=sys.stderr)
+            return 2
+        if not isinstance(ref, dict):
+            print(f"gate: --against {a.against} must be a JSON object",
+                  file=sys.stderr)
+            return 2
+        from compare_models import compare
+        from compare_models import render as render_delta
+        delta = compare(ref, rep)  # ref = the "base" side, report = the new one
+
     verdict = gate_report(rep, a)
+    if delta is not None:
+        verdict["deltas"] = delta  # --json/--ci consumers get it inline
     payload = (json.dumps(verdict, indent=2) if a.json
                else json.dumps(verdict) if a.ci else render(verdict))
     if not verdict["ok"]:
@@ -176,6 +198,8 @@ def main(argv=None) -> int:
                 print(f"gate: FAIL {c['name']}: value={c['value']} "
                       f"expected {c['expected']}", file=sys.stderr)
     print(payload)
+    if delta is not None and not (a.json or a.ci):
+        print(render_delta(delta))
     return 0 if verdict["ok"] else 1
 
 

@@ -749,7 +749,7 @@
 - [x] T676 eval: gate per-rule worst-case (no rule below floor)
 - [x] T677 eval: `gate.py --ci` exit codes documented (0/1/2)
 - [x] T678 eval: baseline report format normalized (`n`, `acc`, `per_label`)
-- [ ] T679 eval: compare two reports (`--against`) prints deltas
+- [x] T679 eval: compare two reports (`--against`) prints deltas
 - [ ] T680 eval: report diff appears in CHANGELOG when gates re-run
 - [ ] T681 eval: i18n gate — wiring eval must stay 0 errors
 - [ ] T682 eval: breaker sim gate — trip and close both true

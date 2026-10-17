@@ -214,3 +214,25 @@ def test_baseline_report_normalized_and_gateable(tmp_path):  # T678
     # below its own accuracy the baseline fails its own bar (sanity of direction)
     r = _run_gate(str(b), "--min-rule-acc", "0.5", "--min-per-rule-acc", "0")
     assert r.returncode == 1 and "FAIL rule_acc" in r.stderr
+
+
+def test_gate_against_prints_deltas(tmp_path):  # T679: informational ref diff
+    ref = _report(tmp_path, {"model": "base-router", "n": 500, "rule_acc": 0.305,
+                             "ece": 0.21, "p50_ms": 1004.0}, name="ref.json")
+    cur = _report(tmp_path, {"model": "bouncer-421m", "n": 500, "rule_acc": 0.512,
+                             "ece": 0.12, "p50_ms": 40.0}, name="cur.json")
+    r = _run_gate(cur, "--against", ref, "--min-rule-acc", "0.4")
+    assert r.returncode == 0, r.stderr
+    assert "rule_acc" in r.stdout and "+0.207" in r.stdout  # human delta table
+    assert "vs" in r.stdout
+    # --json carries the deltas inline, same compare semantics as T668
+    r = _run_gate(cur, "--against", ref, "--json", "--min-rule-acc", "0.4")
+    verdict = json.loads(r.stdout)
+    assert verdict["deltas"]["metrics"]["rule_acc"]["delta"] == 0.207
+    assert verdict["deltas"]["ft_better"] is True
+    # deltas never change the exit code: failing gates still fail
+    r = _run_gate(cur, "--against", ref, "--min-rule-acc", "0.9")
+    assert r.returncode == 1
+    # an unreadable reference is unusable input -> exit 2
+    r = _run_gate(cur, "--against", str(tmp_path / "nope.json"))
+    assert r.returncode == 2 and "--against" in r.stderr
