@@ -37,6 +37,11 @@ Every loop adapter also logs a health line (T699) every 5 minutes:
 Ignored traffic and command replies aren't counted as decisions; fetch and
 event errors are recorded as the last error with its age.
 
+Every log line and decision print goes through the shared `redact()` pass
+(T700): exact env token/site values, `Bearer`/`oauth:`/`Basic` credentials,
+emails, and URL query secrets are masked. Twitch's T077 `redact()` now
+delegates to it.
+
 ## Notes (T408)
 
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision

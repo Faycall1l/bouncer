@@ -73,8 +73,9 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
                    message_id=msg.get("message_id"))
             res["deleted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
-        out(f"[{res['action']}] {text[:120]} ({res.get('rule')}@"
-            f"{res.get('confidence', 0):.2f})")
+        from gatekeeper.adapters.common import redact
+        out(f"[{res['action']}] {redact(text[:120])} "
+            f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
     return res
 
 

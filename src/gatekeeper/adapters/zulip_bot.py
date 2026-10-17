@@ -86,7 +86,9 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
             api_fn(*creds, "DELETE", f"/messages/{msg['id']}")
             res["deleted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
-        out(f"[{res['action']}] <{msg.get('sender_id')}> {text[:120]} "
+        from gatekeeper.adapters.common import redact
+        out(f"[{res['action']}] <{redact(msg.get('sender_id'))}> "
+            f"{redact(text[:120])} "
             f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
     return res
 

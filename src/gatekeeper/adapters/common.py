@@ -28,6 +28,35 @@ def dry_run() -> bool:
     return os.environ.get("BOUNCER_DRY_RUN") == "1"
 
 
+# T700: every secret an adapter might echo into a log line or an out= print.
+_ENV_TOKEN_VARS = ("DISCORD_TOKEN", "TWITCH_TOKEN", "TWITCH_NICK",
+                   "TELEGRAM_TOKEN", "MATRIX_TOKEN", "MATRIX_HOMESERVER",
+                   "MATTERMOST_TOKEN", "MATTERMOST_SERVER", "ZULIP_API_KEY",
+                   "ZULIP_EMAIL", "ZULIP_SITE", "BOUNCER_FORWARD_URL")
+
+
+def redact(s: str) -> str:
+    """T700: one redaction pass for every adapter log line.
+
+    Masks exact env token/site values (worst case: an exception embeds one),
+    `Bearer`/`oauth:`/`Basic` credentials, emails, and URL query-string
+    secrets — in that order, so a token containing an email-like substring
+    is still masked as the token.
+    """
+    import re
+    s = str(s)
+    for var in _ENV_TOKEN_VARS:
+        v = os.environ.get(var)
+        if v:
+            s = s.replace(v, f"***{var}***")
+    s = re.sub(r"(?i)\b(bearer|basic)\s+\S+", r"\1 ***", s)
+    s = re.sub(r"(?i)\boauth:\S+", "oauth:***", s)
+    s = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "***@***", s)  # emails
+    s = re.sub(r"(?i)([?&](?:token|key|api_key|access_token|secret)=)[^&\s]+",
+               r"\1***", s)  # URL query secrets
+    return s
+
+
 def load_rules(adapter: str, default: str = "gaming") -> dict:
     """T698: where an adapter's rules come from, per adapter.
 
@@ -73,9 +102,9 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
         try:
             page = fetch()
         except Exception as e:  # noqa: BLE001 — network blips must not kill the bot
-            print(f"{name} error:", e, file=sys.stderr, flush=True)
+            print(f"{name} error: {redact(e)}", file=sys.stderr, flush=True)
             if health is not None:
-                health.error(e)
+                health.error(redact(e))  # T700: no secrets in the health line
             sleep(backoff_s)
             continue
         for ev in page or []:
@@ -85,7 +114,8 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
                         "ignored", "command"):
                     health.decision()  # T699: ignored traffic isn't a decision
             except Exception as e:  # noqa: BLE001
-                print(f"{name} event error:", e, file=sys.stderr, flush=True)
+                print(f"{name} event error: {redact(e)}",
+                      file=sys.stderr, flush=True)
                 if health is not None:
                     health.error(e)
         if health is not None:

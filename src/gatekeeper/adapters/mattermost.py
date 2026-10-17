@@ -51,7 +51,9 @@ def handle_post(post: dict, rules: dict, *, token=None, server=None,
             api_fn(token, server, "DELETE", f"/posts/{post['id']}")
             res["deleted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
-        out(f"[{res['action']}] <{post.get('user_id')}> {text[:120]} "
+        from gatekeeper.adapters.common import redact
+        out(f"[{res['action']}] <{redact(post.get('user_id'))}> "
+            f"{redact(text[:120])} "
             f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
     return res
 
@@ -123,8 +125,9 @@ def run():
                     if res.get("action") not in ("ignored", "command"):
                         health.decision()
                 except Exception as e:  # noqa: BLE001 — one bad post, one line
-                    print("post error:", e, file=sys.stderr, flush=True)
-                    health.error(e)
+                    from gatekeeper.adapters.common import redact
+                    print("post error:", redact(e), file=sys.stderr, flush=True)
+                    health.error(redact(e))
                 health.maybe_log()
 
     asyncio.run(_loop())  # SIGTERM handling is T702's job

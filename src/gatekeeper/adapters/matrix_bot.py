@@ -76,7 +76,9 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
                     "reason": f"bouncer:{res.get('rule')}"})
             res["redacted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
-        out(f"[{res['action']}] <{event.get('sender')}> {body[:120]} "
+        from gatekeeper.adapters.common import redact
+        out(f"[{res['action']}] <{redact(event.get('sender'))}> "
+            f"{redact(body[:120])} "
             f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
     return res
 
@@ -101,7 +103,8 @@ def dispatch_page(page: dict, rules: dict, **kw) -> list:
         try:
             results.append(handle_event(ev, rules, **kw))
         except Exception as e:  # noqa: BLE001
-            print("event error:", e, file=sys.stderr, flush=True)
+            from gatekeeper.adapters.common import redact
+            print("event error:", redact(e), file=sys.stderr, flush=True)
             results.append({"action": "error", "error": str(e)})
     return results
 

@@ -35,7 +35,8 @@ def forward(url: str, event: dict) -> None:  # T079
     from gatekeeper import __version__
     from gatekeeper.adapters.common import dry_run
     if dry_run():  # T697: never post — not even the forwarder
-        print(f"[dry-run] would forward {event.get('action')} to {url}")
+        from gatekeeper.adapters.common import redact
+        print(f"[dry-run] would forward {event.get('action')} to {redact(url)}")
         return
     req = urllib.request.Request(url, data=json.dumps(event).encode(),
                                  headers={"Content-Type": "application/json",

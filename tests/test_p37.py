@@ -651,5 +651,67 @@ def test_adapters_wire_health():  # T699: every loop adapter reports health
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "health=Health(" in src, name  # wired through run_loop
     mm = (ADAPTERS / "mattermost.py").read_text()
-    assert 'Health("mattermost")' in mm and "health.error(e)" in mm
+    assert 'Health("mattermost")' in mm and "health.error(" in mm
     assert "health.decision()" in mm and "health.maybe_log()" in mm
+
+
+def test_shared_redact_masks_tokens_and_emails(monkeypatch):  # T700
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import redact
+    monkeypatch.setenv("TELEGRAM_TOKEN", "123456:AAFakeToken-xyz")
+    monkeypatch.setenv("ZULIP_EMAIL", "bot@zulip.example.org")
+    # exact env values are masked wherever they appear (exception echoes)
+    s = redact("HTTPError: bot@zulip.example.org rejected "
+               "token 123456:AAFakeToken-xyz")
+    assert "123456:AAFakeToken-xyz" not in s and "***TELEGRAM_TOKEN***" in s
+    assert "bot@zulip.example.org" not in s and "***ZULIP_EMAIL***" in s
+    # credential schemes, emails, URL query secrets
+    assert "Bearer ***" in redact("Authorization: Bearer abc123 rest")
+    assert "oauth:***" in redact("PASS oauth:s3cret irc")
+    assert "Basic ***" in redact("Basic dXNlcjpwYXNz")
+    s = redact("contact admin@corp.example.org please")
+    assert "admin@corp.example.org" not in s and "***@***" in s
+    s = redact("POST https://hooks.example/x?token=shh&u=1")
+    assert "shh" not in s and "token=***" in s
+    # nothing to hide -> nothing mangled
+    assert redact("just a normal message") == "just a normal message"
+
+
+def test_adapter_output_is_redacted(monkeypatch, capsys):  # T700: wired
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setenv("TELEGRAM_TOKEN", "sekrit-token-xyz")
+    monkeypatch.setattr(gatekeeper, "moderate",
+                        lambda t, r: {"action": "flag", "rule": "r",
+                                      "confidence": 0.9})
+    from gatekeeper.adapters.telegram_bot import handle_update
+    handle_update(_tg_message("give me sekrit-token-xyz please "
+                              "(mail admin@example.org)"), {"r": "t"})
+    out = capsys.readouterr().out
+    assert "sekrit-token-xyz" not in out and "***TELEGRAM_TOKEN***" in out
+    assert "admin@example.org" not in out  # pasted emails don't leak either
+    # the shared loop redacts stderr error lines and the health line
+    from gatekeeper.adapters.common import Health, run_loop
+    lines = []
+    h = Health("t", clock=lambda: 0.0, log=lines.append)
+    n = {"i": 0}
+
+    def fetch():
+        n["i"] += 1
+        if n["i"] == 1:
+            raise OSError("401 token sekrit-token-xyz")
+        raise _StopLoop
+
+    try:
+        run_loop(fetch, lambda ev: None, name="t", sleep=lambda s: None,
+                 health=h)
+    except _StopLoop:
+        pass
+    err = capsys.readouterr().err
+    assert "sekrit-token-xyz" not in err and "TELEGRAM_TOKEN" in err
+    assert "sekrit-token-xyz" not in h.line()
+    # every adapter either applies the pass or delegates to it
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+                 "webhooks", "twitch_irc"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "redact(" in src, name

@@ -5,15 +5,13 @@ Print-only by design, so BOUNCER_DRY_RUN (T697) is a no-op here.
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
-import os
 import socket
 import sys
 
 
-def redact(s: str) -> str:  # T077+T300: token never reaches logs in any form
-    tok = os.environ.get("TWITCH_TOKEN", "")
-    out = s.replace(tok, "***") if tok else s
-    return __import__("re").sub(r"oauth:\S+", "oauth:***", out)
+def redact(s: str) -> str:  # T077+T300+T700: delegate to the shared pass
+    from gatekeeper.adapters.common import redact as _redact
+    return _redact(s)
 
 
 def _parse_privmsg(line: str) -> tuple | None:
