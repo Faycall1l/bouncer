@@ -15,7 +15,9 @@
 * Headers: `X-Request-ID` echo, `X-Bouncer-ms` latency,
   `X-Content-Type-Options: nosniff`. Optional `X-API-Key` when `BOUNCER_KEY`
   set (constant-time compare; <16 chars warns at boot). 60 req/min/IP with
-  `Retry-After: 60` on 429. Gzip above 1000 bytes.
+  `Retry-After: 60` on 429. Gzip above 1000 bytes. CORS origins: comma-separated
+  `BOUNCER_CORS` env (default `*`, demo-friendly) or `bouncer serve --cors`;
+  applied at process start.
 
 ## Presets + language (T595)
 

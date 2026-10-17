@@ -671,7 +671,7 @@
 - [x] T606 pkg: `snapshot` CLI surfaced in README command list
 - [x] T607 docs: gates.md breaker demotion row
 - [x] T608 docs: api.md snapshot/export-stats section
-- [ ] T609 test: docs-consistency extended (codes/routes/presets/env)
+- [x] T609 test: docs-consistency extended (codes/routes/presets/env) — also caught + fixed `--key-file` writing the wrong env var
 - [ ] T610 test: README command list matches CLI parsers
 
 ## P33 Release 0.3.0 (T611–T630)

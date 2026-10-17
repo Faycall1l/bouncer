@@ -335,7 +335,7 @@ def _cmd_serve(args) -> int:  # T547+T549: secrets/flags applied before uvicorn 
         if not key:
             print("bouncer: --key-file is empty", file=sys.stderr)
             return 4
-        os.environ["BOUNCER_API_KEY"] = key
+        os.environ["BOUNCER_KEY"] = key  # serve.py reads BOUNCER_KEY (T547 fixed T609)
     if getattr(args, "cors", None):  # T549: flag beats env
         os.environ["BOUNCER_CORS"] = args.cors
     import uvicorn

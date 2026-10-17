@@ -6,7 +6,9 @@
   401. Comparison is constant-time (timing probes learn nothing). Keys shorter
   than 16 chars log a warning at boot (never the key itself).
 * Unset → open API. That's the demo default and fine for localhost; anything
-  internet-facing should set a key.
+  internet-facing should set a key. `bouncer serve --key-file PATH` reads the
+  key from a file and exports it as `BOUNCER_KEY` for the server process —
+  same checks apply.
 
 ## `serve --key-file` (docker-secrets style, T547)
 
