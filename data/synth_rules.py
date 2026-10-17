@@ -31,6 +31,23 @@ TEMPLATES = [
 PROMPT = """You are a chat-mod teacher. Given RULES, write a message + labels as JSON: {message, rule, harm(safe|suspicious|harmful), hype(dead|chill|hyped), jailbreak(0/1), escalate(0/1)}.
 RULES: {rules}. Vary K=3-6 rules, hard negatives, edge cases."""
 
+HIST_USERS = ["nova", "pixel_witch", "draven", "mossy", "kite"]  # T635
+HIST_MSGS = ["hey all", "gg that was close", "what time is the raid?", "brb water",
+             "lol", "ok back", "anyone up for ranked?", "nice clutch",
+             "one sec, dog", "queue popped"]
+
+
+def synth_history(n=None):
+    """T635: neutral 2-4 turn chat window ("user: text" lines the engine parses).
+
+    Deliberately label-free filler — history must never leak the row's verdict,
+    only exercise the history plumbing the engine already handles.
+    """
+    if n is None:
+        n = random.randint(2, 4)
+    return [f"{random.choice(HIST_USERS)}: {random.choice(HIST_MSGS)}" for _ in range(n)]
+
+
 def template_rows(n):
     rows = []
     for _ in range(n):
@@ -40,7 +57,7 @@ def template_rows(n):
         else:
             pools = [p for p in RULE_POOLS if rule in p] or RULE_POOLS
             rules = random.choice(pools)
-        rows.append({"state": {"message": msg, "history": [], "rules": rules},
+        rows.append({"state": {"message": msg, "history": synth_history(), "rules": rules},
                      "labels": {"rule": rule, "harm": harm, "hype": hype,
                                 "jailbreak": bool(jb), "escalate": bool(esc)}})
     return rows
@@ -56,7 +73,7 @@ def llm_rows(n, model="qwen3-4b"):
         try:
             d = json.loads(r.choices[0].message.content.strip().strip("`"))
             d["rules"] = rules
-            rows.append({"state": {"message": d["message"], "history": [], "rules": rules},
+            rows.append({"state": {"message": d["message"], "history": synth_history(), "rules": rules},
                          "labels": {"rule": d["rule"] if d["rule"] in rules or d["rule"]=="ok" else "ok",
                                     "harm": d["harm"], "hype": d["hype"],
                                     "jailbreak": bool(d["jailbreak"]), "escalate": bool(d["escalate"])}})
