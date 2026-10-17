@@ -56,19 +56,20 @@ def collect(report: dict, args) -> list:
         expected = f"> {lo} and <= {hi}"
         add(name, expected, v, None if v is None else lo < v <= hi)
 
-    def ge(name, keys, threshold):
-        v = _num(report, *keys)
-        add(name, f">= {threshold}", v, None if v is None else v >= threshold)
-
     # --- T671: structural gates: this must be a usable eval report ---
     # Absent core fields FAIL loudly (a bad report is a failed gate, not a skip).
     n = _num(report, "n")
     add("report_n", f">= {args.min_n}", n, False if n is None else n >= args.min_n)
     acc = _num(report, "rule_acc")
+    if acc is None:
+        acc = _num(report, "acc")  # T678: normalized baseline report key
     add("report_rule_acc", "present", acc, acc is not None)
 
     # --- T672-T676 register their threshold gates here ---
-    ge("rule_acc", ("rule_acc",), args.min_rule_acc)  # T672: must beat the regex bar
+    if acc is None:  # T672: must beat the regex bar (acc covers baselines too)
+        add("rule_acc", f">= {args.min_rule_acc}", None, None)
+    else:
+        add("rule_acc", f">= {args.min_rule_acc}", acc, acc >= args.min_rule_acc)
     le("ece", ("ece",), args.max_ece)  # T673: after calibration, probs stay honest
     le("p95_ms", ("p95_ms",), args.max_p95_ms)  # T674: latency budget (T4 target)
     band("abstention_rate", ("abstention_rate",),  # T675: honest band
@@ -76,6 +77,8 @@ def collect(report: dict, args) -> list:
     # --- T676: per-rule worst-case — no eligible rule may sit below the floor ---
     # per_rule is {label: [ok, n]}; rules below the support floor are noise.
     pr = _get(report, "per_rule")
+    if pr is MISSING:
+        pr = _get(report, "per_label")  # T678: normalized baseline report key
     worst, worst_name = None, None
     if isinstance(pr, dict):
         for rule, pair in pr.items():

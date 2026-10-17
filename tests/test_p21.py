@@ -29,7 +29,8 @@ def test_baseline_json():  # T379+T380
                        text=True, env=ENV, check=False)
     assert r.returncode == 0
     doc = json.loads(r.stdout.splitlines()[-1])
-    assert doc["n"] == 300 and "per_label" in doc and "regex_acc" in doc
+    assert set(doc) == {"n", "acc", "per_label"}  # T678: normalized report shape
+    assert doc["n"] == 300
 
 
 def test_validate_data():  # T381

@@ -185,3 +185,32 @@ def test_gate_ci_mode_and_documented_exits(tmp_path):  # T677: 0/1/2 contract
     # exit 2 keeps its meaning in CI mode too
     r = _run_gate(str(tmp_path / "nope.json"), "--ci")
     assert r.returncode == 2 and r.stdout == ""
+
+
+def _run_py(*args):
+    return subprocess.run([sys.executable, *args], check=False, capture_output=True,
+                          text=True, timeout=60)
+
+
+def test_baseline_report_normalized_and_gateable(tmp_path):  # T678
+    r = _run_py("eval/baseline_regex.py", "data/examples.jsonl", "--json")
+    assert r.returncode == 0, r.stderr
+    doc = json.loads(r.stdout.splitlines()[-1])
+    assert set(doc) == {"n", "acc", "per_label"}  # the normalized shape
+    assert doc["n"] == 300 and doc["acc"] == 0.403  # the measured number (T637)
+    assert sum(v[0] for v in doc["per_label"].values()) > 0
+    assert sum(v[1] for v in doc["per_label"].values()) == doc["n"]
+    # gate.py consumes the normalized baseline report directly (acc alias)
+    b = tmp_path / "baseline.json"
+    b.write_text(json.dumps(doc))
+    r = _run_gate(str(b), "--json")
+    checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+    assert checks["rule_acc"]["ok"] is True  # acc (0.403) fed the rule_acc gate
+    assert checks["per_rule_worst"]["ok"] is False  # per_label fed worst-case...
+    assert "be-kind" in checks["per_rule_worst"]["expected"]  # ...and named it
+    # with the per-rule floor zeroed, the baseline clears its own acc bar
+    r = _run_gate(str(b), "--min-rule-acc", "0.4", "--min-per-rule-acc", "0")
+    assert r.returncode == 0, r.stderr
+    # below its own accuracy the baseline fails its own bar (sanity of direction)
+    r = _run_gate(str(b), "--min-rule-acc", "0.5", "--min-per-rule-acc", "0")
+    assert r.returncode == 1 and "FAIL rule_acc" in r.stderr

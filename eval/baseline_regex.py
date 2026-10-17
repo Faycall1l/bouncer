@@ -43,10 +43,10 @@ if __name__ == "__main__":
         else:
             n_violation += 1
             hit += pred != "ok"
-    print(f"n={len(rows)} regex_acc={hit / len(rows):.3f} (violations={n_violation})")
+    print(f"n={len(rows)} acc={hit / len(rows):.3f} (violations={n_violation})")
     for lab in sorted(per_label):  # T379
         print(f"  {lab}: {per_hit[lab]}/{per_label[lab]}")
-    if a.json:  # T380
-        print(json.dumps({"n": len(rows), "regex_acc": round(hit / len(rows), 3),
+    if a.json:  # T380+T678: normalized report — n, acc, per_label
+        print(json.dumps({"n": len(rows), "acc": round(hit / len(rows), 3),
                           "per_label": {k: [per_hit[k], per_label[k]]
                                         for k in sorted(per_label)}}))
