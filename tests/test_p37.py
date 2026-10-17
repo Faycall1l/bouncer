@@ -156,3 +156,95 @@ def test_telegram_missing_token_fails_e_adapter():  # T692: T691 guard applies
     assert r.returncode != 0
     assert "E_ADAPTER" in r.stderr and "TELEGRAM_TOKEN" in r.stderr
     assert "KeyError" not in r.stderr
+
+
+def _mx_event(text="hello there", etype="m.room.message", msgtype="m.text",
+              event_id="$ev1"):
+    return {"type": etype, "event_id": event_id, "sender": "@user:example.org",
+            "content": {"msgtype": msgtype, "body": text}}
+
+
+class _StubRouter:
+    """T580 convention: laya isn't installed; the engine needs a router stub."""
+    def predict(self, state, questions):
+        return {"answers": {"rule": {"choice": "ok", "confidence": 0.9,
+                                     "probabilities": {"ok": 0.9}},
+                            "harm": {"score": "safe"},
+                            "hype": {"score": "chill"},
+                            "jailbreak": {"noul": 0.0},
+                            "escalate": {"noul": 0.0}}}
+
+
+def test_matrix_timeline_goes_through_moderate(monkeypatch):  # T693: -> moderate
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "_router", _StubRouter())
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.matrix_bot import handle_event
+    rules = get_preset("gaming")
+    res = handle_event(_mx_event("just chatting"), rules)
+    assert res["action"] in ("allow", "flag", "delete", "escalate")
+    assert res["redacted"] is False
+    # non-message and non-text events are ignored, not moderated
+    assert handle_event(_mx_event(etype="m.room.member"), rules) == \
+        {"action": "ignored", "reason": "not-message"}
+    assert handle_event(_mx_event(msgtype="m.image"), rules) == \
+        {"action": "ignored", "reason": "no-text"}
+    assert handle_event(_mx_event(""), rules)["reason"] == "no-text"
+
+
+def test_matrix_commands_and_redaction_opt_in(monkeypatch):  # T693
+    sys.path.insert(0, "src")
+    import gatekeeper
+    from gatekeeper import get_preset
+    from gatekeeper.adapters import matrix_bot as mx
+    rules = get_preset("gaming")
+    # !bouncer prefix parity with discord
+    res = mx.handle_event(_mx_event("!bouncer rules"), rules)
+    assert res["action"] == "command" and res["reply"].startswith("active:")
+    assert mx.handle_event(_mx_event("!bouncer wat"), rules) == \
+        {"action": "ignored", "reason": "unknown-command"}
+    # redaction is opt-in and needs token + homeserver to fire
+    monkeypatch.setattr(gatekeeper, "moderate",
+                        lambda text, r: {"action": "delete", "rule": "sin-spam",
+                                         "confidence": 0.99})
+    calls = []
+    ev = _mx_event("buy followers", event_id="$bad")
+    res = mx.handle_event(dict(ev, room_id="!r:example.org"), rules)
+    assert res["redacted"] is False and calls == []
+    res = mx.handle_event(dict(ev, room_id="!r:example.org"), rules,
+                          token="t", homeserver="https://mx", can_redact=True,
+                          api_fn=lambda *a, **k: calls.append((a, k)))
+    assert res["redacted"] is True
+    assert calls[0][0][2:4] == ("PUT", "/rooms/!r:example.org/redact/$bad/bouncer1")
+    assert calls[0][0][4] == {"redacts": "$bad", "reason": "bouncer:sin-spam"}
+    res = mx.handle_event(dict(ev, room_id="!r:example.org"), rules,
+                          token="t", can_redact=True)  # no homeserver -> no fire
+    assert res["redacted"] is False
+
+
+def test_matrix_dispatch_page_routes_and_survives_bad_events(monkeypatch):  # T693
+    sys.path.insert(0, "src")
+    import gatekeeper
+    monkeypatch.setattr(gatekeeper, "_router", _StubRouter())
+    from gatekeeper import get_preset
+    from gatekeeper.adapters.matrix_bot import dispatch_page
+    page = {"next_batch": "s1", "rooms": {"join": {"!r:x": {"timeline":
+            {"events": [_mx_event("hello"), {"type": "m.room.member"},
+                        {"type": "m.room.message", "content": None}]}}}}}
+    results = dispatch_page(page, get_preset("gaming"))
+    assert len(results) == 3  # every event accounted for
+    assert results[1]["reason"] == "not-message"
+    # room_id is stamped from the sync envelope, not required on each event
+    assert all(r.get("action") for r in results)
+
+
+def test_matrix_adapter_is_stdlib_only_and_guarded():  # T693: no extra, T691 guard
+    src = (ADAPTERS / "matrix_bot.py").read_text()
+    for banned in ("import matrix", "import nio", "import aiohttp",
+                   "import httpx", "import requests"):
+        assert banned not in src
+    r = _run_py("-m", "gatekeeper.adapters.matrix_bot")
+    assert r.returncode != 0
+    assert "E_ADAPTER" in r.stderr and "MATRIX_TOKEN" in r.stderr
+    assert "KeyError" not in r.stderr

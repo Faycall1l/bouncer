@@ -5,6 +5,7 @@
 | Discord | `adapters/discord_bot.py` | `pip install -e .[discord]`, `DISCORD_TOKEN=... python -m gatekeeper.adapters.discord_bot` |
 | Twitch | `adapters/twitch_irc.py` | stdlib only. `TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc` (flag-only, never bans) |
 | Telegram | `adapters/telegram_bot.py` | stdlib only. `TELEGRAM_TOKEN=... python -m gatekeeper.adapters.telegram_bot` (long-poll, `/rules` `/stats` `/help`, flag-only default; `BOUNCER_TG_DELETE=1` opts into deleteMessage) |
+| Matrix | `adapters/matrix_bot.py` | stdlib only. `MATRIX_TOKEN=... MATRIX_HOMESERVER=... python -m gatekeeper.adapters.matrix_bot` (sync timeline, `!bouncer rules` `!bouncer stats`, flag-only default; `BOUNCER_MX_REDACT=1` opts into redactions) |
 | Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver |
 | Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events |
 
