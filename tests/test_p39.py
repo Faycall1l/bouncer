@@ -37,3 +37,19 @@ def test_ci_python_matrix_tracks_classifiers():  # T732
     # the CI legs and the trove classifiers are the same claim — adding a
     # version to one without the other is drift, and fails here (T732)
     assert legs == minors, (legs, minors)
+
+
+def test_ci_has_dedicated_ruff_job():  # T733
+    import re
+    text = (WORKFLOWS / "ci.yml").read_text()
+
+    def job(name):
+        m = re.search(rf"^  {name}:(.*?)(?=^  \w)", text, re.MULTILINE | re.DOTALL)
+        assert m, f"no {name} job"
+        return m.group(1)
+    # a lint job runs the repo-wide gate on its own — lint failures show
+    # up as lint, not as a wall of red matrix legs
+    lint = job("lint")
+    assert "ruff check ." in lint and "pytest" not in lint
+    # and the test matrix doesn't duplicate the work (T733 dedupe)
+    assert "ruff" not in job("test")
