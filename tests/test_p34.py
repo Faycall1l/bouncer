@@ -112,6 +112,7 @@ def test_report_balance_thresholds(tmp_path):  # T633: --report flags thin label
     assert r.returncode == 0, r.stderr  # advisory without --strict
     rep = json.loads(r.stdout)
     assert rep["n"] == 132 and rep["servers"] == 3  # 120 + 12 default hard negatives
+    assert rep["seed"] == 11  # T646: seed logged for full reproducibility
     for name in ("train", "dev", "test"):
         s = rep["splits"][name]
         assert s["n"] > 0 and sum(s["rule"].values()) == s["n"]

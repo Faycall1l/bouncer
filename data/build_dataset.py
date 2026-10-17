@@ -201,7 +201,7 @@ def main(argv=None) -> int:
 
     if a.report:  # T633: balance check without generating any dataset file
         splits = split_rows(rows, tuple(a.ratios), a.seed or 0, stratify=a.stratify)
-        rep = {"n": len(rows),
+        rep = {"n": len(rows), "seed": a.seed,
                "servers": len({server_key(r) for r in rows}),
                **balance_report(splits, a.min_share)}
         if quarantined:
@@ -218,7 +218,7 @@ def main(argv=None) -> int:
         f.writelines(json.dumps(r) + "\n" for r in rows)
     os.replace(tmp, a.out)  # readers never see a half-written dataset
 
-    report = {"n": len(rows), "out": a.out, "errors": 0,
+    report = {"n": len(rows), "out": a.out, "errors": 0, "seed": a.seed,
               "servers": len({server_key(r) for r in rows})}
     if quarantined:
         report["quarantined"] = len(quarantined)

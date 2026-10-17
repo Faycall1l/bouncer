@@ -147,7 +147,8 @@ if __name__ == "__main__":
         from collections import Counter
         labs = Counter(r["labels"]["rule"] for r in rows)
         harms = Counter(r["labels"]["harm"] for r in rows)
-        print(json.dumps({"n": len(rows), "rule": dict(labs.most_common()),
+        print(json.dumps({"n": len(rows), "seed": a.seed,
+                          "rule": dict(labs.most_common()),
                           "harm": dict(harms.most_common()),
                           "jailbreak": sum(r["labels"]["jailbreak"] for r in rows),
                           "escalate": sum(r["labels"]["escalate"] for r in rows)},

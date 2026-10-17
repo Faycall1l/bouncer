@@ -46,7 +46,8 @@ def test_synth_report_shape():  # T582
     assert r.returncode == 0, r.stderr
     rep = json.loads(r.stdout)
     assert rep["n"] == 20
-    assert set(rep) == {"n", "rule", "harm", "jailbreak", "escalate"}
+    assert set(rep) == {"n", "seed", "rule", "harm", "jailbreak", "escalate"}
+    assert rep["seed"] == 7  # T646: seed logged for reproducibility
     assert sum(rep["rule"].values()) == 20  # rule labels partition the rows
     assert sum(rep["harm"].values()) == 20
     # seed pins the distribution: same flags -> same counts (T382 reproducibility)
