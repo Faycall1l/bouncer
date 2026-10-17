@@ -115,6 +115,7 @@ def test_wheel_builds_clean():  # T713
             # the package and the adapter SDK made it into the wheel...
             assert "gatekeeper/__init__.py" in names
             assert "gatekeeper/adapters/common.py" in names
+            assert "gatekeeper/py.typed" in names  # T725: PEP 561 ships
             # ...the console script is in the wheel metadata...
             ep = [n for n in names if n.endswith("entry_points.txt")]
             assert ep, "no entry_points.txt in the wheel"
@@ -441,3 +442,30 @@ def test_pip_index_metadata_filled():  # T724
     minors = sorted(c.rsplit(" ", 1)[1] for c in cls
                     if c.startswith("Programming Language :: Python :: 3."))
     assert minors and minors[0] == floor, (minors, floor)
+
+
+def test_py_typed_marker_and_typed_public_api():  # T725
+    # the PEP 561 marker exists and is declared as package data...
+    assert Path("src/gatekeeper/py.typed").exists(), "marker file missing"
+    py = _pyproject()
+    pkg_data = py["tool"]["setuptools"].get("package-data", {})
+    assert "py.typed" in pkg_data.get("gatekeeper", []), pkg_data
+    manifest = Path("MANIFEST.in").read_text()
+    assert "src/gatekeeper/py.typed" in manifest, "marker would miss the sdist"
+    # ...and every public function in the package root is fully typed:
+    # return annotation plus every parameter annotated (the imported
+    # siblings — get_preset, validate_rules, explain — are typed at their
+    # own definitions; this pins the __init__ surface, whose shipping in
+    # the wheel alongside py.typed is asserted in the T713 wheel test)
+    tree = ast.parse(Path("src/gatekeeper/__init__.py").read_text())
+    public = [n for n in tree.body
+              if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+              and not n.name.startswith("_")]
+    assert public, "no public functions found at the package root"
+    for fn in public:
+        assert fn.returns is not None, f"{fn.name}(): no return annotation"
+        params = fn.args.posonlyargs + fn.args.args + fn.args.kwonlyargs
+        for a in params:
+            if a.arg in ("self", "cls"):
+                continue
+            assert a.annotation is not None, f"{fn.name}({a.arg}): untyped"

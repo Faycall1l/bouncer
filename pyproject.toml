@@ -68,6 +68,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+gatekeeper = ["py.typed"]  # T725: PEP 561 marker must ship in the wheel
+
 [tool.ruff]
 line-length = 100
 # T388: Space entry carries HF frontmatter (not plain Python) — lint the package, not it.

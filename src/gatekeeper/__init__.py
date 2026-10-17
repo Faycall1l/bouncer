@@ -79,7 +79,7 @@ def _breaker_ok() -> None:
         _BREAKER["half_open"] = False
 
 
-def _supports_model(router) -> bool:
+def _supports_model(router: Router) -> bool:
     """T458: probe once per router; legacy predict(state, questions) keeps working."""
     key = id(router)
     with _FLY_LOCK:
@@ -111,13 +111,15 @@ def _fastpath_allow(msg: str, rules: dict) -> dict | None:
                 "escalate_p": 0.1, "abstained": False, "reason": "fastpath: no links"}
     return None
 
-if TYPE_CHECKING:
-    from laya import Router  # noqa: F401 — annotation-only import
+if TYPE_CHECKING:  # T725: annotation-only imports keep the public API typed
+    from concurrent.futures import ThreadPoolExecutor
+
+    from laya import Router
 
 _router = None
 
 
-def get_router(**kw):
+def get_router(**kw) -> Router:
     """Lazy singleton Router (laya imported only here so packaging stays light)."""
     global _router
     if _router is None:
@@ -197,7 +199,7 @@ def _margin(a: dict) -> float:
     return (probs[0] - probs[1]) if len(probs) >= 2 else 1.0
 
 
-def _executor():
+def _executor() -> ThreadPoolExecutor:
     """T259: one shared pool for timeout-guarded predicts (no per-call alloc)."""
     global _EXEC
     if _EXEC is None:
@@ -209,7 +211,7 @@ def _executor():
 _EXEC = None
 
 
-def _predict_safe(router, state: dict, questions: dict, timeout_s: float,
+def _predict_safe(router: Router, state: dict, questions: dict, timeout_s: float,
                   model: str | None = None) -> dict:
     """T025+T026: timeout guard, one retry, escalate-shaped fallback on failure."""
     import concurrent.futures as cf
@@ -255,7 +257,7 @@ def _fallback(action_note: str) -> dict:
             "cached": False}
 
 
-def _level(score_val, levels: list) -> str:
+def _level(score_val: float, levels: list) -> str:
     """T203: real score answers are floats (expected level); snap to nearest label."""
     try:
         idx = min(len(levels) - 1, max(0, round(float(score_val))))
@@ -309,7 +311,8 @@ def _decide(a: dict, cfg: GateConfig) -> dict:
 def moderate(message: str, rules: dict[str, str] | None = None,
              context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
-             lang: str | None = None, router=None, user_id: str | None = None,
+             lang: str | None = None, router: Router | None = None,
+             user_id: str | None = None,
              model: str | None = None, preset: str | None = None,  # T455+T479
              _prevalidated: bool = False) -> dict:
     cfg = config or GateConfig()
@@ -441,7 +444,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
 
 
 def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfig | None = None,
-                   router=None, chunk: int = 8, model: str | None = None) -> list[dict]:
+                   router: Router | None = None, chunk: int = 8,
+                   model: str | None = None) -> list[dict]:
     """T020+T021: shared Router, chunked to bound padding; order preserved."""
     cfg = config or GateConfig()
     validate_rules(rules, cfg.max_rules, cfg.max_rule_chars,  # T196: once, not per message
