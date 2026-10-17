@@ -50,3 +50,14 @@ def test_laya_records_shape():  # T651: converter output matches engine schema
 def test_class_weights_hint_reaches_notebook_docs():  # T648/T651: pointers stay
     src = _src("notebooks/finetune_kaggle.py")
     assert "class_weights" in src and "build_dataset" in src
+
+
+def test_lora_single_block_at_top():  # T652: knobs live in one editable block
+    src = _src("kaggle/train/train.py")
+    block = src.index("LORA = {")
+    build = src.index("build_model(")
+    assert block < build < src.index("for epoch in range(EPOCHS)")
+    for key in ('"enabled": False', '"r":', '"alpha":', '"dropout":', '"target_modules":'):
+        assert key in src
+    # optimizer only touches trainable params (full FT no-op, LoRA-correct)
+    assert src.count("p.requires_grad") == 2

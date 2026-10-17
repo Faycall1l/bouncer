@@ -26,6 +26,12 @@ import torch
 assert torch.cuda.is_available(), "needs GPU — wait for quota reset"
 device = torch.device("cuda")
 
+# --- T652: the only block you edit for adapter runs ---
+# target_modules must match YOUR encoder's attention projections
+# (bert-style: query/value; llama-style: q_proj/v_proj — check before enabling).
+LORA = {"enabled": False, "r": 8, "alpha": 16, "dropout": 0.05,
+        "target_modules": ["q_proj", "v_proj"]}
+
 # --- rows: gatekeeper jsonl -> {state, questions, expected} (T651: assert each stage) ---
 HARM = ["safe", "suspicious", "harmful"]
 HYPE = ["dead", "chill", "hyped"]
@@ -94,6 +100,12 @@ model = build_model(cfg, encoder_dir=os.path.join(model_dir, "encoder"))
 model.load_state_dict(load_file(os.path.join(model_dir, "model.safetensors")), strict=True)
 assert any("encoder." in n for n, _ in model.named_parameters()), "no encoder params — wrong build?"
 model.encoder.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+if LORA["enabled"]:  # T652: adapter run — train ~1% of params, not the full model
+    from peft import LoraConfig, get_peft_model
+    model = get_peft_model(model, LoraConfig(
+        r=LORA["r"], lora_alpha=LORA["alpha"], lora_dropout=LORA["dropout"],
+        target_modules=LORA["target_modules"]))
+    model.print_trainable_parameters()
 model.head_checkpointing = True
 model.to(device).train()
 
@@ -101,8 +113,8 @@ train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.
 assert train_items and calib_items, "empty train or calibration split"
 EPOCHS, MICRO, ACCUM = 3, 8, 8  # eff batch 64, same as 2xT4 recipe
 assert len(train_items) >= MICRO, "fewer items than one micro-batch"
-enc_p = [p for n, p in model.named_parameters() if "encoder." in n]
-head_p = [p for n, p in model.named_parameters() if "encoder." not in n]
+enc_p = [p for n, p in model.named_parameters() if "encoder." in n and p.requires_grad]
+head_p = [p for n, p in model.named_parameters() if "encoder." not in n and p.requires_grad]  # T652: LoRA-safe
 opt = torch.optim.AdamW([{"params": enc_p, "lr": 2.5e-5}, {"params": head_p, "lr": 1e-4}], weight_decay=0.01)
 total = (len(train_items) // (MICRO * ACCUM)) * EPOCHS
 sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, total), eta_min=1e-6)

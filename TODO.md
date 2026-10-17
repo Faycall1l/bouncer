@@ -720,7 +720,7 @@
 
 ## P35 Fine-tune run (T651–T670)
 - [x] T651 ft: notebook review — every cell has an assert before training
-- [ ] T652 ft: LoRA rank/alpha configurable at notebook top (single block)
+- [x] T652 ft: LoRA rank/alpha configurable at notebook top (single block)
 - [ ] T653 ft: early-stopping on dev rule_acc (patience constant)
 - [ ] T654 ft: loss logged as JSONL per epoch (not just wandb)
 - [ ] T655 ft: checkpoint upload gated on dev metric >= floor
