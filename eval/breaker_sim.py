@@ -8,9 +8,9 @@ import time
 
 sys.path.insert(0, "src")
 
-import gatekeeper  # noqa: E402
-from gatekeeper import GateConfig, moderate  # noqa: E402
-from gatekeeper.cache import CACHE  # noqa: E402
+import gatekeeper
+from gatekeeper import GateConfig, moderate
+from gatekeeper.cache import CACHE
 
 
 class DownRouter:

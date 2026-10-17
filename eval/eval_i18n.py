@@ -7,11 +7,11 @@ import sys
 
 sys.path.insert(0, "src")
 sys.path.insert(0, "eval")
-from validate_data import check_file  # noqa: E402
+from validate_data import check_file
 
-from gatekeeper import build_questions, get_preset  # noqa: E402
-from gatekeeper.normalize import detect_script  # noqa: E402
-from gatekeeper.pool import model_for_lang  # noqa: E402
+from gatekeeper import build_questions, get_preset
+from gatekeeper.normalize import detect_script
+from gatekeeper.pool import model_for_lang
 
 LANG_OF = {"sin-spam": "es", "pas-de-spam": "fr", "bla-spam": "ar"}
 
