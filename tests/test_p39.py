@@ -16,8 +16,8 @@ def test_ci_workflow_runs_pytest_and_ruff_on_push_and_pr():  # T731
     # ...and only once — the repo-wide gate supersedes the old src/tests
     # subset (T731 found the duplicate step and removed it)
     assert "ruff check src tests" not in text
-    # matrix legs report independently (T741 makes it explicit later; the
-    # default fail-fast is on, so pin the current legs at least)
+    # matrix legs list every supported version (T732 pins them equal to
+    # the classifiers; T741 pins fail-fast off so they all report)
     for v in ("3.10", "3.11", "3.12", "3.13"):
         assert f'"{v}"' in text, v
 
@@ -206,3 +206,16 @@ def test_ci_caches_pip_and_uv():  # T740
     assert "astral-sh/setup-uv" in ci
     assert "enable-cache: true" in ci
     assert 'cache-dependency-glob: "pyproject.toml"' in ci
+
+
+def test_ci_matrix_reports_every_leg():  # T741
+    import re
+    ci = (WORKFLOWS / "ci.yml").read_text()
+    m = re.search(r"^  test:(.*?)(?=^  \w|\Z)", ci, re.MULTILINE | re.DOTALL)
+    assert m, "no test job"
+    job = m.group(1)
+    # fail-fast off: one red leg never cancels the rest, so you always
+    # learn whether a failure is version-specific
+    assert "fail-fast: false" in job
+    # only the matrix needs it — single-leg jobs can't cancel each other
+    assert ci.count("fail-fast") == 1

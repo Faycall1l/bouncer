@@ -817,7 +817,7 @@
 - [x] T738 ci: benchmark job (optional, weightless stubs) posts summary
 - [x] T739 ci: eval-gate job runs `gate.py --ci` on the weightless report set
 - [x] T740 ci: cache pip + uv in workflow
-- [ ] T741 ci: fail-fast off, so all matrix legs report
+- [x] T741 ci: fail-fast off, so all matrix legs report
 - [ ] T742 ci: workflow badge in README
 - [ ] T743 ci: PR template (tests? docs? boxes ticked?)
 - [ ] T744 ci: issue template for bug reports (rid + version + config)

@@ -16,6 +16,7 @@ jobs:
   test:  # T154: 3.10/3.11/3.12 matrix; T162: pip cache
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false  # T741: one red leg never cancels the others
       matrix: { python-version: ["3.10", "3.11", "3.12", "3.13"] }  # T402
     steps:
       - uses: actions/checkout@v4
