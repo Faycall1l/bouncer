@@ -33,6 +33,10 @@ def receive_slack_event(body: dict, rules: dict) -> dict:  # T078
 
 def forward(url: str, event: dict) -> None:  # T079
     from gatekeeper import __version__
+    from gatekeeper.adapters.common import dry_run
+    if dry_run():  # T697: never post — not even the forwarder
+        print(f"[dry-run] would forward {event.get('action')} to {url}")
+        return
     req = urllib.request.Request(url, data=json.dumps(event).encode(),
                                  headers={"Content-Type": "application/json",
                                           "User-Agent": f"bouncer/{__version__}",  # T293

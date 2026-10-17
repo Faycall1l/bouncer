@@ -28,6 +28,7 @@ def api(token: str, homeserver: str, method: str, path: str, params=None):
 
 
 def _command(body, rules, event, token, homeserver, api_fn, out):
+    from gatekeeper.adapters.common import dry_run
     cmd = body.split()[1].lower() if len(body.split()) > 1 else ""
     if cmd == "rules":
         reply = "active: " + ", ".join(sorted(rules))
@@ -37,13 +38,13 @@ def _command(body, rules, event, token, homeserver, api_fn, out):
         reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
     else:
         return {"action": "ignored", "reason": "unknown-command"}
-    if token and homeserver:
+    if token and homeserver and not dry_run():
         import time
         api_fn(token, homeserver, "PUT",
                f"/rooms/{event['room_id']}/send/m.room.message/"
                f"{int(time.time() * 1000)}", {"msgtype": "m.notice", "body": reply})
     else:
-        out(reply)
+        out(("[dry-run] would send notice: " if token else "") + reply)
     return {"action": "command", "command": cmd, "reply": reply}
 
 
@@ -60,13 +61,20 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
     if body.startswith("!bouncer"):
         return _command(body, rules, event, token, homeserver, api_fn, out)
     from gatekeeper import moderate
+    from gatekeeper.adapters.common import dry_run
     res = dict(moderate(body, rules))
     res["redacted"] = False
     if res["action"] == "delete" and can_redact and token and homeserver:
-        api_fn(token, homeserver, "PUT",
-               f"/rooms/{event['room_id']}/redact/{event['event_id']}/bouncer1",
-               {"redacts": event["event_id"], "reason": f"bouncer:{res.get('rule')}"})
-        res["redacted"] = True
+        if dry_run():  # T697: print the intent, never the act
+            out(f"[dry-run] would redact {event['event_id']} "
+                f"in {event['room_id']}")
+            res["dry_run"] = True
+        else:
+            api_fn(token, homeserver, "PUT",
+                   f"/rooms/{event['room_id']}/redact/{event['event_id']}/bouncer1",
+                   {"redacts": event["event_id"],
+                    "reason": f"bouncer:{res.get('rule')}"})
+            res["redacted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
         out(f"[{res['action']}] <{event.get('sender')}> {body[:120]} "
             f"({res.get('rule')}@{res.get('confidence', 0):.2f})")

@@ -28,6 +28,7 @@ def api(token: str, method: str, **params):
 
 def _command(text: str, rules: dict, chat_id, token, api_fn, out):
     """T692: `/` commands answer in place; no model call, no side effects."""
+    from gatekeeper.adapters.common import dry_run
     cmd = text.split("@", 1)[0].lstrip("/").split()[0].lower()
     if cmd == "rules":
         reply = "active: " + ", ".join(sorted(rules))
@@ -40,10 +41,10 @@ def _command(text: str, rules: dict, chat_id, token, api_fn, out):
                 "flag-only by default (BOUNCER_TG_DELETE=1 to delete)"
     else:
         return {"action": "ignored", "reason": "unknown-command"}
-    if token:
+    if token and not dry_run():
         api_fn(token, "sendMessage", chat_id=chat_id, text=reply)
     else:
-        out(reply)
+        out(("[dry-run] would send: " if token else "") + reply)
     return {"action": "command", "command": cmd, "reply": reply}
 
 
@@ -59,12 +60,18 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
     if text.startswith("/"):
         return _command(text, rules, chat_id, token, api_fn, out)
     from gatekeeper import moderate
+    from gatekeeper.adapters.common import dry_run
     res = dict(moderate(text, rules))
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token:
-        api_fn(token, "deleteMessage", chat_id=chat_id,
-               message_id=msg.get("message_id"))
-        res["deleted"] = True
+        if dry_run():  # T697: print the intent, never the act
+            out(f"[dry-run] would deleteMessage chat={chat_id} "
+                f"msg={msg.get('message_id')}")
+            res["dry_run"] = True
+        else:
+            api_fn(token, "deleteMessage", chat_id=chat_id,
+                   message_id=msg.get("message_id"))
+            res["deleted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
         out(f"[{res['action']}] {text[:120]} ({res.get('rule')}@"
             f"{res.get('confidence', 0):.2f})")

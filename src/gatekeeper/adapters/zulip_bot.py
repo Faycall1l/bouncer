@@ -43,9 +43,13 @@ def _command(text, rules, msg, creds, api_fn, out):
     else:
         reply = "usage: bouncer rules | bouncer stats"
         cmd = cmd or "help"
+    from gatekeeper.adapters.common import dry_run
     if creds:
-        api_fn(*creds, "POST", "/messages", type="private",
-               to=msg.get("sender_id"), content=reply)
+        if dry_run():  # T697: print the intent, never the act
+            out(f"[dry-run] would PM {msg.get('sender_id')}: {reply}")
+        else:
+            api_fn(*creds, "POST", "/messages", type="private",
+                   to=msg.get("sender_id"), content=reply)
     else:
         out(reply)
     return {"action": "command", "command": cmd, "reply": reply}
@@ -70,12 +74,17 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
     if text.lstrip("/").lower().startswith("bouncer"):  # mention parity
         return _command(text, rules, msg, creds, api_fn, out)
     from gatekeeper import moderate
+    from gatekeeper.adapters.common import dry_run
     res = dict(moderate(text, rules))
     res["deleted"] = False
     if (res["action"] == "delete" and can_delete and creds
             and msg.get("id") is not None):
-        api_fn(*creds, "DELETE", f"/messages/{msg['id']}")
-        res["deleted"] = True
+        if dry_run():  # T697: print the intent, never the act
+            out(f"[dry-run] would delete message {msg['id']}")
+            res["dry_run"] = True
+        else:
+            api_fn(*creds, "DELETE", f"/messages/{msg['id']}")
+            res["deleted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
         out(f"[{res['action']}] <{msg.get('sender_id')}> {text[:120]} "
             f"({res.get('rule')}@{res.get('confidence', 0):.2f})")

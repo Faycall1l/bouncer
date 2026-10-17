@@ -1,5 +1,6 @@
 """Twitch IRC stub, stdlib only (T076-T077). Read-only: flags, never bans.
 Usage: TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc
+Print-only by design, so BOUNCER_DRY_RUN (T697) is a no-op here.
 """
 from __future__ import annotations
 

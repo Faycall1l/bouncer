@@ -22,6 +22,10 @@ fetch failures log and back off 5s, a bad event costs one log line, Ctrl-C
 always stops the bot. Mattermost's websocket loop is the async exception;
 its per-event guard matches `run_loop()`'s.
 
+`BOUNCER_DRY_RUN=1` (T697) applies to every adapter: outbound calls
+(delete/redact/PM/reply/forward) are printed as `[dry-run] would ...` and
+never performed. Twitch is print-only by design, so it's a no-op there.
+
 ## Notes (T408)
 
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision

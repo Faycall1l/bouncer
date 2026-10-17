@@ -23,6 +23,11 @@ def require_env(name: str) -> str:
     return v
 
 
+def dry_run() -> bool:
+    """T697: BOUNCER_DRY_RUN=1 — adapters print actions, never post."""
+    return os.environ.get("BOUNCER_DRY_RUN") == "1"
+
+
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
              sleep=time.sleep):
     """T696: one poll loop for every sync adapter (telegram/matrix/zulip).

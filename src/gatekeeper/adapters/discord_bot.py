@@ -30,6 +30,13 @@ def run(token: str | None = None, preset: str = "gaming"):
                                                              sorted(s.items())))
             return
         res = moderate(msg.content, rules)
+        from gatekeeper.adapters.common import dry_run
+        if dry_run():  # T697: print the intent, never the act
+            if res["action"] in ("delete", "flag", "escalate"):
+                print(f"[dry-run] discord {res['action']} "
+                      f"({res['rule']}@{res['confidence']:.2f}): "
+                      f"{msg.content[:80]}")
+            return
         if res["action"] == "delete":
             try:  # T296: missing perms must not crash the bot loop
                 await msg.delete()

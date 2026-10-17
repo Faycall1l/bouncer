@@ -458,3 +458,71 @@ def test_sync_pollers_use_the_shared_loop():  # T696: wired, not aspirational
     # mattermost is the documented async exception (websocket, not a poller)
     mm = (ADAPTERS / "mattermost.py").read_text()
     assert "while True" not in mm and "async for" in mm
+
+
+def test_dry_run_prints_never_posts(monkeypatch, capsys):  # T697
+    sys.path.insert(0, "src")
+    import gatekeeper
+    from gatekeeper.adapters.common import dry_run
+    assert dry_run() is False  # default: real actions happen
+    monkeypatch.setenv("BOUNCER_DRY_RUN", "1")
+    assert dry_run() is True
+    monkeypatch.setattr(gatekeeper, "moderate",
+                        lambda t, r: {"action": "delete", "rule": "sin-spam",
+                                      "confidence": 0.99})
+    rules = {"sin-spam": "t"}
+    calls = []
+    recorder = lambda *a, **k: calls.append((a, k))  # stub transport
+
+    from gatekeeper.adapters import matrix_bot as mx
+    from gatekeeper.adapters import mattermost as mm
+    from gatekeeper.adapters import telegram_bot as tg
+    from gatekeeper.adapters import zulip_bot as zl
+    # every delete path prints the intent and never reaches the api
+    tg.handle_update(_tg_message("buy now"), rules, token="t", can_delete=True,
+                     api_fn=recorder)
+    mx.handle_event(dict(_mx_event("buy now"), room_id="!r:x"), rules,
+                    token="t", homeserver="https://mx", can_redact=True,
+                    api_fn=recorder)
+    mm.handle_post(_mm_post("buy now"), rules, token="t",
+                   server="https://mm", can_delete=True, api_fn=recorder)
+    zl.handle_event(_zl_message("buy now"), rules,
+                    creds=("bot@x", "k", "https://z"), can_delete=True,
+                    api_fn=recorder)
+    assert calls == []  # not one outbound call happened
+    out = capsys.readouterr().out
+    assert "[dry-run] would deleteMessage" in out
+    assert "[dry-run] would redact" in out
+    assert "[dry-run] would deletePost" in out
+    assert "[dry-run] would delete message" in out
+    # command replies are printed too, never sent
+    tg.handle_update(_tg_message("/rules"), rules, token="t",
+                     api_fn=recorder)
+    mm.handle_slash({"token": "s", "text": "rules", "channel_id": "c1"}, rules,
+                    token="t", server="https://mm", api_fn=recorder)
+    zl.handle_event(_zl_message("bouncer rules", "private"), rules,
+                    creds=("bot@x", "k", "https://z"), api_fn=recorder)
+    assert calls == []
+    out = capsys.readouterr().out
+    assert "[dry-run] would send:" in out and "[dry-run] would post:" in out
+    assert "[dry-run] would PM" in out
+    # nothing was actually deleted: the result says so honestly
+    res = tg.handle_update(_tg_message("buy now"), rules, token="t",
+                           can_delete=True, api_fn=recorder)
+    assert res["deleted"] is False and res["dry_run"] is True
+
+
+def test_dry_run_covers_forwarder_and_all_adapters(monkeypatch):  # T697
+    sys.path.insert(0, "src")
+    monkeypatch.setenv("BOUNCER_DRY_RUN", "1")
+    from gatekeeper.adapters.webhooks import forward
+    # a dry-run forward must not open a socket — the dummy url would raise
+    # URLError if anything tried to POST to it
+    forward("https://127.0.0.1:9/nowhere", {"action": "flag", "message": "x"})
+    # static sweep: every adapter file knows about the switch (or is the
+    # print-only twitch, which documents why it doesn't need one)
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+                 "discord_bot", "webhooks", "common"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "dry_run" in src, name
+    assert "no-op" in (ADAPTERS / "twitch_irc.py").read_text()

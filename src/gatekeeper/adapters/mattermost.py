@@ -40,11 +40,16 @@ def handle_post(post: dict, rules: dict, *, token=None, server=None,
     if not text:
         return {"action": "ignored", "reason": "no-text"}
     from gatekeeper import moderate
+    from gatekeeper.adapters.common import dry_run
     res = dict(moderate(text, rules))
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token and server:
-        api_fn(token, server, "DELETE", f"/posts/{post['id']}")
-        res["deleted"] = True
+        if dry_run():  # T697: print the intent, never the act
+            out(f"[dry-run] would deletePost {post.get('id')}")
+            res["dry_run"] = True
+        else:
+            api_fn(token, server, "DELETE", f"/posts/{post['id']}")
+            res["deleted"] = True
     if res["action"] in ("delete", "flag", "escalate"):
         out(f"[{res['action']}] <{post.get('user_id')}> {text[:120]} "
             f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
@@ -73,11 +78,12 @@ def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,
     else:
         reply = "usage: /bouncer rules | /bouncer stats"
         cmd = cmd or "help"
-    if token and server and form.get("channel_id"):
+    from gatekeeper.adapters.common import dry_run
+    if token and server and form.get("channel_id") and not dry_run():
         api_fn(token, server, "POST", "/posts",
                channel_id=form["channel_id"], message=reply)
     else:
-        out(reply)
+        out(("[dry-run] would post: " if token else "") + reply)
     return {"action": "command", "command": cmd, "reply": reply}
 
 
