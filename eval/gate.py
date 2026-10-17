@@ -6,6 +6,7 @@ not be read/parsed at all.
 
   python eval/gate.py eval/reports/zero-shot.json
   python eval/gate.py REPORT --json          # machine-readable verdict
+  python eval/gate.py REPORT --ci            # exactly one line of verdict JSON
 
 Each gate reads its value from the report and compares against a flag-settable
 threshold (T672-T676 register theirs here). A metric absent from the report is
@@ -116,10 +117,17 @@ def render(verdict: dict) -> str:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="gate",
-                                 description="pass/fail thresholds over a report (T671)")
+    ap = argparse.ArgumentParser(
+        prog="gate", description="pass/fail thresholds over a report (T671)",
+        epilog="exit codes (T677): 0 = every applied gate passed; 1 = a gate "
+               "failed (or the report is structurally unusable); 2 = the input "
+               "could not be read/parsed. Skipped gates (metric absent) never "
+               "block a pass. --ci prints exactly one line of verdict JSON.")
     ap.add_argument("report", help="report JSON (e.g. eval/reports/zero-shot.json)")
     ap.add_argument("--json", action="store_true", help="machine-readable verdict")
+    ap.add_argument("--ci", action="store_true",  # T677: one line, stable exits
+                    help="CI mode: exactly one line of verdict JSON on stdout; "
+                         "failures still blame on stderr; exits 0/1/2 as above")
     ap.add_argument("--min-n", type=int, default=1,
                     help="report must cover at least N rows")
     ap.add_argument("--min-rule-acc", type=float, default=0.403,  # T672
@@ -156,16 +164,16 @@ def main(argv=None) -> int:
         return 2
 
     verdict = gate_report(rep, a)
-    if verdict["ok"]:
-        print(json.dumps(verdict, indent=2) if a.json else render(verdict))
-        return 0
-    # failures are loud on stderr too, not just in the report body
-    for c in verdict["checks"]:
-        if c["ok"] is False:
-            print(f"gate: FAIL {c['name']}: value={c['value']} "
-                  f"expected {c['expected']}", file=sys.stderr)
-    print(json.dumps(verdict, indent=2) if a.json else render(verdict))
-    return 1
+    payload = (json.dumps(verdict, indent=2) if a.json
+               else json.dumps(verdict) if a.ci else render(verdict))
+    if not verdict["ok"]:
+        # failures are loud on stderr too, not just in the report body
+        for c in verdict["checks"]:
+            if c["ok"] is False:
+                print(f"gate: FAIL {c['name']}: value={c['value']} "
+                      f"expected {c['expected']}", file=sys.stderr)
+    print(payload)
+    return 0 if verdict["ok"] else 1
 
 
 if __name__ == "__main__":

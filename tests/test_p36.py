@@ -163,3 +163,25 @@ def test_gate_per_rule_worst_case(tmp_path):  # T676: no eligible rule below flo
     path = _report(tmp_path, {"n": 202, "rule_acc": 0.89, "per_rule": per_rule})
     r = _run_gate(path, "--per-rule-min-n", "1")
     assert r.returncode == 1 and "rare" in r.stderr  # support floor lowered: now judged
+
+
+def test_gate_ci_mode_and_documented_exits(tmp_path):  # T677: 0/1/2 contract
+    r = _run_gate("--help")
+    assert r.returncode == 0
+    for token in ("--ci", "exit codes", "0 =", "1 =", "2 ="):
+        assert token in r.stdout  # the contract is in --help, not tribal memory
+    # --ci: exactly one verdict line, same exit contract
+    path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
+    r = _run_gate(path, "--ci")
+    assert r.returncode == 0
+    lines = r.stdout.strip().splitlines()
+    assert len(lines) == 1 and json.loads(lines[0])["ok"] is True
+    path = _report(tmp_path, {"n": 200, "rule_acc": 0.305})
+    r = _run_gate(path, "--ci")
+    assert r.returncode == 1
+    lines = r.stdout.strip().splitlines()
+    assert len(lines) == 1 and json.loads(lines[0])["ok"] is False
+    assert "FAIL rule_acc" in r.stderr  # blame stays on stderr in CI mode
+    # exit 2 keeps its meaning in CI mode too
+    r = _run_gate(str(tmp_path / "nope.json"), "--ci")
+    assert r.returncode == 2 and r.stdout == ""
