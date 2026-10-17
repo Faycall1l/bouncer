@@ -627,7 +627,7 @@
 - [x] T566 demo: user box placeholder text — shipped in T551
 - [x] T567 demo: review viewer empty-state text — shipped in T555
 - [x] T568 demo: download filename includes date
-- [ ] T569 demo: night-mode label explains demotion
+- [x] T569 demo: night-mode label explains demotion — shipped in T557
 - [ ] T570 test: P30 demo-helper sweep
 
 ## P31 Eval + data (T571–T590)
