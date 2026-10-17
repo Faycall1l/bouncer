@@ -613,7 +613,7 @@
 - [x] T552 demo: meters shows strikes standing
 - [x] T553 demo: per-preset threshold memory (switch restores last values)
 - [x] T554 demo: history download button (txt export)
-- [ ] T555 demo: review queue viewer (last 5 rows)
+- [x] T555 demo: review queue viewer (last 5 rows)
 - [ ] T556 demo: model dropdown (auto/english/multilingual/typed-decisions)
 - [ ] T557 demo: night-mode checkbox (quiet_hours 22–7)
 - [ ] T558 demo: require_calm checkbox
