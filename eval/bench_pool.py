@@ -8,7 +8,7 @@ import time
 
 sys.path.insert(0, "src")
 
-from gatekeeper.pool import RouterPool  # noqa: E402
+from gatekeeper.pool import RouterPool
 
 
 def build_delay(**kw):  # fake router build (~checkpoint load)
