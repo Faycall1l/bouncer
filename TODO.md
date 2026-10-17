@@ -659,7 +659,7 @@
 - [x] T594 docs: README i18n + breaker sections
 - [x] T595 docs: api.md preset field + E_PRESET/E_LANG
 - [x] T596 docs: api.md /ready + timeout_s + model fields
-- [ ] T597 docs: architecture pools + breaker diagram
+- [x] T597 docs: architecture pools + breaker diagram
 - [ ] T598 docs: SECURITY key-file + rotation notes
 - [ ] T599 docs: glossary (pool, breaker, half-open, snapshot, multitenancy)
 - [ ] T600 docs: FAQ (restore, breaker tripped, which model?)
