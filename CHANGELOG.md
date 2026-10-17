@@ -1,6 +1,6 @@
 # Changelog (T146/T168/T601)
 
-## 0.3.0 — unreleased (T601)
+## 0.3.0 — 2026-10-17 (T626)
 * Persistence: atomic writes + `E_SNAPSHOT`, decision/stats snapshots
   (`bouncer snapshot save/load`), review-queue timestamps + pruning, audit
   `tail()` bounded reads, `export --format json/--limit/--action`.
