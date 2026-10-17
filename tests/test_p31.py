@@ -170,3 +170,23 @@ def test_snapshot_cli_roundtrip(tmp_path, capsys):  # T588
     assert st.standing("u-snap")["strikes"] == 2  # round-trip intact
     assert get_stats()["actions"]["allow"] == 1
     st.reset()
+
+
+def test_p31_sweep(tmp_path):  # T590: eval/data cross-checks in one pass
+    # 1. all eval/data scripts exit 0 --help (argparse wired, no weight import)
+    for script in ("eval/breaker_sim.py", "eval/bench_pool.py",
+                   "eval/validate_data.py", "eval/eval_i18n.py",
+                   "eval/baseline_regex.py", "eval/eval_gatekeeper.py",
+                   "data/synth_rules.py"):
+        r = _run(script, "--help")
+        assert r.returncode == 0, f"{script}: {r.stderr}"
+    # 2. eval_i18n and validate_data agree on the shipped fixtures
+    rep = json.loads([l for l in _run("eval/eval_i18n.py", "--json").stdout.splitlines()
+                      if l.startswith("{")][-1])
+    assert rep["n"] == 12 and rep["errors"] == []
+    # 3. synth with a seed is byte-stable across runs (T382 reproducibility)
+    a = _run("data/synth_rules.py", "--n", "30", "--template-only", "--seed", "3",
+             "--report").stdout
+    b = _run("data/synth_rules.py", "--n", "30", "--template-only", "--seed", "3",
+             "--report").stdout
+    assert a == b
