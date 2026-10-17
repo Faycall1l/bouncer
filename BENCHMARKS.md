@@ -76,6 +76,27 @@ Honest limit: these reports pin control-flow behavior, not throughput under
 real weights. The real numbers need the finetune + checkpoints; run the
 scripts yourself — they're deterministic given the flags.
 
+## Warm-pool latency (T751)
+
+`eval/bench_warm.py` splits the number everyone actually pays into the two
+halves that matter:
+
+* **COLD** — first `pool.get()`: checkpoint load included, timed once.
+* **WARM** — N × (`pool.get()` hit + `moderate()`): p50/p95, lookup cost
+  included, exactly what a serve request pays. `creates==1` and `hits==n`
+  in the report's `pool` block prove the warm path was the one measured.
+
+```bash
+python eval/bench_warm.py --n 50        # real weights required
+python eval/bench_warm.py --stub --json # mechanics only
+```
+
+Real mode without weights exits 1 (`E_WARM`) and writes **no** report —
+this file will not carry warm numbers until they're measured on hardware
+that has the checkpoint (`mode: "real"` in `eval/reports/warm.json` is the
+receipt). `--stub` reports `mode: "stub"` and times our bookkeeping only,
+like the pool/breaker benches above.
+
 ## Regex baseline (T210, refreshed T637, local, no weights)
 
 `python eval/baseline_regex.py data/examples.jsonl` → **0.403** on 300 rows.

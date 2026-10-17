@@ -829,7 +829,7 @@
 - [x] T750 test: P39 CI wiring (workflow YAML parses + key jobs exist)
 
 ## P40 Performance (T751–T770)
-- [ ] T751 perf: warm-pool latency bench with real weights (documented method)
+- [x] T751 perf: warm-pool latency bench with real weights (documented method)
 - [ ] T752 perf: cache hit latency printed in bench reports
 - [ ] T753 perf: batch size sweep re-run + table refresh
 - [ ] T754 perf: coalescing effectiveness metric (joined/total) in /stats
