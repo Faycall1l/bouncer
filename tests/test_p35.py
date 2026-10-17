@@ -80,3 +80,13 @@ def test_loss_jsonl_logging():  # T654: JSONL trail independent of wandb
     assert 'kind="step"' in src and 'kind="epoch"' in src
     assert 'kind="early_stop"' in src and 'kind="test"' in src
     assert 'json.dumps(kw)' in src and "train_log.jsonl" in src
+
+
+def test_push_gated_on_dev_floor():  # T655: no shipping sub-floor checkpoints
+    src = _src("kaggle/train/train.py")
+    assert "DEV_FLOOR = 0.35" in src
+    assert "token and best_dev >= DEV_FLOOR" in src
+    assert "dev {best_dev:.3f} < DEV_FLOOR" in src  # refusal is loud
+    gate = src.index("token and best_dev >= DEV_FLOOR")
+    push = src.index("upload_folder")
+    assert gate < push  # the gate sits before the upload

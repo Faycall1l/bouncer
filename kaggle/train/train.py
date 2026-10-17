@@ -132,6 +132,7 @@ train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.
 assert train_items and calib_items, "empty train or calibration split"
 EPOCHS, MICRO, ACCUM = 3, 8, 8  # eff batch 64, same as 2xT4 recipe
 PATIENCE = 1  # T653: stop after N epochs without dev rule_acc improvement
+DEV_FLOOR = 0.35  # T655: below this, the checkpoint is not worth shipping
 assert len(train_items) >= MICRO, "fewer items than one micro-batch"
 enc_p = [p for n, p in model.named_parameters() if "encoder." in n and p.requires_grad]
 head_p = [p for n, p in model.named_parameters() if "encoder." not in n and p.requires_grad]  # T652: LoRA-safe
@@ -223,12 +224,17 @@ try:
     token = UserSecretsClient().get_secret("HF_TOKEN")
 except Exception:  # noqa: BLE001 — no secrets in this env
     token = None
-if token:
+if token and best_dev >= DEV_FLOOR:  # T655: ship only models that earned it
     from huggingface_hub import HfApi
     api = HfApi(token=token)
     api.create_repo("bouncer-421m", exist_ok=True)
     api.upload_folder(folder_path=OUT, repo_id=api.whoami()["name"] + "/bouncer-421m")
     print("PUSHED to HF", flush=True)
+    log_rec(kind="push", dev_rule_acc=round(best_dev, 4))
+elif token:
+    print(f"dev {best_dev:.3f} < DEV_FLOOR {DEV_FLOOR} — no push; weights stay "
+          "in /kaggle/working output", flush=True)
+    log_rec(kind="no_push", dev_rule_acc=round(best_dev, 4), floor=DEV_FLOOR)
 else:
     print("no HF_TOKEN — model stays in /kaggle/working output", flush=True)
 print("TRAIN_OK")
