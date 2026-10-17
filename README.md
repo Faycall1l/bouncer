@@ -115,9 +115,10 @@ doctor: 27 checks, 4 warn, 0 fail
 * **env** — interpreter floor, package version, config file (broken TOML =
   `E_ADAPTER` naming the file → hard fault), and every `require_env()` an
   adapter wants, reported as *presence only*: values are never printed.
-* **dep** — `find_spec` locates, never imports: numpy, laya, fastapi,
-  uvicorn, gradio, huggingface_hub. Missing pieces are warnings — the engine
-  degrades to escalate, it doesn't die.
+* **dep** — `find_spec` locates, never imports: every core dependency (numpy,
+  laya, fastapi, uvicorn, pydantic, gradio, datasets, huggingface_hub).
+  Missing pieces are warnings — the engine degrades to escalate, it doesn't
+  die.
 * **route** — checkpoint per language from the pool (json/os only, T458) and
   the `BOUNCER_DEVICE` policy; the model stays asleep.
 * Exit `0` with warnings (degraded is a documented mode), `1` only on hard

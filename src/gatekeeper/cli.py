@@ -396,12 +396,16 @@ def cmd_doctor(args) -> int:  # T727: env/dep/route self-diagnosis
                      f"{'set' if present else 'unset (bouncer.toml may supply it)'}")
 
     # -- dep: find_spec locates without importing — no side effects, no
-    #    weights; missing pieces are warns because the engine degrades
+    #    weights; missing pieces are warns because the engine degrades.
+    #    T730: the list must cover every core dependency — the sweep test
+    #    asserts set equality with pyproject, so drift fails the build.
     for mod, why in (("numpy", "tensor ops"),
                      ("laya", "System One router (predicts)"),
                      ("fastapi", "HTTP server"),
                      ("uvicorn", "HTTP server"),
+                     ("pydantic", "HTTP request models"),
                      ("gradio", "demo app"),
+                     ("datasets", "eval data loading"),
                      ("huggingface_hub", "weight downloads")):
         present = importlib.util.find_spec(mod) is not None
         note("ok" if present else "warn", "dep", mod,

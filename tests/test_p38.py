@@ -598,3 +598,56 @@ def test_finetune_extra_pins_training_deps():  # T729
             continue
         assert mod in core | set(finetune), (
             src, mod, "neither core nor .[finetune] installs it")
+
+
+def test_p38_sweep_packaging(tmp_path):  # T730
+    import argparse
+    import re
+    import subprocess
+
+    import pytest
+    # 1) import matrix: every module in the package imports with numpy and
+    #    laya shadowed by raising modules — the T723 weightless axis now
+    #    covers the whole tree (adapters, serve, demo_app included)
+    for mod in ("numpy", "laya"):
+        (tmp_path / f"{mod}.py").write_text('raise ImportError("T730")\n')
+    mods = []
+    for p in sorted(Path("src/gatekeeper").rglob("*.py")):
+        if "__pycache__" in str(p):
+            continue
+        rel = p.relative_to("src/gatekeeper").with_suffix("")
+        name = ".".join(("gatekeeper", *rel.parts)).removesuffix(".__init__")
+        mods.append(name or "gatekeeper")
+    assert len(mods) >= 20, mods
+    code = "; ".join(f"import {m}" for m in mods)
+    r = subprocess.run([sys.executable, "-c", code], check=False,
+                       capture_output=True, text=True, timeout=120,
+                       env={"PATH": "/usr/bin:/bin",
+                            "PYTHONPATH": f"{tmp_path}:src"})
+    assert r.returncode == 0, r.stderr  # first failing module is named
+    # 2) CLI wiring: every subcommand has a handler and answers --help
+    sys.path.insert(0, "src")
+    from gatekeeper.cli import build_parser
+    p = build_parser()
+    sub = next(a for a in p._actions
+               if isinstance(a, argparse._SubParsersAction))
+    assert len(sub.choices) >= 12, sorted(sub.choices)
+    for name in sorted(sub.choices):
+        assert callable(sub.choices[name].get_default("fn")), name
+        with pytest.raises(SystemExit) as e:
+            build_parser().parse_args([name, "--help"])
+        assert e.value.code == 0, name
+    # 3) doctor's dep audit drifts from nothing: its list is exactly the
+    #    core dependency set, so a new core dep must be diagnosed (the
+    #    sweep found pydantic/datasets missing at T730 and fixed it)
+    import tomllib
+    with open("pyproject.toml", "rb") as f:
+        core = {d.split(">=")[0]
+                for d in tomllib.load(f)["project"]["dependencies"]}
+    r = subprocess.run([sys.executable, "-m", "gatekeeper.cli", "doctor"],
+                       check=False, capture_output=True, text=True,
+                       timeout=60, env={"PATH": "/usr/bin:/bin",
+                                        "PYTHONPATH": "src"})
+    assert r.returncode == 0, r.stdout + r.stderr
+    doc_deps = set(re.findall(r"^\s*\S+\s+dep\s+(\S+):", r.stdout, re.MULTILINE))
+    assert doc_deps == core, (sorted(doc_deps), sorted(core))

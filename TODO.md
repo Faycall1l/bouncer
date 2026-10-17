@@ -804,7 +804,7 @@
 - [x] T727 pkg: `bouncer doctor` — env/dep/route self-diagnosis command
 - [x] T728 pkg: doctor output documented in README
 - [x] T729 pkg: install extra `.[finetune]` pins training deps separately
-- [ ] T730 test: P38 packaging sweep (build + import matrix)
+- [x] T730 test: P38 packaging sweep (build + import matrix)
 
 ## P39 CI/CD (T731–T750)
 - [ ] T731 ci: GitHub Actions workflow — pytest + ruff on push/PR
