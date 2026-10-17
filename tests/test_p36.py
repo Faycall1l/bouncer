@@ -315,3 +315,30 @@ def test_gate_breaker_trips_and_closes(tmp_path):  # T682: both true or it's bro
     path = _report(tmp_path, {"tripped": True}, name="b-short.json")
     r = _run_gate(path)
     assert r.returncode == 1 and "FAIL breaker_closed" in r.stderr
+
+
+def test_gate_pool_speedup_hits_scenario(tmp_path):  # T683: >= 2x where it counts
+    # a real weightless bench (T580) through the gate
+    r = _run_py("eval/bench_pool.py", "--out", str(tmp_path / "pool.json"), "--json")
+    assert r.returncode == 0, r.stderr
+    report = json.loads(r.stdout)
+    assert report["speedup"] >= 2.0  # precondition: hits scenario shows the point
+    path = _report(tmp_path, report, name="pool-real.json")
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    r = _run_gate(path, "--json")
+    checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+    assert checks["pool_speedup"]["ok"] is True
+    # a pool that barely beats naive (1.2x) fails
+    path = _report(tmp_path, {"speedup": 1.2, "thrash": {"hits": 0}},
+                   name="pool-slow.json")
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL pool_speedup" in r.stderr
+    # thrash-only report without the hits number = bad shape, FAIL not skip
+    path = _report(tmp_path, {"thrash": {"hits": 0}}, name="pool-noshape.json")
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL pool_speedup" in r.stderr
+    # the floor is flag-settable
+    path = _report(tmp_path, {"speedup": 5.4}, name="pool-54.json")
+    r = _run_gate(path, "--min-speedup", "6")
+    assert r.returncode == 1

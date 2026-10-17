@@ -128,17 +128,29 @@ def collect_breaker(report: dict, args) -> list:
     return checks
 
 
+def collect_pool(report: dict, args) -> list:
+    """T683: the hits scenario must show the pool's point — >= 2x vs naive."""
+    checks = []
+    v = _num(report, "speedup")
+    _add(checks, "pool_speedup", f">= {args.min_speedup}", v,
+         False if v is None else v >= args.min_speedup)
+    return checks
+
+
 def detect_kind(report: dict) -> str:
-    """Gate family by report shape (T681: i18n, T682: breaker; more to follow)."""
+    """Gate family by report shape (T681-T683; more families may follow)."""
     if "per_lang" in report:
         return "i18n"  # only eval_i18n.py produces per_lang
     if "tripped" in report or "closed" in report:
         return "breaker"  # only breaker_sim.py produces these
+    if "speedup" in report or "thrash" in report:
+        return "pool"  # only bench_pool.py produces these
     return "eval"
 
 
 COLLECTORS = {"eval": collect, "i18n": collect_i18n,  # T681
-              "breaker": collect_breaker}  # T682: dispatch table
+              "breaker": collect_breaker,  # T682
+              "pool": collect_pool}  # T683: dispatch table
 
 
 def gate_report(report: dict, args) -> dict:
@@ -225,6 +237,8 @@ def main(argv=None) -> int:
                     help="floor for the worst per-rule accuracy")
     ap.add_argument("--per-rule-min-n", type=int, default=5,  # T676
                     help="ignore rules with fewer than N samples (noise floor)")
+    ap.add_argument("--min-speedup", type=float, default=2.0,  # T683
+                    help="pool hits-scenario speedup floor vs naive rebuilds")
     a = ap.parse_args(argv)
     if a.changelog and not a.against:  # T680: usage error, before any output
         print("gate: --changelog requires --against (nothing to diff)",

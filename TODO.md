@@ -753,7 +753,7 @@
 - [x] T680 eval: report diff appears in CHANGELOG when gates re-run
 - [x] T681 eval: i18n gate — wiring eval must stay 0 errors
 - [x] T682 eval: breaker sim gate — trip and close both true
-- [ ] T683 eval: pool bench gate — speedup >= 2x in the hits scenario
+- [x] T683 eval: pool bench gate — speedup >= 2x in the hits scenario
 - [ ] T684 eval: `gate.py` reads BENCHMARKS table for known numbers
 - [ ] T685 eval: stale-report warning (older than N days)
 - [ ] T686 eval: `eval/reports/latest.json` pointer file (gitignored)
