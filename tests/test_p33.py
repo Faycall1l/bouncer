@@ -58,3 +58,28 @@ def test_ready_and_preset_shapes():  # T615
     assert "be-kind" in pack  # the gaming pack's core rule
     r = c.get("/presets/nope")
     assert r.status_code == 404
+
+
+def test_pool_eviction_under_max():  # T616
+    from gatekeeper.pool import RouterPool
+    built = []
+
+    def factory(**kw):
+        built.append(kw)
+        return kw
+
+    p = RouterPool(max_n=2, factory=factory)
+    p.get(model="english")
+    p.get(model="multilingual")
+    assert p.stats() == {"size": 2, "max_n": 2, "hits": 0, "creates": 2,
+                         "evictions": 0}
+    p.get(model="typed-decisions")  # third key, no free slot -> evict LRU
+    s = p.stats()
+    assert s["size"] == 2 and s["evictions"] == 1 and s["creates"] == 3
+    # the evicted one (english, least recent) is rebuilt on next use
+    p.get(model="english")
+    s = p.stats()
+    assert s["creates"] == 4 and s["evictions"] == 2
+    # same kwargs hit the cache: no new build
+    p.get(model="english")
+    assert len(built) == 4 and p.stats()["hits"] == 1
