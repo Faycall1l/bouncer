@@ -53,3 +53,40 @@ def test_synth_report_shape():  # T582
     again = json.loads(_run("data/synth_rules.py", "--n", "20", "--template-only",
                             "--seed", "7", "--report").stdout)
     assert again == rep
+
+
+_STUB_LAYA = '''
+class Router:
+    def __init__(self, **kw):
+        pass
+
+    def predict(self, state, questions, model=None, **kw):
+        return {"answers": {
+            "rule": {"choice": "ok", "confidence": 0.9, "probabilities": {"ok": 0.9}},
+            "harm": {"score": "safe", "probabilities": []},
+            "hype": {"score": "chill", "probabilities": []},
+            "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+'''
+
+
+def test_eval_model_flag_in_report(tmp_path):  # T583
+    (tmp_path / "laya.py").write_text(_STUB_LAYA)  # weightless stand-in for checkpoints
+    data = tmp_path / "rows.jsonl"
+    row = {"state": {"message": "hello there", "history": [],
+                     "rules": {"be-kind": "be nice"}},
+           "labels": {"rule": "ok", "harm": "safe", "hype": "chill",
+                      "jailbreak": False, "escalate": False}}
+    data.write_text(json.dumps(row) + "\n")
+    env = {**ENV, "PYTHONPATH": f"src:{tmp_path}"}
+    out = str(tmp_path / "rep.json")
+    r = subprocess.run([sys.executable, "eval/eval_gatekeeper.py", str(data),
+                        "--limit", "1", "--model", "english", "--out", out],
+                       check=False, capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout)["model"] == "english"  # T583: flag reaches the report
+    # default: no --model -> report says base-router
+    r = subprocess.run([sys.executable, "eval/eval_gatekeeper.py", str(data),
+                        "--limit", "1", "--out", str(tmp_path / "rep2.json")],
+                       check=False, capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout)["model"] == "base-router"

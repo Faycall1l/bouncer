@@ -643,7 +643,7 @@
 - [x] T580 test: breaker sim runs weightless (subprocess)
 - [x] T581 test: pool bench runs weightless
 - [x] T582 test: synth --report shape
-- [ ] T583 test: eval --model flag surfaces in report
+- [x] T583 test: eval --model flag surfaces in report
 - [ ] T584 test: baseline --limit truncates
 - [ ] T585 test: validate --limit truncates
 - [ ] T586 data: i18n rows validate clean
