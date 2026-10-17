@@ -290,3 +290,50 @@ def test_i18n_rows_flow_through_pipeline(tmp_path):  # T649: not hand-kept
     assert len({tuple(sorted(x["state"]["rules"])) for x in gen}) == 3  # 3 langs
     for x in gen + shipped:  # pipeline shape everywhere: stamped + historyed
         assert x["v"] == 1 and x["state"]["history"]
+
+
+def test_upload_hf_dry_run_plan(tmp_path):  # T650 sweep: upload planner
+    r = _run("data/upload_hf.py", "data/examples.jsonl")
+    assert r.returncode == 0  # dry-run is the default
+    plan = json.loads(r.stdout)
+    assert plan["files"][0]["ok"] and plan["files"][0]["rows"] == 300
+    assert plan["missing"] == []
+    # missing files fail loud before any upload attempt
+    r = _run("data/upload_hf.py", str(tmp_path / "nope.jsonl"))
+    assert r.returncode == 1 and "missing" in r.stdout
+    # --yes refuses the YOUR_HF placeholder namespace
+    r = _run("data/upload_hf.py", "data/examples.jsonl", "--yes")
+    assert r.returncode == 1 and "YOUR_HF" in r.stderr
+
+
+def test_rule_vocab_unseen_k(tmp_path):  # T650 sweep: unseen-K measurement
+    out = str(tmp_path / "v.jsonl")
+    r = _run("data/build_dataset.py", "--n", "150", "--template-only",
+             "--seed", "11", "--hard-n", "0", "--out", out)
+    assert r.returncode == 0, r.stderr
+    base = out.removesuffix(".jsonl")
+    r = _run("eval/rule_vocab.py", f"{base}.train.jsonl", f"{base}.test.jsonl", "--json")
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(r.stdout)
+    assert rep["unseen_server_row_share"] == 1.0  # test servers never seen in train
+    assert rep["unseen_rules"] and rep["unseen_k"]  # K=2/3 test vs K=4 train
+    # single-file mode reports the file's own vocabulary
+    r = _run("eval/rule_vocab.py", "data/examples.jsonl", "--json")
+    rep = json.loads(r.stdout)
+    assert rep["rows"] == 300 and rep["servers"] == 3 and "4" in rep["k"]
+
+
+def test_build_dedupe_cli(tmp_path):  # T650 sweep: --dedupe end-to-end
+    sys.path.insert(0, "data")
+    from build_dataset import normalized_hash
+    out = str(tmp_path / "d.jsonl")
+    r = _run("data/build_dataset.py", "--n", "30", "--template-only",
+             "--seed", "3", "--dedupe", "--out", out)
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(r.stdout)
+    with open(out) as f:
+        rows = [json.loads(l) for l in f]
+    assert rep["n"] == len(rows) == rep["deduped"]["kept"]
+    assert rep["deduped"]["dropped"] > 0
+    hashes = [normalized_hash(x["state"]["message"]) for x in rows]
+    assert len(set(hashes)) == len(hashes)  # nothing near-identical survives

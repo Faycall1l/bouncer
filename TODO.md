@@ -716,7 +716,7 @@
 - [x] T647 data: 12k build script runs `--template-only` end-to-end in test
 - [x] T648 data: class-weight hints emitted for the finetune notebook
 - [x] T649 data: i18n rows flow through build pipeline (not hand-kept)
-- [ ] T650 test: P34 build pipeline sweep
+- [x] T650 test: P34 build pipeline sweep
 
 ## P35 Fine-tune run (T651–T670)
 - [ ] T651 ft: notebook review — every cell has an assert before training
