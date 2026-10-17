@@ -685,7 +685,7 @@
 - [x] T618 test: preset-as-rules e2e + default preset
 - [x] T619 test: i18n eval report keys — covered by T587 (per_lang + errors + n)
 - [x] T620 test: breaker e2e (storm → open → cool → probe)
-- [ ] T621 test: timeout + model fields e2e
+- [x] T621 test: timeout + model fields e2e
 - [ ] T622 test: multitenancy isolation (preset A vs B same text)
 - [ ] T623 test: persistence files ignored by git
 - [ ] T624 test: version strings consistent (0.3.0 everywhere)

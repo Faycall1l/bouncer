@@ -144,6 +144,52 @@ def test_breaker_e2e_full_cycle():  # T620: storm -> open -> cool -> probe -> cl
     gatekeeper._BREAKER.update({"fails": 0, "open_until": 0.0, "half_open": False})
 
 
+def test_timeout_and_model_fields_e2e():  # T621
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen: dict = {}
+
+    class Stub:
+        def predict(self, state, questions, model=None, **kw):
+            seen["model"] = model
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95,
+                         "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Stub()
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+    serve._BUCKETS.clear()
+    c = TestClient(serve.app)
+    # model: pinned checkpoint reaches the router, validated before the call
+    r = c.post("/predict", json={"message": "p33 model pin", "preset": "gaming",
+                                 "model": "multilingual"})
+    assert r.status_code == 200 and seen["model"] == "multilingual"
+    r = c.post("/predict", json={"message": "p33 bad model", "preset": "gaming",
+                                 "model": "nope"})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_MODEL_NAME"
+    assert seen["model"] == "multilingual"  # rejected before any call
+    # timeout: accepted range enforced, default applied when omitted
+    r = c.post("/predict", json={"message": "p33 timeout in", "preset": "gaming",
+                                 "timeout_s": 5, "model": "english"})
+    assert r.status_code == 200
+    r = c.post("/predict", json={"message": "p33 timeout lo", "preset": "gaming",
+                                 "timeout_s": 0.1})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_TIMEOUT"
+    r = c.post("/predict", json={"message": "p33 timeout hi", "preset": "gaming",
+                                 "timeout_s": 999})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_TIMEOUT"
+    r = c.post("/predict", json={"message": "p33 timeout ok", "preset": "gaming",
+                                 "timeout_s": 30})
+    assert r.status_code == 200
+
+
 def test_pool_eviction_under_max():  # T616
     from gatekeeper.pool import RouterPool
     built = []
