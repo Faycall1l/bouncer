@@ -49,9 +49,10 @@ def _command(text: str, rules: dict, chat_id, token, api_fn, out):
 
 
 def handle_update(update: dict, rules: dict, *, token: str | None = None,
-                  can_delete: bool = False, api_fn=api, out=print) -> dict:
+                  can_delete: bool = False, api_fn=api, out=print,
+                  cap=None) -> dict:
     """One update in, zero or one reaction out. `api_fn`/`out` are injectable
-    so tests never touch the network."""
+    so tests never touch the network. `cap` (T701) limits model calls per chat."""
     msg = update.get("message") or {}
     text = (msg.get("text") or "").strip()
     chat_id = msg.get("chat", {}).get("id")
@@ -59,6 +60,10 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
         return {"action": "ignored", "reason": "no-text"}  # stickers/embeds
     if text.startswith("/"):
         return _command(text, rules, chat_id, token, api_fn, out)
+    if cap is not None and not cap.allow(chat_id):  # T701: flood != model fuel
+        out(f"[rate-limited] chat {chat_id} over the per-user cap; "
+            "message not moderated")
+        return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
     from gatekeeper.adapters.common import dry_run
     res = dict(moderate(text, rules))
@@ -80,10 +85,17 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
 
 
 def run():
-    from gatekeeper.adapters.common import Health, load_rules, require_env, run_loop
+    from gatekeeper.adapters.common import (
+        Health,
+        load_rules,
+        rate_cap_from_env,
+        require_env,
+        run_loop,
+    )
     token = require_env("TELEGRAM_TOKEN")  # T691: named failure, not a crash
     rules = load_rules("telegram")  # T698: BOUNCER_RULES[_TELEGRAM] or preset
     can_delete = os.environ.get("BOUNCER_TG_DELETE") == "1"  # T692: opt-in
+    cap = rate_cap_from_env()  # T701: per-chat model-call budget
     offset = 0
 
     def fetch():  # ack the whole page up front: at-most-once, never re-read
@@ -96,7 +108,8 @@ def run():
         return result
 
     def handle(upd):
-        handle_update(upd, rules, token=token, can_delete=can_delete)
+        handle_update(upd, rules, token=token, can_delete=can_delete,
+                      cap=cap)  # T701
 
     run_loop(fetch, handle, name="telegram",  # T696 loop, T699 health line
              health=Health("telegram"))

@@ -715,3 +715,66 @@ def test_adapter_output_is_redacted(monkeypatch, capsys):  # T700: wired
                  "webhooks", "twitch_irc"):
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "redact(" in src, name
+
+
+def test_rate_cap_sliding_window_and_sweep():  # T701
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import RateCap
+    t = [0.0]
+    cap = RateCap(max_calls=3, window_s=60.0, clock=lambda: t[0])
+    assert all(cap.allow("u1") for _ in range(3))  # budget spent
+    assert cap.allow("u1") is False  # 4th in-window call denied
+    assert cap.allow("u2") is True  # other users keep their own budget
+    t[0] = 61.0  # window slides: a fresh budget, not a permanent ban
+    assert cap.allow("u1") is True
+    t[0] = 200.0
+    cap.allow("u3")  # the periodic sweep drops idle users
+    assert "u1" not in cap._hits and "u2" not in cap._hits
+
+
+def test_rate_cap_from_env(monkeypatch):  # T701
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import rate_cap_from_env
+    monkeypatch.delenv("BOUNCER_RATE_CAP", raising=False)
+    assert rate_cap_from_env().max_calls == 10  # sane default
+    monkeypatch.setenv("BOUNCER_RATE_CAP", "3")
+    assert rate_cap_from_env().max_calls == 3
+    monkeypatch.setenv("BOUNCER_RATE_CAP", "0")
+    assert rate_cap_from_env() is None  # opt-out
+    monkeypatch.setenv("BOUNCER_RATE_CAP", "banana")
+    assert rate_cap_from_env().max_calls == 10  # a typo must not crash a bot
+
+
+def test_rate_cap_blocks_model_calls(monkeypatch, capsys):  # T701 e2e
+    sys.path.insert(0, "src")
+    import gatekeeper
+    from gatekeeper.adapters.common import RateCap
+    from gatekeeper.adapters.telegram_bot import handle_update
+    calls = []
+    monkeypatch.setattr(gatekeeper, "moderate",
+                        lambda t, r: (calls.append(t),
+                                      {"action": "allow", "rule": "ok",
+                                       "confidence": 1.0})[1])
+    rules = {"r": "t"}
+    cap = RateCap(max_calls=2, window_s=60.0, clock=lambda: 0.0)
+    for i in range(2):
+        assert handle_update(_tg_message(f"msg {i}"), rules,
+                             cap=cap)["action"] == "allow"
+    assert len(calls) == 2
+    # the flood message never reaches the model and is visibly logged
+    res = handle_update(_tg_message("msg flood"), rules, cap=cap)
+    assert res == {"action": "ignored", "reason": "rate-limited"}
+    assert len(calls) == 2 and "[rate-limited]" in capsys.readouterr().out
+    # commands bypass the cap (cheap, no model call)
+    assert handle_update(_tg_message("/rules"), rules,
+                         cap=cap)["action"] == "command"
+    # no cap -> the old behavior, every message moderated
+    assert handle_update(_tg_message("msg 3"), rules)["action"] == "allow"
+    assert len(calls) == 3
+
+
+def test_adapters_wire_rate_cap():  # T701: all four pollers carry a cap
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "rate_cap_from_env()" in src, name
+        assert 'reason": "rate-limited"' in src, name

@@ -56,8 +56,10 @@ def _command(text, rules, msg, creds, api_fn, out):
 
 
 def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
-                 can_delete: bool = False, api_fn=api, out=print) -> dict:
-    """One queue event in, zero or one reaction out (T695)."""
+                 can_delete: bool = False, api_fn=api, out=print,
+                 cap=None) -> dict:
+    """One queue event in, zero or one reaction out (T695). `cap` (T701)
+    limits model calls per sender."""
     if event.get("type") != "message":
         return {"action": "ignored", "reason": "not-message"}
     msg = event.get("message") or {}
@@ -73,6 +75,10 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
         return _command(text, rules, msg, creds, api_fn, out)
     if text.lstrip("/").lower().startswith("bouncer"):  # mention parity
         return _command(text, rules, msg, creds, api_fn, out)
+    if cap is not None and not cap.allow(msg.get("sender_id")):  # T701
+        out(f"[rate-limited] <{msg.get('sender_id')}> over the per-user cap; "
+            "message not moderated")
+        return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
     from gatekeeper.adapters.common import dry_run
     res = dict(moderate(text, rules))
@@ -94,12 +100,19 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
 
 
 def run():
-    from gatekeeper.adapters.common import Health, load_rules, require_env, run_loop
+    from gatekeeper.adapters.common import (
+        Health,
+        load_rules,
+        rate_cap_from_env,
+        require_env,
+        run_loop,
+    )
     email = require_env("ZULIP_EMAIL")  # T691: named failure, not a crash
     key = require_env("ZULIP_API_KEY")
     site = require_env("ZULIP_SITE").rstrip("/")
     rules = load_rules("zulip")  # T698: BOUNCER_RULES[_ZULIP] or preset
     can_delete = os.environ.get("BOUNCER_ZL_DELETE") == "1"  # T695: opt-in
+    cap = rate_cap_from_env()  # T701: per-sender model-call budget
     own_id = api(email, key, site, "GET", "/users/me").get("user_id")
     q = api(email, key, site, "POST", "/register",
             event_types=json.dumps(["message"]),
@@ -111,7 +124,7 @@ def run():
 
     def handle(ev):
         handle_event(ev, rules, own_id=own_id, creds=(email, key, site),
-                     can_delete=can_delete)
+                     can_delete=can_delete, cap=cap)  # T701
 
     run_loop(fetch, handle, name="zulip",  # T696 loop, T699 health line
              health=Health("zulip"))

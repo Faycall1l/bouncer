@@ -49,9 +49,11 @@ def _command(body, rules, event, token, homeserver, api_fn, out):
 
 
 def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
-                 can_redact: bool = False, api_fn=api, out=print) -> dict:
+                 can_redact: bool = False, api_fn=api, out=print,
+                 cap=None) -> dict:
     """One timeline event in, zero or one reaction out (T693). `api_fn`/`out`
-    are injectable so tests never touch a homeserver."""
+    are injectable so tests never touch a homeserver. `cap` (T701) limits
+    model calls per sender."""
     if event.get("type") != "m.room.message":
         return {"action": "ignored", "reason": "not-message"}
     content = event.get("content") or {}
@@ -60,6 +62,11 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
         return {"action": "ignored", "reason": "no-text"}  # images, empties
     if body.startswith("!bouncer"):
         return _command(body, rules, event, token, homeserver, api_fn, out)
+    if cap is not None and not cap.allow(event.get("sender")):  # T701
+        from gatekeeper.adapters.common import redact
+        out(f"[rate-limited] <{redact(event.get('sender'))}> over the "
+            "per-user cap; message not moderated")
+        return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
     from gatekeeper.adapters.common import dry_run
     res = dict(moderate(body, rules))
@@ -110,11 +117,18 @@ def dispatch_page(page: dict, rules: dict, **kw) -> list:
 
 
 def run():
-    from gatekeeper.adapters.common import Health, load_rules, require_env, run_loop
+    from gatekeeper.adapters.common import (
+        Health,
+        load_rules,
+        rate_cap_from_env,
+        require_env,
+        run_loop,
+    )
     token = require_env("MATRIX_TOKEN")  # T691: named failure, not a crash
     homeserver = require_env("MATRIX_HOMESERVER").rstrip("/")
     rules = load_rules("matrix")  # T698: BOUNCER_RULES[_MATRIX] or preset
     can_redact = os.environ.get("BOUNCER_MX_REDACT") == "1"  # T693: opt-in
+    cap = rate_cap_from_env()  # T701: per-sender model-call budget
     since = None
 
     def fetch():
@@ -127,7 +141,7 @@ def run():
 
     def handle(ev):
         handle_event(ev, rules, token=token, homeserver=homeserver,
-                     can_redact=can_redact)
+                     can_redact=can_redact, cap=cap)  # T701
 
     run_loop(fetch, handle, name="matrix",  # T696 loop, T699 health line
              health=Health("matrix"))

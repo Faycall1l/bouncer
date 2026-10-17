@@ -42,6 +42,11 @@ Every log line and decision print goes through the shared `redact()` pass
 emails, and URL query secrets are masked. Twitch's T077 `redact()` now
 delegates to it.
 
+The pollers carry a per-user rate cap (T701): `BOUNCER_RATE_CAP` model
+calls per user per minute (default 10, `0` disables). Over-cap messages
+are logged as `[rate-limited]` and skipped — a flood can't monopolize the
+model. Command replies bypass the cap; they never reach the model anyway.
+
 ## Notes (T408)
 
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision

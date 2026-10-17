@@ -32,13 +32,20 @@ def api(token: str, server: str, method: str, path: str, **params):
 
 
 def handle_post(post: dict, rules: dict, *, token=None, server=None,
-                can_delete: bool = False, api_fn=api, out=print) -> dict:
-    """One `posted` event in, zero or one reaction out (T694)."""
+                can_delete: bool = False, api_fn=api, out=print,
+                cap=None) -> dict:
+    """One `posted` event in, zero or one reaction out (T694). `cap` (T701)
+    limits model calls per user."""
     if post.get("type"):  # system messages (joins, leaves, edits) carry no text
         return {"action": "ignored", "reason": "system-post"}
     text = (post.get("message") or "").strip()
     if not text:
         return {"action": "ignored", "reason": "no-text"}
+    if cap is not None and not cap.allow(post.get("user_id")):  # T701
+        from gatekeeper.adapters.common import redact
+        out(f"[rate-limited] <{redact(post.get('user_id'))}> over the "
+            "per-user cap; message not moderated")
+        return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
     from gatekeeper.adapters.common import dry_run
     res = dict(moderate(text, rules))
@@ -92,7 +99,13 @@ def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,
 def run():
     import asyncio
 
-    from gatekeeper.adapters.common import AdapterError, Health, load_rules, require_env
+    from gatekeeper.adapters.common import (
+        AdapterError,
+        Health,
+        load_rules,
+        rate_cap_from_env,
+        require_env,
+    )
     try:
         import websockets  # optional dep: pip install -e .[mattermost]
     except ImportError as e:
@@ -103,6 +116,7 @@ def run():
     token = require_env("MATTERMOST_TOKEN")
     rules = load_rules("mattermost")  # T698: BOUNCER_RULES[_MATTERMOST] or preset
     can_delete = os.environ.get("BOUNCER_MM_DELETE") == "1"  # T694: opt-in
+    cap = rate_cap_from_env()  # T701: per-user model-call budget
     health = Health("mattermost")  # T699: same counters as run_loop's
 
     async def _loop():
@@ -121,7 +135,8 @@ def run():
                     continue
                 try:
                     res = handle_post(post, rules, token=token, server=server,
-                                      can_delete=can_delete) or {}
+                                      can_delete=can_delete,
+                                      cap=cap) or {}  # T701
                     if res.get("action") not in ("ignored", "command"):
                         health.decision()
                 except Exception as e:  # noqa: BLE001 — one bad post, one line

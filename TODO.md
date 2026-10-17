@@ -773,7 +773,7 @@
 - [x] T698 adp: per-adapter rules source (preset name or file path)
 - [x] T699 adp: adapter health line in logs (decisions/min, last error)
 - [x] T700 adp: redaction pass shared across adapters (tokens, emails)
-- [ ] T701 adp: per-user rate cap in adapters (protects the model)
+- [x] T701 adp: per-user rate cap in adapters (protects the model)
 - [ ] T702 adp: graceful shutdown on SIGTERM for every adapter
 - [ ] T703 adp: adapter matrix table updated in adapters README
 - [ ] T704 adp: webhook signature verification helper (hmac compare)

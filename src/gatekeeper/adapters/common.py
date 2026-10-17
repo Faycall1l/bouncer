@@ -161,3 +161,45 @@ class Health:
         if now - self._last_line >= self.every_s:
             self.log(self.line())
             self._last_line = now
+
+
+class RateCap:
+    """T701: per-user sliding-window cap — one flood can't monopolize the
+    model. `allow(key)` True = this call may reach the model."""
+
+    def __init__(self, max_calls: int = 10, window_s: float = 60.0,
+                 clock=time.monotonic):
+        self.max_calls = max_calls
+        self.window_s = window_s
+        self.clock = clock
+        self._hits = {}
+        self._last_sweep = clock()
+
+    def _sweep(self, now):
+        cutoff = now - self.window_s
+        for key in [k for k, ts in self._hits.items()
+                    if not ts or ts[-1] <= cutoff]:
+            del self._hits[key]  # idle users cost nothing
+
+    def allow(self, key) -> bool:
+        now = self.clock()
+        if now - self._last_sweep > self.window_s:
+            self._sweep(now)
+            self._last_sweep = now
+        hits = [t for t in self._hits.get(key, []) if t > now - self.window_s]
+        if len(hits) >= self.max_calls:
+            self._hits[key] = hits
+            return False
+        hits.append(now)
+        self._hits[key] = hits
+        return True
+
+
+def rate_cap_from_env() -> RateCap | None:
+    """T701: BOUNCER_RATE_CAP = max model calls per user per minute;
+    0 disables the cap. A typo'd value must not crash a running bot."""
+    try:
+        n = int(os.environ.get("BOUNCER_RATE_CAP", "10"))
+    except ValueError:
+        n = 10
+    return RateCap(max_calls=n) if n > 0 else None
