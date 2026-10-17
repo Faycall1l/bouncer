@@ -50,6 +50,11 @@ def collect(report: dict, args) -> list:
         v = _num(report, *keys)
         add(name, f"<= {threshold}", v, None if v is None else v <= threshold)
 
+    def band(name, keys, lo, hi):  # T675: abstention must neither vanish nor dominate
+        v = _num(report, *keys)
+        expected = f"> {lo} and <= {hi}"
+        add(name, expected, v, None if v is None else lo < v <= hi)
+
     def ge(name, keys, threshold):
         v = _num(report, *keys)
         add(name, f">= {threshold}", v, None if v is None else v >= threshold)
@@ -65,6 +70,8 @@ def collect(report: dict, args) -> list:
     ge("rule_acc", ("rule_acc",), args.min_rule_acc)  # T672: must beat the regex bar
     le("ece", ("ece",), args.max_ece)  # T673: after calibration, probs stay honest
     le("p95_ms", ("p95_ms",), args.max_p95_ms)  # T674: latency budget (T4 target)
+    band("abstention_rate", ("abstention_rate",),  # T675: honest band
+         args.min_abstention, args.max_abstention)
     return checks
 
 
@@ -105,6 +112,11 @@ def main(argv=None) -> int:
     ap.add_argument("--max-p95-ms", type=float, default=44.0,  # T674
                     help="p95 latency budget in ms (44 = T4 product target; "
                          "CPU zero-shot reports will fail)")
+    ap.add_argument("--min-abstention", type=float, default=0.0,  # T675
+                    help="abstention_rate floor, exclusive: 0 abstentions means "
+                         "the model never hedges — suspicious, not laudable")
+    ap.add_argument("--max-abstention", type=float, default=0.3,  # T675
+                    help="abstention_rate ceiling: past this the gate is all abstain")
     a = ap.parse_args(argv)
 
     try:

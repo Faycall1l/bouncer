@@ -23,7 +23,7 @@ def test_gate_pass_on_healthy_report(tmp_path):  # T671: exit 0, PASS lines
     assert "PASS rule_acc" in r.stdout  # 0.403 meets the floor exactly (T672)
     assert "SKIP ece" in r.stdout  # absent metric -> skipped, never passed (T673)
     assert "SKIP p95_ms" in r.stdout  # absent metric -> skipped (T674)
-    assert "3 passed, 0 failed, 2 skipped -> PASS" in r.stdout
+    assert "3 passed, 0 failed, 3 skipped -> PASS" in r.stdout
 
 
 def test_gate_fails_loud_on_threshold(tmp_path):  # T671: exit 1 + stderr blame
@@ -97,7 +97,7 @@ def test_gate_ece_ceiling(tmp_path):  # T673: after calibration, probs stay hone
     path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
     r = _run_gate(path, "--json")
     verdict = json.loads(r.stdout)
-    assert verdict["ok"] is True and verdict["skipped"] == 2  # ece + p95 absent
+    assert verdict["ok"] is True and verdict["skipped"] == 3  # ece+p95+abstention
     assert any(c["name"] == "ece" and c["ok"] is None for c in verdict["checks"])
 
 
@@ -113,3 +113,25 @@ def test_gate_p95_latency_budget(tmp_path):  # T674: flag-settable latency budge
     # the budget is flag-settable (e.g. CPU hosts get an honest larger one)
     r = _run_gate(path, "--max-p95-ms", "2000")
     assert r.returncode == 0, r.stderr
+
+
+def test_gate_abstention_band(tmp_path):  # T675: not 0, not > 0.3
+    # a model that hedges sometimes passes
+    path = _report(tmp_path, {"n": 500, "rule_acc": 0.51, "abstention_rate": 0.05})
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    # never abstaining fails: overconfidence is not a virtue here
+    path = _report(tmp_path, {"n": 500, "rule_acc": 0.51, "abstention_rate": 0.0})
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL abstention_rate" in r.stderr
+    # all-abstain fails
+    path = _report(tmp_path, {"n": 500, "rule_acc": 0.51, "abstention_rate": 0.42})
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL abstention_rate" in r.stderr
+    # the ceiling edge (0.3) is inside the band
+    path = _report(tmp_path, {"n": 500, "rule_acc": 0.51, "abstention_rate": 0.3})
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    # band is flag-adjustable
+    r = _run_gate(path, "--max-abstention", "0.2")
+    assert r.returncode == 1
