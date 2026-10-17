@@ -1,0 +1,122 @@
+"""T631: dataset build orchestrator — synth -> validate -> server-disjoint split.
+
+One command produces the full file plus train/dev/test splits whose rule-sets
+never cross splits (a row's "server" = its rule-set ids, see T632). Weightless
+by default (template rows); with OPENAI_BASE_URL + OPENAI_API_KEY set, ~2/3 of
+rows come from the teacher (synth_rules.llm_rows).
+"""
+import argparse
+import json
+import os
+import random
+import sys
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
+sys.path.insert(0, os.path.join(_HERE, "..", "eval"))
+
+from synth_rules import llm_rows, template_rows
+from validate_data import check_row
+
+NAMES = ("train", "dev", "test")
+
+
+def server_key(row: dict) -> tuple:
+    """A row's server identity: the rule-set it belongs to (ids only)."""
+    return tuple(sorted(row["state"]["rules"]))
+
+
+def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0) -> dict:
+    """Server-disjoint split: every rule-set lands in exactly one split.
+
+    The two smallest rule-sets are reserved for dev/test (when there are enough
+    to leave train at least one), then the rest fill largest-first into whichever
+    split is furthest below its row target. Tiny template sets (3 rule-sets) get
+    a usable dev/test; larger teacher sets converge on the ratios.
+    """
+    if len(ratios) != 3 or any(x < 0 for x in ratios) or sum(ratios) <= 0:
+        raise ValueError("ratios must be 3 non-negative numbers summing > 0")
+    groups: dict = {}
+    for r in rows:
+        groups.setdefault(server_key(r), []).append(r)
+    targets = {n: ratios[i] * len(rows) for i, n in enumerate(NAMES)}
+    counts = dict.fromkeys(NAMES, 0)
+    assign: dict = {}
+
+    keys = sorted(groups, key=lambda k: (len(groups[k]), k))  # ascending, stable
+    reserve = [n for n in NAMES[1:] if targets[n] > 0]
+    if len(groups) > len(reserve):  # train keeps at least one rule-set
+        for n in reserve:
+            key = keys.pop(0)  # smallest remaining -> n
+            assign[key] = n
+            counts[n] += len(groups[key])
+    for key in sorted(keys, key=lambda k: -len(groups[k])):  # largest first
+        best = max(NAMES, key=lambda n: targets[n] - counts[n])
+        assign[key] = best
+        counts[best] += len(groups[key])
+
+    out = {n: [] for n in NAMES}
+    for key, part in groups.items():
+        out[assign[key]].extend(part)
+    return out
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(prog="build_dataset",
+                                 description="synth -> validate -> split (T631)")
+    ap.add_argument("--n", type=int, default=12000)
+    ap.add_argument("--out", default="data/gatekeeper-12k.jsonl")
+    ap.add_argument("--template-only", action="store_true")
+    ap.add_argument("--seed", type=int, default=None)  # reproducible builds (T382)
+    ap.add_argument("--ratios", type=float, nargs=3, default=[0.8, 0.1, 0.1],
+                    metavar=("TRAIN", "DEV", "TEST"))
+    ap.add_argument("--no-split", action="store_true",
+                    help="write the full file only, skip the split files")
+    a = ap.parse_args(argv)
+
+    if a.seed is not None:
+        random.seed(a.seed)
+    if a.template_only or not os.environ.get("OPENAI_API_KEY"):
+        rows = template_rows(a.n)
+    else:
+        rows = template_rows(a.n // 3) + llm_rows(2 * a.n // 3)
+    random.shuffle(rows)
+
+    # validate in memory BEFORE writing anything (T645: fail loud, write nothing)
+    errs = []
+    for i, r in enumerate(rows):
+        errs.extend(check_row(r, i))
+    if errs:
+        print(f"build_dataset: {len(errs)} invalid row(s), nothing written",
+              file=sys.stderr)
+        for e in errs[:5]:
+            print(f"  {e}", file=sys.stderr)
+        return 1
+
+    parent = os.path.dirname(os.path.abspath(a.out))
+    os.makedirs(parent, exist_ok=True)
+    tmp = a.out + ".tmp"
+    with open(tmp, "w") as f:
+        f.writelines(json.dumps(r) + "\n" for r in rows)
+    os.replace(tmp, a.out)  # readers never see a half-written dataset
+
+    report = {"n": len(rows), "out": a.out, "errors": 0,
+              "servers": len({server_key(r) for r in rows})}
+    if not a.no_split:
+        splits = split_rows(rows, tuple(a.ratios), a.seed or 0)
+        base = a.out.removesuffix(".jsonl")
+        files = {}
+        for name, part in splits.items():
+            path = f"{base}.{name}.jsonl"
+            with open(path, "w") as f:
+                f.writelines(json.dumps(r) + "\n" for r in part)
+            files[name] = path
+        report["splits"] = {k: len(v) for k, v in splits.items()}
+        report["files"] = files
+        report["disjoint"] = True  # by construction; verified by T632
+    print(json.dumps(report, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

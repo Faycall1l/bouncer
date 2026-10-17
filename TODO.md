@@ -697,7 +697,7 @@
 - [x] T630 final: push v0.3.0
 
 ## P34 Dataset build (T631–T650)
-- [ ] T631 data: `build_dataset.py` orchestrates synth → validate → split
+- [x] T631 data: `build_dataset.py` orchestrates synth → validate → split
 - [ ] T632 data: server-disjoint split verifier (no rule-set leaks train→test)
 - [ ] T633 data: label balance report per split (`--report` + thresholds)
 - [ ] T634 data: dedupe near-identical messages (normalized hash)
