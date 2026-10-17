@@ -90,6 +90,15 @@ Split gates: `--allow-threshold` / `--delete-threshold` (and the same JSON keys
 on `POST /predict` + `/predict/batch`) tune the two bars independently;
 bare `--threshold` sets both. Higher allow = fewer auto-allows, more escalations.
 
+## Config file (T709+T727)
+
+Adapters and `bouncer doctor` read an optional `bouncer.toml` (stdlib
+`tomllib`) from the working directory — override the path with
+`BOUNCER_CONFIG`. Precedence is always **env var > file > default**: a
+missing file is fine (defaults), a broken one fails closed with `E_ADAPTER`
+naming the file. The full annotated example lives in
+[`src/gatekeeper/adapters/README.md`](src/gatekeeper/adapters/README.md).
+
 ## Router pools (T592)
 
 Routers (one per checkpoint × device) are expensive to build, so bouncer keeps an

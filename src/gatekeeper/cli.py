@@ -344,6 +344,84 @@ def _cmd_serve(args) -> int:  # T547+T549: secrets/flags applied before uvicorn 
     return 0
 
 
+def cmd_doctor(args) -> int:  # T727: env/dep/route self-diagnosis
+    """Weightless health report: interpreter, config, adapter env (presence
+    only — values are never printed), importable deps, model routing.
+    Never loads the model or touches the network. Warns are documented
+    degraded modes (missing laya = escalate fallback); exit 1 only when
+    something is actually broken (python floor, unreadable config)."""
+    import ast
+    import importlib.util
+    import os
+    import platform
+    from pathlib import Path
+
+    from gatekeeper import __version__
+    from gatekeeper.adapters.common import AdapterError, load_config
+    from gatekeeper.pool import model_for_lang
+
+    findings: list[tuple[str, str, str, str]] = []  # level, area, name, detail
+
+    def note(level: str, area: str, name: str, detail: str) -> None:
+        findings.append((level, area, name, detail))
+
+    # -- env: interpreter, package, config file (E_ADAPTER names the broken
+    #    one), adapter requirements found by scanning require_env("NAME")
+    pyv = sys.version_info[:2]
+    note("ok" if pyv >= (3, 10) else "fail", "env", "python",
+         f"{platform.python_version()} (requires >=3.10)")
+    note("ok", "env", "bouncer", __version__)
+    cfg_path = os.environ.get("BOUNCER_CONFIG", "").strip() or "bouncer.toml"
+    if os.path.exists(cfg_path):
+        try:
+            load_config(cfg_path)
+            note("ok", "env", "config", cfg_path)
+        except AdapterError as e:  # E_ADAPTER: the file is the fault
+            note("fail", "env", "config", str(e))
+    else:
+        note("ok", "env", "config", f"{cfg_path} absent (defaults)")
+    adir = Path(__file__).parent / "adapters"
+    for path in sorted(adir.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            is_req = (isinstance(node, ast.Call)
+                      and isinstance(node.func, ast.Name)
+                      and node.func.id == "require_env" and node.args
+                      and isinstance(node.args[0], ast.Constant)
+                      and isinstance(node.args[0].value, str))
+            if is_req:
+                env = node.args[0].value
+                present = bool(os.environ.get(env))
+                note("ok" if present else "info", "env", env,
+                     f"{path.stem}: env "
+                     f"{'set' if present else 'unset (bouncer.toml may supply it)'}")
+
+    # -- dep: find_spec locates without importing — no side effects, no
+    #    weights; missing pieces are warns because the engine degrades
+    for mod, why in (("numpy", "tensor ops"),
+                     ("laya", "System One router (predicts)"),
+                     ("fastapi", "HTTP server"),
+                     ("uvicorn", "HTTP server"),
+                     ("gradio", "demo app"),
+                     ("huggingface_hub", "weight downloads")):
+        present = importlib.util.find_spec(mod) is not None
+        note("ok" if present else "warn", "dep", mod,
+             "importable" if present else f"missing — {why} unavailable")
+
+    # -- route: checkpoint per language + device policy. The pool is json/os
+    #    only (T458), so this never wakes the model.
+    for lang in ("en", "es", "zh", "ar", "ja"):
+        note("ok", "route", f"model[{lang}]", model_for_lang(lang) or "default")
+    dev = os.environ.get("BOUNCER_DEVICE", "").strip()
+    note("ok", "route", "device", dev or "auto")
+
+    for level, area, name, detail in findings:
+        print(f"{level:4}  {area:5}  {name}: {detail}")
+    fails = sum(1 for lv, *_ in findings if lv == "fail")
+    warns = sum(1 for lv, *_ in findings if lv == "warn")
+    print(f"doctor: {len(findings)} checks, {warns} warn, {fails} fail")
+    return 1 if fails else 0
+
+
 def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatch
     p = argparse.ArgumentParser(prog="bouncer",  # T321: exit codes up front
                                 epilog="exit codes: 0 allow · 2 delete/flag · 3 escalate · "
@@ -427,6 +505,8 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     pk.add_argument("--strict", action="store_true")  # T319: exit 2 on warnings
     pk.add_argument("--format", choices=["json", "lines"], default="json")  # T325
     pk.set_defaults(fn=cmd_pack)
+    dr = sub.add_parser("doctor")  # T727: env/dep/route self-diagnosis
+    dr.set_defaults(fn=cmd_doctor)
     return p
 
 

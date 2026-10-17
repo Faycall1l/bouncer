@@ -506,3 +506,38 @@ def test_sbom_exported_in_release_workflow(tmp_path):  # T726
     pub = Path(".github/workflows/publish.yml").read_text()
     assert "scripts/sbom.py --out dist/sbom.json" in pub
     assert "name: sbom" in pub, "no sbom artifact uploaded"
+
+
+def test_bouncer_doctor_self_diagnosis(tmp_path):  # T727
+    import subprocess
+
+    def run_doctor(extra_env):
+        env = {"PATH": "/usr/bin:/bin", "PYTHONPATH": "src"}
+        env.update(extra_env)
+        return subprocess.run(
+            [sys.executable, "-m", "gatekeeper.cli", "doctor"],
+            check=False, capture_output=True, text=True, timeout=60, env=env)
+
+    # baseline: all three areas reported with a summary; exit 0 — warns
+    # are allowed (this env legitimately lacks laya: documented degrade)
+    r = run_doctor({})
+    assert r.returncode == 0, r.stdout + r.stderr
+    for area in ("env", "dep", "route"):
+        assert f" {area} " in r.stdout, (area, r.stdout)
+    assert "bouncer:" in r.stdout and "config:" in r.stdout
+    assert "laya" in r.stdout  # dep audit runs even when it's missing
+    assert "model[zh]" in r.stdout  # route audit names real checkpoints
+    import re
+    assert re.search(r"doctor: \d+ checks, \d+ warn, \d+ fail", r.stdout)
+    # values never leak: a set token is reported as presence only
+    r = run_doctor({"TELEGRAM_TOKEN": "sekrit-T727"})
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "TELEGRAM_TOKEN: telegram_bot: env set" in r.stdout
+    assert "sekrit-T727" not in r.stdout + r.stderr, "doctor leaked a secret"
+    # a broken config is a hard fault: E_ADAPTER names the file, exit 1
+    bad = tmp_path / "broken.toml"
+    bad.write_text("[[[ not toml")
+    r = run_doctor({"BOUNCER_CONFIG": str(bad)})
+    assert r.returncode == 1, r.stdout
+    assert "E_ADAPTER" in r.stdout and str(bad) in r.stdout
+    assert " 1 fail" in r.stdout
