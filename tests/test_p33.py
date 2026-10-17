@@ -60,6 +60,49 @@ def test_ready_and_preset_shapes():  # T615
     assert r.status_code == 404
 
 
+def test_preset_as_rules_e2e_and_default(monkeypatch):  # T618
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    class Stub:
+        """Answers by rule id present in the pack: link -> delete-grade conf."""
+
+        def predict(self, state, questions):
+            has_no_spam = any("no-spam" in r or "sin-spam" in r
+                              for r in state["rules"])
+            conf = 0.96 if has_no_spam else 0.5
+            return {"answers": {
+                "rule": {"choice": "ok" if not has_no_spam else "no-spam",
+                         "confidence": conf,
+                         "probabilities": {"ok": 1 - conf, "no-spam": conf}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Stub()
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+    serve._BUCKETS.clear()
+    c = TestClient(serve.app)
+    msg = "buy crypto http://free-coins.example"
+    # preset pack drives the decision end-to-end (rules reach the router)
+    r = c.post("/predict", json={"message": msg, "preset": "gaming"})
+    assert r.status_code == 200
+    assert r.json()["action"] == "delete" and r.json()["rule"] == "no-spam"
+    # same text with a pack that has no no-spam rule: no violation to match
+    r = c.post("/predict", json={"message": msg, "preset": "study"})
+    assert r.status_code == 200 and r.json()["action"] != "delete"
+    # neither rules nor preset -> env default kicks in (T475)
+    monkeypatch.setenv("BOUNCER_DEFAULT_PRESET", "gaming")
+    r = c.post("/predict", json={"message": msg})
+    assert r.status_code == 200 and r.json()["rule"] == "no-spam"
+    monkeypatch.delenv("BOUNCER_DEFAULT_PRESET")
+    r = c.post("/predict", json={"message": msg})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "E_PRESET"
+
+
 def test_pool_eviction_under_max():  # T616
     from gatekeeper.pool import RouterPool
     built = []

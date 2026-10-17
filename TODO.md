@@ -682,7 +682,7 @@
 - [x] T615 test: GET /ready + /presets/{name} shapes
 - [x] T616 test: pool eviction under max
 - [x] T617 test: snapshot round-trip (stats+strikes) — covered by T588
-- [ ] T618 test: preset-as-rules e2e + default preset
+- [x] T618 test: preset-as-rules e2e + default preset
 - [ ] T619 test: i18n eval report keys
 - [ ] T620 test: breaker e2e (storm → open → cool → probe)
 - [ ] T621 test: timeout + model fields e2e
