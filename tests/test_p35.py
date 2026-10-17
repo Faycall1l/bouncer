@@ -220,6 +220,30 @@ def test_failure_modes_documented():  # T667: OOM, token cap, label noise, refus
         assert kw in readme
 
 
+def test_compare_models_deltas(tmp_path):  # T668: weightless base-vs-ft diff
+    base = {"model": "base-router", "n": 500, "rule_acc": 0.305, "ece": 0.21,
+            "brier": 0.18, "p50_ms": 1004.0, "abstention_rate": 0.0,
+            "overconfident_errors": 0, "gate": {"prec": 0.0, "n": 0}}
+    ft = {"model": "bouncer-421m", "n": 500, "rule_acc": 0.512, "ece": 0.12,
+          "brier": 0.11, "p50_ms": 40.0, "abstention_rate": 0.05,
+          "overconfident_errors": 2, "gate": {"prec": 0.81, "n": 42}}
+    b, f_ = tmp_path / "base.json", tmp_path / "ft.json"
+    b.write_text(json.dumps(base))
+    f_.write_text(json.dumps(ft))
+    r = _run_py("eval/compare_models.py", str(b), str(f_), "--json")
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(r.stdout)
+    assert rep["ft_wins"] == 7 and rep["base_wins"] == 1  # overconf is the loss
+    assert rep["ft_better"] is True
+    assert rep["metrics"]["rule_acc"]["delta"] == 0.207
+    assert rep["metrics"]["rule_acc"]["verdict"] == "ft"
+    assert rep["metrics"]["ece"]["delta"] == -0.09  # lower is better
+    assert rep["metrics"]["overconfident_errors"]["verdict"] == "base"
+    # unreadable report -> exit 2, loud
+    r = _run_py("eval/compare_models.py", str(tmp_path / "nope.json"), str(f_))
+    assert r.returncode == 2 and "cannot read" in r.stderr
+
+
 def test_eval_after_train_cell():  # T660: CI metrics on the held-out split
     src = _src("kaggle/train/train.py")
     assert "test_split.jsonl" in src  # split always written OUT

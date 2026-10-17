@@ -736,7 +736,7 @@
 - [x] T665 ft: honest docs — what a real run changes in BENCHMARKS (draft)
 - [x] T666 ft: costs block — 2xT4 hours + estimated HF storage
 - [x] T667 ft: failure modes documented (OOM, token cap, label noise)
-- [ ] T668 ft: base-vs-finetune eval comparison script (weights optional)
+- [x] T668 ft: base-vs-finetune eval comparison script (weights optional)
 - [ ] T669 ft: RELEASE checklist item "accuracy numbers refreshed"
 - [ ] T670 test: P35 fine-tune plumbing sweep (weightless)
 
