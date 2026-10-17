@@ -148,3 +148,25 @@ def test_i18n_report_ci_safe(tmp_path):  # T587: no weights, no laya, writes rep
     assert set(rep["per_lang"]) == {"es", "fr", "ar"}  # 3 languages wired
     with open(out) as f:
         assert json.load(f) == rep  # report file == stdout
+
+
+def test_snapshot_cli_roundtrip(tmp_path, capsys):  # T588
+    from gatekeeper import strikes as st
+    from gatekeeper.cli import main
+    from gatekeeper.stats import get_stats, record, reset_stats
+    st.reset()
+    reset_stats()
+    st.add_strike("u-snap")
+    st.add_strike("u-snap")
+    record("allow", "ok", 1.0)
+    f = str(tmp_path / "snap.json")
+    assert main(["snapshot", "save", f]) == 0
+    assert "users=1" in capsys.readouterr().out
+    st.reset()  # wipe in-memory state, then restore from the file
+    reset_stats()
+    assert st.standing("u-snap")["strikes"] == 0
+    assert get_stats()["total"] == 0
+    assert main(["snapshot", "load", f]) == 0
+    assert st.standing("u-snap")["strikes"] == 2  # round-trip intact
+    assert get_stats()["actions"]["allow"] == 1
+    st.reset()

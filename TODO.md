@@ -648,7 +648,7 @@
 - [x] T585 test: validate --limit truncates
 - [x] T586 data: i18n rows validate clean
 - [x] T587 eval: i18n report written by CI-safe command
-- [ ] T588 test: snapshot round-trip via CLI (save/load)
+- [x] T588 test: snapshot round-trip via CLI (save/load)
 - [ ] T589 test: breaker sim report keys
 - [ ] T590 test: P31 eval sweep
 
