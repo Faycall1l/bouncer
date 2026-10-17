@@ -21,6 +21,7 @@ dependencies = [  # T216: lower bounds from smoke-tested versions
   "fastapi>=0.110",
   "uvicorn>=0.29",
   "gradio>=4.44.0",
+  "pydantic>=2",  # T722: serve.py's models run on the v2 stack
   "numpy>=1.26",
   "datasets>=3.0.0",
   "huggingface_hub>=0.23",

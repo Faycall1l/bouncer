@@ -370,3 +370,18 @@ def test_pip_install_produces_working_bouncer(tmp_path):  # T721
     sys.path.insert(0, "src")
     from gatekeeper import __version__
     assert r.stdout.strip() == f"bouncer {__version__}"
+
+
+def test_dependency_floor_pins():  # T722
+    import re
+    py = _pyproject()
+    deps = py["project"]["dependencies"]
+    # every core dep carries a lower bound (the T216 promise, re-audited)
+    for d in deps:
+        assert re.match(r"^[\w.-]+>=\d[\w.]*$", d), f"no clean floor: {d}"
+    # the box's three all have floors...
+    floors = {_floor(d)[0]: _floor(d)[1] for d in deps}
+    for pkg in ("fastapi", "gradio", "pydantic"):
+        assert floors.get(pkg, "").startswith(">="), pkg
+    # ...and pydantic's floor is the v2 stack serve.py actually runs on
+    assert floors["pydantic"] == ">=2"
