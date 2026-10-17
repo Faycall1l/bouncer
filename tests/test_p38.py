@@ -65,3 +65,25 @@ def test_adapter_extras_cover_every_third_party_import():  # T711
     assert found, "the scan found no third-party adapter imports"
     for mod, src in found:
         assert to_dist[mod] in dists, (src, mod, "no extra installs it")
+
+
+def test_console_script_entry_point():  # T712
+    import subprocess
+    sys.path.insert(0, "src")
+    py = _pyproject()
+    # exactly one console script, wired to the CLI entry the docs invoke
+    scripts = py["project"]["scripts"]
+    assert scripts == {"bouncer": "gatekeeper.cli:main"}
+    # the declared target is importable and callable without installing
+    from gatekeeper.cli import main
+    assert callable(main)
+    # and it behaves like the console script: `bouncer --version` answers
+    # with the packaged version, exit 0 — the same contract wheel users get
+    from gatekeeper import __version__
+    r = subprocess.run(
+        [sys.executable, "-c",
+         "from gatekeeper.cli import main; raise SystemExit(main(['--version']))"],
+        check=False, capture_output=True, text=True, timeout=60,
+        env={"PATH": "/usr/bin:/bin", "PYTHONPATH": "src"})
+    assert r.returncode == 0, r.stderr
+    assert f"bouncer {__version__}" in r.stdout
