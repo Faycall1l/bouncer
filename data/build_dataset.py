@@ -6,9 +6,11 @@ by default (template rows); with OPENAI_BASE_URL + OPENAI_API_KEY set, ~2/3 of
 rows come from the teacher (synth_rules.llm_rows).
 """
 import argparse
+import hashlib
 import json
 import os
 import random
+import re
 import sys
 from collections import Counter
 
@@ -64,6 +66,30 @@ def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0) -> dict:
     return out
 
 
+def normalized_hash(msg: str) -> str:
+    """T634: near-duplicate key — case/punctuation/whitespace insensitive."""
+    norm = re.sub(r"\s+", " ", re.sub(r"[^\w\s]", "", msg.casefold())).strip()
+    return hashlib.sha256(norm.encode()).hexdigest()[:16]
+
+
+def dedupe_rows(rows: list) -> tuple:
+    """Keep the first row per normalized message; returns (kept, n_dropped).
+
+    Targets teacher rows that drift into near-copies ("GG all!" vs "gg all").
+    In template mode this collapses the six templates to six rows — pass
+    --dedupe only where repeats are unwanted.
+    """
+    seen = set()
+    kept = []
+    for r in rows:
+        h = normalized_hash(r["state"]["message"])
+        if h in seen:
+            continue
+        seen.add(h)
+        kept.append(r)
+    return kept, len(rows) - len(kept)
+
+
 def balance_report(splits: dict, min_share: float) -> dict:
     """Per-split label distribution + which rule labels fall under min_share."""
     below = []
@@ -100,6 +126,8 @@ def main(argv=None) -> int:
                     help="rule-label share below this is flagged in --report")
     ap.add_argument("--strict", action="store_true",  # T633: CI gate
                     help="with --report: exit 1 when any label is below threshold")
+    ap.add_argument("--dedupe", action="store_true",  # T634: drop near-identical rows
+                    help="keep first row per normalized message (see dedupe_rows)")
     a = ap.parse_args(argv)
 
     if a.seed is not None:
@@ -109,6 +137,10 @@ def main(argv=None) -> int:
     else:
         rows = template_rows(a.n // 3) + llm_rows(2 * a.n // 3)
     random.shuffle(rows)
+    deduped = None
+    if a.dedupe:  # T634: before validation, so dropped rows never get checked
+        rows, dropped = dedupe_rows(rows)
+        deduped = {"kept": len(rows), "dropped": dropped}
 
     # validate in memory BEFORE writing anything (T645: fail loud, write nothing)
     errs = []
@@ -126,6 +158,8 @@ def main(argv=None) -> int:
         rep = {"n": len(rows),
                "servers": len({server_key(r) for r in rows}),
                **balance_report(splits, a.min_share)}
+        if deduped is not None:
+            rep["deduped"] = deduped
         print(json.dumps(rep, indent=2))
         return 1 if a.strict and not rep["balanced"] else 0
 
@@ -138,6 +172,8 @@ def main(argv=None) -> int:
 
     report = {"n": len(rows), "out": a.out, "errors": 0,
               "servers": len({server_key(r) for r in rows})}
+    if deduped is not None:
+        report["deduped"] = deduped
     if not a.no_split:
         splits = split_rows(rows, tuple(a.ratios), a.seed or 0)
         base = a.out.removesuffix(".jsonl")

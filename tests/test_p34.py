@@ -88,3 +88,37 @@ def test_bad_ratios_rejected():  # T632: garbage config fails loud
     ], ratios=(2.0, 0.0, 1.0), seed=0)
     assert len(splits["train"]) == 30 and len(splits["test"]) == 30
     assert splits["dev"] == []
+
+
+def test_dedupe_normalized_hash():  # T634: case/punct/whitespace collapse
+    sys.path.insert(0, "data")
+    from build_dataset import dedupe_rows, normalized_hash
+    assert normalized_hash("GG all!!") == normalized_hash("gg  all")
+    assert normalized_hash("GG all") != normalized_hash("GG all tomorrow")
+    rows = [{"state": {"message": m, "history": [], "rules": {"r": "t"}},
+             "labels": {"rule": "ok"}}
+            for m in ("GG all", "gg  ALL!", "gg all.", "different text")]
+    kept, dropped = dedupe_rows(rows)
+    assert dropped == 2 and len(kept) == 2
+    assert kept[0]["state"]["message"] == "GG all"  # first wins
+
+
+def test_report_balance_thresholds(tmp_path):  # T633: --report flags thin labels
+    # an unreachable threshold flags every label -> balanced False
+    r = _run("data/build_dataset.py", "--n", "120", "--template-only",
+             "--seed", "11", "--report", "--min-share", "1.1")
+    assert r.returncode == 0, r.stderr  # advisory without --strict
+    rep = json.loads(r.stdout)
+    assert rep["n"] == 120 and rep["servers"] == 3
+    for name in ("train", "dev", "test"):
+        s = rep["splits"][name]
+        assert s["n"] > 0 and sum(s["rule"].values()) == s["n"]
+    assert rep["balanced"] is False and rep["below_threshold"]
+    # --strict turns the same imbalance into exit 1 (CI gate shape)
+    r = _run("data/build_dataset.py", "--n", "120", "--template-only",
+             "--seed", "11", "--report", "--min-share", "1.1", "--strict")
+    assert r.returncode == 1
+    # a zero threshold can never trip: single-label splits are share 1.0
+    r = _run("data/build_dataset.py", "--n", "120", "--template-only",
+             "--seed", "11", "--report", "--min-share", "0.0", "--strict")
+    assert r.returncode == 0 and json.loads(r.stdout)["balanced"] is True
