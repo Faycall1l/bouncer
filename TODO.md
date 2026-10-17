@@ -693,5 +693,5 @@
 - [x] T626 docs: CHANGELOG 0.3.0 dated
 - [x] T627 docs: release draft + tag v0.3.0 (draft here; tag minted at T630 after the final gates)
 - [x] T628 test: breaker + pool metrics lines
-- [ ] T629 suite: final full green + stats
+- [x] T629 suite: final full green + stats — 189 passed, `ruff check .` clean, 637 commits
 - [ ] T630 final: push v0.3.0
