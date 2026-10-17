@@ -824,7 +824,7 @@
 - [x] T745 ci: CODEOWNERS / branch protection notes in CONTRIBUTING
 - [x] T746 ci: secret scan job (gitleaks or grep-based fallback)
 - [x] T747 ci: coverage run + artifact (no % floor yet, just the number)
-- [ ] T748 ci: nightly stub-suite workflow (catches drift, not flake)
+- [x] T748 ci: nightly stub-suite workflow (catches drift, not flake)
 - [ ] T749 ci: release-notes check (CHANGELOG touched when version bumps)
 - [ ] T750 test: P39 CI wiring (workflow YAML parses + key jobs exist)
 

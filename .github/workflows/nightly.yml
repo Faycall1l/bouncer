@@ -1,0 +1,18 @@
+name: nightly
+on:
+  schedule:
+    - cron: "17 3 * * *"  # T748: off the hour — busy slots get delayed
+  workflow_dispatch:
+jobs:
+  stub-suite:  # T748: whole weightless suite against today's dependency
+    # resolution — catches upstream DRIFT, never flake: stub routers, no
+    # network, no weights, so a red run means something actually moved
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: "pip" }
+      # floors are open on purpose (T722): pip resolves today's latest
+      # within them, exactly like a fresh user install would
+      - run: pip install -e ".[dev]"
+      - run: pytest -q

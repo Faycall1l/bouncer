@@ -352,3 +352,20 @@ def test_ci_coverage_job_posts_number(tmp_path):  # T747
     totals = json.loads(out.read_text())["totals"]
     assert totals["percent_covered"] >= 0.0
     assert totals["num_statements"] > 100, "coverage measured nothing"
+
+
+def test_nightly_stub_suite_workflow():  # T748
+    import re
+    text = (WORKFLOWS / "nightly.yml").read_text()
+    header, _, body = text.partition("jobs:")
+    # scheduled + manually runnable — no push trigger (that's ci.yml's job)
+    assert "schedule" in header and "cron" in header
+    assert "workflow_dispatch" in header
+    assert "push" not in header, "nightly must not double ci.yml"
+    m = re.search(r"^  stub-suite:(.*?)(?=^  \w|\Z)", body, re.MULTILINE | re.DOTALL)
+    assert m, "no stub-suite job"
+    job = m.group(1)
+    # the whole weightless suite — deterministic by construction (stubs,
+    # no network), so red means upstream drift, not flake
+    assert "pytest -q" in job
+    assert '.[dev]' in job  # open floors resolve the latest deps, on purpose
