@@ -788,7 +788,7 @@
 - [x] T711 pkg: `pyproject` optional-deps groups audited (server/demo/adapters)
 - [x] T712 pkg: console-script entry point `bouncer` in wheel metadata
 - [x] T713 pkg: wheel builds clean (`uv build` PEP 517 smoke test)
-- [ ] T714 pkg: sdist includes LICENSE, README, data/examples
+- [x] T714 pkg: sdist includes LICENSE, README, data/examples
 - [ ] T715 pkg: LICENSE year + holder check
 - [ ] T716 pkg: Dockerfile (slim, non-root, healthcheck)
 - [ ] T717 pkg: docker-compose with volume for snapshots + secrets

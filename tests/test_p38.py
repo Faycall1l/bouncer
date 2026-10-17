@@ -130,3 +130,35 @@ def test_wheel_builds_clean():  # T713
             # nothing heavy leaked in: tests, weights, VCS stay out (T713+T718)
             assert not any(n.startswith(("tests/", ".git/", "model"))
                            for n in names), "heavy paths leaked into the wheel"
+
+
+def test_sdist_includes_license_readme_and_data_examples():  # T714
+    import glob
+    import os
+    import shutil
+    import subprocess
+    import tarfile
+    import tempfile
+
+    import pytest
+    uv = shutil.which("uv") or os.path.expanduser("~/.local/bin/uv")
+    if not os.path.exists(uv):
+        pytest.skip("uv not available — the sdist smoke needs a PEP 517 builder")
+    with tempfile.TemporaryDirectory() as td:
+        r = subprocess.run([uv, "build", "--sdist", "-o", td],
+                           check=False, capture_output=True, text=True,
+                           timeout=300, cwd=str(Path.cwd()))
+        assert r.returncode == 0, r.stderr
+        sdists = glob.glob(os.path.join(td, "*.tar.gz"))
+        assert len(sdists) == 1, sdists
+        with tarfile.open(sdists[0]) as tf:
+            members = {m.name.split("/", 1)[-1] for m in tf.getmembers()
+                       if m.isfile()}
+        # the box's contract: license, readme, data examples...
+        for req in ("LICENSE", "README.md", "pyproject.toml", "MANIFEST.in",
+                    "data/examples.jsonl", "data/CARD.md"):
+            assert req in members, f"{req} missing from the sdist"
+        # ...the importable package, and nothing heavy (weights/VCS)
+        assert "src/gatekeeper/__init__.py" in members
+        assert not any(m.startswith((".git/", "model", "build/"))
+                       for m in members), "heavy paths leaked into the sdist"

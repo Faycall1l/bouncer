@@ -1,0 +1,4 @@
+# T714: the sdist carries the license, readme, and the data examples —
+# everything a source install needs to run the data scripts and demos.
+include LICENSE README.md
+include data/*.jsonl data/*.md
