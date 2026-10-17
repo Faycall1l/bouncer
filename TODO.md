@@ -755,7 +755,7 @@
 - [x] T682 eval: breaker sim gate — trip and close both true
 - [x] T683 eval: pool bench gate — speedup >= 2x in the hits scenario
 - [x] T684 eval: `gate.py` reads BENCHMARKS table for known numbers
-- [ ] T685 eval: stale-report warning (older than N days)
+- [x] T685 eval: stale-report warning (older than N days)
 - [ ] T686 eval: `eval/reports/latest.json` pointer file (gitignored)
 - [ ] T687 eval: negative-test — gate fails loudly on bad report
 - [ ] T688 eval: docs section "running the gates" in BENCHMARKS

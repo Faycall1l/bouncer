@@ -372,3 +372,25 @@ def test_gate_check_docs_reads_benchmarks(tmp_path):  # T684: no docs/default dr
     # an unreadable doc is unusable input -> exit 2
     r = _run_gate(path, "--check-docs", str(tmp_path / "nope.md"))
     assert r.returncode == 2 and "cannot read docs" in r.stderr
+
+
+def test_gate_stale_report_warning(tmp_path):  # T685: warn, never re-verdict
+    import os
+    import time
+    path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
+    r = _run_gate(path)
+    assert r.returncode == 0 and "warning" not in r.stderr  # fresh: no noise
+    old = time.time() - 30 * 86400
+    os.utime(path, (old, old))
+    r = _run_gate(path)
+    assert r.returncode == 0  # a stale report warns, it does not fail
+    assert "warning" in r.stderr and "30d" in r.stderr
+    # the window is flag-settable; wide enough -> no warning
+    r = _run_gate(path, "--max-report-age-days", "365")
+    assert r.returncode == 0 and "warning" not in r.stderr
+    # 0 disables the check entirely
+    r = _run_gate(path, "--max-report-age-days", "0")
+    assert r.returncode == 0 and "warning" not in r.stderr
+    # --ci stdout stays one clean line; the warning lives on stderr
+    r = _run_gate(path, "--ci")
+    assert len(r.stdout.strip().splitlines()) == 1 and "warning" in r.stderr

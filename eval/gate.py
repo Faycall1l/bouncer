@@ -11,13 +11,18 @@ not be read/parsed at all.
   python eval/gate.py REPORT --against REF --changelog   # diff also lands in CHANGELOG
   python eval/gate.py REPORT --check-docs  # + drift check vs BENCHMARKS Known numbers
 
+Reports older than --max-report-age-days (default 14) get a stderr warning —
+a warning, never a verdict change (T685).
+
 Each gate reads its value from the report and compares against a flag-settable
 threshold (T672-T676 register theirs here). A metric absent from the report is
 SKIPPED — a missing number never counts as a green light.
 """
 import argparse
 import json
+import os
 import sys
+import time
 
 MISSING = object()
 
@@ -262,6 +267,9 @@ def main(argv=None) -> int:
     ap.add_argument("--check-docs", default=None, nargs="?", const="BENCHMARKS.md",  # T684
                     help="also check the Known-numbers table in this doc against "
                          "the threshold defaults being enforced (default BENCHMARKS.md)")
+    ap.add_argument("--max-report-age-days", type=float, default=14.0,  # T685
+                    help="warn (stderr, never a verdict change) when the report "
+                         "file is older than N days; 0 disables")
     ap.add_argument("--min-n", type=int, default=1,
                     help="report must cover at least N rows")
     ap.add_argument("--min-rule-acc", type=float, default=0.403,  # T672
@@ -302,6 +310,13 @@ def main(argv=None) -> int:
         print(f"gate: {a.report} must contain a JSON object, got "
               f"{type(rep).__name__}", file=sys.stderr)
         return 2
+
+    if a.max_report_age_days > 0:  # T685: a stale report is a stale verdict
+        age_d = (time.time() - os.path.getmtime(a.report)) / 86400.0
+        if age_d > a.max_report_age_days:
+            print(f"gate: warning: report is {age_d:.0f}d old "
+                  f"(limit {a.max_report_age_days:.0f}d) — re-run the eval",
+                  file=sys.stderr)
 
     delta = None
     render_delta = None
