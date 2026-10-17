@@ -110,3 +110,20 @@ def test_baseline_limit_truncates(tmp_path):  # T584
                        if l.startswith("{")][-1])["n"] == 3  # T584: truncated
     empty = _run("eval/baseline_regex.py", str(data), "--limit", "0")
     assert empty.returncode == 0  # --limit 0 means no truncation (not "zero rows")
+
+
+def test_validate_limit_truncates(tmp_path):  # T585
+    good = json.dumps(
+        {"state": {"message": "hi", "history": [], "rules": {"r": "t"}},
+         "labels": {"rule": "ok", "harm": "safe", "hype": "chill",
+                    "jailbreak": False, "escalate": False}})
+    data = tmp_path / "rows.jsonl"
+    # row 2 is malformed; with --limit 2 it stays out of scope -> clean exit
+    data.write_text(f"{good}\n{good}\n{{not json\n")
+    capped = _run("eval/validate_data.py", str(data), "--limit", "2", "--json")
+    assert capped.returncode == 0, capped.stdout + capped.stderr
+    assert json.loads(capped.stdout)["errors"] == 0
+    full = _run("eval/validate_data.py", str(data), "--json")
+    assert full.returncode == 1  # the malformed row is caught without --limit
+    assert json.loads([l for l in full.stdout.splitlines()
+                       if l.startswith("{")][-1])["errors"] == 1

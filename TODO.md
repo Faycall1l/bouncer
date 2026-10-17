@@ -645,7 +645,7 @@
 - [x] T582 test: synth --report shape
 - [x] T583 test: eval --model flag surfaces in report
 - [x] T584 test: baseline --limit truncates
-- [ ] T585 test: validate --limit truncates
+- [x] T585 test: validate --limit truncates
 - [ ] T586 data: i18n rows validate clean
 - [ ] T587 eval: i18n report written by CI-safe command
 - [ ] T588 test: snapshot round-trip via CLI (save/load)
