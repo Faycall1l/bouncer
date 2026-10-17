@@ -257,3 +257,35 @@ def test_context_token_budget_truncates_and_reports():  # T756
     doc = Path("docs/thresholds.md").read_text()
     for needle in ("max_context_tokens", "tokens_est", "chars/4"):
         assert needle in doc, needle
+
+
+def test_watch_throughput_summary(monkeypatch, capsys):  # T757
+    import io
+    import re
+
+    import gatekeeper
+    from gatekeeper.cache import CACHE
+    from gatekeeper.cli import main
+
+    class Stub:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95,
+                         "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe"}, "hype": {"score": "chill"},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    monkeypatch.setattr(gatekeeper, "_router", Stub())  # no weights in CI
+    CACHE.clear()
+    # 100 lines: one heartbeat (every 100th line, T326) + the EOF summary
+    monkeypatch.setattr("sys.stdin", io.StringIO(
+        "".join(f"p757 line {i}\n" for i in range(100))))
+    assert main(["watch", "--preset", "gaming"]) == 0
+    out, err = capsys.readouterr()
+    rate = r"(\d+) lines in (\d+\.\d{2})s = (\d+\.\d) lines/sec"
+    hits = re.findall(rate, err)
+    assert len(hits) == 2, err  # heartbeat + EOF, both with the rate
+    assert int(hits[0][0]) == 100 and int(hits[1][0]) == 100
+    assert float(hits[1][2]) >= 0.0
+    # the rate is a summary, never pipe noise: stdout stays clean (T286)
+    assert "lines/sec" not in out and "throughput:" not in out

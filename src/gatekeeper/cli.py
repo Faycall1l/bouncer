@@ -97,11 +97,14 @@ RESET = "\033[0m"
 
 
 def cmd_watch(args) -> int:
+    import time
+
     from gatekeeper import moderate
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
     only = {a.strip() for a in (getattr(args, "action", None) or "").split(",")
             if a.strip()}  # T535: comma list of actions to print
+    t0 = time.perf_counter()  # T757: wall time under the whole stream
     totals: dict = {}  # T286
     for line in sys.stdin:
         line = line.rstrip("\n")
@@ -127,7 +130,10 @@ def cmd_watch(args) -> int:
             continue
         totals[res["action"]] = totals.get(res["action"], 0) + 1
         if sum(totals.values()) % 100 == 0:  # T326: heartbeat for long tails
-            print("totals: " + " ".join(f"{a}={n}" for a, n in sorted(totals.items())),
+            n = sum(totals.values())
+            el = max(time.perf_counter() - t0, 1e-9)  # T757: never /0
+            print("totals: " + " ".join(f"{a}={x}" for a, x in sorted(totals.items()))
+                  + f" ({n} lines in {el:.2f}s = {n / el:.1f} lines/sec)",
                   file=sys.stderr, flush=True)
         if only and res["action"] not in only:  # T535: filter keeps stdout pipe-clean
             continue
@@ -137,6 +143,10 @@ def cmd_watch(args) -> int:
               flush=True)
     if totals:  # T286: EOF summary to stderr (keeps stdout pipe-clean)
         print("totals: " + " ".join(f"{a}={n}" for a, n in sorted(totals.items())),
+              file=sys.stderr)
+        n = sum(totals.values())
+        elapsed = max(time.perf_counter() - t0, 1e-9)  # T757: never /0
+        print(f"throughput: {n} lines in {elapsed:.2f}s = {n / elapsed:.1f} lines/sec",
               file=sys.stderr)
     return 0
 
