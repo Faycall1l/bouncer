@@ -39,6 +39,19 @@ def action_badge(action: str) -> str:
             "escalate": "⚪ ESCALATE"}[action]
 
 
+def format_meters(r: dict, standing: dict | None = None) -> str:
+    """T561: pure meters text (result badges only; no tally, no msg access)."""
+    text = (f"harm={r.get('harm', '?')} jail={r.get('jailbreak_p', 0.0):.2f} "
+            f"esc={r.get('escalate_p', 0.0):.2f} abstained={r.get('abstained', '?')}")
+    text += f" margin={r.get('margin', '?')}"  # T352
+    text += f" script={r.get('script', '?')}"  # T495
+    text += f" cause={r.get('cause', '?')}"  # T560
+    if standing:  # T552: counts only, never more
+        text += (f"\nstrikes={standing['strikes']} "
+                 f"suggest_ban={standing['suggest_ban']}")
+    return text
+
+
 def launch(port: int = 7860, share: bool = False, preset: str | None = None):  # T548
     """T324+T548: port/share/preset settable for `bouncer demo` flags and Spaces."""
     import gradio as gr
@@ -87,16 +100,11 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
         dist = r.get("rule_dist") or {}
         bars = "\n".join(f"{k}: {'█' * int(v * 20)} {v:.2f}" for k, v in
                          sorted(dist.items(), key=lambda kv: -kv[1])[:8]) or "n/a"  # T368
-        meters = (f"harm={r['harm']} jail={r['jailbreak_p']:.2f} "  # T086
-                  f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
-        meters += f" margin={r.get('margin', '?')}"  # T352
-        meters += f" script={r.get('script', '?')}"  # T495
-        meters += f" cause={r.get('cause', '?')}"  # T560
-        if uid:  # T552: standing for the attributed user (counts only)
+        if uid:  # T552+T561: strikes standing for the attributed user
             from gatekeeper import strikes as _st
-            standing = _st.standing(uid)
-            meters += (f"\nstrikes={standing['strikes']} "
-                       f"suggest_ban={standing['suggest_ban']}")
+            meters = format_meters(r, _st.standing(uid))
+        else:
+            meters = format_meters(r)
         from gatekeeper.normalize import caps_flood, extract_links  # T175: regex baseline
         base = "delete" if extract_links(msg) else ("flag" if caps_flood(msg) else "allow")
         agree = base == r["action"]

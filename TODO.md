@@ -619,7 +619,7 @@
 - [x] T558 demo: require_calm checkbox
 - [x] T559 demo: severity box (`RULE=high` lines)
 - [x] T560 demo: meters shows cause
-- [ ] T561 demo: `format_meters(res)` pure helper extracted
+- [x] T561 demo: `format_meters(res)` pure helper extracted
 - [ ] T562 demo: `format_trail()` pure helper extracted
 - [ ] T563 demo: threshold memory pure helpers (`remember_thr`)
 - [ ] T564 demo: severity parser pure helper (`parse_severity`)
