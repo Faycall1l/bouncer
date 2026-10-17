@@ -39,7 +39,7 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
     stash: dict = {}  # T356: latest real result for the review button
     tally = [0, 0]  # T362: regex-baseline agree [hits, total]
 
-    def run(msg, preset, rules_t, allow_thr, delete_thr, lang):  # T351+T357
+    def run(msg, preset, rules_t, allow_thr, delete_thr, lang, user=""):  # T351+T357+T551
         if not (msg or "").strip():  # T360: don't spend a model call on nothing
             return "⚪ EMPTY", "ok @ 0.00", "empty message", "n/a", "", "0.0 ms"
         note = ""  # T366
@@ -54,9 +54,10 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
             return "⚠️ RULES ERROR", "-", str(e), "", "", ""
         try:  # T285: model errors become a badge, never a traceback
             from gatekeeper import GateConfig
+            uid = (user or "").strip() or None  # T551: strikes attribution per user
             r = moderate(msg, rules, config=GateConfig(allow_threshold=allow_thr,
                                                        delete_threshold=delete_thr),
-                         lang=lang)
+                         lang=lang, user_id=uid)
         except Exception as e:  # noqa: BLE001 — demo must stay up without weights
             return "⚪ ERROR", "-", f"{type(e).__name__}: {e}", "", "", ""
         r["reason"] = explain(r, rules)
@@ -114,6 +115,8 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
         preset.change(_on_preset, preset, [rules, lang])
         rules.change(_on_edit, None, None)
         msg = gr.Textbox(label="chat message")
+        user = gr.Textbox(value="", label="user id (optional, for strikes)",  # T551
+                          placeholder="e.g. discord:1234 — strikes tally per id")
         allow_thr = gr.Slider(0.5, 0.99, 0.85, label="allow threshold")  # T351
         delete_thr = gr.Slider(0.5, 0.99, 0.85, label="delete threshold")  # T351
         btn = gr.Button("Moderate")
@@ -128,8 +131,8 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
         lats = []  # T353: session latencies for the p50 line
         _orig_run = run
 
-        def run_h(msg, preset, rules_t, allow_thr, delete_thr, lang):
-            out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr, lang)
+        def run_h(msg, preset, rules_t, allow_thr, delete_thr, lang, user=""):
+            out = _orig_run(msg, preset, rules_t, allow_thr, delete_thr, lang, user)
             trail.append(f"{out[0]} {out[1]} {msg[:60]}")  # T354: badge + rule@conf
             del trail[:-50]  # T367: bounded session memory
             ms = out[5]
@@ -142,7 +145,7 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                     f"p50 {p50:.1f}ms")
             return out + (head + "\n" + "\n".join(trail[-8:]),)
 
-        btn.click(run_h, [msg, preset, rules, allow_thr, delete_thr, lang],
+        btn.click(run_h, [msg, preset, rules, allow_thr, delete_thr, lang, user],  # T551
                   [badge, rule, reason, dist, meters, lat, hist])
         flag_btn = gr.Button("🚩 send to review queue")  # T095
         flag_out = gr.Textbox(label="review")

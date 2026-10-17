@@ -609,7 +609,7 @@
 - [x] T550 test: P29 CLI sweep
 
 ## P30 Demo (T551–T570)
-- [ ] T551 demo: user_id box → strikes attribution
+- [x] T551 demo: user_id box → strikes attribution
 - [ ] T552 demo: meters shows strikes standing
 - [ ] T553 demo: per-preset threshold memory (switch restores last values)
 - [ ] T554 demo: history download button (txt export)
