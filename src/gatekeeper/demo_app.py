@@ -106,24 +106,35 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
         lang = gr.Dropdown(["auto", "en", "es", "fr", "ar"], value="auto",  # T357+T505
                            label="language hint")
         dirty = []  # T358: hand-edits survive preset switches
+        thr_mem: dict = {}  # T553: last thresholds per preset, restored on return
+        cur_preset = [first]
+        thr_allow, thr_del = [0.85], [0.85]  # T553: live slider values
 
         def _on_preset(n):
             from gatekeeper.presets import preset_lang  # T505: pack sets the hint too
+            thr_mem[cur_preset[0]] = (thr_allow[0], thr_del[0])  # T553: stash old
+            cur_preset[0] = n
             if dirty:
-                return gr.skip(), gr.skip()
-            return preset_text[n], preset_lang(n)
+                return gr.skip(), gr.skip(), gr.skip(), gr.skip()
+            allow, delete = thr_mem.get(n, (0.85, 0.85))  # T553: restore or default
+            return preset_text[n], preset_lang(n), allow, delete
 
         def _on_edit():
             if not dirty:
                 dirty.append(True)
 
-        preset.change(_on_preset, preset, [rules, lang])
+        def _thr_changed(a, d):  # T553: remember what the user dialed in
+            thr_allow[0], thr_del[0] = a, d
+
         rules.change(_on_edit, None, None)
         msg = gr.Textbox(label="chat message")
         user = gr.Textbox(value="", label="user id (optional, for strikes)",  # T551
                           placeholder="e.g. discord:1234 — strikes tally per id")
         allow_thr = gr.Slider(0.5, 0.99, 0.85, label="allow threshold")  # T351
         delete_thr = gr.Slider(0.5, 0.99, 0.85, label="delete threshold")  # T351
+        preset.change(_on_preset, preset, [rules, lang, allow_thr, delete_thr])  # T553
+        allow_thr.change(_thr_changed, [allow_thr, delete_thr], None)
+        delete_thr.change(_thr_changed, [allow_thr, delete_thr], None)
         btn = gr.Button("Moderate")
         badge = gr.Label(label="action")
         rule = gr.Label(label="rule")
