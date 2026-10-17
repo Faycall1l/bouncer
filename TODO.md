@@ -703,7 +703,7 @@
 - [x] T634 data: dedupe near-identical messages (normalized hash)
 - [x] T635 data: history-window synthesis (2–4 turns) instead of empty []
 - [x] T636 data: hard-negative injection (linkless spam, polite insults)
-- [ ] T637 data: `examples.jsonl` regenerated through the same pipeline
+- [x] T637 data: `examples.jsonl` regenerated through the same pipeline
 - [ ] T638 data: dataset card fields (splits, labels, license, limits)
 - [ ] T639 data: HF upload script dry-run mode (`--dry-run` prints plan)
 - [ ] T640 data: schema version stamp in every row (`v: 1`)

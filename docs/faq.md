@@ -48,5 +48,5 @@ scripts. Pin explicitly only to compare behavior (`english` for
 English-only communities, `typed-decisions` for the Jev-style checkpoint). The
 pool caches every checkpoint you touch, so pinning costs memory × slots — size
 `BOUNCER_POOL_MAX` accordingly. Note: base zero-shot accuracy is modest
-(regex baseline 0.480 vs model 0.305 on our template data) — the Kaggle
+(regex baseline 0.403 vs model 0.305 on our template data) — the Kaggle
 fine-tune is the path to production quality.

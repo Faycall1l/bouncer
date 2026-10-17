@@ -74,10 +74,14 @@ Honest limit: these reports pin control-flow behavior, not throughput under
 real weights. The real numbers need the finetune + checkpoints; run the
 scripts yourself — they're deterministic given the flags.
 
-## Regex baseline (T210, local, no weights)
+## Regex baseline (T210, refreshed T637, local, no weights)
 
-`python eval/baseline_regex.py data/examples.jsonl` → **0.480** on 300 rows.
-Dumb links/caps rules beat uncalibrated zero-shot (0.305) on template data —
+`python eval/baseline_regex.py data/examples.jsonl` → **0.403** on 300 rows.
+The file was regenerated 2026-10-17 (T637) through `data/build_dataset.py`:
+history windows (2–4 turns) + 30 hard negatives (linkless spam, polite insults)
++ corrected escalate labels — the old hand-rolled file scored 0.480, and the
+drop to 0.403 is exactly the hard negatives: regex can't see them.
+Dumb links/caps rules still beat uncalibrated zero-shot (0.305) —
 exactly why the demo shows both side by side, and why calibration + finetune matter.
 
 ## Honest limits (T109, refreshed T407)
@@ -90,5 +94,6 @@ exactly why the demo shows both side by side, and why calibration + finetune mat
 * Refit temperatures on your own held-out data before trusting probabilities.
 * Stub-overhead numbers (T385) measure engine cost only — add your model's
   forward-pass latency (base Laya: ~1000ms CPU, ~33ms T4) for honest totals.
-* Regex baseline (0.48) beats zero-shot (0.305) on template data by construction:
-  templates are link/caps-shaped. It says nothing about open chat.
+* Regex baseline (0.403 post-T637, was 0.480 pre-hard-negatives) beats zero-shot
+  (0.305) on template data by construction: templates are link/caps-shaped.
+  It says nothing about open chat.
