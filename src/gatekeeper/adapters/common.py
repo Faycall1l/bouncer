@@ -58,7 +58,7 @@ def load_rules(adapter: str, default: str = "gaming") -> dict:
 
 
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
-             sleep=time.sleep):
+             sleep=time.sleep, health=None):
     """T696: one poll loop for every sync adapter (telegram/matrix/zulip).
 
     `fetch()` returns the next page of events (or None); `handle()` consumes
@@ -66,16 +66,68 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
     event costs one log line, never the process. KeyboardInterrupt always
     passes through — Ctrl-C must stop a bot. The Mattermost websocket adapter
     is async and keeps its own loop; its per-event guard matches this one.
+    T699: `health` (if given) counts real decisions, records errors, and
+    emits its health line when due.
     """
     while True:
         try:
             page = fetch()
         except Exception as e:  # noqa: BLE001 — network blips must not kill the bot
             print(f"{name} error:", e, file=sys.stderr, flush=True)
+            if health is not None:
+                health.error(e)
             sleep(backoff_s)
             continue
         for ev in page or []:
             try:
-                handle(ev)
+                res = handle(ev) or {}
+                if health is not None and res.get("action") not in (
+                        "ignored", "command"):
+                    health.decision()  # T699: ignored traffic isn't a decision
             except Exception as e:  # noqa: BLE001
                 print(f"{name} event error:", e, file=sys.stderr, flush=True)
+                if health is not None:
+                    health.error(e)
+        if health is not None:
+            health.maybe_log()
+
+
+class Health:
+    """T699: per-adapter health line — decisions/min + last error, on a timer.
+
+    Clock and log are injectable so tests never wait a real minute.
+    """
+
+    def __init__(self, name: str, *, clock=time.monotonic, log=print,
+                 window_s: float = 60.0, every_s: float = 300.0):
+        self.name = name
+        self.clock = clock
+        self.log = log
+        self.window_s = window_s
+        self.every_s = every_s
+        self._stamps = []
+        self._last_error = None  # (clock ts, message)
+        self._last_line = clock()
+
+    def decision(self):
+        self._stamps.append(self.clock())
+
+    def error(self, msg):
+        self._last_error = (self.clock(), str(msg))
+
+    def line(self) -> str:
+        cutoff = self.clock() - self.window_s
+        self._stamps = [t for t in self._stamps if t > cutoff]
+        if self._last_error is None:
+            err = "none"
+        else:
+            ago = (self.clock() - self._last_error[0]) / 60.0
+            err = f"{ago:.0f}m ago — {self._last_error[1]}"
+        return (f"{self.name} health: {len(self._stamps)} decisions/min, "
+                f"last error: {err}")
+
+    def maybe_log(self):
+        now = self.clock()
+        if now - self._last_line >= self.every_s:
+            self.log(self.line())
+            self._last_line = now

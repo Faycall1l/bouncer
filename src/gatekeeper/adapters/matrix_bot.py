@@ -107,7 +107,7 @@ def dispatch_page(page: dict, rules: dict, **kw) -> list:
 
 
 def run():
-    from gatekeeper.adapters.common import load_rules, require_env, run_loop
+    from gatekeeper.adapters.common import Health, load_rules, require_env, run_loop
     token = require_env("MATRIX_TOKEN")  # T691: named failure, not a crash
     homeserver = require_env("MATRIX_HOMESERVER").rstrip("/")
     rules = load_rules("matrix")  # T698: BOUNCER_RULES[_MATRIX] or preset
@@ -126,7 +126,8 @@ def run():
         handle_event(ev, rules, token=token, homeserver=homeserver,
                      can_redact=can_redact)
 
-    run_loop(fetch, handle, name="matrix")  # T696: the shared poll loop
+    run_loop(fetch, handle, name="matrix",  # T696 loop, T699 health line
+             health=Health("matrix"))
 
 
 if __name__ == "__main__":

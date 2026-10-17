@@ -79,7 +79,7 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
 
 
 def run():
-    from gatekeeper.adapters.common import load_rules, require_env, run_loop
+    from gatekeeper.adapters.common import Health, load_rules, require_env, run_loop
     token = require_env("TELEGRAM_TOKEN")  # T691: named failure, not a crash
     rules = load_rules("telegram")  # T698: BOUNCER_RULES[_TELEGRAM] or preset
     can_delete = os.environ.get("BOUNCER_TG_DELETE") == "1"  # T692: opt-in
@@ -97,7 +97,8 @@ def run():
     def handle(upd):
         handle_update(upd, rules, token=token, can_delete=can_delete)
 
-    run_loop(fetch, handle, name="telegram")  # T696: the shared poll loop
+    run_loop(fetch, handle, name="telegram",  # T696 loop, T699 health line
+             health=Health("telegram"))
 
 
 if __name__ == "__main__":

@@ -90,7 +90,7 @@ def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,
 def run():
     import asyncio
 
-    from gatekeeper.adapters.common import AdapterError, load_rules, require_env
+    from gatekeeper.adapters.common import AdapterError, Health, load_rules, require_env
     try:
         import websockets  # optional dep: pip install -e .[mattermost]
     except ImportError as e:
@@ -101,6 +101,7 @@ def run():
     token = require_env("MATTERMOST_TOKEN")
     rules = load_rules("mattermost")  # T698: BOUNCER_RULES[_MATTERMOST] or preset
     can_delete = os.environ.get("BOUNCER_MM_DELETE") == "1"  # T694: opt-in
+    health = Health("mattermost")  # T699: same counters as run_loop's
 
     async def _loop():
         async with websockets.connect(
@@ -117,10 +118,14 @@ def run():
                 if not post:
                     continue
                 try:
-                    handle_post(post, rules, token=token, server=server,
-                                can_delete=can_delete)
+                    res = handle_post(post, rules, token=token, server=server,
+                                      can_delete=can_delete) or {}
+                    if res.get("action") not in ("ignored", "command"):
+                        health.decision()
                 except Exception as e:  # noqa: BLE001 — one bad post, one line
                     print("post error:", e, file=sys.stderr, flush=True)
+                    health.error(e)
+                health.maybe_log()
 
     asyncio.run(_loop())  # SIGTERM handling is T702's job
 

@@ -92,7 +92,7 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
 
 
 def run():
-    from gatekeeper.adapters.common import load_rules, require_env, run_loop
+    from gatekeeper.adapters.common import Health, load_rules, require_env, run_loop
     email = require_env("ZULIP_EMAIL")  # T691: named failure, not a crash
     key = require_env("ZULIP_API_KEY")
     site = require_env("ZULIP_SITE").rstrip("/")
@@ -111,7 +111,8 @@ def run():
         handle_event(ev, rules, own_id=own_id, creds=(email, key, site),
                      can_delete=can_delete)
 
-    run_loop(fetch, handle, name="zulip")  # T696: the shared poll loop
+    run_loop(fetch, handle, name="zulip",  # T696 loop, T699 health line
+             health=Health("zulip"))
 
 
 if __name__ == "__main__":

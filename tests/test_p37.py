@@ -454,7 +454,8 @@ def test_sync_pollers_use_the_shared_loop():  # T696: wired, not aspirational
     for name in ("telegram_bot", "matrix_bot", "zulip_bot"):
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "run_loop(fetch, handle" in src, name
-        assert "require_env, run_loop" in src, name
+        assert "from gatekeeper.adapters.common import" in src, name
+        assert "run_loop" in src and "require_env" in src, name
         assert "while True" not in src, name  # the loop lives in common.py
     # mattermost is the documented async exception (websocket, not a poller)
     mm = (ADAPTERS / "mattermost.py").read_text()
@@ -586,3 +587,69 @@ def test_adapters_source_rules_via_load_rules():  # T698: wired for real
         src = (ADAPTERS / f"{name}.py").read_text()
         assert "load_rules(" in src, name
         assert 'get_preset("' not in src, name  # no hardcoded presets left
+
+
+def test_health_line_counts_decisions_and_last_error():  # T699
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import Health
+    t = [0.0]
+    lines = []
+    h = Health("testadp", clock=lambda: t[0], log=lines.append,
+               window_s=60.0, every_s=300.0)
+    assert h.line() == "testadp health: 0 decisions/min, last error: none"
+    for _ in range(7):
+        h.decision()
+    assert "7 decisions/min" in h.line()
+    h.error("net down")
+    assert "last error: 0m ago — net down" in h.line()
+    t[0] = 90.0  # past the 60s window: old decisions fall off
+    assert "0 decisions/min" in h.line()
+    assert "2m ago — net down" in h.line()
+    # the health line is emitted on the interval, not per event
+    h.maybe_log()
+    assert lines == []  # 90s < every_s=300s — not due yet
+    t[0] = 300.0
+    h.maybe_log()
+    assert len(lines) == 1 and lines[0].startswith("testadp health:")
+    h.maybe_log()  # immediately after: not due again
+    assert len(lines) == 1
+
+
+def test_run_loop_feeds_health():  # T699: the loop owns the counters
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import Health, run_loop
+    t = [0.0]
+    lines = []
+    h = Health("testadp", clock=lambda: t[0], log=lines.append, every_s=10.0)
+    calls = {"n": 0}
+
+    def fetch():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return [{"a": "allow"}, {"a": "ignored"}, {"a": "command"}]
+        if calls["n"] == 2:
+            raise OSError("net down")
+        raise _StopLoop  # BaseException: escapes run_loop's guards
+
+    def handle(ev):
+        return {"action": ev["a"]}
+
+    try:
+        run_loop(fetch, handle, name="testadp", sleep=lambda s: None, health=h)
+    except _StopLoop:
+        pass
+    # ignored/command traffic isn't a decision; the allow is
+    assert "1 decisions/min" in h.line()
+    assert "last error: 0m ago — net down" in h.line()  # fetch failure logged
+    t[0] = 10.0
+    h.maybe_log()
+    assert len(lines) == 1 and "1 decisions/min" in lines[0]
+
+
+def test_adapters_wire_health():  # T699: every loop adapter reports health
+    for name in ("telegram_bot", "matrix_bot", "zulip_bot"):
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "health=Health(" in src, name  # wired through run_loop
+    mm = (ADAPTERS / "mattermost.py").read_text()
+    assert 'Health("mattermost")' in mm and "health.error(e)" in mm
+    assert "health.decision()" in mm and "health.maybe_log()" in mm

@@ -32,6 +32,11 @@ points at a JSON file of rules; `BOUNCER_RULES_<ADAPTER>` (e.g.
 unreadable rules file fails at startup with `E_ADAPTER`, before any loop
 starts.
 
+Every loop adapter also logs a health line (T699) every 5 minutes:
+`<name> health: N decisions/min, last error: <age> — <msg>` (or `none`).
+Ignored traffic and command replies aren't counted as decisions; fetch and
+event errors are recorded as the last error with its age.
+
 ## Notes (T408)
 
 * Discord: `!bouncer rules` prints the pack, `!bouncer stats` prints decision

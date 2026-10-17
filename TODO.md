@@ -771,7 +771,7 @@
 - [x] T696 adp: shared adapter SDK — one `run_loop()` for all pollers
 - [x] T697 adp: `BOUNCER_DRY_RUN=1` prints actions, never posts
 - [x] T698 adp: per-adapter rules source (preset name or file path)
-- [ ] T699 adp: adapter health line in logs (decisions/min, last error)
+- [x] T699 adp: adapter health line in logs (decisions/min, last error)
 - [ ] T700 adp: redaction pass shared across adapters (tokens, emails)
 - [ ] T701 adp: per-user rate cap in adapters (protects the model)
 - [ ] T702 adp: graceful shutdown on SIGTERM for every adapter
