@@ -678,7 +678,7 @@
 - [x] T611 pkg: version 0.3.0
 - [x] T612 suite: full run green (179 tests)
 - [x] T613 lint: `ruff check .` green
-- [ ] T614 test: new CLI commands --help (snapshot/models/presets)
+- [x] T614 test: new CLI commands --help (snapshot/models/presets)
 - [ ] T615 test: GET /ready + /presets/{name} shapes
 - [ ] T616 test: pool eviction under max
 - [ ] T617 test: snapshot round-trip (stats+strikes)
