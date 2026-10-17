@@ -111,6 +111,7 @@ unreadable/unparseable). A metric absent from the report is **skipped** — a
 missing number never counts as a green light.
 
 ```bash
+python eval/gate.py --all                               # make-style: whole reports dir
 python eval/gate.py eval/reports/latest.json           # human verdict
 python eval/gate.py REPORT --ci                        # one verdict line, for CI
 python eval/gate.py REPORT --against REF.json          # + informational deltas

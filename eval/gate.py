@@ -10,6 +10,7 @@ not be read/parsed at all.
   python eval/gate.py REPORT --against REF   # + informational metric delta table
   python eval/gate.py REPORT --against REF --changelog   # diff also lands in CHANGELOG
   python eval/gate.py REPORT --check-docs  # + drift check vs BENCHMARKS Known numbers
+  python eval/gate.py --all                # every known report in eval/reports/
 
 Reports older than --max-report-age-days (default 14) get a stderr warning —
 a warning, never a verdict change (T685).
@@ -253,6 +254,42 @@ def render(verdict: dict) -> str:
     return "\n".join(lines)
 
 
+def run_all(args) -> int:
+    """T689: make-style single command — gate every known report that exists
+    in the reports dir, one summary line per file. Nothing present -> exit 2
+    (there is nothing to gate; that is not a green run)."""
+    known = ["latest.json", "i18n.json", "breaker.json", "pool.json"]
+    paths = [os.path.join(args.reports_dir, n) for n in known]
+    found = [(n, p) for n, p in zip(known, paths) if os.path.exists(p)]
+    if not found:
+        print(f"gate: no reports in {args.reports_dir} — run eval/*.py first",
+              file=sys.stderr)
+        return 2
+    any_fail = False
+    for name, path in found:
+        try:
+            with open(path) as f:
+                rep = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"gate: {path} unreadable: {e}", file=sys.stderr)
+            return 2
+        verdict = gate_report(rep, args)
+        if args.check_docs:
+            verdict["checks"].extend(collect_docs(args, args.check_docs))
+            _tally(verdict)
+        print(f"== {name}: {'PASS' if verdict['ok'] else 'FAIL'} "
+              f"({verdict['passed']} passed, {verdict['failed']} failed, "
+              f"{verdict['skipped']} skipped)")
+        for c in verdict["checks"]:
+            if c["ok"] is False:
+                print(f"   FAIL {name}/{c['name']}: value={c['value']} "
+                      f"expected {c['expected']}", file=sys.stderr)
+                any_fail = True
+    print(f"GATE all: {'FAIL' if any_fail else 'PASS'} "
+          f"({len(found)} reports gated)")
+    return 1 if any_fail else 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         prog="gate", description="pass/fail thresholds over a report (T671)",
@@ -260,7 +297,13 @@ def main(argv=None) -> int:
                "failed (or the report is structurally unusable); 2 = the input "
                "could not be read/parsed. Skipped gates (metric absent) never "
                "block a pass. --ci prints exactly one line of verdict JSON.")
-    ap.add_argument("report", help="report JSON (e.g. eval/reports/zero-shot.json)")
+    ap.add_argument("report", nargs="?",  # T689: optional when --all is used
+                    help="report JSON (e.g. eval/reports/zero-shot.json)")
+    ap.add_argument("--all", action="store_true",  # T689: make-style one command
+                    help="gate every known report in --reports-dir "
+                         "(latest/i18n/breaker/pool); human output only")
+    ap.add_argument("--reports-dir", default="eval/reports",  # T689
+                    help="where --all looks for the known reports")
     ap.add_argument("--json", action="store_true", help="machine-readable verdict")
     ap.add_argument("--ci", action="store_true",  # T677: one line, stable exits
                     help="CI mode: exactly one line of verdict JSON on stdout; "
@@ -299,6 +342,13 @@ def main(argv=None) -> int:
     ap.add_argument("--min-speedup", type=float, default=2.0,  # T683
                     help="pool hits-scenario speedup floor vs naive rebuilds")
     a = ap.parse_args(argv)
+    if a.all:  # T689: single command over the whole reports dir
+        if a.against or a.changelog:
+            ap.error("--all gates each report on its own; "
+                     "--against/--changelog need a single report")
+        return run_all(a)
+    if not a.report:
+        ap.error("a report path (or --all) is required")  # argparse exits 2
     if a.changelog and not a.against:  # T680: usage error, before any output
         print("gate: --changelog requires --against (nothing to diff)",
               file=sys.stderr)

@@ -466,3 +466,38 @@ def test_benchmarks_documents_running_the_gates():  # T688: the how-to is real
     # defaults named in the docs match the flags in the runner (no doc drift)
     assert "--min-rule-acc" in text and "--max-ece" in text
     assert "--max-p95-ms" in text and "--min-speedup" in text
+
+
+def test_gate_all_make_style_command(tmp_path):  # T689: one command, whole dir
+    rd = tmp_path / "reports"
+    rd.mkdir()
+    # nothing to gate yet -> exit 2, told to run the producers first
+    r = _run_gate("--all", "--reports-dir", str(rd))
+    assert r.returncode == 2 and "no reports" in r.stderr
+    # one healthy report per family
+    (rd / "latest.json").write_text(json.dumps({"n": 300, "rule_acc": 0.403}))
+    (rd / "i18n.json").write_text(json.dumps({"n": 12, "errors": [], "per_lang": {}}))
+    (rd / "breaker.json").write_text(json.dumps({"tripped": True, "closed": True}))
+    (rd / "pool.json").write_text(json.dumps({"speedup": 5.4}))
+    r = _run_gate("--all", "--reports-dir", str(rd))
+    assert r.returncode == 0, r.stderr
+    for name in ("latest.json", "i18n.json", "breaker.json", "pool.json"):
+        assert f"== {name}: PASS" in r.stdout
+    assert "GATE all: PASS (4 reports gated)" in r.stdout
+    # one rotten report fails the whole run, naming file and gate
+    (rd / "breaker.json").write_text(json.dumps({"tripped": True, "closed": False}))
+    r = _run_gate("--all", "--reports-dir", str(rd))
+    assert r.returncode == 1
+    assert "== breaker.json: FAIL" in r.stdout
+    assert "FAIL breaker.json/breaker_closed" in r.stderr
+    assert "GATE all: FAIL" in r.stdout
+    # a corrupt report file in the dir -> exit 2 (unusable input)
+    (rd / "i18n.json").write_text("{broken")
+    r = _run_gate("--all", "--reports-dir", str(rd))
+    assert r.returncode == 2 and "unreadable" in r.stderr
+    # --all + single-report-only flags is a usage error (exit 2 from argparse)
+    r = _run_gate("--all", "--against", "x.json", "--reports-dir", str(rd))
+    assert r.returncode == 2
+    # and a bare invocation is a usage error too — never a silent 0
+    r = _run_gate()
+    assert r.returncode == 2
