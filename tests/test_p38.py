@@ -469,3 +469,40 @@ def test_py_typed_marker_and_typed_public_api():  # T725
             if a.arg in ("self", "cls"):
                 continue
             assert a.annotation is not None, f"{fn.name}({a.arg}): untyped"
+
+
+def test_sbom_exported_in_release_workflow(tmp_path):  # T726
+    import json
+    import subprocess
+    # the export runs offline and byte-for-byte deterministically (a
+    # release manifest that shifts between runs can't be diffed by ops)
+    outs = []
+    for name in ("a.json", "b.json"):
+        o = tmp_path / name
+        r = subprocess.run([sys.executable, "scripts/sbom.py", "--out", str(o)],
+                           check=False, capture_output=True, text=True,
+                           timeout=60)
+        assert r.returncode == 0, r.stderr
+        outs.append(o.read_bytes())
+    assert outs[0] == outs[1], "SBOM export is not deterministic"
+    sbom = json.loads(outs[0])
+    assert sbom["format"] == "bouncer-sbom/1"
+    # every declared direct dep is there, floor intact...
+    py = _pyproject()
+    pkgs = {p["name"]: p["requirement"] for p in sbom["packages"]}
+    core = dict(_floor(d) for d in py["project"]["dependencies"])
+    assert core == pkgs, (core, pkgs)
+    # ...every extra is exported, floors too...
+    assert set(sbom["extras"]) == set(py["project"]["optional-dependencies"])
+    for deps in sbom["extras"].values():
+        for p in deps:
+            assert p["requirement"].startswith(">=") or p["requirement"] == "*", p
+    # ...and the identity matches the package the tag points at
+    assert sbom["package"]["name"] == py["project"]["name"]
+    assert sbom["package"]["version"] == py["project"]["version"]
+    assert sbom["python"]["requires"] == py["project"]["requires-python"]
+    # the release workflow actually exports it as its own artifact (the
+    # wheel/SBOM release attach lands at T736)
+    pub = Path(".github/workflows/publish.yml").read_text()
+    assert "scripts/sbom.py --out dist/sbom.json" in pub
+    assert "name: sbom" in pub, "no sbom artifact uploaded"

@@ -800,7 +800,7 @@
 - [x] T723 pkg: no hard dep on numpy/laya for core import (weightless check)
 - [x] T724 pkg: `pip index` metadata — keywords/classifiers filled
 - [x] T725 pkg: py.typed marker + typed public API
-- [ ] T726 pkg: SBOM-ish dep list exported in release workflow
+- [x] T726 pkg: SBOM-ish dep list exported in release workflow
 - [ ] T727 pkg: `bouncer doctor` — env/dep/route self-diagnosis command
 - [ ] T728 pkg: doctor output documented in README
 - [ ] T729 pkg: install extra `.[finetune]` pins training deps separately

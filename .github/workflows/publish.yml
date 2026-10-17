@@ -12,3 +12,9 @@ jobs:
       - run: pip install build && python -m build --sdist
       - uses: actions/upload-artifact@v4
         with: { name: sdist, path: dist/* }
+      # T726: SBOM-ish declared-dependency manifest — deterministic, no
+      # network; the release job attaches it alongside the wheel (T736).
+      - name: export SBOM
+        run: python scripts/sbom.py --out dist/sbom.json
+      - uses: actions/upload-artifact@v4
+        with: { name: sbom, path: dist/sbom.json }
