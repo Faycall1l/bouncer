@@ -633,7 +633,7 @@
 ## P31 Eval + data (T571–T590)
 - [x] T571 eval: `eval/breaker_sim.py` (failure storm → opens, report JSON)
 - [x] T572 eval: `eval/bench_pool.py` (pooled construction timing + eviction demo)
-- [ ] T573 eval: `validate_data --limit` flag
+- [x] T573 eval: `validate_data --limit` flag
 - [ ] T574 data: `synth_rules --report` prints label distribution
 - [ ] T575 docs: BENCHMARKS pool/breaker notes
 - [ ] T576 eval: `eval_gatekeeper --model` (passes model= through)

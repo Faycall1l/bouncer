@@ -1,4 +1,5 @@
 """T381: schema checker for eval JSONL rows (state/rules/labels). No weights."""
+import argparse
 import json
 import sys
 
@@ -36,9 +37,18 @@ def check_file(path: str, limit: int = 0) -> list:
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "data/examples.jsonl"
-    errs = check_file(path)
+    ap = argparse.ArgumentParser(prog="validate_data")
+    ap.add_argument("path", nargs="?", default="data/examples.jsonl")
+    ap.add_argument("--limit", type=int, default=0)  # T573: check first N rows only
+    ap.add_argument("--out", default=None)  # T573: optional JSON report
+    ap.add_argument("--json", action="store_true")  # T573: one-line output
+    a = ap.parse_args()
+    errs = check_file(a.path, a.limit)
     for e in errs[:20]:
         print(e)
-    print(f"checked {path}: {len(errs)} errors")
+    if a.out:
+        with open(a.out, "w") as f:
+            json.dump({"path": a.path, "limit": a.limit, "errors": errs}, f, indent=2)
+    print(json.dumps({"path": a.path, "errors": len(errs)},
+                     indent=None if a.json else 2))
     sys.exit(1 if errs else 0)
