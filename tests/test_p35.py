@@ -213,6 +213,13 @@ def test_smoke_run_path_documented():  # T659: 50 rows, 1 epoch, documented shap
     assert "--max-samples 50" in readme and "TRAIN_OK" in readme
 
 
+def test_failure_modes_documented():  # T667: OOM, token cap, label noise, refusals
+    readme = _src("notebooks/README.md")
+    for kw in ("## Failure modes", "CUDA OOM", "head_max_len=256",
+               "quarantine", "no_push", "temp.json"):
+        assert kw in readme
+
+
 def test_eval_after_train_cell():  # T660: CI metrics on the held-out split
     src = _src("kaggle/train/train.py")
     assert "test_split.jsonl" in src  # split always written OUT

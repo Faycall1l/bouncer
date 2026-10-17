@@ -19,3 +19,14 @@ records = to_laya_records("/kaggle/input/gatekeeper-12k.jsonl")
 `kaggle/train/train.py --max-samples 50` — 50 rows, 1 epoch, the exact same code
 path (data → items → train → calibrate → eval → gate). If it can't print
 `TRAIN_OK`, the 4-5h run won't either. Pre-flight checks: `scripts/check_kaggle_env.py` (T656).
+
+## Failure modes (T667)
+
+| symptom | likely cause | fix |
+|---|---|---|
+| CUDA OOM mid-epoch | T4 16GB ceiling, batch too hot | `MICRO` 8→4 (double `ACCUM` to keep effective batch), drop `max_len` 1024→512, or enable the LoRA block (T652) — checkpointing + fp16 are already on |
+| `SKIPPED` ≈ half the rows (T651 assert fires) | token cap: rows whose rule-sets blow `head_max_len=256` | fewer/shorter rules per row (lower K in the build), or trim rule text in `data/synth_rules.py` |
+| dev rule_acc plateaus near 0.30 | label noise from teacher distillation, or base-model collapse | inspect the quarantine file (T645) for teacher garbage, check label balance (`build_dataset.py --report`, T633), re-synth with more hard negatives (T636) |
+| run dies at hour 4, no push | quota exhaustion / preemption | rolling `checkpoint_latest` survives per epoch (T653+); re-run with `--max-samples` sanity first, then full |
+| training fine, no HF push | gate said no: dev < 0.35 or test_acc < 0.403 (T655/T661), or no `HF_TOKEN` secret | read `train_log.jsonl` `no_push` records — both metrics and both floors are in there; a refusal is information, not an error |
+| `temp.json` temps look extreme (>5, <0.5) | calibration slice too small or too easy | check `calib_items` count in `temp.json`; refit with more calibration rows before trusting probabilities |
