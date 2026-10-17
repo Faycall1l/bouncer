@@ -78,6 +78,12 @@ bouncer check "you all suck" --preset gaming
 bouncer check "you all suck" --preset gaming --allow-threshold 0.9 --delete-threshold 0.7
 bouncer serve  # API on :8000
 bouncer demo   # Gradio UI
+bouncer watch --preset gaming < chat.log        # live tail, colored verdicts
+bouncer review                                  # queued flags/escalations
+bouncer snapshot save snap.json                 # counters + strikes (T606)
+bouncer snapshot load snap.json
+bouncer export --out audit.csv                  # audit log -> CSV
+bouncer models; bouncer presets                 # checkpoints, rule-packs
 ```
 
 Split gates: `--allow-threshold` / `--delete-threshold` (and the same JSON keys

@@ -668,7 +668,7 @@
 - [x] T603 docs: presets catalogue preset-lang tags
 - [x] T604 docs: adapters README model routing note
 - [x] T605 docs: data README i18n + report flags — shipped in T579
-- [ ] T606 pkg: `snapshot` CLI surfaced in README command list
+- [x] T606 pkg: `snapshot` CLI surfaced in README command list
 - [ ] T607 docs: gates.md breaker demotion row
 - [ ] T608 docs: api.md snapshot/export-stats section
 - [ ] T609 test: docs-consistency extended (codes/routes/presets/env)
