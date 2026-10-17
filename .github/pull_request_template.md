@@ -1,6 +1,6 @@
-## What & why
+## What & how verified
 
-<!-- one or two sentences: what changed, and why it's worth merging -->
+<!-- what changed; how verified (tests / Kaggle link). T158's question, kept. -->
 
 ## Checklist
 

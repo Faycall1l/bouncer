@@ -267,3 +267,19 @@ def test_issue_template_bug_report():  # T744
     assert t.count("required: true") >= 3
     # ...and the form demands redaction: no tokens ever land in issues
     assert "Redaction" in t and "Tokens" in t
+
+
+def test_codeowners_and_branch_protection_notes():  # T745
+    co = Path(".github/CODEOWNERS").read_text()
+    # every path routes through the maintainer
+    assert "* @Faycall1l" in co
+    con = Path("CONTRIBUTING.md").read_text()
+    # branch protection lives in GitHub settings — the notes must name the
+    # checks to require, and the file that routes reviews
+    assert "branch protection" in con.lower()
+    assert "CODEOWNERS" in con
+    for check in ("lint", "test", "weightless", "eval-gate"):
+        assert check in con, check
+    # the documented verify gate matches what the repo actually lints with
+    # (the stale "ruff check src tests" wording died here, at T745)
+    assert "ruff check ." in con and "ruff check src tests" not in con
