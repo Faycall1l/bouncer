@@ -815,7 +815,7 @@
 - [x] T736 ci: release job attaches wheel + SBOM to GitHub Release
 - [x] T737 ci: tag-vs-version guard (tag must match pyproject)
 - [x] T738 ci: benchmark job (optional, weightless stubs) posts summary
-- [ ] T739 ci: eval-gate job runs `gate.py --ci` on reports committed
+- [x] T739 ci: eval-gate job runs `gate.py --ci` on the weightless report set
 - [ ] T740 ci: cache pip + uv in workflow
 - [ ] T741 ci: fail-fast off, so all matrix legs report
 - [ ] T742 ci: workflow badge in README

@@ -152,3 +152,38 @@ def test_ci_benchmark_job_posts_summary(tmp_path):  # T738
                            env={"PATH": "/usr/bin:/bin", "PYTHONPATH": src})
         assert r.returncode == 0, r.stderr
         assert isinstance(json.loads(r.stdout), dict), r.stdout
+
+
+def test_ci_eval_gate_job_replays_weightless(tmp_path):  # T739
+    import re
+    import subprocess
+    import sys
+    ci = (WORKFLOWS / "ci.yml").read_text()
+    m = re.search(r"^  eval-gate:(.*?)(?=^  \w|\Z)", ci, re.MULTILINE | re.DOTALL)
+    assert m, "no eval-gate job"
+    job = m.group(1)
+    # the job regenerates the weightless report set (reports are gitignored
+    # — nothing canonical is committed), then gates it with the box's exact
+    # flag: one line of verdict JSON, stable exits
+    assert "gate.py --all --ci" in job
+    assert "bench_pool.py" in job and "breaker_sim.py" in job
+    # replay the job's commands for real in a tmp cwd: the gate must PASS
+    # exit 0 on that weightless set (a fresh CI checkout sees only this)
+    src = str(Path("src").resolve())
+    root = str(Path.cwd())
+    env = {"PATH": "/usr/bin:/bin", "PYTHONPATH": src}
+    for script in ("eval/bench_pool.py", "eval/breaker_sim.py"):
+        r = subprocess.run([sys.executable, f"{root}/{script}"],
+                           check=False, capture_output=True, text=True,
+                           timeout=120, cwd=str(tmp_path), env=env)
+        assert r.returncode == 0, r.stderr
+    reports = tmp_path / "eval" / "reports"
+    assert sorted(p.name for p in reports.glob("*.json")) == \
+        ["breaker.json", "pool.json"]
+    r = subprocess.run(
+        [sys.executable, f"{root}/eval/gate.py", "--all", "--ci",
+         "--reports-dir", str(reports)],
+        check=False, capture_output=True, text=True, timeout=120,
+        cwd=str(tmp_path), env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "GATE all: PASS" in r.stdout

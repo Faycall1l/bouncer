@@ -64,3 +64,16 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: PYTHONPATH=src python -c "import gatekeeper; print(gatekeeper.__version__)"
+  eval-gate:  # T739: gate.py --ci over freshly generated weightless reports
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: "pip" }
+      - run: pip install -e ".[dev]"
+      - name: generate the weightless report set
+        run: |
+          python eval/bench_pool.py
+          python eval/breaker_sim.py
+      - name: gate them (one-line verdict, stable exits)
+        run: python eval/gate.py --all --ci
