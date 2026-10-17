@@ -19,6 +19,15 @@ jobs:
         with: { python-version: "${{ matrix.python-version }}", cache: "pip" }
       - run: pip install -e ".[dev]"
       - run: pytest -q
+  weightless:  # T734: docs-consistency + CLI subset — stdlib+fastapi only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      # stdlib + fastapi alone: proves these tests never reach for weights
+      - run: pip install pytest "fastapi>=0.110" "pydantic>=2"
+      - run: PYTHONPATH=src pytest -q tests/test_cli.py tests/test_p18.py tests/test_p22.py tests/test_p29.py
   smoke:  # T161: import check without weights/deps
     runs-on: ubuntu-latest
     steps:

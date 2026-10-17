@@ -810,7 +810,7 @@
 - [x] T731 ci: GitHub Actions workflow — pytest + ruff on push/PR
 - [x] T732 ci: Python version matrix (3.10–3.13, pinned equal to classifiers)
 - [x] T733 ci: ruff `check .` job (not just src/tests)
-- [ ] T734 ci: docs-consistency + CLI tests run without weights (label)
+- [x] T734 ci: docs-consistency + CLI tests run without weights (label)
 - [ ] T735 ci: wheel build artifact on tags
 - [ ] T736 ci: release job attaches wheel + SBOM to GitHub Release
 - [ ] T737 ci: tag-vs-version guard (tag must match pyproject)

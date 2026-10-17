@@ -53,3 +53,20 @@ def test_ci_has_dedicated_ruff_job():  # T733
     assert "ruff check ." in lint and "pytest" not in lint
     # and the test matrix doesn't duplicate the work (T733 dedupe)
     assert "ruff" not in job("test")
+
+
+def test_ci_weightless_docs_cli_job():  # T734
+    import re
+    text = (WORKFLOWS / "ci.yml").read_text()
+    m = re.search(r"^  weightless:(.*?)(?=^  \w)", text, re.MULTILINE | re.DOTALL)
+    assert m, "no weightless job"
+    job = m.group(1)
+    # the label names what it runs: docs-consistency + CLI tests
+    for f in ("tests/test_p22.py", "tests/test_cli.py",
+              "tests/test_p18.py", "tests/test_p29.py"):
+        assert f in job, f
+    # and it genuinely runs without weights: no laya, no full install —
+    # just enough to import serve (fastapi/pydantic) alongside stdlib
+    assert "laya" not in job and ".[dev]" not in job
+    assert 'pip install pytest "fastapi>=0.110"' in job
+    assert "PYTHONPATH=src" in job
