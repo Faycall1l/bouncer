@@ -19,10 +19,16 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(prog="baseline_regex")
     ap.add_argument("path", nargs="?", default="data/examples.jsonl")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--limit", type=int, default=0)  # T577: first N rows only
     a = ap.parse_args()
     path = a.path
     with open(path) as f:
         rows = [json.loads(line) for line in f]
+    if a.limit:  # T577
+        rows = rows[:a.limit]
+    if not rows:  # T577: empty slice shouldn't divide by zero
+        print("n=0 regex_acc=nan (no rows)")
+        raise SystemExit(0)
     from collections import Counter
     per_label, per_hit = Counter(), Counter()  # T379
     hit, n_violation = 0, 0
