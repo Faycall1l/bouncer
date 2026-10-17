@@ -758,7 +758,7 @@
 - [x] T685 eval: stale-report warning (older than N days)
 - [x] T686 eval: `eval/reports/latest.json` pointer file (gitignored)
 - [x] T687 eval: negative-test — gate fails loudly on bad report
-- [ ] T688 eval: docs section "running the gates" in BENCHMARKS
+- [x] T688 eval: docs section "running the gates" in BENCHMARKS
 - [ ] T689 eval: make-style single command `python eval/gate.py --all`
 - [ ] T690 test: P36 eval-gate sweep
 

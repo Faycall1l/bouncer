@@ -102,6 +102,39 @@ threshold defaults it enforces have drifted from the documented numbers
 | max_p95_ms_t4 | 44 |
 | pool_speedup_floor | 2.0 |
 
+## Running the gates (T688)
+
+`eval/gate.py` is the single pass/fail runner over any eval report. It reads a
+report JSON, applies thresholds, and exits `0` (all applied gates passed),
+`1` (a gate failed or the report is structurally unusable), or `2` (input
+unreadable/unparseable). A metric absent from the report is **skipped** — a
+missing number never counts as a green light.
+
+```bash
+python eval/gate.py eval/reports/latest.json           # human verdict
+python eval/gate.py REPORT --ci                        # one verdict line, for CI
+python eval/gate.py REPORT --against REF.json          # + informational deltas
+python eval/gate.py REPORT --check-docs                # + drift check vs table above
+python eval/gate.py REPORT --against REF --changelog   # + dated diff into CHANGELOG
+```
+
+Report kinds are detected by shape and gated by family:
+
+| report shape | family | what is checked |
+|---|---|---|
+| `rule_acc` (or baseline `acc`) | eval | `rule_acc >= 0.403`, `ECE <= 0.15`, `p95 <= 44ms`, abstention in (0, 0.3], worst per-rule >= 0.3 |
+| `per_lang` (eval_i18n.py) | i18n | `errors == 0` |
+| `tripped`/`closed` (breaker_sim.py) | breaker | tripped **and** closed both true |
+| `speedup`/`thrash` (bench_pool.py) | pool | hits-scenario speedup >= 2x |
+
+Every threshold is a flag (`--min-rule-acc`, `--max-ece`, `--max-p95-ms`,
+`--min/--max-abstention`, `--min-per-rule-acc/--per-rule-min-n`,
+`--min-speedup`), with defaults pinned by the Known-numbers table above and
+drift-checked by `--check-docs`. Reports older than
+`--max-report-age-days` (default 14) warn on stderr without changing the
+verdict. Regenerate any report by rerunning its producer in `eval/`; the
+newest eval report is always at `eval/reports/latest.json` (T686, gitignored).
+
 ## Run costs (T666, estimates — not receipts)
 
 | item | cost | notes |

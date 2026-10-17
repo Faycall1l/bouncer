@@ -452,3 +452,17 @@ def test_gate_fails_loudly_on_bad_reports(tmp_path):  # T687: the battery
     # and the whole run still exits 0 only because nothing else failed — the
     # structural gates, not the NaN metric, carry that verdict
     assert r.returncode == 0 and checks["report_rule_acc"]["ok"] is True
+
+
+def test_benchmarks_documents_running_the_gates():  # T688: the how-to is real
+    text = Path("BENCHMARKS.md").read_text()
+    assert "## Running the gates" in text
+    for token in ("eval/gate.py", "--ci", "--against", "--check-docs",
+                  "--changelog", "exit", "0", "1", "2"):
+        assert token in text
+    # the four families gate.py dispatches to are all documented
+    for family in ("rule_acc", "per_lang", "tripped", "speedup"):
+        assert family in text
+    # defaults named in the docs match the flags in the runner (no doc drift)
+    assert "--min-rule-acc" in text and "--max-ece" in text
+    assert "--max-p95-ms" in text and "--min-speedup" in text
