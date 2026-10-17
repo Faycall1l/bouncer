@@ -39,6 +39,17 @@ def action_badge(action: str) -> str:
             "escalate": "⚪ ESCALATE"}[action]
 
 
+def remember_thr(mem: dict, old: str, new: str,
+                 allow: float, delete: float) -> tuple:
+    """T563: pure threshold memory — stash old preset's values, restore new's.
+
+    Returns (allow, delete) to set the sliders to.
+    """
+    if old:
+        mem[old] = (allow, delete)
+    return mem.get(new, (0.85, 0.85))
+
+
 def format_meters(r: dict, standing: dict | None = None) -> str:
     """T561: pure meters text (result badges only; no tally, no msg access)."""
     text = (f"harm={r.get('harm', '?')} jail={r.get('jailbreak_p', 0.0):.2f} "
@@ -158,11 +169,11 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
 
         def _on_preset(n):
             from gatekeeper.presets import preset_lang  # T505: pack sets the hint too
-            thr_mem[cur_preset[0]] = (thr_allow[0], thr_del[0])  # T553: stash old
+            allow, delete = remember_thr(thr_mem, cur_preset[0], n,  # T563
+                                         thr_allow[0], thr_del[0])
             cur_preset[0] = n
             if dirty:
                 return gr.skip(), gr.skip(), gr.skip(), gr.skip()
-            allow, delete = thr_mem.get(n, (0.85, 0.85))  # T553: restore or default
             return preset_text[n], preset_lang(n), allow, delete
 
         def _on_edit():

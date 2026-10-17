@@ -621,7 +621,7 @@
 - [x] T560 demo: meters shows cause
 - [x] T561 demo: `format_meters(res)` pure helper extracted
 - [x] T562 demo: `format_trail()` pure helper extracted
-- [ ] T563 demo: threshold memory pure helpers (`remember_thr`)
+- [x] T563 demo: threshold memory pure helpers (`remember_thr`)
 - [ ] T564 demo: severity parser pure helper (`parse_severity`)
 - [ ] T565 demo: model dropdown default auto
 - [ ] T566 demo: user box placeholder text
