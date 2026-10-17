@@ -329,3 +329,44 @@ def test_dockerfile_oci_labels_are_honest():  # T720
     # version/created stay CI-stamped: a static one would rot (T720 decision)
     assert "version" not in labels and "created" not in labels
     assert "CI stamps them at build time" in text
+
+
+def test_pip_install_produces_working_bouncer(tmp_path):  # T721
+    import glob
+    import os
+    import shutil
+    import subprocess
+
+    import pytest
+    uv = shutil.which("uv") or os.path.expanduser("~/.local/bin/uv")
+    if not os.path.exists(uv):
+        pytest.skip("uv not available — the install smoke needs a builder")
+    # build the wheel, install it --no-deps into a throwaway venv: the
+    # entry-point wiring must stand on its own, without pulling the world
+    r = subprocess.run([uv, "build", "--wheel", "-o", str(tmp_path)],
+                       check=False, capture_output=True, text=True,
+                       timeout=300, cwd=str(Path.cwd()))
+    assert r.returncode == 0, r.stderr
+    wheels = glob.glob(str(tmp_path / "*.whl"))
+    assert len(wheels) == 1, wheels
+    venv = tmp_path / "venv"
+    r = subprocess.run([uv, "venv", str(venv)], check=False,
+                       capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr
+    py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    r = subprocess.run([uv, "pip", "install", "--python", str(py),
+                        "--no-deps", wheels[0]],
+                       check=False, capture_output=True, text=True,
+                       timeout=300)
+    assert r.returncode == 0, r.stderr
+    # the console script exists and answers `--version` with the packaged
+    # version — exactly what a wheel user gets after pip install
+    bin_dir = venv / ("Scripts" if os.name == "nt" else "bin")
+    script = bin_dir / ("bouncer.exe" if os.name == "nt" else "bouncer")
+    assert script.exists(), "console script not installed"
+    r = subprocess.run([str(script), "--version"], check=False,
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    sys.path.insert(0, "src")
+    from gatekeeper import __version__
+    assert r.stdout.strip() == f"bouncer {__version__}"
