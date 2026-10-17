@@ -541,3 +541,18 @@ def test_bouncer_doctor_self_diagnosis(tmp_path):  # T727
     assert r.returncode == 1, r.stdout
     assert "E_ADAPTER" in r.stdout and str(bad) in r.stdout
     assert " 1 fail" in r.stdout
+
+
+def test_doctor_output_documented_in_readme():  # T728
+    import re
+    readme = Path("README.md").read_text()
+    # the section exists and pins all three areas plus the exit contract
+    m = re.search(r"## Doctor \(T727\+T728\)\n(.*?)(?=\n## )", readme, re.DOTALL)
+    assert m, "no Doctor section in README"
+    section = m.group(1)
+    for needle in ("`bouncer doctor`", "**env**", "**dep**", "**route**",
+                   "presence only", "never printed", "Exit `0`", "`1` only"):
+        assert needle in section, needle
+    # the documented summary line is the format doctor actually prints —
+    # count values stay free (the T727 test runs the real command)
+    assert re.search(r"doctor: \d+ checks, \d+ warn, \d+ fail", section)

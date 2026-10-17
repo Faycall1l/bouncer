@@ -802,7 +802,7 @@
 - [x] T725 pkg: py.typed marker + typed public API
 - [x] T726 pkg: SBOM-ish dep list exported in release workflow
 - [x] T727 pkg: `bouncer doctor` — env/dep/route self-diagnosis command
-- [ ] T728 pkg: doctor output documented in README
+- [x] T728 pkg: doctor output documented in README
 - [ ] T729 pkg: install extra `.[finetune]` pins training deps separately
 - [ ] T730 test: P38 packaging sweep (build + import matrix)
 
