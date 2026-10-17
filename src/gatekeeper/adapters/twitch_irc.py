@@ -53,13 +53,16 @@ def _watch_once(sock, rules) -> None:
 
 def run(retries: int = 3):
     from gatekeeper import get_preset
+    from gatekeeper.adapters.common import require_env
     rules = get_preset("stream")
     host, port = "irc.chat.twitch.tv", 6667
-    nick, chan = os.environ["TWITCH_NICK"], os.environ["TWITCH_CHAN"]
+    # T691: all three checked up-front — fail before the first connect attempt
+    nick, chan = require_env("TWITCH_NICK"), require_env("TWITCH_CHAN")
+    tok = require_env("TWITCH_TOKEN")
     for attempt in range(max(1, retries)):  # T299: reconnect with backoff
         try:
             sock = socket.create_connection((host, port), timeout=15)
-            sock.sendall(f"PASS {os.environ['TWITCH_TOKEN']}\r\nNICK {nick}\r\nJOIN {chan}\r\n".encode())
+            sock.sendall(f"PASS {tok}\r\nNICK {nick}\r\nJOIN {chan}\r\n".encode())
             print(f"watching {redact(chan)} (flag-only)", flush=True)  # T300
             _watch_once(sock, rules)
             return

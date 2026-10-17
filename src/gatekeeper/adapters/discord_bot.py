@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
-import os
 
 
 def run(token: str | None = None, preset: str = "gaming"):
@@ -42,7 +41,8 @@ def run(token: str | None = None, preset: str = "gaming"):
         elif res["action"] in ("flag", "escalate"):
             await msg.add_reaction("⚠️")
 
-    client.run(token or os.environ["DISCORD_TOKEN"])  # T075: env, never logged
+    from gatekeeper.adapters.common import require_env
+    client.run(token or require_env("DISCORD_TOKEN"))  # T075+T691: env, named
 
 
 if __name__ == "__main__":

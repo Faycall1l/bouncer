@@ -763,7 +763,7 @@
 - [x] T690 test: P36 eval-gate sweep
 
 ## P37 Adapters (T691–T710)
-- [ ] T391-fix note: box ids continue; see T692
+- [x] T691 adp: shared `require_env()` — missing adapter tokens fail with `E_ADAPTER`, not raw `KeyError`
 - [ ] T692 adp: telegram adapter (long-poll, / commands, flag-only default)
 - [ ] T693 adp: matrix/melement adapter (room timeline → moderate)
 - [ ] T694 adp: mattermost adapter (websocket + slash command)

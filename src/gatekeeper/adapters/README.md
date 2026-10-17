@@ -8,6 +8,9 @@
 | Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events |
 
 Tokens always from env, never logged (twitch redacts, discord never prints).
+Missing tokens fail at startup via the shared `require_env()` guard
+(`gatekeeper.adapters.common`, `E_ADAPTER`) — the error names the variable
+instead of a raw `KeyError`; blank counts as missing (T691).
 
 ## Notes (T408)
 
