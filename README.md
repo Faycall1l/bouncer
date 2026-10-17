@@ -100,6 +100,10 @@ LRU pool keyed by constructor kwargs:
   an eviction storm where every request pays a full reload (`eval/bench_pool.py`
   demonstrates both: 5.4× speedup with hits, ~1× thrashing without).
 * `BOUNCER_DEVICE` (e.g. `cuda`, `mps`, `cpu`) — default device for pool builds.
+* `BOUNCER_MODEL_DIR` (e.g. `/kaggle/working/bouncer-421m`) — load a local
+  fine-tuned checkpoint for every request: beats language routing, while an
+  explicit `model=` pin still wins. This is how a Kaggle-trained model (P35)
+  becomes the engine's default (T663).
 * `model=` — pin a checkpoint per request: `moderate(msg, rules, model="multilingual")`,
   `POST /predict {"model": "typed-decisions"}`, `bouncer check --model english`.
   `None`/`auto` routes by language hint: non-latin scripts (ar/zh/ru/fa/ur/he) pin

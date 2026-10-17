@@ -6,6 +6,8 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, "src")
+
 
 def _run_py(*args):
     env = {**os.environ, "PATH": "/usr/bin:/bin"}  # strip kaggle CLI for determinism
@@ -116,6 +118,29 @@ def test_calibration_writes_temp_json():  # T662: temperature artifact lands in 
     save = src.index("save_checkpoint(model, tok, cfg, OUT)")
     temp = src.index('"temp.json"')
     assert save < temp  # temp.json reflects the checkpoint that was actually saved
+
+
+def test_bouncer_model_dir_overrides_lang(monkeypatch):  # T663: finetuned dir wins
+    import gatekeeper
+    seen = {}
+
+    class R:
+        def predict(self, state, questions, model=None):
+            seen["model"] = model
+            return {"answers": {
+                "rule": {"choice": "ok"},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    monkeypatch.setenv("BOUNCER_MODEL_DIR", "/models/bouncer-421m")
+    gatekeeper.moderate("hello one", {"r": "t"}, router=R())
+    assert seen["model"] == "/models/bouncer-421m"  # env dir beats lang routing
+    gatekeeper.moderate("hello two", {"r": "t"}, router=R(), model="english")
+    assert seen["model"] == "english"  # explicit pin still beats the env dir
+    monkeypatch.delenv("BOUNCER_MODEL_DIR")
+    gatekeeper.moderate("hello three", {"r": "t"}, router=R())
+    assert seen["model"] is None  # no dir, en default -> plain base router
 
 
 def test_check_kaggle_env_preflight():  # T656: pre-flight plan is honest JSON

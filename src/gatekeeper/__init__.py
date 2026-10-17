@@ -375,7 +375,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     if lang:
         state["lang_hint"] = lang  # T041: nudge multilingual routing
     if model is None:  # T458: ar/zh/ru ride multilingual unless pinned
-        model = model_for_lang(lang)
+        model = __import__("os").environ.get("BOUNCER_MODEL_DIR", "").strip() \
+            or model_for_lang(lang)  # T663: a finetuned dir beats lang routing
     if model is not None and not _supports_model(r):  # T458: legacy 2-arg routers
         model = None  # (lang_hint in state still applies)
     tripped = _breaker_tripped()  # T512: short-circuit, no model call while open
