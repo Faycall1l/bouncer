@@ -91,6 +91,7 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                   f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
         meters += f" margin={r.get('margin', '?')}"  # T352
         meters += f" script={r.get('script', '?')}"  # T495
+        meters += f" cause={r.get('cause', '?')}"  # T560
         if uid:  # T552: standing for the attributed user (counts only)
             from gatekeeper import strikes as _st
             standing = _st.standing(uid)

@@ -618,7 +618,7 @@
 - [x] T557 demo: night-mode checkbox (quiet_hours 22–7)
 - [x] T558 demo: require_calm checkbox
 - [x] T559 demo: severity box (`RULE=high` lines)
-- [ ] T560 demo: meters shows cause
+- [x] T560 demo: meters shows cause
 - [ ] T561 demo: `format_meters(res)` pure helper extracted
 - [ ] T562 demo: `format_trail()` pure helper extracted
 - [ ] T563 demo: threshold memory pure helpers (`remember_thr`)
