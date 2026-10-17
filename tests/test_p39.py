@@ -187,3 +187,22 @@ def test_ci_eval_gate_job_replays_weightless(tmp_path):  # T739
         cwd=str(tmp_path), env=env)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "GATE all: PASS" in r.stdout
+
+
+def test_ci_caches_pip_and_uv():  # T740
+    import re
+    ci = (WORKFLOWS / "ci.yml").read_text()
+    jobs = re.findall(r"^  (\w[\w-]*):", ci, re.MULTILINE)
+    assert len(jobs) >= 6, jobs
+    # every job that pip-installs lets setup-python cache the wheelhouse...
+    for name in jobs:
+        m = re.search(rf"^  {re.escape(name)}:(.*?)(?=^  \w|\Z)",
+                      ci, re.MULTILINE | re.DOTALL)
+        assert m, name
+        if "pip install" in m.group(1):
+            assert 'cache: "pip"' in m.group(1), name
+    # ...and uv — the same uvx the local gate runs — is set up with its
+    # own cache keyed on pyproject.toml (T740)
+    assert "astral-sh/setup-uv" in ci
+    assert "enable-cache: true" in ci
+    assert 'cache-dependency-glob: "pyproject.toml"' in ci

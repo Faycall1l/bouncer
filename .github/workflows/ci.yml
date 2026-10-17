@@ -8,10 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install ruff
-      - run: ruff check .  # T402+T731+T733: the one lint gate
+      - uses: astral-sh/setup-uv@v5  # T740: uv ships with its own cache
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - run: uvx ruff check .  # T402+T731+T733: same gate, same tool as local
   test:  # T154: 3.10/3.11/3.12 matrix; T162: pip cache
     runs-on: ubuntu-latest
     strategy:
@@ -27,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with: { python-version: "3.12", cache: "pip" }  # T740: cache it too
       # stdlib + fastapi alone: proves these tests never reach for weights
       - run: pip install pytest "fastapi>=0.110" "pydantic>=2"
       - run: PYTHONPATH=src pytest -q tests/test_cli.py tests/test_p18.py tests/test_p22.py tests/test_p29.py
