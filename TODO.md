@@ -705,7 +705,7 @@
 - [x] T636 data: hard-negative injection (linkless spam, polite insults)
 - [x] T637 data: `examples.jsonl` regenerated through the same pipeline
 - [x] T638 data: dataset card fields (splits, labels, license, limits)
-- [ ] T639 data: HF upload script dry-run mode (`--dry-run` prints plan)
+- [x] T639 data: HF upload script dry-run mode (`--dry-run` prints plan)
 - [ ] T640 data: schema version stamp in every row (`v: 1`)
 - [ ] T641 data: row count + size assertion in CI-safe test
 - [ ] T642 data: rule-set vocabulary extractor (unseen-K measurement)

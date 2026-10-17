@@ -17,7 +17,7 @@ Build (one command: synth → validate → server-disjoint split, T631):
 `python data/build_dataset.py --n 12000 --seed 42`
 Low-level synth only: `python data/synth_rules.py --n 12000 --out data/gatekeeper-12k.jsonl`
 Distribution check (no write): `python data/synth_rules.py --n 2000 --template-only --report` (T574)
-HF push: `huggingface-cli upload YOUR_HF/gatekeeper-chatmix-12k data/gatekeeper-12k.jsonl`
+HF push (dry-run by default, T639): `python data/upload_hf.py` then `--yes`.
 
 ## examples_i18n.jsonl (T504+T579)
 
