@@ -21,7 +21,8 @@ def test_gate_pass_on_healthy_report(tmp_path):  # T671: exit 0, PASS lines
     assert r.returncode == 0, r.stderr
     assert "PASS report_n" in r.stdout and "PASS report_rule_acc" in r.stdout
     assert "PASS rule_acc" in r.stdout  # 0.403 meets the floor exactly (T672)
-    assert "3 passed, 0 failed, 0 skipped -> PASS" in r.stdout
+    assert "SKIP ece" in r.stdout  # absent metric -> skipped, never passed (T673)
+    assert "3 passed, 0 failed, 1 skipped -> PASS" in r.stdout
 
 
 def test_gate_fails_loud_on_threshold(tmp_path):  # T671: exit 1 + stderr blame
@@ -77,3 +78,23 @@ def test_gate_rule_acc_floor(tmp_path):  # T672: must beat the regex bar (0.403)
     # and the floor is configurable per run
     r = _run_gate(path, "--min-rule-acc", "0.5")
     assert r.returncode == 1 and "expected >= 0.5" in r.stderr
+
+
+def test_gate_ece_ceiling(tmp_path):  # T673: after calibration, probs stay honest
+    # a calibrated run (temp refit) passes
+    path = _report(tmp_path, {"n": 500, "rule_acc": 0.51, "ece": 0.12})
+    r = _run_gate(path)
+    assert r.returncode == 0, r.stderr
+    # an uncalibrated/base-like ECE fails the ceiling
+    path = _report(tmp_path, {"n": 200, "rule_acc": 0.45, "ece": 0.21})
+    r = _run_gate(path)
+    assert r.returncode == 1 and "FAIL ece" in r.stderr
+    # configurable per run
+    r = _run_gate(path, "--max-ece", "0.25")
+    assert r.returncode == 0, r.stderr
+    # absent ece is SKIPPED, and skipped never blocks a pass
+    path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
+    r = _run_gate(path, "--json")
+    verdict = json.loads(r.stdout)
+    assert verdict["ok"] is True and verdict["skipped"] == 1
+    assert any(c["name"] == "ece" and c["ok"] is None for c in verdict["checks"])

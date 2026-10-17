@@ -743,7 +743,7 @@
 ## P36 Eval gates (T671–T690)
 - [x] T671 eval: `gate.py` — pass/fail thresholds over a report JSON
 - [x] T672 eval: gate rule_acc >= 0.403 (must beat regex; box said 0.480 pre-T637) configurable
-- [ ] T673 eval: gate ECE <= 0.15 after calibration
+- [x] T673 eval: gate ECE <= 0.15 after calibration
 - [ ] T674 eval: gate p95 latency <= budget (ms, flag-settable)
 - [ ] T675 eval: gate abstention_rate within band (not 0, not > 0.3)
 - [ ] T676 eval: gate per-rule worst-case (no rule below floor)

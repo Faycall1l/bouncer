@@ -63,6 +63,7 @@ def collect(report: dict, args) -> list:
 
     # --- T672-T676 register their threshold gates here ---
     ge("rule_acc", ("rule_acc",), args.min_rule_acc)  # T672: must beat the regex bar
+    le("ece", ("ece",), args.max_ece)  # T673: after calibration, probs stay honest
     return checks
 
 
@@ -98,6 +99,8 @@ def main(argv=None) -> int:
     ap.add_argument("--min-rule-acc", type=float, default=0.403,  # T672
                     help="rule_acc floor: the regex baseline on examples.jsonl "
                          "(0.403 post-T637; older notes say 0.480, pre-hard-negatives)")
+    ap.add_argument("--max-ece", type=float, default=0.15,  # T673
+                    help="ECE ceiling after calibration (uncalibrated reports will fail)")
     a = ap.parse_args(argv)
 
     try:
