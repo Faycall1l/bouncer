@@ -605,7 +605,7 @@
 - [x] T546 cli: preset+rules together exits 4 (conflict) — shipped in T483
 - [x] T547 cli: `serve --key-file` (docker-secrets style key load)
 - [x] T548 cli: `demo --preset` default selection
-- [ ] T549 cli: `serve --cors` overrides env origins
+- [x] T549 cli: `serve --cors` overrides env origins
 - [ ] T550 test: P29 CLI sweep
 
 ## P30 Demo (T551–T570)

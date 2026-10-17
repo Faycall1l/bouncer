@@ -97,3 +97,21 @@ def test_demo_preset_flag(capsys):  # T548
     with pytest.raises(SystemExit) as ei:
         _demo(Args())
     assert ei.value.code == 4 and "unknown preset" in capsys.readouterr().err
+
+
+def test_serve_cors_flag(monkeypatch):  # T549
+    import os
+    import sys as _sys
+    import types as _types
+
+    from gatekeeper.cli import _cmd_serve
+    fake = _types.ModuleType("uvicorn")
+    fake.run = lambda *x, **k: None
+    monkeypatch.setitem(_sys.modules, "uvicorn", fake)
+    monkeypatch.delenv("BOUNCER_CORS", raising=False)
+
+    class Args:
+        host, port, workers, key_file = "127.0.0.1", 8000, 1, None
+        cors = "https://a.example,https://b.example"
+    assert _cmd_serve(Args()) == 0
+    assert os.environ["BOUNCER_CORS"] == "https://a.example,https://b.example"

@@ -323,9 +323,9 @@ def _add_threshold_flags(p) -> None:
     p.add_argument("--delete-threshold", type=float, default=None)  # T223
 
 
-def _cmd_serve(args) -> int:  # T547: key-file (docker-secrets style) before uvicorn
+def _cmd_serve(args) -> int:  # T547+T549: secrets/flags applied before uvicorn starts
+    import os
     if getattr(args, "key_file", None):
-        import os
         try:
             with open(args.key_file) as f:
                 key = f.read().strip()
@@ -336,6 +336,8 @@ def _cmd_serve(args) -> int:  # T547: key-file (docker-secrets style) before uvi
             print("bouncer: --key-file is empty", file=sys.stderr)
             return 4
         os.environ["BOUNCER_API_KEY"] = key
+    if getattr(args, "cors", None):  # T549: flag beats env
+        os.environ["BOUNCER_CORS"] = args.cors
     import uvicorn
     uvicorn.run("gatekeeper.serve:app", host=args.host, port=args.port,
                 workers=args.workers)
@@ -370,6 +372,7 @@ def main(argv=None) -> int:
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--workers", type=int, default=1)  # T322
     s.add_argument("--key-file", default=None)  # T547: read API key from a file
+    s.add_argument("--cors", default=None)  # T549: comma origins, overrides env
     s.set_defaults(fn=_cmd_serve)
     d = sub.add_parser("demo")  # T069
     d.add_argument("--port", type=int, default=7860)  # T323
