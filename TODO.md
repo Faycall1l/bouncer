@@ -792,7 +792,7 @@
 - [x] T715 pkg: LICENSE year + holder check
 - [x] T716 pkg: Dockerfile (slim, non-root, healthcheck)
 - [x] T717 pkg: docker-compose with volume for snapshots + secrets
-- [ ] T718 pkg: `.dockerignore` excludes models/, data dumps, git
+- [x] T718 pkg: `.dockerignore` excludes models/, data dumps, git
 - [ ] T719 pkg: container start runs `bouncer check` self-test
 - [ ] T720 pkg: image labels (org.opencontainers) in Dockerfile
 - [ ] T721 pkg: `pip install .` produces working `bouncer --version` (test)

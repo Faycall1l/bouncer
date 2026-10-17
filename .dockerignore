@@ -1,8 +1,24 @@
-# T062
+# T062+T718: keep the build context tiny — the image COPYs only
+# pyproject.toml, README.md, LICENSE, MANIFEST.in and src/.
+# git history
+.git
+.gitignore
+.venv
+# weights + their cache (never inside an image layer)
+models/
+hf-cache/
+# data dumps (jsonl exports, dataset material, stats)
+data/
+*.jsonl
+bouncer-stats.json
+# bytecode, anywhere in the tree
+**/__pycache__
+**/*.pyc
 __pycache__
 *.pyc
-.venv
-.git
-hf-cache/
-*.jsonl
+# secrets
 .env
+# local build artifacts
+build/
+dist/
+*.egg-info

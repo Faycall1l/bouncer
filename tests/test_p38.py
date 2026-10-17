@@ -235,3 +235,37 @@ def test_compose_snapshot_volumes_and_secrets():  # T717
                            check=False, capture_output=True, text=True,
                            timeout=60)
         assert r.returncode == 0, r.stderr
+
+
+def _docker_ignored(path: str, rules: list) -> bool:  # T718: tiny matcher
+    from fnmatch import fnmatch
+    first = path.split("/")[0]
+    for r in rules:
+        r = r.strip()
+        if not r or r.startswith("#"):
+            continue
+        if r.endswith("/"):
+            if path.startswith(r) or first == r.rstrip("/"):
+                return True
+        elif fnmatch(path, r) or fnmatch(first, r) or first == r:
+            return True
+    return False
+
+
+def test_dockerignore_keeps_context_tiny():  # T718
+    rules = Path(".dockerignore").read_text().splitlines()
+    # the box's contract: models, data dumps, git — plus the usual suspects
+    must = ("models/", "data/", "*.jsonl", ".git", ".env", "hf-cache/")
+    for rule in must:
+        assert rule in rules, f".dockerignore lost {rule}"
+    # every path that must never reach the build context stays out...
+    heavy = [".git/objects/pack/x", "models/laya-30ms.bin",
+             "hf-cache/models--x/blob", ".env", "bouncer-audit.jsonl",
+             "data/examples.jsonl", "src/gatekeeper/__pycache__/m.pyc",
+             "bouncer-stats.json"]
+    for p in heavy:
+        assert _docker_ignored(p, rules), p
+    # ...while everything the Dockerfile COPYs is still in the context
+    for p in ("src/gatekeeper/__init__.py", "src/gatekeeper/adapters/common.py",
+              "pyproject.toml", "README.md", "LICENSE", "MANIFEST.in"):
+        assert not _docker_ignored(p, rules), f"context would lose {p}"
