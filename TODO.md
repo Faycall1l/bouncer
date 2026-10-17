@@ -666,7 +666,7 @@
 - [x] T601 docs: CHANGELOG 0.3.0 entry drafted
 - [x] T602 docs: thresholds guide breaker knobs
 - [x] T603 docs: presets catalogue preset-lang tags
-- [ ] T604 docs: adapters README model routing note
+- [x] T604 docs: adapters README model routing note
 - [ ] T605 docs: data README i18n + report flags
 - [ ] T606 pkg: `snapshot` CLI surfaced in README command list
 - [ ] T607 docs: gates.md breaker demotion row
