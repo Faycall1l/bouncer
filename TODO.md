@@ -655,7 +655,7 @@
 ## P32 Docs + packaging (T591–T610)
 - [x] T591 docs: README persistence section (snapshot CLI + files)
 - [x] T592 docs: README pools section (max, device, model=)
-- [ ] T593 docs: README preset-as-rules + default preset
+- [x] T593 docs: README preset-as-rules + default preset
 - [ ] T594 docs: README i18n + breaker sections
 - [ ] T595 docs: api.md preset field + E_PRESET/E_LANG
 - [ ] T596 docs: api.md /ready + timeout_s + model fields

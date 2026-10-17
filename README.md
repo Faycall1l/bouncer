@@ -101,6 +101,21 @@ LRU pool keyed by constructor kwargs:
 * Pool size/hits/evictions appear in `GET /stats`, `GET /ready`, and
   `bouncer models`.
 
+## Presets as rules (T593)
+
+A "preset" is just a named rule-pack (`bouncer presets` lists them with
+language tags; `bouncer pack init FILE --preset gaming` writes one out to edit).
+Anywhere bouncer takes `rules`, it also takes `preset` — **never both**:
+
+* `bouncer check "msg" --preset study` · `POST /predict {"message": …, "preset": "es"}`
+* `GET /presets/{name}` returns the pack for inspection.
+* Passing both exits 4 (CLI) / `422 E_PRESET` (API) — packs are single-sourced,
+  mixing silently merges nothing.
+* `BOUNCER_DEFAULT_PRESET=study` fills the gap server-side: requests with neither
+  `rules` nor `preset` use it (bad value → `E_PRESET`).
+* Presets carry a language tag (`PRESET_LANG`): choosing `es`/`fr`/`ar` also hints
+  the language downstream (reason language, model routing).
+
 ## Persistence (T591)
 
 Nothing persists by default — bouncer is in-memory per process. Two opt-in files:
