@@ -12,8 +12,10 @@ data/*-*.jsonl
 .kaggle/
 .env
 .DS_Store
-bouncer-audit*.jsonl
+bouncer-audit*.jsonl*
+bouncer-stats.json
 review-queue.jsonl
+audit.csv
 .ipynb_checkpoints/
 eval/reports/*.json
 eval/reports/*.jsonl

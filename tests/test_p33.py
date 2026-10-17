@@ -240,6 +240,20 @@ def test_multitenancy_isolation():  # T622: same text, preset A vs B, no bleed
     assert r3.json()["cached"] is True
 
 
+def test_persistence_files_git_ignored():  # T623: runtime state never committed
+    import subprocess
+    # every file bouncer can write at runtime must be ignored by git
+    candidates = ["bouncer-audit.jsonl", "bouncer-audit.jsonl.1", "review-queue.jsonl",
+                  "bouncer-stats.json", "audit.csv",
+                  "eval/reports/zero-shot.json", "eval/reports/breaker.json",
+                  "eval/reports/i18n.json", ".env"]
+    r = subprocess.run(["git", "check-ignore", "--stdin"], input="\n".join(candidates),
+                       capture_output=True, text=True, check=True)
+    ignored = set(r.stdout.split())
+    missing = set(candidates) - ignored
+    assert not missing, f"not gitignored: {sorted(missing)}"
+
+
 def test_pool_eviction_under_max():  # T616
     from gatekeeper.pool import RouterPool
     built = []
