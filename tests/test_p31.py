@@ -127,3 +127,13 @@ def test_validate_limit_truncates(tmp_path):  # T585
     assert full.returncode == 1  # the malformed row is caught without --limit
     assert json.loads([l for l in full.stdout.splitlines()
                        if l.startswith("{")][-1])["errors"] == 1
+
+
+def test_i18n_rows_validate_clean():  # T586: shipped fixtures stay schema-clean
+    r = _run("eval/validate_data.py", "data/examples_i18n.jsonl", "--json")
+    assert r.returncode == 0, r.stdout + r.stderr
+    rep = json.loads([l for l in r.stdout.splitlines() if l.startswith("{")][-1])
+    assert rep["errors"] == 0
+    with open("data/examples_i18n.jsonl") as f:
+        langs = [json.loads(l)["state"]["rules"] for l in f]
+    assert len(langs) == 12  # 4 each es/fr/ar (T504)
