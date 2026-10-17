@@ -790,7 +790,7 @@
 - [x] T713 pkg: wheel builds clean (`uv build` PEP 517 smoke test)
 - [x] T714 pkg: sdist includes LICENSE, README, data/examples
 - [x] T715 pkg: LICENSE year + holder check
-- [ ] T716 pkg: Dockerfile (slim, non-root, healthcheck)
+- [x] T716 pkg: Dockerfile (slim, non-root, healthcheck)
 - [ ] T717 pkg: docker-compose with volume for snapshots + secrets
 - [ ] T718 pkg: `.dockerignore` excludes models/, data dumps, git
 - [ ] T719 pkg: container start runs `bouncer check` self-test

@@ -183,3 +183,22 @@ def test_license_year_and_holder():  # T715
     assert py["project"]["license"]["text"] == "Apache-2.0"
     assert any("Apache Software License" in c
                for c in py["project"]["classifiers"])
+
+
+def test_dockerfile_slim_nonroot_healthcheck():  # T716
+    text = Path("Dockerfile").read_text()
+    # slim base, pinned to a minor so rebuilds don't silently jump distros
+    from_lines = [l for l in text.splitlines() if l.startswith("FROM ")]
+    assert from_lines == ["FROM python:3.12-slim"], from_lines
+    # non-root: a dedicated user is created and switched to
+    assert "useradd" in text and "USER bouncer" in text
+    # a healthcheck exists and probes the real liveness route (T046),
+    # not /ready — weights downloading must not mark the container sick
+    assert "HEALTHCHECK" in text and "/health" in text
+    assert "start-period" in text  # cold start downloads weights
+    # production image ships runtime deps only: no dev extra, no editable
+    # install that would need the source tree to stay put
+    assert ".[dev]" not in text and " -e " not in text and '-e "' not in text
+    # and it still serves the same app the compose file expects
+    assert 'CMD ["uvicorn", "gatekeeper.serve:app"' in text
+    assert "EXPOSE 8000" in text
