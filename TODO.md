@@ -794,7 +794,7 @@
 - [x] T717 pkg: docker-compose with volume for snapshots + secrets
 - [x] T718 pkg: `.dockerignore` excludes models/, data dumps, git
 - [x] T719 pkg: container start runs `bouncer check` self-test
-- [ ] T720 pkg: image labels (org.opencontainers) in Dockerfile
+- [x] T720 pkg: image labels (org.opencontainers) in Dockerfile
 - [ ] T721 pkg: `pip install .` produces working `bouncer --version` (test)
 - [ ] T722 pkg: dependency floor pins (`>=`) for fastapi/gradio/pydantic
 - [ ] T723 pkg: no hard dep on numpy/laya for core import (weightless check)

@@ -305,3 +305,27 @@ def test_container_entrypoint_runs_self_test(monkeypatch, tmp_path):  # T719
         r = run_entry(rc, "true")
         assert r.returncode == 1, rc
         assert "self-test failed" in r.stderr, rc
+
+
+def test_dockerfile_oci_labels_are_honest():  # T720
+    import re
+    text = Path("Dockerfile").read_text()
+    py = _pyproject()
+    labels = dict(re.findall(
+        r"^\s*(?:LABEL\s+)?org\.opencontainers\.image\.([\w.]+)=\"([^\"]*)\""
+        r"\s*\\?\s*$",
+        text, re.MULTILINE))
+    for key in ("title", "description", "authors", "source", "url",
+                "licenses", "base.name"):
+        assert key in labels, f"missing OCI label: {key}"
+    # every value agrees with the shipped metadata — no free-hand marketing
+    assert labels["title"] == py["project"]["name"]
+    assert labels["description"] == py["project"]["description"]
+    assert labels["authors"] == py["project"]["authors"][0]["name"]
+    assert labels["source"] == py["project"]["urls"]["Homepage"]
+    assert labels["licenses"] == py["project"]["license"]["text"]
+    from_line = next(l for l in text.splitlines() if l.startswith("FROM "))
+    assert labels["base.name"].endswith(from_line.split()[1])
+    # version/created stay CI-stamped: a static one would rot (T720 decision)
+    assert "version" not in labels and "created" not in labels
+    assert "CI stamps them at build time" in text

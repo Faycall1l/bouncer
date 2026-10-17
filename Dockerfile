@@ -17,6 +17,16 @@ RUN pip install --no-cache-dir . \
     && chown -R bouncer:bouncer /app /home/bouncer/.cache
 USER bouncer
 ENV HOME=/home/bouncer
+# T720: OCI labels, values kept honest by test (match pyproject metadata).
+# version/created are deliberately absent — CI stamps them at build time so
+# a static label can never silently rot.
+LABEL org.opencontainers.image.title="gatekeeper-1" \
+      org.opencontainers.image.description="Programmable live-chat moderation in one 30ms System One forward pass (Laya/Jev-compatible)" \
+      org.opencontainers.image.authors="gatekeeper-1 contributors" \
+      org.opencontainers.image.source="https://github.com/Faycall1l/bouncer" \
+      org.opencontainers.image.url="https://github.com/Faycall1l/bouncer" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.base.name="docker.io/library/python:3.12-slim"
 EXPOSE 8000
 # T716: liveness against /health (T046) — /ready would flap while weights
 # download on first run. T719: start-period covers the self-test plus the
