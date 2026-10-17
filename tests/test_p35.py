@@ -251,6 +251,27 @@ def test_release_checklist_accuracy_item():  # T669: numbers refreshed before ta
     assert "docs/RELEASE-CHECKLIST.md" in _src("CONTRIBUTING.md")
 
 
+def test_p35_numbers_consistent_everywhere():  # T670 sweep: one set of numbers
+    bench = _src("BENCHMARKS.md")
+    assert "0.403" in bench and "2×T4" in bench  # T666 costs block present
+    assert "finetune-run-impact.md" in bench  # T665 draft is linked
+    impact = _src("docs/drafts/finetune-run-impact.md")
+    assert "0.305" in impact and "0.403" in impact  # before-column is measured
+    assert "**Status: draft.**" in impact  # nothing in it pretends to be measured
+    train = _src("kaggle/train/train.py")
+    assert "REGEX_FLOOR = 0.403" in train and "DEV_FLOOR = 0.35" in train
+
+
+def test_compare_models_render_table(tmp_path):  # T670 sweep: human output path
+    b, f_ = tmp_path / "base.json", tmp_path / "ft.json"
+    b.write_text(json.dumps({"model": "base-router", "n": 10, "rule_acc": 0.3}))
+    f_.write_text(json.dumps({"model": "bouncer-421m", "n": 10, "rule_acc": 0.5}))
+    r = _run_py("eval/compare_models.py", str(b), str(f_))
+    assert r.returncode == 0, r.stderr
+    assert "rule_acc" in r.stdout and "better" in r.stdout
+    assert "ft wins 1 / base wins 0" in r.stdout  # table + verdict line render
+
+
 def test_eval_after_train_cell():  # T660: CI metrics on the held-out split
     src = _src("kaggle/train/train.py")
     assert "test_split.jsonl" in src  # split always written OUT

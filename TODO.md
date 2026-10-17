@@ -738,7 +738,7 @@
 - [x] T667 ft: failure modes documented (OOM, token cap, label noise)
 - [x] T668 ft: base-vs-finetune eval comparison script (weights optional)
 - [x] T669 ft: RELEASE checklist item "accuracy numbers refreshed"
-- [ ] T670 test: P35 fine-tune plumbing sweep (weightless)
+- [x] T670 test: P35 fine-tune plumbing sweep (weightless)
 
 ## P36 Eval gates (T671–T690)
 - [ ] T671 eval: `gate.py` — pass/fail thresholds over a report JSON
