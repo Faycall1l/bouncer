@@ -26,3 +26,15 @@ def test_breaker_sim_weightless(tmp_path):  # T580+T589
     assert os.path.exists(out)
     with open(out) as f:
         assert json.load(f)["events"] == rep["events"]  # report file matches stdout
+
+
+def test_pool_bench_weightless(tmp_path):  # T581
+    out = str(tmp_path / "pool.json")
+    r = _run("eval/bench_pool.py", "--max-n", "2", "--requests", "6",
+             "--out", out, "--json")
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(r.stdout)
+    assert rep["stats"]["size"] == 2 and rep["pooled_s"] < rep["naive_s"] * 2
+    assert rep["thrash"]["stats"]["evictions"] > 0  # eviction demo always fires
+    with open(out) as f:
+        assert json.load(f)["stats"] == rep["stats"]

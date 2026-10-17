@@ -641,7 +641,7 @@
 - [x] T578 docs: eval/reports README lists new artifacts
 - [x] T579 docs: data/README documents i18n file
 - [x] T580 test: breaker sim runs weightless (subprocess)
-- [ ] T581 test: pool bench runs weightless
+- [x] T581 test: pool bench runs weightless
 - [ ] T582 test: synth --report shape
 - [ ] T583 test: eval --model flag surfaces in report
 - [ ] T584 test: baseline --limit truncates
