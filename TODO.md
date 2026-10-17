@@ -692,6 +692,6 @@
 - [x] T625 docs: golden 0.3.0 behavior note
 - [x] T626 docs: CHANGELOG 0.3.0 dated
 - [x] T627 docs: release draft + tag v0.3.0 (draft here; tag minted at T630 after the final gates)
-- [ ] T628 test: breaker + pool metrics lines
+- [x] T628 test: breaker + pool metrics lines
 - [ ] T629 suite: final full green + stats
 - [ ] T630 final: push v0.3.0

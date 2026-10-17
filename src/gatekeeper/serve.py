@@ -192,6 +192,11 @@ def metrics():
     with _BREAKER_LOCK:
         is_open = time.time() < _BREAKER["open_until"]
     lines.append(f"bouncer_breaker_open {int(is_open)}")
+    from .pool import POOL  # T628: pool health in the same scrape
+    ps = POOL.stats()
+    lines += [f"bouncer_pool_size {ps['size']}", f"bouncer_pool_max {ps['max_n']}",
+              f"bouncer_pool_hits {ps['hits']}", f"bouncer_pool_creates {ps['creates']}",
+              f"bouncer_pool_evictions {ps['evictions']}"]
     return PlainTextResponse("\n".join(lines) + "\n")
 
 

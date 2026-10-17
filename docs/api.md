@@ -11,7 +11,7 @@
 * `GET /health` loaded/unavailable + uptime · `GET /version` · `GET /models` ·
   `GET /stats` (decisions + cache + version + uptime) · `GET /presets` ·
   `GET /metrics` (per-action counters, cache hits/misses/rate, latency p50,
-  `bouncer_info{version}`, uptime).
+  `bouncer_info{version}`, uptime, `bouncer_breaker_open`, `bouncer_pool_*`).
 * Headers: `X-Request-ID` echo, `X-Bouncer-ms` latency,
   `X-Content-Type-Options: nosniff`. Optional `X-API-Key` when `BOUNCER_KEY`
   set (constant-time compare; <16 chars warns at boot). 60 req/min/IP with

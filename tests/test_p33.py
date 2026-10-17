@@ -271,6 +271,37 @@ def test_version_strings_consistent():  # T624: 0.3.0 in pkg + pyproject
     assert build_parser() is not None  # parser builds against this version
 
 
+def test_breaker_and_pool_metrics_lines():  # T628
+    import time as _t
+
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    serve._BUCKETS.clear()
+    c = TestClient(serve.app)
+    r = c.get("/metrics")
+    assert r.status_code == 200
+    body = r.text
+    for line in ("bouncer_breaker_open", "bouncer_pool_size", "bouncer_pool_max",
+                 "bouncer_pool_hits", "bouncer_pool_creates",
+                 "bouncer_pool_evictions"):
+        assert line in body, f"missing {line}"
+        val = next(l for l in body.splitlines() if l.startswith(line + " "))
+        assert float(val.split()[1]) >= 0  # well-formed numeric sample
+    # breaker flip is observable: mark it open, scrape again
+    with gatekeeper._BREAKER_LOCK:
+        gatekeeper._BREAKER["open_until"] = _t.time() + 60
+    r = c.get("/metrics")
+    assert "bouncer_breaker_open 1" in r.text
+    with gatekeeper._BREAKER_LOCK:
+        gatekeeper._BREAKER["open_until"] = 0.0
+    assert "bouncer_breaker_open 0" in c.get("/metrics").text
+    from gatekeeper.pool import POOL
+    POOL.clear()
+
+
 def test_pool_eviction_under_max():  # T616
     from gatekeeper.pool import RouterPool
     built = []
