@@ -10,6 +10,8 @@ def to_laya_records(path):
         for line in f:
             row = json.loads(line)
             s, lab = row["state"], row["labels"]
+            assert s.get("rules"), "row has no rules — wrong file? (T651)"
+            assert lab["harm"] in HARM and lab["hype"] in HYPE, "label out of range (T651)"
             rules = s["rules"]
             criteria = dict(rules); criteria["ok"] = "message follows all rules"
             recs.append({"state": s,
@@ -23,6 +25,7 @@ def to_laya_records(path):
                 # score levels MUST be int indices (laya list-criteria); choice = label str; noul = bool
                 "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]), "hype": HYPE.index(lab["hype"]),
                             "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}})
+    assert recs, "no records built — empty input file? (T651)"
     return recs
 
 # On Kaggle, after `pip install laya`:

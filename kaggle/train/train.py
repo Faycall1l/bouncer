@@ -26,12 +26,20 @@ import torch
 assert torch.cuda.is_available(), "needs GPU — wait for quota reset"
 device = torch.device("cuda")
 
-# --- rows: gatekeeper jsonl -> {state, questions, expected} ---
+# --- rows: gatekeeper jsonl -> {state, questions, expected} (T651: assert each stage) ---
 HARM = ["safe", "suspicious", "harmful"]
 HYPE = ["dead", "chill", "hyped"]
 paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
+assert paths, "no /kaggle/input/**/*.jsonl — upload the dataset first (T657)"
 with open(paths[0]) as f:
     rows_raw = [json.loads(line) for line in f]
+assert len(rows_raw) >= 2000, f"need 2000 rows (1500 train + 500 test), got {len(rows_raw)}"
+sample = rows_raw[0]
+assert "state" in sample and "labels" in sample, "row schema mismatch (T386)"
+assert isinstance(sample["state"].get("rules"), dict) and sample["state"]["rules"], \
+    "state.rules must be a non-empty mapping"
+assert set(sample["labels"]) >= {"rule", "harm", "hype", "jailbreak", "escalate"}, \
+    "labels missing heads"
 random.seed(7); random.shuffle(rows_raw)
 train_rows, test_rows = rows_raw[:1500], rows_raw[1500:2000]
 
@@ -66,6 +74,8 @@ OUT = "/kaggle/working/bouncer-421m"
 items, skipped = items_from_rows(tok, [to_row(r) for r in train_rows],
                                  cfg["max_len"], cfg["head_max_len"])
 print(f"ITEMS={len(items)} SKIPPED={skipped}", flush=True)
+assert items, "tokenizer produced zero items — check max_len/head_max_len"
+assert skipped < len(train_rows) * 0.5, f"skipped {skipped}/{len(train_rows)} rows — malformed data?"
 
 # --- single-GPU RLCD (same canonical fns as train_ddp.py) ---
 from laya.calibrate import fit_temperature_map
@@ -82,12 +92,15 @@ from safetensors.torch import load_file
 
 model = build_model(cfg, encoder_dir=os.path.join(model_dir, "encoder"))
 model.load_state_dict(load_file(os.path.join(model_dir, "model.safetensors")), strict=True)
+assert any("encoder." in n for n, _ in model.named_parameters()), "no encoder params — wrong build?"
 model.encoder.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 model.head_checkpointing = True
 model.to(device).train()
 
 train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.1, seed=20260922)
+assert train_items and calib_items, "empty train or calibration split"
 EPOCHS, MICRO, ACCUM = 3, 8, 8  # eff batch 64, same as 2xT4 recipe
+assert len(train_items) >= MICRO, "fewer items than one micro-batch"
 enc_p = [p for n, p in model.named_parameters() if "encoder." in n]
 head_p = [p for n, p in model.named_parameters() if "encoder." not in n]
 opt = torch.optim.AdamW([{"params": enc_p, "lr": 2.5e-5}, {"params": head_p, "lr": 1e-4}], weight_decay=0.01)

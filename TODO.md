@@ -719,7 +719,7 @@
 - [x] T650 test: P34 build pipeline sweep
 
 ## P35 Fine-tune run (T651–T670)
-- [ ] T651 ft: notebook review — every cell has an assert before training
+- [x] T651 ft: notebook review — every cell has an assert before training
 - [ ] T652 ft: LoRA rank/alpha configurable at notebook top (single block)
 - [ ] T653 ft: early-stopping on dev rule_acc (patience constant)
 - [ ] T654 ft: loss logged as JSONL per epoch (not just wandb)
