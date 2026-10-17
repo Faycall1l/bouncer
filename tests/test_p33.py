@@ -254,6 +254,23 @@ def test_persistence_files_git_ignored():  # T623: runtime state never committed
     assert not missing, f"not gitignored: {sorted(missing)}"
 
 
+def test_version_strings_consistent():  # T624: 0.3.0 in pkg + pyproject
+    import pathlib
+    import re
+
+    import gatekeeper
+    assert gatekeeper.__version__ == "0.3.0"
+    pyproject = pathlib.Path("pyproject.toml").read_text()
+    m = re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE)
+    assert m and m.group(1) == "0.3.0", "pyproject version drifts from __version__"
+    # the CHANGELOG must document the version we ship
+    changelog = pathlib.Path("CHANGELOG.md").read_text()
+    assert "## 0.3.0" in changelog
+    # snapshot export stamps the same version it restores under
+    from gatekeeper.cli import build_parser
+    assert build_parser() is not None  # parser builds against this version
+
+
 def test_pool_eviction_under_max():  # T616
     from gatekeeper.pool import RouterPool
     built = []

@@ -688,7 +688,7 @@
 - [x] T621 test: timeout + model fields e2e
 - [x] T622 test: multitenancy isolation (preset A vs B same text)
 - [x] T623 test: persistence files ignored by git
-- [ ] T624 test: version strings consistent (0.3.0 everywhere)
+- [x] T624 test: version strings consistent (0.3.0 everywhere)
 - [ ] T625 docs: golden 0.3.0 behavior note
 - [ ] T626 docs: CHANGELOG 0.3.0 dated
 - [ ] T627 docs: release draft + tag v0.3.0
