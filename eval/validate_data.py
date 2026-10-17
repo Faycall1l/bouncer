@@ -8,6 +8,8 @@ def check_row(row: dict, i: int) -> list:
     errs = []
     if not isinstance(row, dict):
         return [f"row {i}: not an object"]
+    if "v" in row and row["v"] != 1:  # T640: stamped rows must be current schema
+        errs.append(f"row {i}: unsupported schema version {row['v']!r} (want 1)")
     s, lab = row.get("state"), row.get("labels")
     if not isinstance(s, dict):
         errs.append(f"row {i}: missing state object")

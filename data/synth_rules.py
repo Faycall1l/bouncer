@@ -70,7 +70,7 @@ def template_rows(n):
         else:
             pools = [p for p in RULE_POOLS if rule in p] or RULE_POOLS
             rules = random.choice(pools)
-        rows.append({"state": {"message": msg, "history": synth_history(), "rules": rules},
+        rows.append({"v": 1, "state": {"message": msg, "history": synth_history(), "rules": rules},
                      "labels": {"rule": rule, "harm": harm, "hype": hype,
                                 "jailbreak": bool(jb), "escalate": bool(esc)}})
     return rows
@@ -82,7 +82,7 @@ def hard_rows(n):
         msg, rule, harm, hype, jb, esc = random.choice(HARD_NEGATIVES)
         pools = [p for p in RULE_POOLS if rule in p] or RULE_POOLS
         rules = random.choice(pools)
-        rows.append({"state": {"message": msg, "history": synth_history(), "rules": rules},
+        rows.append({"v": 1, "state": {"message": msg, "history": synth_history(), "rules": rules},
                      "labels": {"rule": rule, "harm": harm, "hype": hype,
                                 "jailbreak": bool(jb), "escalate": bool(esc)}})
     return rows
@@ -99,7 +99,7 @@ def llm_rows(n, model="qwen3-4b"):
         try:
             d = json.loads(r.choices[0].message.content.strip().strip("`"))
             d["rules"] = rules
-            rows.append({"state": {"message": d["message"], "history": synth_history(), "rules": rules},
+            rows.append({"v": 1, "state": {"message": d["message"], "history": synth_history(), "rules": rules},
                          "labels": {"rule": d["rule"] if d["rule"] in rules or d["rule"]=="ok" else "ok",
                                     "harm": d["harm"], "hype": d["hype"],
                                     "jailbreak": bool(d["jailbreak"]), "escalate": bool(d["escalate"])}})
