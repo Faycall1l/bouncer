@@ -638,7 +638,7 @@
 - [x] T575 docs: BENCHMARKS pool/breaker notes
 - [x] T576 eval: `eval_gatekeeper --model` (passes model= through)
 - [x] T577 eval: `baseline --limit` flag
-- [ ] T578 docs: eval/reports README lists new artifacts
+- [x] T578 docs: eval/reports README lists new artifacts
 - [ ] T579 docs: data/README documents i18n file
 - [ ] T580 test: breaker sim runs weightless (subprocess)
 - [ ] T581 test: pool bench runs weightless
