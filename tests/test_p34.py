@@ -271,3 +271,22 @@ def test_12k_template_build_end_to_end(tmp_path):  # T647: full-size pipeline ru
     with open(out) as f:
         all_rows = [json.loads(l) for l in f]
     assert all(x["v"] == 1 and 2 <= len(x["state"]["history"]) <= 4 for x in all_rows)
+
+
+def test_i18n_rows_flow_through_pipeline(tmp_path):  # T649: not hand-kept
+    out = str(tmp_path / "i18n.jsonl")
+    r = _run("data/build_dataset.py", "--i18n", "--seed", "42", "--out", out)
+    assert r.returncode == 0, r.stderr
+    with open(out) as f:
+        gen = [json.loads(l) for l in f]
+    with open("data/examples_i18n.jsonl") as f:
+        shipped = [json.loads(l) for l in f]
+    assert len(gen) == len(shipped) == 12
+
+    def key(r_):
+        return (r_["state"]["message"], r_["labels"]["rule"])
+
+    assert sorted(map(key, gen)) == sorted(map(key, shipped))  # same fixtures
+    assert len({tuple(sorted(x["state"]["rules"])) for x in gen}) == 3  # 3 langs
+    for x in gen + shipped:  # pipeline shape everywhere: stamped + historyed
+        assert x["v"] == 1 and x["state"]["history"]

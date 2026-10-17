@@ -18,7 +18,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 sys.path.insert(0, os.path.join(_HERE, "..", "eval"))
 
-from synth_rules import hard_rows, llm_rows, template_rows
+from synth_rules import hard_rows, i18n_rows, llm_rows, template_rows
 from validate_data import check_row
 
 NAMES = ("train", "dev", "test")
@@ -184,18 +184,26 @@ def main(argv=None) -> int:
                     help="hard-negative rows to inject (default: n//10, 0 disables)")
     ap.add_argument("--stratify", action="store_true",  # T643: label-preserving
                     help="place servers to keep label shares close to the global mix")
+    ap.add_argument("--i18n", action="store_true",  # T649: translated fixtures
+                    help="build the i18n fixture set through the pipeline instead")
     a = ap.parse_args(argv)
 
     if a.seed is not None:
         random.seed(a.seed)
     teacher_bad = []  # T645: llm_rows failures quarantined, never dropped
-    if a.template_only or not os.environ.get("OPENAI_API_KEY"):
+    if a.i18n:  # T649: fixtures flow through the pipeline like every other row
+        if a.out == "data/gatekeeper-12k.jsonl":
+            a.out = "data/examples_i18n.jsonl"
+        rows = i18n_rows()
+        a.no_split = True  # one flat fixture file, no server-disjoint split
+    elif a.template_only or not os.environ.get("OPENAI_API_KEY"):
         rows = template_rows(a.n)
     else:
         rows = template_rows(a.n // 3) + llm_rows(2 * a.n // 3, quarantine=teacher_bad)
-    hard = a.hard_n if a.hard_n is not None else a.n // 10  # T636
-    if hard > 0:
-        rows += hard_rows(hard)
+    if not a.i18n:
+        hard = a.hard_n if a.hard_n is not None else a.n // 10  # T636
+        if hard > 0:
+            rows += hard_rows(hard)
     random.shuffle(rows)
     deduped = None
     if a.dedupe:  # T634: before validation, so dropped rows never get checked

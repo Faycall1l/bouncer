@@ -62,6 +62,46 @@ def synth_history(n=None):
     return [f"{random.choice(HIST_USERS)}: {random.choice(HIST_MSGS)}" for _ in range(n)]
 
 
+I18N_RULESETS = {  # T649: translated rule-sets, one per fixture language
+    "es": {"sin-spam": "sin anuncios, enlaces, autopromoción ni regalos de cripto",
+           "se-amable": "sin insultos, odio ni acoso a jugadores",
+           "sin-spoilers": "sin spoilers sin etiqueta"},
+    "fr": {"pas-de-spam": "pas de pubs, liens, autopromo ni cadeaux crypto",
+           "soyez-aimable": "pas d'insultes, de haine ni de harcèlement",
+           "pas-de-spoilers": "pas de spoilers sans balise"},
+    "ar": {"bla-spam": "ممنوع الإعلانات والروابط والترويج الذاتي",
+           "khalik-latif": "ممنوع الشتائم والكراهية والمضايقة",
+           "bla-harg": "ممنوع حرق الأحداث بدون وسم"},
+}
+
+I18N_SEEDS = [  # T649: (lang, message, rule, harm) — history/stamp via pipeline
+    ("es", "GG buena partida a todos", "ok", "safe"),
+    ("es", "COMPRA NITRO GRATIS http://x.gg YA", "sin-spam", "suspicious"),
+    ("es", "todos ustedes son malísimos, desinstalen", "se-amable", "harmful"),
+    ("es", "EL FINAL muere al final jajaja", "sin-spoilers", "suspicious"),
+    ("fr", "GG bien joué à tous", "ok", "safe"),
+    ("fr", "NITRO GRATUIT http://x.gg CLIQUEZ", "pas-de-spam", "suspicious"),
+    ("fr", "vous êtes tous nuls, désinstallez", "soyez-aimable", "harmful"),
+    ("fr", "SPOILER il meurt à la fin mdr", "pas-de-spoilers", "suspicious"),
+    ("ar", "مباراة رائعة يا جماعة", "ok", "safe"),
+    ("ar", "نيترو مجاني http://x.gg اضغط الآن", "bla-spam", "suspicious"),
+    ("ar", "كلكم سيئون احذفوا اللعبة", "khalik-latif", "harmful"),
+    ("ar", "حرق النهاية يموت في الآخر ههه", "bla-harg", "suspicious"),
+]
+
+
+def i18n_rows():
+    """T649: i18n fixtures flow through the same pipeline as every other row
+    (history windows, schema stamp) — no hand-kept files."""
+    rows = []
+    for lang, msg, rule, harm in I18N_SEEDS:
+        rows.append({"v": 1, "state": {"message": msg, "history": synth_history(),
+                                       "rules": I18N_RULESETS[lang]},
+                     "labels": {"rule": rule, "harm": harm, "hype": "chill",
+                                "jailbreak": False, "escalate": False}})
+    return rows
+
+
 def template_rows(n):
     rows = []
     for _ in range(n):
