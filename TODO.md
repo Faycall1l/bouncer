@@ -610,7 +610,7 @@
 
 ## P30 Demo (T551–T570)
 - [x] T551 demo: user_id box → strikes attribution
-- [ ] T552 demo: meters shows strikes standing
+- [x] T552 demo: meters shows strikes standing
 - [ ] T553 demo: per-preset threshold memory (switch restores last values)
 - [ ] T554 demo: history download button (txt export)
 - [ ] T555 demo: review queue viewer (last 5 rows)

@@ -70,6 +70,11 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
                   f"esc={r['escalate_p']:.2f} abstained={r['abstained']}")
         meters += f" margin={r.get('margin', '?')}"  # T352
         meters += f" script={r.get('script', '?')}"  # T495
+        if uid:  # T552: standing for the attributed user (counts only)
+            from gatekeeper import strikes as _st
+            standing = _st.standing(uid)
+            meters += (f"\nstrikes={standing['strikes']} "
+                       f"suggest_ban={standing['suggest_ban']}")
         from gatekeeper.normalize import caps_flood, extract_links  # T175: regex baseline
         base = "delete" if extract_links(msg) else ("flag" if caps_flood(msg) else "allow")
         agree = base == r["action"]
