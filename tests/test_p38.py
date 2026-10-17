@@ -269,3 +269,39 @@ def test_dockerignore_keeps_context_tiny():  # T718
     for p in ("src/gatekeeper/__init__.py", "src/gatekeeper/adapters/common.py",
               "pyproject.toml", "README.md", "LICENSE", "MANIFEST.in"):
         assert not _docker_ignored(p, rules), f"context would lose {p}"
+
+
+def test_container_entrypoint_runs_self_test(monkeypatch, tmp_path):  # T719
+    import os
+    import subprocess
+    script = Path("scripts/docker-entrypoint.sh")
+    assert script.exists() and os.access(script, os.X_OK), "entrypoint not executable"
+    # shell syntax must be valid before anything else claims it works
+    r = subprocess.run(["sh", "-n", str(script)], capture_output=True,
+                       text=True, check=False)
+    assert r.returncode == 0, r.stderr
+    # the Dockerfile gates startup on it
+    dockerfile = Path("Dockerfile").read_text()
+    assert 'ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]' in dockerfile
+    assert "docker-entrypoint.sh" in dockerfile
+    # behavior: a stub bouncer returns each documented exit code and the
+    # entrypoint must hand off only on the tolerated ones (T719 contract)
+    stub_dir = tmp_path / "bin"
+    stub_dir.mkdir()
+    stub = stub_dir / "bouncer"
+    stub.write_text('#!/bin/sh\nexit "$STUB_RC"\n')
+    stub.chmod(0o755)
+
+    def run_entry(rc, *cmd):
+        e = {"PATH": f"{stub_dir}:/usr/bin:/bin", "STUB_RC": str(rc)}
+        return subprocess.run(["sh", str(script), *cmd], capture_output=True,
+                              text=True, env=e, timeout=30, check=False)
+
+    # tolerated exits hand off to the CMD and it really runs
+    r0 = run_entry(0, "echo", "handed-off")
+    assert r0.returncode == 0 and "handed-off" in r0.stdout
+    assert run_entry(3, "true").returncode == 0  # escalate: degraded but alive
+    for rc in (1, 2):                         # crash / delete-flag: kill boot
+        r = run_entry(rc, "true")
+        assert r.returncode == 1, rc
+        assert "self-test failed" in r.stderr, rc
