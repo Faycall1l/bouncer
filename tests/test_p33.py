@@ -190,6 +190,56 @@ def test_timeout_and_model_fields_e2e():  # T621
     assert r.status_code == 200
 
 
+def test_multitenancy_isolation():  # T622: same text, preset A vs B, no bleed
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    rules_seen: list = []
+
+    class Stub:
+        """Records which pack arrived; verdict keyed off that pack's rule ids."""
+
+        def predict(self, state, questions):
+            rules_seen.append(sorted(state["rules"]))
+            if "no-cheat" in state["rules"]:  # gaming pack
+                return {"answers": {
+                    "rule": {"choice": "no-cheat", "confidence": 0.97,
+                             "probabilities": {"no-cheat": 0.97, "ok": 0.03}},
+                    "harm": {"score": "safe", "probabilities": []},
+                    "hype": {"score": "chill", "probabilities": []},
+                    "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+            # study pack: no cheat rule to match -> plain ok
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95,
+                         "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Stub()
+    from gatekeeper.cache import CACHE
+    CACHE.clear()
+    serve._BUCKETS.clear()
+    c = TestClient(serve.app)
+    msg = "p33 same text everywhere"
+    r1 = c.post("/predict", json={"message": msg, "preset": "gaming"})
+    r2 = c.post("/predict", json={"message": msg, "preset": "study"})
+    r3 = c.post("/predict", json={"message": msg, "preset": "gaming"})
+    assert r1.status_code == r2.status_code == r3.status_code == 200
+    # each request carried its OWN pack: no merging, no last-one-wins
+    assert rules_seen[0] != rules_seen[1]
+    assert "no-cheat" in rules_seen[0] and "no-cheat" not in rules_seen[1]
+    # verdicts differ by tenant config even though text is identical
+    assert r1.json()["rule"] == "no-cheat" and r1.json()["action"] == "delete"
+    assert r2.json()["action"] != "delete"
+    # cache is per-config: study never saw gaming's entry (2 model calls total),
+    # while the gaming repeat served from cache without a third call
+    assert len(rules_seen) == 2
+    assert r3.json()["cached"] is True
+
+
 def test_pool_eviction_under_max():  # T616
     from gatekeeper.pool import RouterPool
     built = []
