@@ -18,7 +18,33 @@ class SlackError(Exception):  # T301
     code = "E_SLACK"
 
 
-def receive_slack_event(body: dict, rules: dict) -> dict:  # T078
+def verify_slack_signature(secret, ts, body, signature, *, now=None,
+                           tolerance_s: float = 300.0) -> bool:  # T704
+    """Slack's v0 scheme: HMAC-SHA256 over `v0:{ts}:{body}`, compared
+    constant-time, inside a replay window. Missing pieces are a mismatch,
+    never an exception. `body` must be the raw bytes/str Slack signed —
+    a re-serialized dict would silently mismatch on key order/whitespace."""
+    import time as _time
+    if now is None:
+        now = _time.time()
+    try:
+        if abs(now - float(ts)) > tolerance_s:
+            return False  # replay window: stale or clock-skewed beyond reason
+    except (TypeError, ValueError):
+        return False
+    from gatekeeper.adapters.common import verify_signature
+    return verify_signature(secret, signature, f"v0:{ts}:{body}", prefix="v0=")
+
+
+def receive_slack_event(body, rules, *, secret=None, raw=None, ts=None,  # T704
+                        signature=None) -> dict:  # T078
+    """Pass `secret` (+ the raw body, timestamp and X-Slack-Signature header)
+    to enforce T704 verification — fail-closed: a missing piece raises
+    E_SLACK instead of letting an unsigned event through."""
+    if secret is not None and (
+        raw is None or not verify_slack_signature(secret, ts, raw, signature)
+    ):
+        raise SlackError("E_SLACK: bad signature (T704)")
     from gatekeeper import moderate
     if not isinstance(body, dict):  # T301
         raise SlackError(f"E_SLACK: event body is {type(body).__name__}, expected dict")

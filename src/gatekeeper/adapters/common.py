@@ -57,6 +57,27 @@ def redact(s: str) -> str:
     return s
 
 
+def verify_signature(secret: str, header: str, body, *, prefix: str = "",
+                     digestmod: str = "sha256") -> bool:
+    """T704: constant-time HMAC signature check for webhook receivers.
+
+    Malformed input (None/empty secret, header, body) is a mismatch, never
+    an exception — a verifier that crashes on `None` hands out 500-response
+    oracles. `prefix` covers schemes like GitHub's `sha256=`. Comparison is
+    `hmac.compare_digest` throughout; no `==` on secrets, ever.
+    """
+    import hashlib
+    import hmac
+    if not secret or not header or body is None:
+        return False
+    if not isinstance(header, str) or not isinstance(secret, str):
+        return False
+    raw = body if isinstance(body, bytes) else str(body).encode()
+    expected = prefix + hmac.new(secret.encode(), raw,
+                                 getattr(hashlib, digestmod)).hexdigest()
+    return hmac.compare_digest(header, expected)
+
+
 def load_rules(adapter: str, default: str = "gaming") -> dict:
     """T698: where an adapter's rules come from, per adapter.
 

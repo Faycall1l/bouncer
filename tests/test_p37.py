@@ -859,7 +859,7 @@ def test_adapter_matrix_is_complete_and_honest():  # T703
     # the SDK column only names helpers that actually exist in common.py
     common = (ADAPTERS / "common.py").read_text()
     for fn in ("require_env", "load_rules", "run_loop", "Health", "RateCap",
-               "redact", "dry_run", "install_shutdown"):
+               "redact", "dry_run", "install_shutdown", "verify_signature"):
         assert f"def {fn}" in common or f"class {fn}" in common, fn
         assert fn in text, fn
     # env opt-ins named in the matrix are real env vars in the sources
@@ -868,3 +868,87 @@ def test_adapter_matrix_is_complete_and_honest():  # T703
         assert env in text
         assert any(env in (ADAPTERS / f).read_text()
                    for f in files), env
+
+
+def test_verify_signature_constant_time_helper():  # T704
+    sys.path.insert(0, "src")
+    import hashlib
+    import hmac as _hmac
+
+    from gatekeeper.adapters.common import verify_signature
+    body = '{"text": "hi"}'
+    good = _hmac.new(b"s3cret", body.encode(), hashlib.sha256).hexdigest()
+    assert verify_signature("s3cret", good, body) is True
+    assert verify_signature("s3cret", good, body + " ") is False  # tampered
+    assert verify_signature("s3cret", "deadbeef", body) is False
+    # GitHub-style prefixed scheme
+    assert verify_signature("s3cret", "sha256=" + good, body,
+                            prefix="sha256=") is True
+    assert verify_signature("s3cret", good, body, prefix="sha256=") is False
+    # bytes and str bodies verify identically
+    assert verify_signature("s3cret", good, body.encode()) is True
+    # malformed input is a mismatch, never an exception
+    assert verify_signature("", good, body) is False
+    assert verify_signature("s3cret", None, body) is False
+    assert verify_signature("s3cret", good, None) is False
+    assert verify_signature("s3cret", good, body,
+                            digestmod="sha512") is False
+    # comparison is constant-time, never ==
+    assert "compare_digest" in (ADAPTERS / "common.py").read_text()
+
+
+def test_slack_signature_scheme_and_replay_window(monkeypatch):  # T704
+    sys.path.insert(0, "src")
+    import hashlib
+    import hmac as _hmac
+    import time
+
+    import gatekeeper
+    from gatekeeper.adapters.webhooks import SlackError, receive_slack_event, verify_slack_signature
+    secret = "signing-secret-xyz"
+    raw = '{"text": "hello"}'
+    ts = "1729160000.000100"
+    sig = "v0=" + _hmac.new(secret.encode(), f"v0:{ts}:{raw}".encode(),
+                            hashlib.sha256).hexdigest()
+    monkeypatch.setattr(gatekeeper, "_router", _StubRouter())
+    now = float(ts)
+    assert verify_slack_signature(secret, ts, raw, sig, now=now) is True
+    assert verify_slack_signature(secret, ts, raw + "x", sig,
+                                  now=now) is False  # tampered body
+    # replay window: stale or future-skewed beyond tolerance fails
+    assert verify_slack_signature(secret, ts, raw, sig,
+                                  now=now + 301) is False
+    assert verify_slack_signature(secret, ts, raw, sig,
+                                  now=now - 301) is False
+    assert verify_slack_signature(secret, ts, raw, sig, now=now + 60) is True
+    # garbage timestamps and missing pieces are mismatches, not crashes
+    assert verify_slack_signature(secret, "not-a-ts", raw, sig,
+                                  now=now) is False
+    assert verify_slack_signature(secret, ts, raw, None, now=now) is False
+    # no secret -> legacy behavior, no verification expected
+    assert receive_slack_event({"text": "hi"}, {"r": "t"})["action"]
+    # with a secret: a valid signature passes through to moderation
+    fresh = str(time.time())
+    raw2 = '{"text": "hi"}'
+    sig2 = "v0=" + _hmac.new(secret.encode(),
+                             f"v0:{fresh}:{raw2}".encode(),
+                             hashlib.sha256).hexdigest()
+    res = receive_slack_event({"text": "hi"}, {"r": "t"}, secret=secret,
+                              raw=raw2, ts=fresh, signature=sig2)
+    assert res["action"] in ("allow", "flag", "delete", "escalate")
+    # a bad signature raises E_SLACK before moderation sees the event
+    try:
+        receive_slack_event({"text": "hi"}, {"r": "t"}, secret=secret,
+                            raw=raw2, ts=fresh, signature="v0=bad")
+    except SlackError as e:
+        assert e.code == "E_SLACK" and "signature" in str(e)
+    else:
+        raise AssertionError("bad signature must raise E_SLACK")
+    # fail-closed: a secret without the raw signed body raises too
+    try:
+        receive_slack_event({"text": "hi"}, {"r": "t"}, secret=secret,
+                            ts=fresh, signature=sig2)
+    except SlackError:
+        pass
+    else:
+        raise AssertionError("missing raw body must fail closed")
