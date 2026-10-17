@@ -28,3 +28,25 @@ padding memory. 32 keeps p95 fair for everyone behind the rate limiter.
 **Can cached decisions go stale?** (T406) No — since T221 the key covers every
 decision input (both thresholds, lang, context, quiet state, gate knobs). Same
 text under different settings recomputes instead of reusing.
+
+**My counters reset on restart — how do I restore them?** (T600) Save before the
+restart: `bouncer snapshot save snap.json`, then `bouncer snapshot load snap.json`
+after. It restores decision counters and per-user strikes; version mismatches
+warn but never fail, corrupt files raise `E_SNAPSHOT`. Snapshots hold counts
+only, never message content.
+
+**The breaker says `breaker-open` — what do I do?** (T600) The model failed
+`breaker_n` times in a row (crash, OOM, bad device) and requests are now
+short-circuiting to `escalate` instead of waiting for timeouts. Check the model
+process/device, then either wait out `breaker_cool_s` (a half-open probe
+recovers automatically) or restart the server. To disable the guard entirely
+(not recommended): `BOUNCER_BREAKER=off`.
+
+**Which model checkpoint should I use?** (T600) Default (`model=None`) is right
+for most: it routes by language hint, pinning `multilingual` for non-latin
+scripts. Pin explicitly only to compare behavior (`english` for
+English-only communities, `typed-decisions` for the Jev-style checkpoint). The
+pool caches every checkpoint you touch, so pinning costs memory × slots — size
+`BOUNCER_POOL_MAX` accordingly. Note: base zero-shot accuracy is modest
+(regex baseline 0.480 vs model 0.305 on our template data) — the Kaggle
+fine-tune is the path to production quality.
