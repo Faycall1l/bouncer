@@ -32,6 +32,21 @@
   passing an explicit `lang` still wins. (The demo UI offers an `auto` option;
   the API simply omits the field.)
 
+## Snapshots + stats export (T608)
+
+* CLI, not HTTP (state lives in the server process; snapshotting remotely would
+  race in-flight decisions):
+  * `bouncer snapshot save snap.json` — decision counters + per-user strikes,
+    stamped with version + timestamp. `load` restores (unknown-version warns,
+    never fails; corrupt/foreign file → `E_SNAPSHOT`).
+  * `bouncer export --out audit.csv [--format json] [--since TS] [--action
+    delete,flag] [--limit N]` — audit log as CSV or raw JSON array; `--limit`
+    uses a bounded tail read.
+  * `bouncer export --stats stats.json` — counters + strikes snapshot as JSON
+    (same data `GET /stats` serves, plus strikes; path is the argument, not
+    `--out`).
+* Programmatic: `gatekeeper.stats.save()/load()` and `audit.tail(n)`.
+
 ## Reliability fields (T596)
 
 * `model` (request field, `bouncer check --model`) pins a checkpoint:
