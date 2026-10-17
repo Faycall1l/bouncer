@@ -707,7 +707,7 @@
 - [x] T638 data: dataset card fields (splits, labels, license, limits)
 - [x] T639 data: HF upload script dry-run mode (`--dry-run` prints plan)
 - [x] T640 data: schema version stamp in every row (`v: 1`)
-- [ ] T641 data: row count + size assertion in CI-safe test
+- [x] T641 data: row count + size assertion in CI-safe test
 - [ ] T642 data: rule-set vocabulary extractor (unseen-K measurement)
 - [ ] T643 data: stratified split option (label-preserving)
 - [ ] T644 data: `validate_data` warns on empty history (T635 fix check)

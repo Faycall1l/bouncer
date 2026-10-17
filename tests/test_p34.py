@@ -123,3 +123,19 @@ def test_report_balance_thresholds(tmp_path):  # T633: --report flags thin label
     r = _run("data/build_dataset.py", "--n", "120", "--template-only",
              "--seed", "11", "--report", "--min-share", "0.0", "--strict")
     assert r.returncode == 0 and json.loads(r.stdout)["balanced"] is True
+
+
+def test_examples_row_count_and_size():  # T641: shipped fixtures stay pinned
+    import pathlib
+
+    p = pathlib.Path("data/examples.jsonl")
+    with open(p) as f:
+        rows = [json.loads(l) for l in f]
+    assert len(rows) == 300  # T637 regeneration pinned this count
+    assert all(r.get("v") == 1 for r in rows)  # T640 stamps present
+    assert p.stat().st_size < 1_000_000  # example file stays small
+    q = pathlib.Path("data/examples_i18n.jsonl")
+    with open(q) as f:
+        irows = [json.loads(l) for l in f]
+    assert len(irows) == 12 and all(r.get("v") == 1 for r in irows)
+    assert q.stat().st_size < 50_000
