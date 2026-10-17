@@ -724,7 +724,7 @@
 - [x] T653 ft: early-stopping on dev rule_acc (patience constant)
 - [x] T654 ft: loss logged as JSONL per epoch (not just wandb)
 - [x] T655 ft: checkpoint upload gated on dev metric >= floor
-- [ ] T656 ft: `scripts/check_kaggle_env.py` verifies secrets + instance
+- [x] T656 ft: `scripts/check_kaggle_env.py` verifies secrets + instance
 - [ ] T657 ft: data upload step (kaggle datasets create) scripted
 - [ ] T658 ft: training script accepts `--max-samples` smoke flag
 - [ ] T659 ft: smoke run path (50 rows, 1 epoch) documented + tested shape

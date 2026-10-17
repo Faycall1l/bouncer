@@ -1,6 +1,16 @@
 """P35 tests (T651-T670): fine-tune plumbing. Weightless — the GPU run is manual;
 these tests review the scripts statically and exercise everything runnable."""
+import json
+import os
 import re
+import subprocess
+import sys
+
+
+def _run_py(*args):
+    env = {**os.environ, "PATH": "/usr/bin:/bin"}  # strip kaggle CLI for determinism
+    return subprocess.run([sys.executable, *args], check=False, capture_output=True,
+                          text=True, env=env, timeout=30)
 
 
 def _src(path):
@@ -90,3 +100,19 @@ def test_push_gated_on_dev_floor():  # T655: no shipping sub-floor checkpoints
     gate = src.index("token and best_dev >= DEV_FLOOR")
     push = src.index("upload_folder")
     assert gate < push  # the gate sits before the upload
+
+
+def test_check_kaggle_env_preflight():  # T656: pre-flight plan is honest JSON
+    r = _run_py("scripts/check_kaggle_env.py", "--json")
+    rep = json.loads(r.stdout)
+    names = {c["name"] for c in rep["checks"]}
+    assert names == {"kaggle_cli", "kaggle_credentials", "dataset_artifact", "hf_token"}
+    assert r.returncode == (0 if rep["ok"] else 1)  # exit code matches the plan
+    for c in rep["checks"]:
+        assert set(c) == {"name", "ok", "required", "detail"}
+    # an unbuilt dataset fails loud, a shipped artifact passes
+    r = _run_py("scripts/check_kaggle_env.py", "--dataset", "/nonexistent/x.jsonl", "--json")
+    assert r.returncode == 1
+    assert "dataset_artifact" in json.loads(r.stdout)["failed_required"]
+    r = _run_py("scripts/check_kaggle_env.py", "--dataset", "data/examples.jsonl", "--json")
+    assert "dataset_artifact" not in json.loads(r.stdout)["failed_required"]
