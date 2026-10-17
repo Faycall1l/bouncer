@@ -108,6 +108,16 @@ def test_regression_gate_beats_regex():  # T661: new model must beat the regex b
     assert 'kind="no_push"' in src and "regex_floor=REGEX_FLOOR" in src  # refusals logged
 
 
+def test_calibration_writes_temp_json():  # T662: temperature artifact lands in OUT
+    src = _src("kaggle/train/train.py")
+    assert '"temp.json"' in src
+    assert '"temperature": cfg.get("temperature"' in src
+    assert 'kind="calibration"' in src
+    save = src.index("save_checkpoint(model, tok, cfg, OUT)")
+    temp = src.index('"temp.json"')
+    assert save < temp  # temp.json reflects the checkpoint that was actually saved
+
+
 def test_check_kaggle_env_preflight():  # T656: pre-flight plan is honest JSON
     r = _run_py("scripts/check_kaggle_env.py", "--json")
     rep = json.loads(r.stdout)

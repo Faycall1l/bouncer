@@ -221,6 +221,13 @@ except Exception as e:  # noqa: BLE001 — keep base temps on fit failure
     print("temp fallback:", e, flush=True)
 cfg.update({"fine_tuned": True, "model_name": "bouncer-421m"})
 save_checkpoint(model, tok, cfg, OUT)
+# T662: calibration artifact — what the engine (and a human) can inspect later
+with open(os.path.join(OUT, "temp.json"), "w") as f:
+    json.dump({"temperature": cfg.get("temperature", 1.0),
+               "temperature_by_options": cfg.get("temperature_by_options"),
+               "calib_items": len(calib_items),
+               "dev_rule_acc": round(best_dev, 4)}, f, indent=2)
+log_rec(kind="calibration", temperature=cfg.get("temperature", 1.0))
 
 # --- quick eval on held-out 500 ---
 import laya
