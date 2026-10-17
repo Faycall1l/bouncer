@@ -86,6 +86,22 @@ drop to 0.403 is exactly the hard negatives: regex can't see them.
 Dumb links/caps rules still beat uncalibrated zero-shot (0.305) —
 exactly why the demo shows both side by side, and why calibration + finetune matter.
 
+## Known numbers (T684)
+
+`python eval/gate.py REPORT --check-docs` reads this table and fails if the
+threshold defaults it enforces have drifted from the documented numbers
+(T669 release-checklist companion). The `_acc` rows are reference values
+(nothing enforces them; they are what the gates are built around):
+
+| metric | value |
+|---|---|
+| zero_shot_rule_acc | 0.305 |
+| regex_baseline_acc | 0.403 |
+| regex_floor | 0.403 |
+| max_ece | 0.15 |
+| max_p95_ms_t4 | 44 |
+| pool_speedup_floor | 2.0 |
+
 ## Run costs (T666, estimates — not receipts)
 
 | item | cost | notes |

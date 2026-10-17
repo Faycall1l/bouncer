@@ -342,3 +342,33 @@ def test_gate_pool_speedup_hits_scenario(tmp_path):  # T683: >= 2x where it coun
     path = _report(tmp_path, {"speedup": 5.4}, name="pool-54.json")
     r = _run_gate(path, "--min-speedup", "6")
     assert r.returncode == 1
+
+
+def test_gate_check_docs_reads_benchmarks(tmp_path):  # T684: no docs/default drift
+    path = _report(tmp_path, {"n": 300, "rule_acc": 0.403})
+    # against the real BENCHMARKS.md: documented numbers == enforced defaults
+    r = _run_gate(path, "--check-docs")
+    assert r.returncode == 0, r.stderr
+    r = _run_gate(path, "--check-docs", "--json")
+    checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+    assert checks["docs_regex_floor"]["ok"] is True
+    assert checks["docs_max_ece"]["value"] == 0.15
+    assert checks["docs_max_p95_ms_t4"]["value"] == 44.0
+    assert checks["docs_pool_speedup_floor"]["value"] == 2.0
+    # a drifted table fails loudly, even when every report gate passes
+    bench = tmp_path / "BENCHMARKS.md"
+    bench.write_text(
+        "# Bench\n\n## Known numbers (test)\n\n| metric | value |\n|---|---|\n"
+        "| regex_floor | 0.480 |\n| max_ece | 0.15 |\n| max_p95_ms_t4 | 44 |\n"
+        "| pool_speedup_floor | 2.0 |\n")
+    r = _run_gate(path, "--check-docs", str(bench))
+    assert r.returncode == 1 and "docs_regex_floor" in r.stderr
+    # a table missing an enforced row fails too (drift by omission, not skip)
+    bench.write_text(
+        "# Bench\n\n## Known numbers\n\n| metric | value |\n|---|---|\n"
+        "| max_ece | 0.15 |\n")
+    r = _run_gate(path, "--check-docs", str(bench))
+    assert r.returncode == 1 and "docs_regex_floor" in r.stderr
+    # an unreadable doc is unusable input -> exit 2
+    r = _run_gate(path, "--check-docs", str(tmp_path / "nope.md"))
+    assert r.returncode == 2 and "cannot read docs" in r.stderr

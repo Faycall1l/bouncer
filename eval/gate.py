@@ -9,6 +9,7 @@ not be read/parsed at all.
   python eval/gate.py REPORT --ci            # exactly one line of verdict JSON
   python eval/gate.py REPORT --against REF   # + informational metric delta table
   python eval/gate.py REPORT --against REF --changelog   # diff also lands in CHANGELOG
+  python eval/gate.py REPORT --check-docs  # + drift check vs BENCHMARKS Known numbers
 
 Each gate reads its value from the report and compares against a flag-settable
 threshold (T672-T676 register theirs here). A metric absent from the report is
@@ -137,6 +138,40 @@ def collect_pool(report: dict, args) -> list:
     return checks
 
 
+def known_numbers(path: str) -> dict:
+    """T684: the Known-numbers table in BENCHMARKS.md, as data."""
+    import re
+
+    nums = {}
+    in_table = False
+    with open(path) as f:
+        for line in f:
+            if line.startswith("## "):
+                in_table = "Known numbers" in line
+                continue
+            if not in_table:
+                continue
+            m = re.match(r"\|\s*([a-z0-9_]+)\s*\|\s*\**(-?[0-9.]+)", line)
+            if m:
+                nums[m.group(1)] = float(m.group(2))
+    return nums
+
+
+def collect_docs(args, path: str) -> list:
+    """T684: documented numbers and enforced defaults may not drift apart.
+    A table row that vanished is drift by omission — FAIL, not SKIP."""
+    checks = []
+    known = known_numbers(path)
+    pairs = [("regex_floor", args.min_rule_acc), ("max_ece", args.max_ece),
+             ("max_p95_ms_t4", args.max_p95_ms),
+             ("pool_speedup_floor", args.min_speedup)]
+    for key, enforced in pairs:
+        documented = known.get(key)
+        _add(checks, f"docs_{key}", f"== default {enforced}", documented,
+             False if documented is None else abs(documented - enforced) < 1e-9)
+    return checks
+
+
 def detect_kind(report: dict) -> str:
     """Gate family by report shape (T681-T683; more families may follow)."""
     if "per_lang" in report:
@@ -154,12 +189,18 @@ COLLECTORS = {"eval": collect, "i18n": collect_i18n,  # T681
 
 
 def gate_report(report: dict, args) -> dict:
-    checks = COLLECTORS[detect_kind(report)](report, args)
-    passed = sum(1 for c in checks if c["ok"] is True)
-    failed = sum(1 for c in checks if c["ok"] is False)
-    skipped = sum(1 for c in checks if c["ok"] is None)
-    return {"ok": failed == 0 and passed > 0, "passed": passed, "failed": failed,
-            "skipped": skipped, "checks": checks}
+    verdict = {"checks": COLLECTORS[detect_kind(report)](report, args)}
+    _tally(verdict)
+    return verdict
+
+
+def _tally(verdict: dict):
+    """(Re)count a verdict after its check list changed (T684: docs checks)."""
+    checks = verdict["checks"]
+    verdict["passed"] = sum(1 for c in checks if c["ok"] is True)
+    verdict["failed"] = sum(1 for c in checks if c["ok"] is False)
+    verdict["skipped"] = sum(1 for c in checks if c["ok"] is None)
+    verdict["ok"] = verdict["failed"] == 0 and verdict["passed"] > 0
 
 
 def append_changelog(path: str, report: str, ref: str, delta: dict, verdict: dict):
@@ -218,6 +259,9 @@ def main(argv=None) -> int:
     ap.add_argument("--changelog", default=None, nargs="?", const="CHANGELOG.md",  # T680
                     help="also append the --against delta block to this CHANGELOG "
                          "(default CHANGELOG.md); requires --against")
+    ap.add_argument("--check-docs", default=None, nargs="?", const="BENCHMARKS.md",  # T684
+                    help="also check the Known-numbers table in this doc against "
+                         "the threshold defaults being enforced (default BENCHMARKS.md)")
     ap.add_argument("--min-n", type=int, default=1,
                     help="report must cover at least N rows")
     ap.add_argument("--min-rule-acc", type=float, default=0.403,  # T672
@@ -277,6 +321,13 @@ def main(argv=None) -> int:
         delta = compare(ref, rep)  # ref = the "base" side, report = the new one
 
     verdict = gate_report(rep, a)
+    if a.check_docs:  # T684: docs-vs-defaults drift, appended to any verdict
+        try:
+            verdict["checks"].extend(collect_docs(a, a.check_docs))
+        except OSError as e:
+            print(f"gate: cannot read docs {a.check_docs}: {e}", file=sys.stderr)
+            return 2
+        _tally(verdict)
     if delta is not None:
         verdict["deltas"] = delta  # --json/--ci consumers get it inline
     payload = (json.dumps(verdict, indent=2) if a.json
