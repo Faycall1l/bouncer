@@ -726,7 +726,7 @@
 - [x] T655 ft: checkpoint upload gated on dev metric >= floor
 - [x] T656 ft: `scripts/check_kaggle_env.py` verifies secrets + instance
 - [x] T657 ft: data upload step (kaggle datasets create) scripted
-- [ ] T658 ft: training script accepts `--max-samples` smoke flag
+- [x] T658 ft: training script accepts `--max-samples` smoke flag
 - [ ] T659 ft: smoke run path (50 rows, 1 epoch) documented + tested shape
 - [ ] T660 ft: eval-after-train cell runs `eval_gatekeeper.py` on test split
 - [ ] T661 ft: regression gate — new model must beat regex baseline 0.480

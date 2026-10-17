@@ -15,11 +15,18 @@ subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U",
                 "laya>=0.1.6", "transformers>=4.48.0", "datasets>=3.0.0",
                 "safetensors", "huggingface_hub", "accelerate"], check=True)
 
+import argparse
 import glob
 import json
 import os
 import random
 import time
+
+FLAGS = argparse.ArgumentParser(add_help=False)  # T658: --max-samples smoke flag
+FLAGS.add_argument("--max-samples", type=int, default=0,
+                   help="truncate total rows for a smoke run (0 = full dataset)")
+_known, _rest = FLAGS.parse_known_args()  # tolerate Kaggle's own argv noise
+MAX_SAMPLES = _known.max_samples
 
 import torch
 
@@ -47,8 +54,16 @@ assert isinstance(sample["state"].get("rules"), dict) and sample["state"]["rules
 assert set(sample["labels"]) >= {"rule", "harm", "hype", "jailbreak", "escalate"}, \
     "labels missing heads"
 random.seed(7); random.shuffle(rows_raw)
-train_rows, test_rows = rows_raw[:1500], rows_raw[1500:2000]
-train_rows, dev_rows = train_rows[:-200], train_rows[-200:]  # T653: dev from train tail
+if MAX_SAMPLES:  # T658: smoke path — data must still be complete on disk (asserts above)
+    rows_raw = rows_raw[:MAX_SAMPLES]
+if len(rows_raw) < 2000:  # T658: smoke split ~80/10/10 when truncated
+    cut = max(1, int(len(rows_raw) * 0.8))
+    dev_cut = min(len(rows_raw), cut + max(1, len(rows_raw) // 10))
+    train_rows, dev_rows, test_rows = rows_raw[:cut], rows_raw[cut:dev_cut], rows_raw[dev_cut:]
+else:
+    train_rows, test_rows = rows_raw[:1500], rows_raw[1500:2000]
+    train_rows, dev_rows = train_rows[:-200], train_rows[-200:]  # T653: dev from train tail
+assert train_rows and dev_rows and test_rows, "split left an empty part"
 
 def to_row(r):
     s, lab = r["state"], r["labels"]

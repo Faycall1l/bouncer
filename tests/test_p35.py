@@ -132,3 +132,12 @@ def test_upload_dataset_kaggle_dry_run():  # T657: publish plan, dry-run default
     # --yes without the CLI on PATH fails loud before staging anything
     r = _run_py("scripts/upload_dataset_kaggle.py", "--dataset", "data/examples.jsonl", "--yes")
     assert r.returncode == 1 and "kaggle CLI" in r.stderr
+
+
+def test_max_samples_smoke_flag():  # T658: smoke truncation without breaking splits
+    src = _src("kaggle/train/train.py")
+    assert '"--max-samples"' in src and "parse_known_args" in src
+    assert "T658: smoke path" in src  # truncation happens AFTER completeness asserts
+    assert "T658: smoke split" in src and "split left an empty part" in src
+    flag = src.index('"--max-samples"')
+    assert flag < src.index("rows_raw = rows_raw[:MAX_SAMPLES]") < src.index("train_items, calib_items")
