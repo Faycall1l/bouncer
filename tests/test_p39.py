@@ -123,3 +123,32 @@ def test_ci_tag_must_match_pyproject():  # T737
     assert "E_TAG" in r.stderr and "9.9.9" in r.stderr and ver in r.stderr
     # ...and a missing tag is a usage error, not a silent pass
     assert run().returncode == 2
+
+
+def test_ci_benchmark_job_posts_summary(tmp_path):  # T738
+    import json
+    import re
+    import subprocess
+    import sys
+    ci = (WORKFLOWS / "ci.yml").read_text()
+    m = re.search(r"^  bench:(.*?)(?=^  \w|\Z)", ci, re.MULTILINE | re.DOTALL)
+    assert m, "no bench job"
+    job = m.group(1)
+    # weightless by construction: the stub benches, never the model, and
+    # results are POSTED (step summary) — no thresholds to flake on
+    assert "bench_stub.py" in job and "bench_pool.py" in job
+    assert "GITHUB_STEP_SUMMARY" in job
+    # optional: manual dispatch exists, and PRs don't run it unfiltered
+    assert "workflow_dispatch" in ci
+    assert "github.event_name == 'workflow_dispatch'" in job
+    # the job's exact commands really run weightless — this env has no
+    # model stack at all, and a tmp cwd keeps tracked reports untouched
+    src = str(Path("src").resolve())
+    for cmd in ([sys.executable, str(Path("eval/bench_stub.py").resolve()), "20"],
+                [sys.executable, str(Path("eval/bench_pool.py").resolve()),
+                 "--json"]):
+        r = subprocess.run(cmd, check=False, capture_output=True, text=True,
+                           timeout=120, cwd=str(tmp_path),
+                           env={"PATH": "/usr/bin:/bin", "PYTHONPATH": src})
+        assert r.returncode == 0, r.stderr
+        assert isinstance(json.loads(r.stdout), dict), r.stdout
