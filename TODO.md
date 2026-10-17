@@ -741,7 +741,7 @@
 - [x] T670 test: P35 fine-tune plumbing sweep (weightless)
 
 ## P36 Eval gates (T671–T690)
-- [ ] T671 eval: `gate.py` — pass/fail thresholds over a report JSON
+- [x] T671 eval: `gate.py` — pass/fail thresholds over a report JSON
 - [ ] T672 eval: gate rule_acc >= 0.480 (must beat regex) configurable
 - [ ] T673 eval: gate ECE <= 0.15 after calibration
 - [ ] T674 eval: gate p95 latency <= budget (ms, flag-settable)
