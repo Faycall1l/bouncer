@@ -75,11 +75,19 @@ def forward(url: str, event: dict) -> None:  # T079
 
 
 def forward_if_interesting(res: dict, message: str) -> bool:
-    """T294: delete/flag/escalate go to BOUNCER_FORWARD_URL with the reason; True if sent."""
+    """T294+T707: delete/flag/escalate go to BOUNCER_FORWARD_URL with the
+    reason; True if sent. Breaker-open results fire too (explicitly keyed on
+    `cause`, not just today's escalate action shape) and carry `cause` in the
+    payload — a receiver must be able to tell "the model said escalate" from
+    "the model is down, escalating by default"."""
     url = os.environ.get("BOUNCER_FORWARD_URL", "")
-    if url and res["action"] in ("delete", "flag", "escalate"):
-        forward(url, {"action": res["action"], "rule": res["rule"],
-                      "confidence": res["confidence"], "reason": res.get("reason", ""),
+    interesting = (res["action"] in ("delete", "flag", "escalate")
+                   or res.get("cause") == "breaker-open")  # T707
+    if url and interesting:
+        forward(url, {"action": res["action"], "rule": res.get("rule", "ok"),
+                      "confidence": res.get("confidence", 0.0),
+                      "reason": res.get("reason", ""),
+                      "cause": res.get("cause", ""),  # T707: breaker-open shows here
                       "message": message[:500]})
         return True
     return False

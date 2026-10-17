@@ -1015,3 +1015,60 @@ def test_twitch_mentions_and_whispers_documented():  # T706
     assert "Whispers (T706)" in doc and "Mentions (T706)" in doc
     readme = (ADAPTERS / "README.md").read_text()
     assert "whispers" in readme.lower() and "T706" in readme
+
+
+def test_forward_fires_on_breaker_open(monkeypatch):  # T707
+    sys.path.insert(0, "src")
+    import json
+
+    import gatekeeper
+    from gatekeeper import GateConfig, moderate
+    from gatekeeper.adapters import webhooks as wh
+    from gatekeeper.cache import CACHE
+
+    class Boom:  # test_p28's pattern: every predict attempt fails
+        def predict(self, state, questions):
+            raise RuntimeError("down")
+
+    CACHE.clear()
+    gatekeeper._BREAKER.update({"fails": 0, "open_until": 0.0,
+                                "half_open": False})
+    try:
+        cfg = GateConfig(breaker_n=1, breaker_cool_s=60.0)
+        rules = {"plain-chat": "normal talk"}
+        moderate("t707 trips it", rules, config=cfg, router=Boom())
+        r = moderate("t707 breaker open", rules, config=cfg, router=Boom())
+        assert r["cause"] == "breaker-open"  # the real engine's breaker result
+    finally:
+        gatekeeper._BREAKER.update({"fails": 0, "open_until": 0.0,
+                                    "half_open": False})
+
+    seen = {}
+
+    class Resp:
+        def read(self):
+            return b""
+
+    def _ok(req, timeout):
+        seen["req"] = req
+        return Resp()
+
+    monkeypatch.setattr(wh.urllib.request, "urlopen", _ok)
+    monkeypatch.setenv("BOUNCER_FORWARD_URL", "http://hooks.example/x")
+    # the breaker-open result fires the forwarder...
+    assert wh.forward_if_interesting(r, "t707 message") is True
+    payload = json.loads(seen["req"].data)
+    # ...and the payload says WHY the escalation happened
+    assert payload["cause"] == "breaker-open"
+    assert "breaker open" in payload["reason"]
+    assert payload["action"] == "escalate"
+    assert payload["message"] == "t707 message"
+    # cause is keyed explicitly: even a non-escalate shape still fires
+    seen.clear()
+    assert wh.forward_if_interesting({"action": "allow", "rule": "ok",
+                                      "confidence": 1.0,
+                                      "cause": "breaker-open"}, "m") is True
+    assert json.loads(seen["req"].data)["cause"] == "breaker-open"
+    # a plain allow stays quiet
+    assert wh.forward_if_interesting({"action": "allow", "rule": "ok",
+                                      "confidence": 1.0}, "m") is False
