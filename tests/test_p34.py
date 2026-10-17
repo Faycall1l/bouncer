@@ -113,6 +113,13 @@ def test_report_balance_thresholds(tmp_path):  # T633: --report flags thin label
     rep = json.loads(r.stdout)
     assert rep["n"] == 132 and rep["servers"] == 3  # 120 + 12 default hard negatives
     assert rep["seed"] == 11  # T646: seed logged for full reproducibility
+    cw = rep["class_weights"]  # T648: inverse-frequency hints for the finetune
+    assert set(cw) == {"rule", "harm", "jailbreak", "escalate"}
+    for field in ("rule", "harm"):
+        ws = list(cw[field].values())
+        assert all(w > 0 for w in ws)
+        assert ws == sorted(ws)  # most_common order == ascending weights
+    assert set(cw["jailbreak"]) == {"false", "true"}
     for name in ("train", "dev", "test"):
         s = rep["splits"][name]
         assert s["n"] > 0 and sum(s["rule"].values()) == s["n"]

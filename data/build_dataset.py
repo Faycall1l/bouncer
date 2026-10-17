@@ -123,6 +123,25 @@ def quarantine_rows(rows: list) -> tuple:
     return good, bad
 
 
+def class_weights(rows: list) -> dict:
+    """T648: inverse-frequency weight hints for the finetune notebook — w = n/(K*n_c).
+
+    Binary heads get their own n/(2*count) pair. These are hints, not magic:
+    the trainer applies them however its API wants (class_weight, focal loss...).
+    """
+    out = {}
+    for field in ("rule", "harm"):
+        c = Counter(r["labels"].get(field, "?") for r in rows)
+        n, k = sum(c.values()), len(c)
+        out[field] = {lab: round(n / (k * cnt), 3) for lab, cnt in c.most_common()}
+    for field in ("jailbreak", "escalate"):
+        pos = sum(1 for r in rows if r["labels"].get(field))
+        n, neg = len(rows) or 1, len(rows) - pos
+        out[field] = {"false": round(n / (2 * (neg or 1)), 3),
+                      "true": round(n / (2 * (pos or 1)), 3)}
+    return out
+
+
 def balance_report(splits: dict, min_share: float) -> dict:
     """Per-split label distribution + which rule labels fall under min_share."""
     below = []
@@ -203,6 +222,7 @@ def main(argv=None) -> int:
         splits = split_rows(rows, tuple(a.ratios), a.seed or 0, stratify=a.stratify)
         rep = {"n": len(rows), "seed": a.seed,
                "servers": len({server_key(r) for r in rows}),
+               "class_weights": class_weights(rows),
                **balance_report(splits, a.min_share)}
         if quarantined:
             rep["quarantined"] = len(quarantined)
@@ -219,7 +239,8 @@ def main(argv=None) -> int:
     os.replace(tmp, a.out)  # readers never see a half-written dataset
 
     report = {"n": len(rows), "out": a.out, "errors": 0, "seed": a.seed,
-              "servers": len({server_key(r) for r in rows})}
+              "servers": len({server_key(r) for r in rows}),
+              "class_weights": class_weights(rows)}
     if quarantined:
         report["quarantined"] = len(quarantined)
     if deduped is not None:

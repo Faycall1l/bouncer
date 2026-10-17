@@ -30,3 +30,7 @@ def to_laya_records(path):
 #   recs = to_laya_records("/kaggle/input/gatekeeper-12k/gatekeeper-12k.jsonl")
 #   run_rlcd(recs, base="convaiinnovations/laya", epochs=4, push_to="YOUR_HF/gatekeeper-laya-421m")
 # If function name drifted, open the notebook's train cell and keep its call — only swap `recs`.
+# Class imbalance (T648): the dataset build report emits inverse-frequency hints —
+#   python data/build_dataset.py --n 12000 --report --seed 42   # -> class_weights
+# Feed those (rule / harm / jailbreak / escalate) to whatever weight knob your
+# laya/trainer version exposes; escalate is the rare head and benefits most.
