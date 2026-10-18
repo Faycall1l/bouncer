@@ -886,7 +886,7 @@
 - [x] T801 docs: docs deploy workflow (GitHub Pages) behind flag
 - [x] T802 docs: search-friendly headings (no duplicate H1s) lint
 - [x] T803 docs: README anchors tested (badges + section links)
-- [ ] T804 docs: CONTRIBUTING (boxes workflow, verify.sh, code style)
+- [x] T804 docs: CONTRIBUTING (boxes workflow, verify.sh, code style)
 - [ ] T805 docs: ROADMAP.md for post-0.4.0 (finetune results, plugins)
 - [ ] T806 docs: examples/ directory with 3 copy-paste scripts
 - [ ] T807 docs: every env var documented table (from T609 list) in one page

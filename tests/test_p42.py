@@ -1,6 +1,7 @@
 """P42 tests (T791-T810): docs site. mkdocs.yml is parsed with a real
 YAML parser where one exists (ruby Psych — same deal as T750)."""
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -423,3 +424,22 @@ def test_readme_badges_and_anchor_links():  # T803
     assert not problems, "\n".join(problems)
     # floor: the two BENCHMARKS anchors are the point of this box
     assert anchor_links >= 2, f"only {anchor_links} anchored links found"
+
+
+def test_contributing_covers_boxes_verify_style():  # T804
+    con = Path("CONTRIBUTING.md").read_text()
+    # the three topics the box asks for: boxes workflow, verify.sh, style
+    for needle in ("One TODO box = one commit + push", "TODO batches",
+                   "verify.sh", "Receipt", "T###", "line-length",
+                   "tests/test_pNN.py", "BOUNCER_", "invented"):
+        assert needle in con, needle
+    # the shipped gate agrees with the documented one — and both spell
+    # the repo-wide lint (T745 killed the narrow subset wording)
+    v = Path("verify.sh")
+    assert v.exists(), "verify.sh missing"
+    assert os.access(v, os.X_OK), "verify.sh not executable"
+    text = v.read_text()
+    for step in ("pytest -q", "ruff check .", "git add -A", "git push"):
+        assert step in text, step
+    assert "ruff check src tests" not in text
+    assert "ruff check src tests" not in con
