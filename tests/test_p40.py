@@ -584,3 +584,23 @@ def test_readme_perf_section_measured_dated():  # T767
     assert "stub" in section and "not claimed" in section
     # and the section says where enforcement lives (gates, not vibes)
     assert "eval/gate.py" in section and "200ms" in section
+
+
+def test_before_after_finetune_columns_honest():  # T768
+    bench = Path("BENCHMARKS.md").read_text()
+    assert "## Before vs after finetune (T768)" in bench
+    section = bench.split("## Before vs after finetune (T768)", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    # one two-column table (three pipes per row incl. both borders)
+    assert section.count("|---|---|---|") == 1
+    # the after column is explicitly empty of numbers — "awaits" not values
+    assert "empty on" in section and "awaits" in section
+    # and the emptiness is a receipt rule, not forgetfulness
+    for needle in ('mode:"real"', "T751 rule", "never from expectation",
+                   "NOT a prediction", "T665"):
+        assert needle in section, needle
+    # every BEFORE figure cited is a number the rest of the file carries
+    for needle in ("0.08ms", "0.2ms", "30.4ms", "57.4ms",
+                   "1.4ms", "1.3ms", "0.305", "0.403"):
+        assert needle in section, f"missing {needle}"
+        assert bench.count(needle) >= 2, f"{needle} only appears here"

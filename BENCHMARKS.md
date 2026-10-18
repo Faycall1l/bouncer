@@ -19,6 +19,26 @@ enforces the envelope on every push. `eval_gatekeeper`/`gate`/`breaker`
 reports are scores and gate verdicts, not latency — they keep their own
 documented shapes.
 
+## Before vs after finetune (T768)
+
+Every number in this file was measured BEFORE the finetune exists. The
+honest split has two columns — and the "after" column stays **empty on
+purpose** until a run produces receipts:
+
+| what | before finetune (measured here) | after finetune |
+|---|---|---|
+| engine overhead (stub-timed paths) | **0.08ms**/moderate (T385), batch ~0.2ms/msg (T753) | unchanged by weights: these paths run before any model call |
+| import / `--version` cold start | **30.4ms / 57.4ms** (T762/T763) | unchanged: import never loads a model |
+| question payload (5q vs 3q) | **1.4ms / 1.3ms** (T755) | changes only when a real model pads them |
+| model p50/p95 end-to-end | never measured with weights in this repo | awaits `mode:"real"` reports (T751 rule) |
+| rule accuracy | 0.305 zero-shot / 0.403 regex floor | awaits the fine-tune run — target unclaimed |
+
+"Unchanged by weights" is structural — the measured code executes before
+the model is ever called — and NOT a prediction of post-finetune totals:
+the model's own latency stacks ON TOP of these numbers. Post-finetune
+cells get filled from `eval/reports/*` carrying `mode:"real"` receipts,
+never from expectation. Draft: `docs/drafts/finetune-run-impact.md` (T665).
+
 ## Zero-shot base Laya on gatekeeper-chatmix (T108)
 
 Kernel `faycal00/bouncer-eval-zero` (CPU, 200 rows, 1 choice question). COMPLETE.
