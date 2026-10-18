@@ -1,6 +1,6 @@
 # Architecture (T140, updated T395)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 ```mermaid
 flowchart LR

@@ -895,7 +895,7 @@
 - [x] T810 test: P42 docs-site sweep
 
 ## P43 Release 0.4.0 (T811–T830)
-- [ ] T811 pkg: version 0.4.0
+- [x] T811 pkg: version 0.4.0
 - [ ] T812 suite: full run green + count recorded
 - [ ] T813 lint: `ruff check .` green
 - [ ] T814 ci: workflow green on the release commit (status recorded)

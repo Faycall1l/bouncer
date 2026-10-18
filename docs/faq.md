@@ -1,6 +1,6 @@
 # FAQ (T143)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 **Why not regex?** Regex can't read new phrasings; bouncer scores meaning in 30ms
 and shows a regex baseline side-by-side in the demo so you can see the gap.

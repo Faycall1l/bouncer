@@ -1,6 +1,6 @@
 # Glossary (T150)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 * **System One model** — fast typed-decision model (Kahneman's System 1): state in,
   probabilities out, no text generation. Jev (closed) / Laya (open) started the category.

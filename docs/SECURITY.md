@@ -1,6 +1,6 @@
 # Security notes (T598)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 The full asset/actor/trust-boundary view lives in
 [threat-model.md](threat-model.md) (T771) — including its known-gaps table;

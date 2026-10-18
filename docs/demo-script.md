@@ -1,6 +1,6 @@
 # Demo gif script (T149) — 20s, no editing
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 1. `bouncer check "FREE NITRO http://x.gg" --preset stream` -> red DELETE
 2. open demo, pick stream preset, click example "GG that clutch was insane" -> green ALLOW

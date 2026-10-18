@@ -1,6 +1,6 @@
 # API reference (T141, updated T394)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 * `POST /predict` `{message, rules, context?, threshold?, allow_threshold?,
   delete_threshold?, lang?}` → decision + reason. `context` ≤ 20 items, each

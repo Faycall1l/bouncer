@@ -24,7 +24,12 @@ def test_new_cli_commands_help():  # T614
     r = _run("pack", "--help")
     assert "init" in r.stdout
     r = _run("--version")
-    assert r.returncode == 0 and "0.3.0" in r.stdout  # T611+T624: via --version
+    import pathlib as _p
+    import re as _re
+    ver = _re.search(r'^version = "([^"]+)"',
+                     _p.Path("pyproject.toml").read_text(),
+                     _re.MULTILINE).group(1)
+    assert r.returncode == 0 and ver in r.stdout  # T611+T624: via --version
 
 
 def test_ready_and_preset_shapes():  # T615
@@ -254,18 +259,20 @@ def test_persistence_files_git_ignored():  # T623: runtime state never committed
     assert not missing, f"not gitignored: {sorted(missing)}"
 
 
-def test_version_strings_consistent():  # T624: 0.3.0 in pkg + pyproject
+def test_version_strings_consistent():  # T624: pkg == pyproject == CHANGELOG
     import pathlib
     import re
 
     import gatekeeper
-    assert gatekeeper.__version__ == "0.3.0"
-    pyproject = pathlib.Path("pyproject.toml").read_text()
-    m = re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE)
-    assert m and m.group(1) == "0.3.0", "pyproject version drifts from __version__"
+    m = re.search(r'^version = "([^"]+)"',
+                  pathlib.Path("pyproject.toml").read_text(), re.MULTILINE)
+    assert m, "no version in pyproject.toml"
+    version = m.group(1)
+    assert gatekeeper.__version__ == version, \
+        "pyproject version drifts from __version__"
     # the CHANGELOG must document the version we ship
     changelog = pathlib.Path("CHANGELOG.md").read_text()
-    assert "## 0.3.0" in changelog
+    assert f"## {version}" in changelog, f"no CHANGELOG section for {version}"
     # snapshot export stamps the same version it restores under
     from gatekeeper.cli import build_parser
     assert build_parser() is not None  # parser builds against this version

@@ -1,6 +1,6 @@
 # Local MPS setup (T219, Apple Silicon)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 ```bash
 python3.12 -m venv /tmp/laya-venv

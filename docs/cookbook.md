@@ -1,6 +1,6 @@
 # Cookbook (T794)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 Five copy-paste recipes. Each one is a complete loop — the linked pages
 hold the full contracts. Finished scripts you can lift verbatim:

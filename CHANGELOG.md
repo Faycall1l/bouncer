@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.0 — 2026-10-18 (T811)
+
 * Eval gates (T671-T689): `eval/gate.py` pass/fail runner over report JSONs —
   exit-code contract 0/1/2 (`--ci` one-liner), threshold flags
   (`--min-rule-acc` 0.403, `--max-ece` 0.15, `--max-p95-ms` 44, abstention
@@ -10,6 +12,24 @@
   `--check-docs` drift check vs the BENCHMARKS Known-numbers table, `--all`
   make-style run, stale-report warnings. Baseline report normalized to
   `n`/`acc`/`per_label` (T678); `eval/reports/latest.json` pointer (T686).
+* Platform adapters (T691-T710): Discord/Twitch/Telegram/Matrix/Mattermost/
+  Zulip bots plus webhooks with Slack-signature verification — matrix-tested
+  against stubs; destructive chat actions became opt-in flags
+  (`BOUNCER_TG_DELETE`, `BOUNCER_MX_REDACT`, `BOUNCER_MM_DELETE`,
+  `BOUNCER_ZL_DELETE`), `BOUNCER_DRY_RUN=1` prints instead of posting,
+  `BOUNCER_RULES_<ADAPTER>` per-adapter rule overrides, fail-closed
+  startup with coded `E_ADAPTER` faults, platform env vars documented.
+* Security & ops (T771-T790): threat-model/runbook/SECURITY doc set,
+  key-rotation window (`BOUNCER_KEY_OLD`, T776), proxy-pinned rate keys
+  (`BOUNCER_TRUSTED_PROXY`, T777), `/v1/systemone` passthrough with
+  `E_STATE` key caps (T772-T775), review queue `0600` with bounded raw
+  keep (T784), forwarder SSRF pin (`BOUNCER_FORWARD_ALLOW`, T785).
+* Docs site (T791-T810): mkdocs-material site whose nav equals the file
+  set, six new pages (getting-started, cookbook, version notes, roadmap,
+  environment-variable table, error-code index), three runnable example
+  scripts, test-enforced link/heading/fence/diagram-fallback/freshness
+  lints, GitHub Pages workflow behind the `DOCS_DEPLOY` flag, rewritten
+  CONTRIBUTING with a shipped `verify.sh`.
 
 ## 0.3.0 — 2026-10-17 (T626)
 * Persistence: atomic writes + `E_SNAPSHOT`, decision/stats snapshots

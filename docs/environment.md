@@ -1,6 +1,6 @@
 # Environment variables (T807)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 Every environment variable the code reads, in one table. The split of
 duties: this page is the *inventory* (kept honest by a test in both

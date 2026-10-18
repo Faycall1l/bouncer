@@ -1,13 +1,13 @@
 # Version notes (T797)
 
-_(Last checked against v0.3.0.)_
+_(Last checked against v0.4.0.)_
 
 This site tracks `main` — the newest code, currently package version
-**0.3.0** (`pyproject.toml`, `bouncer --version`). If you're reading an
+**0.4.0** (`pyproject.toml`, `bouncer --version`). If you're reading an
 older release — a `v0.x.y` tag checkout or, once versioned builds ship,
 the **version switcher** in the nav sidebar — this page is the bridge:
-what the behavior deltas are between 0.1, 0.2, and 0.3, so old docs don't
-mislead you. The authoritative list is the
+what the behavior deltas are between 0.1, 0.2, 0.3, and 0.4, so old docs
+don't mislead you. The authoritative list is the
 [CHANGELOG](https://github.com/Faycall1l/bouncer/blob/main/CHANGELOG.md);
 this page keeps only the deltas that change *what you observe*.
 
@@ -48,7 +48,32 @@ this page keeps only the deltas that change *what you observe*.
   preset→lang autofill, per-line `lang` in `watch --json-in`. Non-latin
   scripts (ar/zh/ru/fa/ur/he) pin the `multilingual` checkpoint.
 
-## On 0.3.0 (latest)
+## Coming from 0.3.x
+
+* **Auth rotation in 0.4.0** — `BOUNCER_KEY_OLD` keeps the outgoing key
+  accepted (constant-time compare) while `BOUNCER_KEY` becomes current:
+  rotate without a restart window. Keys under 16 chars warn at boot.
+* **Proxy-pinned rate keys in 0.4.0** — `BOUNCER_TRUSTED_PROXY` names the
+  proxy peer IPs whose `X-Forwarded-For` may set the rate-limit key;
+  everyone else is keyed by peer IP.
+* **Forwarder SSRF pin in 0.4.0** — the webhook forwarder only speaks
+  http(s), and once `BOUNCER_FORWARD_ALLOW` is set, only its exact hosts
+  (case-insensitive, no wildcards) — anything else is `E_WEBHOOK`.
+* **Destructive chat actions became opt-in in 0.4.0** — Telegram deletes,
+  Matrix redactions and Mattermost/Zulip deletes fire only with
+  `BOUNCER_TG_DELETE` / `BOUNCER_MX_REDACT` / `BOUNCER_MM_DELETE` /
+  `BOUNCER_ZL_DELETE`; `BOUNCER_DRY_RUN=1` prints every action instead of
+  posting.
+* **`/v1/systemone` exists from 0.4.0** — a raw single-shot passthrough
+  route with the same bounded inputs; oversized `state`/`questions` keys
+  are `422 E_STATE`.
+* **Review queue hardened in 0.4.0** — written `0600`, raw messages
+  bounded per line and on disk.
+* **Eval gate runner in 0.4.0** — `eval/gate.py` pass/fail over report
+  JSONs: threshold flags, deltas against a baseline report, and a
+  docs-drift check against the BENCHMARKS known-numbers table.
+
+## On 0.4.0 (latest)
 
 You're current — nothing above applies. Watch this page and the CHANGELOG
 when a versioned build of the site starts serving older docs through the
