@@ -9,7 +9,9 @@
   delete_threshold?}` → array, order kept. 1–32 messages (else 422/413), each
   ≤ 8000 chars. Shares rate/auth guards with `/predict`.
 * `POST /v1/systemone` `{state, questions}` → raw router passthrough (Jev SDKs work).
-  Same rate/auth guards apply.
+  Same rate/auth guards apply. `state.history` is bounded server-side to the
+  newest 20 items (silently trimmed, T774) — the raw path gets the same
+  per-request work cap as `/predict`.
 * `GET /health` loaded/unavailable + uptime · `GET /version` · `GET /models` ·
   `GET /stats` (decisions + cache + version + uptime) · `GET /presets` ·
   `GET /metrics` (per-action counters, cache hits/misses/rate, latency p50,

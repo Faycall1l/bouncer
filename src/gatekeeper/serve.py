@@ -399,5 +399,11 @@ def predict_batch(req: BatchReq, request: Request):
 def systemone(body: dict, request: Request):
     _rate(request)  # T224: passthrough shares guards too
     _auth(request)
+    state = body.get("state", {}) or {}
+    # T774: this raw path forwards `state` straight to the router, so nothing
+    # else caps it — bound history to the newest MAX_CONTEXT items, the same
+    # window /predict's context (T308) and the engine's [-history_n:] use.
+    if isinstance(state, dict) and isinstance(state.get("history"), list):
+        state = {**state, "history": state["history"][-MAX_CONTEXT:]}
     r = get_router()
-    return r.predict(body.get("state", {}), body.get("questions", {}))
+    return r.predict(state, body.get("questions", {}))

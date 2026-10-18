@@ -174,3 +174,56 @@ def test_rules_bombs_rejected():  # T773: existed (T004-T006), now pinned
                             router=_FuzzStub())
     # documented in the API reference (undocumented caps drift silently)
     assert "E_RULES_TEXT" in Path("docs/api.md").read_text()
+
+
+def test_systemone_history_cap_server_side():  # T774: not just docs
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen = {}
+
+    class Rec:
+        def predict(self, state, questions):
+            seen["state"] = state
+            return {"answers": {}}
+
+    gatekeeper._router = Rec()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+
+    # over the cap: the raw path trims to the newest MAX_CONTEXT items —
+    # same window as /predict's context (T308) and engine [-history_n:]
+    serve._BUCKETS.clear()
+    hist = [f"h{i}" for i in range(50)]
+    r = client.post("/v1/systemone",
+                    json={"state": {"message": "m", "history": hist},
+                          "questions": {}})
+    assert r.status_code == 200, r.text
+    got = seen["state"]["history"]
+    assert len(got) == serve.MAX_CONTEXT
+    assert got == hist[-serve.MAX_CONTEXT:]  # newest kept, oldest dropped
+
+    # under the cap: untouched — the Jev wire contract survives the cap
+    serve._BUCKETS.clear()
+    hist2 = hist[:5]
+    client.post("/v1/systemone",
+                json={"state": {"history": hist2}, "questions": {}})
+    assert seen["state"]["history"] == hist2
+
+    # non-list history passes through untouched: this box is the COUNT
+    # cap; per-item/content validation is T775's
+    serve._BUCKETS.clear()
+    client.post("/v1/systemone",
+                json={"state": {"history": "not-a-list"}, "questions": {}})
+    assert seen["state"]["history"] == "not-a-list"
+
+    # /predict still rejects >20 context outright (T308 unchanged)
+    serve._BUCKETS.clear()
+    r = client.post("/predict", json={"message": "p774 cap check",
+                                      "rules": {"r": "rule text"},
+                                      "context": [f"c{i}" for i in range(21)]})
+    assert r.status_code == 422 and "E_CONTEXT" in r.text, r.text
+
+    # and the cap is documented where the endpoint is
+    assert "history" in Path("docs/api.md").read_text()
