@@ -101,6 +101,21 @@ def _auth(request) -> None:
             raise HTTPException(status_code=401, detail="bad API key")
 
 
+def _metrics_gate(request) -> None:  # T778: /metrics is the box's or a key holder's
+    """Loopback with no forwarded hop → always. Anyone else → the key.
+    Key off the socket peer (unspoofable): an X-Forwarded-For header can
+    only *remove* the local exemption (a local proxy forwarded it), never
+    grant it. No key configured → open server, open metrics — the same
+    bargain as every other route."""
+    if not _KEY:
+        return
+    host = request.client.host if request.client else ""
+    local = host == "::1" or host.startswith("127.")
+    if local and not request.headers.get("x-forwarded-for"):
+        return
+    _auth(request)  # 401 unless the key checks out (Prometheus: X-API-Key)
+
+
 @app.middleware("http")  # T052+T056+T065: request id, access log, latency header
 async def _mw(request, call_next):
     import uuid
@@ -208,9 +223,10 @@ def preset_one(name: str):
 
 
 @app.get("/metrics")  # T178: prometheus-style text
-def metrics():
+def metrics(request: Request):  # T778: exposure gate before any counters leave
     from fastapi.responses import PlainTextResponse
 
+    _metrics_gate(request)
     from .cache import CACHE
     from .stats import get_stats
     g = get_stats()

@@ -436,3 +436,71 @@ def test_trusted_proxy_client_ip():  # T777
     finally:
         serve._TRUSTED[:] = orig_trusted
         serve._BUCKETS.clear()
+
+
+def test_metrics_exposure_gate():  # T778
+    import pytest
+    from fastapi import HTTPException
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    gatekeeper._router = _FuzzStub()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    orig = (serve._KEY, serve._KEY_OLD)
+
+    try:
+        # keyless server = open server: metrics open too (same bargain
+        # as every other route) — this is also what keeps the old tests
+        # and a default Prometheus scrape working
+        serve._KEY = serve._KEY_OLD = ""
+        serve._BUCKETS.clear()
+        assert client.get("/metrics").status_code == 200
+
+        # key set: the TestClient peer isn't loopback → key required
+        serve._KEY = "metrics-key-0123456789"
+        serve._BUCKETS.clear()
+        assert client.get("/metrics").status_code == 401
+        r = client.get("/metrics",
+                       headers={"X-API-Key": "metrics-key-0123456789"})
+        assert r.status_code == 200 and "bouncer_" in r.text, r.text
+        assert client.get("/metrics", headers={"X-API-Key": "nope"}).status_code == 401
+        # this box gates metrics alone: LB-facing GETs keep their contract
+        for path in ("/health", "/ready", "/version", "/stats"):
+            assert client.get(path).status_code == 200, path
+
+        # loopback exemptions (unit — TestClient's peer can't be loopback)
+        class Peer:
+            def __init__(self, host):
+                self.host = host
+
+        class Req:
+            def __init__(self, host, headers=None):
+                self.client = Peer(host)
+                self.headers = headers or {}
+
+        serve._metrics_gate(Req("127.0.0.1"))        # direct local scrape: free
+        serve._metrics_gate(Req("::1"))              # v6 loopback too
+        with pytest.raises(HTTPException) as e:      # remote, no key
+            serve._metrics_gate(Req("203.0.113.5"))
+        assert e.value.status_code == 401
+        with pytest.raises(HTTPException) as e:      # loopback THROUGH a local
+            serve._metrics_gate(Req("127.0.0.1",    # proxy: forwarded hop seen
+                                    {"x-forwarded-for": "203.0.113.5"}))
+        assert e.value.status_code == 401
+        # ...and a forwarded header can't fake loopback from outside
+        with pytest.raises(HTTPException) as e:
+            serve._metrics_gate(Req("203.0.113.5",
+                                    {"x-forwarded-for": "127.0.0.1"}))
+        assert e.value.status_code == 401
+        # keyless again: the gate is off entirely, even remote
+        serve._KEY = ""
+        serve._metrics_gate(Req("203.0.113.5"))
+    finally:
+        serve._KEY, serve._KEY_OLD = orig
+        serve._BUCKETS.clear()
+
+    # documented where operators and integrators look
+    assert "T778" in Path("docs/SECURITY.md").read_text()
+    assert "T778" in Path("docs/api.md").read_text()

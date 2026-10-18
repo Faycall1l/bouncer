@@ -28,6 +28,23 @@ The file is read once at startup, stripped of surrounding whitespace, and loaded
 into `BOUNCER_KEY` for the server process. Missing or empty file → exit 4
 (refuses to serve half-configured). The file is never logged or echoed.
 
+## `/metrics` exposure (T778)
+
+`GET /metrics` (traffic counters, cache, breaker, latency) is gated as soon
+as `BOUNCER_KEY` is set:
+
+* **loopback** peer with no `X-Forwarded-For` (a direct local scrape) →
+  served without the key;
+* **anyone else** → `X-API-Key` required (Prometheus sends it as a header);
+  wrong or missing key → 401.
+
+The gate reads the **socket peer**, which no header can spoof: a
+`X-Forwarded-For` can only *remove* the local exemption (your local proxy
+forwarded the request), never grant it. With no key configured the server
+is open on every route anyway — metrics follow the same bargain. `/health`,
+`/ready`, and the other GETs keep their LB-facing contract; this gate is
+metrics alone.
+
 ## Key rotation — two-key window (T776)
 
 Rotation without a client deadline uses a second accepted key,
