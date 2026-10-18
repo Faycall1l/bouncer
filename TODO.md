@@ -868,7 +868,7 @@
 - [x] T785 sec: SSRF guard on webhook forward URL (scheme + opt-in allowlist)
 - [x] T786 sec: adversarial rule pack test (huge K, recursive-looking ids)
 - [x] T787 sec: error messages leak nothing (path/version sweep test)
-- [ ] T788 sec: SECURITY.md threat-model link + disclosure contact
+- [x] T788 sec: SECURITY.md threat-model link + disclosure contact
 - [ ] T789 sec: ops runbook (backup, restore, rotate, drain) in docs
 - [ ] T790 test: P41 security sweep
 

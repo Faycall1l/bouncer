@@ -893,3 +893,19 @@ def test_errors_leak_nothing(capfd, monkeypatch):  # T787: path/version sweep
         cli_main(["snapshot", "load", "/x"])
     # the threat model row cites the box
     assert "T787" in Path("docs/threat-model.md").read_text()
+
+
+def test_security_md_link_and_disclosure():  # T788
+    root = Path("SECURITY.md").read_text()
+    # the GitHub Security-tab file points at the real docs, both ways
+    assert "docs/threat-model.md" in root
+    assert "docs/SECURITY.md" in root
+    # ...and carries a disclosure contact with the no-public-PoC order
+    assert "Report a vulnerability" in root and "Security" in root
+    assert "private" in root and "public issue" in root
+    # the env table doesn't rot: security vars added since T403 are listed
+    for var in ("BOUNCER_KEY_OLD", "BOUNCER_TRUSTED_PROXY",
+                "BOUNCER_FORWARD_ALLOW"):
+        assert var in root, var
+    # docs/SECURITY.md links back to the threat model too (P41 needle)
+    assert "threat-model.md" in Path("docs/SECURITY.md").read_text()
