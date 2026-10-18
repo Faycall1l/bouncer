@@ -19,7 +19,8 @@ bouncer serve                                  # API on :8000
 [Demo script](demo-script.md)
 
 **Reference** — [API](api.md) · [Architecture](architecture.md) ·
-[Glossary](glossary.md) · [Golden set](golden.md) · [MPS scoring](mps.md)
+[Glossary](glossary.md) · [Golden set](golden.md) · [MPS scoring](mps.md) ·
+[Version notes](versions.md)
 
 **Operations** — [Security](SECURITY.md) · [Threat model](threat-model.md) ·
 [Runbook](runbook.md) · [Release checklist](RELEASE-CHECKLIST.md)

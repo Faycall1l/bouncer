@@ -178,3 +178,27 @@ def test_glossary_linked_from_every_relevant_page():  # T796
     assert not missing, f"pages missing a glossary link: {missing}"
     # the definition page itself is reachable: nav (T792) + landing page
     assert "glossary.md" in _nav_paths()
+
+
+def test_version_switcher_note():  # T797
+    vp = Path("docs/versions.md")
+    assert vp.exists(), "versions.md missing"
+    text = vp.read_text()
+    assert text.startswith("# Version notes")
+    # covers all three tagged generations the box asks about
+    for v in ("0.1", "0.2", "0.3"):
+        assert v in text, v
+    # switcher framing: why this page exists (older readers vs main)
+    assert "switcher" in text.lower() and "CHANGELOG" in text
+    # real behavior deltas, needles straight from the CHANGELOG entries
+    for needle in ("E_PRESET", "--allow-threshold", "breaker-open",
+                   "E_SNAPSHOT", "Stale-verdict"):
+        assert needle in text, needle
+    # drift guard: the page names the CURRENT package version, so the
+    # 0.4.0 release box must come back and update this page on bump
+    version = re.search(r'^version = "([^"]+)"',
+                        Path("pyproject.toml").read_text(), re.MULTILINE).group(1)
+    assert version in text, f"versions.md must mention current {version}"
+    # reachable: nav entry + landing page link
+    assert "versions.md" in _nav_paths()
+    assert "](versions.md)" in Path("docs/index.md").read_text()

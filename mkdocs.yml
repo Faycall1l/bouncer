@@ -47,6 +47,7 @@ nav:
       - Glossary: glossary.md
       - Golden set: golden.md
       - MPS scoring: mps.md
+      - Version notes: versions.md
   - Operations:
       - Security: SECURITY.md
       - Threat model: threat-model.md
