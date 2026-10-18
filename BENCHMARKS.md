@@ -125,6 +125,16 @@ no lock-contention collapse at 8 threads (strikes/cache/pool/breaker
 tables all hold their locks briefly). Rerun the script for your machine;
 the report JSON is the receipt.
 
+## Import time (T762)
+
+`eval/bench_import.py --n 5` (fresh `python -c "import gatekeeper"`
+subprocess per run) on this machine 2026-10-18: **p50 30.4ms, p95 43.8ms**.
+The number is the receipt for the lazy-demo contract: gradio is imported
+only inside `demo_app.build_app`, so a core install never pays for the
+demo extra (a machine without gradio — like this one — imports fine).
+`--budget-ms B` turns the bench into a gate (exit 1 over budget); T763/
+T764 wire their own honest floors on top of it.
+
 ## Regex baseline (T210, refreshed T637, local, no weights)
 
 `python eval/baseline_regex.py data/examples.jsonl` → **0.403** on 300 rows.

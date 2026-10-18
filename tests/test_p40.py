@@ -401,3 +401,33 @@ def test_release_memory_pool_hook(monkeypatch):  # T761
     readme = Path("README.md").read_text()
     for needle in ("release_memory()", "memory-pressure hook", "pays COLD"):
         assert needle in readme, needle
+
+
+def test_lazy_gradio_import_and_import_bench(tmp_path):  # T762
+    import os
+    import re
+    # no gatekeeper module imports gradio at top level — the demo extra is
+    # paid for only by the demo command itself
+    for f in (ROOT / "src" / "gatekeeper").glob("*.py"):
+        top = re.findall(r"^(?:import gradio|from gradio)", f.read_text(),
+                         re.MULTILINE)
+        assert not top, f"{f.name} imports gradio eagerly"
+    # proof in this gradio-less env: the demo module itself imports clean
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    r = _run("-c", "import gatekeeper.demo_app", env=env)
+    assert r.returncode == 0, r.stderr
+    # the import-time bench runs cold subprocesses and reports the receipt
+    out = tmp_path / "import.json"
+    r = _run(str(ROOT / "eval/bench_import.py"), "--n", "3", "--json",
+             "--out", str(out), cwd=tmp_path, env=env)
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(out.read_text())
+    assert rep["n"] == 3 and rep["p50_ms"] >= 0 and rep["budget_ms"] is None
+    # the budget flag is a real gate: an impossible budget fails loudly
+    r = _run(str(ROOT / "eval/bench_import.py"), "--n", "1",
+             "--budget-ms", "0.001", cwd=tmp_path, env=env)
+    assert r.returncode == 1 and "E_BUDGET" in r.stderr
+    # BENCHMARKS carries the measured number and the lazy-demo receipt
+    doc = Path("BENCHMARKS.md").read_text()
+    for needle in ("T762", "30.4ms", "demo_app.build_app"):
+        assert needle in doc, needle
