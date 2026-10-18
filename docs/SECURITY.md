@@ -99,6 +99,17 @@ turns the check on; the old key only widens it. Both vars warn at boot when
 shorter than 16 chars (never the values). Drain via `/ready` for each restart
 and nothing drops.
 
+## Webhook forward SSRF guard (T785)
+
+`BOUNCER_FORWARD_URL` is operator config, not end-user input — but a
+copied template or a compromised config could still point the forwarder
+at `file://`, an internal admin panel or the cloud metadata address. So
+`forward()` refuses anything that isn't http(s) **before a socket opens**,
+and setting `BOUNCER_FORWARD_ALLOW` (comma-separated hosts) narrows it
+further: only those exact hosts receive events (case-insensitive; a
+subdomain of an allowed host is *not* allowed). Timeout is 10s per
+attempt; failures surface as `E_WEBHOOK`, never as a silent drop.
+
 ## Data handling
 
 * The audit log stores a **sha256-truncated hash** of each message, never raw

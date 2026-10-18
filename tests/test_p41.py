@@ -709,3 +709,54 @@ def test_review_queue_raw_but_bounded_and_private():  # T784
     sec = Path("docs/SECURITY.md").read_text()
     for needle in ("review queue", "raw message", "0600", "T784"):
         assert needle in sec, needle
+
+
+def test_webhook_ssrf_guard(monkeypatch):  # T785
+    import pytest
+
+    from gatekeeper.adapters import webhooks as wh
+
+    calls = []
+
+    class Resp:
+        def read(self):
+            return b"ok"
+
+    def _fake(req, timeout):
+        calls.append((req.full_url, timeout))
+        return Resp()
+
+    monkeypatch.setattr(wh.urllib.request, "urlopen", _fake)
+    # non-http(s) schemes die BEFORE a socket opens — file:// to the
+    # passwd file, gopher, data:, ftp: all refuse, and nothing was sent
+    for bad in ("file:///etc/passwd", "gopher://x/1",
+                "data:text/plain,x", "ftp://x/pub"):
+        with pytest.raises(wh.WebhookError) as e:
+            wh.forward(bad, {"action": "flag"})
+        assert "scheme" in str(e.value), e.value
+    assert calls == [], calls
+
+    # http and https both pass — intranet hooks are a real setup; the
+    # allowlist is the opt-in pin, not a forced-TLS claim
+    wh.forward("http://hooks.internal/x", {"action": "flag"})
+    wh.forward("https://hooks.example/x", {"action": "flag"})
+    assert [c[0] for c in calls] == ["http://hooks.internal/x",
+                                     "https://hooks.example/x"]
+    assert all(t == 10 for _, t in calls)  # the real timeout, pinned
+
+    # opt-in allowlist: unpinned hosts die, the pinned one lives
+    monkeypatch.setenv("BOUNCER_FORWARD_ALLOW", "hooks.example")
+    with pytest.raises(wh.WebhookError):
+        wh.forward("http://evil.example/x", {"action": "flag"})
+    wh.forward("https://hooks.example/x", {"action": "flag"})
+    assert len(calls) == 3
+    # no subdomain wildcards; case-insensitive exact host
+    with pytest.raises(wh.WebhookError):
+        wh.forward("https://hooks.example.evil/x", {"action": "flag"})
+    wh.forward("https://HOOKS.EXAMPLE/x", {"action": "flag"})
+    assert len(calls) == 4
+
+    # documented where operators look
+    sec = Path("docs/SECURITY.md").read_text()
+    for needle in ("BOUNCER_FORWARD_ALLOW", "http(s)", "T785", "10s"):
+        assert needle in sec, needle

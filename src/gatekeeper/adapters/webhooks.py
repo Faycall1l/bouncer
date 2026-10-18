@@ -18,6 +18,26 @@ class SlackError(Exception):  # T301
     code = "E_SLACK"
 
 
+_SCHEMES = ("http://", "https://")  # T785: file://, gopher://, data: are the SSRF classics
+
+
+def _check_url(url: str) -> None:
+    """T785: SSRF guard for the forwarder. The URL is operator config, not
+    end-user input — this keeps a copied template or a compromised config
+    from turning the forwarder into an internal scanner: only http(s)
+    leaves the box, and if BOUNCER_FORWARD_ALLOW is set, only those exact
+    hosts (case-insensitive, no subdomain wildcards)."""
+    if not url.lower().startswith(_SCHEMES):
+        raise WebhookError(f"E_WEBHOOK: refusing non-http(s) scheme in {url!r}")
+    allow = [h.strip() for h in
+             os.environ.get("BOUNCER_FORWARD_ALLOW", "").split(",") if h.strip()]
+    if allow:
+        from urllib.parse import urlsplit
+        host = urlsplit(url).hostname or ""
+        if host not in allow:
+            raise WebhookError(f"E_WEBHOOK: host {host!r} not in BOUNCER_FORWARD_ALLOW")
+
+
 def verify_slack_signature(secret, ts, body, signature, *, now=None,
                            tolerance_s: float = 300.0) -> bool:  # T704
     """Slack's v0 scheme: HMAC-SHA256 over `v0:{ts}:{body}`, compared
@@ -60,6 +80,8 @@ def receive_slack_event(body, rules, *, secret=None, raw=None, ts=None,  # T704
 def forward(url: str, event: dict) -> None:  # T079
     from gatekeeper import __version__
     from gatekeeper.adapters.common import dry_run
+
+    _check_url(url)  # T785: scheme + opt-in allowlist before any socket opens
     if dry_run():  # T697: never post — not even the forwarder
         from gatekeeper.adapters.common import redact
         print(f"[dry-run] would forward {event.get('action')} to {redact(url)}")

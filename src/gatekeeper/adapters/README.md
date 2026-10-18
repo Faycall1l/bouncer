@@ -9,7 +9,7 @@
 | Mattermost | `adapters/mattermost.py` | `pip install -e .[mattermost]`. `MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.mattermost` (websocket `posted` events + `/bouncer` slash webhook, `MATTERMOST_SLASH_TOKEN` compared constant-time; `BOUNCER_MM_DELETE=1` opts into deletePost) | own async loop (per-event guard matches run_loop), Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Zulip | `adapters/zulip_bot.py` | stdlib only. `ZULIP_EMAIL=... ZULIP_API_KEY=... ZULIP_SITE=... python -m gatekeeper.adapters.zulip_bot` (event-queue poll, stream messages moderated, PMs/mentions are `bouncer` commands; `BOUNCER_ZL_DELETE=1` opts into delete) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver; pass `secret`+`raw`+`ts`+`signature` to enforce Slack v0 signature verification (fail-closed) | dry-run, redact, verify_signature |
-| Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events; breaker-open results fire too and carry `cause` | dry-run, redact |
+| Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events; breaker-open results fire too and carry `cause`; http(s) only, and `BOUNCER_FORWARD_ALLOW` (comma-separated hosts) pins exact destinations (T785) | dry-run, redact |
 | *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, Health, RateCap, redact, dry_run, install_shutdown, verify_signature, load_config |
 
 The matrix's SDK column is the T703 truth: `common.py` (T691–T709) is the

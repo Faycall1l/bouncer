@@ -85,6 +85,7 @@ each opened with a row here and moved up when it landed.
 | log/terminal injection (CWE-117) | log lines are `json.dumps` (fixed keys, escaped values); `X-Request-ID` scrubbed before echo+log; reasons scrubbed at the source in `explain()`; watch previews and error lines scrubbed | T779 |
 | public demo discloses rules/messages | `bouncer demo --share` prints a structured `{"warn"}` at launch — before gradio loads or the port binds; docs tell operators a shared link is full disclosure (rulebook, messages, review rows) | T780 |
 | vulnerable dependency ships | CI `audit` job runs pip-audit over the versions pip resolves from pyproject on **every push** — a known CVE turns the build red before anything ships | T781 |
+| forwarder as internal scanner (SSRF) | `forward()` refuses non-http(s) schemes before any socket opens; opt-in `BOUNCER_FORWARD_ALLOW` pins exact destination hosts (case-insensitive, no subdomain wildcards) | T785 |
 | unbounded history on the raw path | `/v1/systemone` trims `state.history` to the newest 20 items server-side before forwarding — same window as `/predict`'s context (T308); under-cap and non-list states pass through untouched | T774 |
 | context item / dict-key / body-size bounds | context items ≤ 8000 chars → 422 `E_CONTEXT` (structured path **rejects**); `/v1/systemone` `state`/`questions` keys ≤ 64 → 422 `E_STATE` and its history items **trim** to 8000 (passthrough precedent from T774); every POST with `Content-Length` > 1 MB → 413 from the request middleware *before* the body is read or parsed | T775 |
 
