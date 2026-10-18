@@ -298,3 +298,71 @@ def test_context_item_and_key_length_hardening():  # T775
     assert "E_STATE" in api and "8000 chars" in api
     readme = Path("README.md").read_text()
     assert "before they're parsed" in readme
+
+
+def test_two_key_rotation_window():  # T776
+    import inspect
+
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    gatekeeper._router = _FuzzStub()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    payload = {"message": "p776 rotation window",
+               "rules": {"no-spam": "no ads or links"}}
+    orig = (serve._KEY, serve._KEY_OLD)
+
+    def attempt(key):  # key=None → no header at all
+        serve._BUCKETS.clear()
+        h = {} if key is None else {"X-API-Key": key}
+        return client.post("/predict", json=payload, headers=h)
+
+    try:
+        # window open: both keys carry full weight, everything else 401
+        serve._KEY, serve._KEY_OLD = "new-key-0123456789", "old-key-0123456789"
+        assert attempt("new-key-0123456789").status_code == 200
+        assert attempt("old-key-0123456789").status_code == 200
+        assert attempt("wrong-key-0123456789").status_code == 401
+        assert attempt(None).status_code == 401
+        # hostile non-ASCII header: 401, never compare_digest(str) TypeError
+        # -> 500 (the pre-T776 line did exactly that)
+        assert attempt(b"\xff\xfe-key-bytes").status_code == 401
+        # both comparisons always run — no short-circuit `or` that would
+        # let timing say which key was close
+        src = inspect.getsource(serve._auth)
+        assert "compare_digest(got, _KEY_OLD.encode" in src
+        assert " or hmac" not in src and "and hmac.compare" not in src
+
+        # window closed: the old key dies the instant the var is gone
+        serve._KEY, serve._KEY_OLD = "new-key-0123456789", ""
+        assert attempt("new-key-0123456789").status_code == 200
+        assert attempt("old-key-0123456789").status_code == 401
+
+        # auth off entirely (no primary) still means open API — the old
+        # key alone never turns the check on
+        serve._KEY, serve._KEY_OLD = "", "old-key-0123456789"
+        assert attempt(None).status_code == 200
+    finally:
+        serve._KEY, serve._KEY_OLD = orig
+
+    # the runbook lives where operators look for it
+    sec = Path("docs/SECURITY.md").read_text()
+    for needle in ("two-key window", "BOUNCER_KEY_OLD", "constant-time",
+                   "T776", "/ready", "step 3"):
+        assert needle in sec, needle
+
+
+def test_short_old_key_warns_at_boot():  # T776: T292's warning, window key too
+    import os
+    import subprocess
+
+    env = {k: v for k, v in os.environ.items() if k != "BOUNCER_KEY"}
+    env["BOUNCER_KEY_OLD"] = "short"
+    env["PYTHONPATH"] = "src" + os.pathsep + env.get("PYTHONPATH", "")
+    p = subprocess.run([sys.executable, "-c", "import gatekeeper.serve"],
+                       capture_output=True, text=True, timeout=60,
+                       check=False, env=env)
+    assert "BOUNCER_KEY_OLD shorter than 16 chars" in p.stdout, p.stdout
+    assert "BOUNCER_KEY shorter" not in p.stdout  # the primary is unset here

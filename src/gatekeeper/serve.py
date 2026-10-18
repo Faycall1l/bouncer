@@ -36,8 +36,11 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)  # T284
 _START = time.time()
 
 _KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared key
+_KEY_OLD = __import__("os").environ.get("BOUNCER_KEY_OLD", "")  # T776: rotation window
 if 0 < len(_KEY) < 16:  # T292: short keys fall to guessing; warn loudly, still enforce
     print('{"warn": "BOUNCER_KEY shorter than 16 chars"}', flush=True)
+if 0 < len(_KEY_OLD) < 16:  # T776: the outgoing key deserves the same warning
+    print('{"warn": "BOUNCER_KEY_OLD shorter than 16 chars"}', flush=True)
 
 _BUCKETS: dict = {}  # T054: >60 req/min per IP -> 429
 
@@ -68,7 +71,16 @@ def _rate(request: Request) -> None:
 def _auth(request) -> None:
     if _KEY:
         import hmac  # T307: constant-time compare blunts timing probes
-        if not hmac.compare_digest(request.headers.get("X-API-Key", ""), _KEY):
+        # T776: rotation window — the outgoing key stays valid beside the
+        # new one so clients migrate with no deadline. `|=` never
+        # short-circuits: both compares run, so timing can't say which
+        # key was close. Bytes compare: raw header bytes can hold
+        # non-ASCII that compare_digest(str) would TypeError on (-> 500).
+        got = request.headers.get("X-API-Key", "").encode("utf-8", "replace")
+        good = hmac.compare_digest(got, _KEY.encode("utf-8", "replace"))
+        if _KEY_OLD:
+            good |= hmac.compare_digest(got, _KEY_OLD.encode("utf-8", "replace"))
+        if not good:
             from fastapi import HTTPException
             raise HTTPException(status_code=401, detail="bad API key")
 

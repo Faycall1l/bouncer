@@ -28,17 +28,28 @@ The file is read once at startup, stripped of surrounding whitespace, and loaded
 into `BOUNCER_KEY` for the server process. Missing or empty file → exit 4
 (refuses to serve half-configured). The file is never logged or echoed.
 
-## Key rotation
+## Key rotation — two-key window (T776)
 
-There is exactly one active key — bouncer doesn't keep a keyring, so rotation is
-a restart:
+Rotation without a client deadline uses a second accepted key,
+`BOUNCER_KEY_OLD`. The server accepts **both** `BOUNCER_KEY` (current) and
+`BOUNCER_KEY_OLD` (outgoing) — each compared constant-time, wrong key is 401
+either way, and both comparisons always run (a `|=` on bools doesn't
+short-circuit, so timing can't reveal which key was close). Runbook:
 
-1. Write the new key to the secrets file (atomic replace: write temp + `mv`).
-2. Restart the process (`systemctl restart`, `docker compose up -d`, etc.).
-3. Roll the new key to clients, then delete the old value everywhere it lived.
+1. **Open the window.** Set `BOUNCER_KEY` to the *new* key and
+   `BOUNCER_KEY_OLD` to the key clients hold today (same atomic secrets-file
+   replace as above; with `serve --key-file` the file supplies the primary —
+   export the old one in the environment). Restart once.
+2. **Migrate at any pace.** Every client on either key keeps working; there
+   is no clock on this step. The only rule: nothing still holding the old key
+   may survive step 3.
+3. **Close the window.** Unset `BOUNCER_KEY_OLD`, restart. The old key dies
+   everywhere at once.
 
-During the restart window `/health` fails (process down) — that's why `/ready`
-exists for LBs; drain first if you need zero-dropped-requests rotation.
+Notes: `BOUNCER_KEY_OLD` never enables auth by itself — only `BOUNCER_KEY`
+turns the check on; the old key only widens it. Both vars warn at boot when
+shorter than 16 chars (never the values). Drain via `/ready` for each restart
+and nothing drops.
 
 ## Data handling
 

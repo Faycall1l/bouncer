@@ -80,6 +80,7 @@ each opened with a row here and moved up when it landed.
 | rule-set ambiguity | rules XOR preset, unknown preset → 422 `E_PRESET` | T471, T482 |
 | hostile input (random bytes, JSON bombs, lone surrogates) | seeded fuzz over `/predict` proves no 5xx: malformed bodies 400, nesting 422, surrogate text sanitized (message/history) or rejected (`E_RULES_TEXT`) at the engine boundary | T772 |
 | rule-set bombs (oversized value/id/count) | `validate_rules` rejects >280-char values (`E_RULES_TEXT`), non-slug ids >24 chars (`E_RULES_ID`), >12 rules (`E_RULES_COUNT`) — was already enforced, now pinned end-to-end and documented | T004–T006, T773 |
+| rushed rotation = leaked old key | two-key window: `BOUNCER_KEY_OLD` accepted constant-time beside the new key — clients migrate with no deadline, closing the window kills the old key in one step; both compares always run | T776 |
 | unbounded history on the raw path | `/v1/systemone` trims `state.history` to the newest 20 items server-side before forwarding — same window as `/predict`'s context (T308); under-cap and non-list states pass through untouched | T774 |
 | context item / dict-key / body-size bounds | context items ≤ 8000 chars → 422 `E_CONTEXT` (structured path **rejects**); `/v1/systemone` `state`/`questions` keys ≤ 64 → 422 `E_STATE` and its history items **trim** to 8000 (passthrough precedent from T774); every POST with `Content-Length` > 1 MB → 413 from the request middleware *before* the body is read or parsed | T775 |
 
