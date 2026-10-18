@@ -227,3 +227,74 @@ def test_systemone_history_cap_server_side():  # T774: not just docs
 
     # and the cap is documented where the endpoint is
     assert "history" in Path("docs/api.md").read_text()
+
+
+def test_context_item_and_key_length_hardening():  # T775
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen = {}
+
+    class Rec:
+        def predict(self, state, questions):
+            seen["state"] = state
+            return _FuzzStub().predict(state, questions)
+
+    gatekeeper._router = Rec()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    rules = {"no-spam": "no ads or links"}
+
+    def post(path, payload=None, **kw):
+        serve._BUCKETS.clear()
+        return client.post(path, json=payload, **kw)
+
+    # context ITEM length: the 20-item count cap misses one 500k-char item
+    r = post("/predict", {"message": "p775 item cap", "rules": rules,
+                          "context": ["x" * (serve.MAX_ITEM + 1)]})
+    assert r.status_code == 422 and "E_CONTEXT" in r.text, r.text
+    # exactly at the bound still passes — a bound is a bound, not a wall
+    r = post("/predict", {"message": "p775 at item cap", "rules": rules,
+                          "context": ["x" * serve.MAX_ITEM]})
+    assert r.status_code == 200, r.text
+
+    # systemone dict KEYS: bounded at both top levels, rejected (a key
+    # can't be trimmed coherently), 64 chars exactly still passes
+    r = post("/v1/systemone", {"state": {"k" * (serve.MAX_KEY + 1): "v"},
+                               "questions": {}})
+    assert r.status_code == 422 and "E_STATE" in r.text, r.text
+    r = post("/v1/systemone", {"state": {},
+                               "questions": {"q" * (serve.MAX_KEY + 1): {}}})
+    assert r.status_code == 422 and "E_STATE" in r.text, r.text
+    r = post("/v1/systemone", {"state": {"k" * serve.MAX_KEY: "v"},
+                               "questions": {}})
+    assert r.status_code == 200, r.text
+
+    # systemone history ITEMS: trimmed to the same bound (T774's trim
+    # precedent — /predict rejects this, the raw passthrough trims)
+    r = post("/v1/systemone", {"state": {"history": ["h" * (serve.MAX_ITEM + 999)]},
+                               "questions": {}})
+    assert r.status_code == 200, r.text
+    assert [len(h) for h in seen["state"]["history"]] == [serve.MAX_ITEM]
+
+    # body-size pre-check: Content-Length over 1MB is 413 from the request
+    # middleware — before any parsing (the old T291 helper only ran inside
+    # the batch handler, after the body was already read)
+    serve._BUCKETS.clear()
+    big = ('{"message": "p775 big", "rules": {"r": "text"}, "context": ['
+           + ",".join('"' + "y" * 60_000 + '"' for _ in range(18)) + "]}").encode()
+    assert len(big) > serve.MAX_BODY
+    r = client.post("/predict", content=big,
+                    headers={"content-type": "application/json"})
+    assert r.status_code == 413 and "body too large" in r.text, r.text
+    # under the limit, same shape answers normally (the bound didn't eat
+    # legitimate traffic)
+    r = post("/predict", {"message": "p775 normal after storms", "rules": rules})
+    assert r.status_code == 200 and r.json()["action"] == "allow"
+
+    # both caps are documented where people look for them
+    api = Path("docs/api.md").read_text()
+    assert "E_STATE" in api and "8000 chars" in api
+    readme = Path("README.md").read_text()
+    assert "before they're parsed" in readme

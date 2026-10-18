@@ -1,17 +1,21 @@
 # API reference (T141, updated T394)
 
 * `POST /predict` `{message, rules, context?, threshold?, allow_threshold?,
-  delete_threshold?, lang?}` → decision + reason. `context` ≤ 20 items (else 422),
-  message ≤ 8000 chars (else 413). `rules` caps (T773): 1–12 keys, each a
+  delete_threshold?, lang?}` → decision + reason. `context` ≤ 20 items, each
+  ≤ 8000 chars (else 422 `E_CONTEXT`), message ≤ 8000 chars (else 413).
+  `rules` caps (T773): 1–12 keys, each a
   ≤24-char slug (`a-z0-9-`) with value ≤ 280 chars — bombs get 422
   `E_RULES_COUNT`/`E_RULES_ID`/`E_RULES_TEXT`. Rule errors → 422 `{code, message}`.
+  All POST bodies whose `Content-Length` exceeds 1 MB are 413 **before**
+  they're parsed (T775).
 * `POST /predict/batch` `{messages[], rules, threshold?, allow_threshold?,
   delete_threshold?}` → array, order kept. 1–32 messages (else 422/413), each
   ≤ 8000 chars. Shares rate/auth guards with `/predict`.
 * `POST /v1/systemone` `{state, questions}` → raw router passthrough (Jev SDKs work).
-  Same rate/auth guards apply. `state.history` is bounded server-side to the
-  newest 20 items (silently trimmed, T774) — the raw path gets the same
-  per-request work cap as `/predict`.
+  Same rate/auth guards apply. `state.history` is bounded server-side (T774+T775):
+  newest 20 items, each trimmed to 8000 chars (silently — passthrough keeps its
+  wire contract), and `state`/`questions` dict keys ≤ 64 chars (else 422
+  `E_STATE` — keys can't be trimmed coherently, so they're rejected).
 * `GET /health` loaded/unavailable + uptime · `GET /version` · `GET /models` ·
   `GET /stats` (decisions + cache + version + uptime) · `GET /presets` ·
   `GET /metrics` (per-action counters, cache hits/misses/rate, latency p50,

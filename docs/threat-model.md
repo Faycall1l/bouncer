@@ -8,7 +8,8 @@ bouncer trusts the transport after the key check.
 
 A threat model that hides its gaps is worse than none. Everything "enforced"
 below cites the box that enforces it; every known gap cites the box tracking
-it (T775) and stays here until that box closes it.
+it and stays here until that box closes it. Current set: none — T772–T775
+each opened with a row here and moved up when it landed.
 
 ## Assets
 
@@ -80,13 +81,10 @@ it (T775) and stays here until that box closes it.
 | hostile input (random bytes, JSON bombs, lone surrogates) | seeded fuzz over `/predict` proves no 5xx: malformed bodies 400, nesting 422, surrogate text sanitized (message/history) or rejected (`E_RULES_TEXT`) at the engine boundary | T772 |
 | rule-set bombs (oversized value/id/count) | `validate_rules` rejects >280-char values (`E_RULES_TEXT`), non-slug ids >24 chars (`E_RULES_ID`), >12 rules (`E_RULES_COUNT`) — was already enforced, now pinned end-to-end and documented | T004–T006, T773 |
 | unbounded history on the raw path | `/v1/systemone` trims `state.history` to the newest 20 items server-side before forwarding — same window as `/predict`'s context (T308); under-cap and non-list states pass through untouched | T774 |
+| context item / dict-key / body-size bounds | context items ≤ 8000 chars → 422 `E_CONTEXT` (structured path **rejects**); `/v1/systemone` `state`/`questions` keys ≤ 64 → 422 `E_STATE` and its history items **trim** to 8000 (passthrough precedent from T774); every POST with `Content-Length` > 1 MB → 413 from the request middleware *before* the body is read or parsed | T775 |
 
 ## Known gaps (tracked, not hidden)
 
-| gap | risk | tracked |
-|---|---|---|
-| context per-item and dict-key lengths | long items/keys bypass count-based caps | T775 |
-| no body-size pre-check on `/predict` | giant bodies are parsed before field caps apply (batch only has T291) | (covered with T775) |
-
-Each row moves into *Countermeasures enforced today* when its box lands —
-with the box that enforces it, never a promise.
+_None open. Every gap this doc ever carried named its box (T772–T775) and
+moved into *Countermeasures* the day that box landed — the next gap starts
+the same way: a risk row here, a box in TODO.md, no promises without one._

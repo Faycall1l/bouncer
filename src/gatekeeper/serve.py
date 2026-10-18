@@ -78,7 +78,11 @@ async def _mw(request, call_next):
     import uuid
     rid = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
     t0 = time.time()
-    resp = await call_next(request)
+    if request.method == "POST" and _body_too_big(request):  # T775: 413 BEFORE
+        from fastapi.responses import JSONResponse  # the body is ever read/parsed
+        resp = JSONResponse(status_code=413, content={"detail": "body too large"})
+    else:
+        resp = await call_next(request)
     ms = (time.time() - t0) * 1000
     resp.headers["X-Request-ID"] = rid
     resp.headers["X-Bouncer-ms"] = f"{ms:.1f}"
@@ -269,6 +273,8 @@ def _thresholds(threshold: float, allow: float | None,
 MAX_BATCH = 32  # T224: bound one request's work
 MAX_BODY = 1_000_000  # T291: 1MB cap on batch payloads
 MAX_CONTEXT = 20  # T308: bound per-request history
+MAX_ITEM = 8000  # T775: bound one context/history item (same as a message)
+MAX_KEY = 64  # T775: bound dict keys on the raw passthrough
 MODELS = ("english", "multilingual", "typed-decisions")  # T459: laya checkpoints
 
 
@@ -326,6 +332,10 @@ def predict(req: ModReq, request: Request):
         raise HTTPException(status_code=422,
                             detail={"code": "E_CONTEXT",
                                     "message": f"context capped at {MAX_CONTEXT} items"})
+    if any(len(c) > MAX_ITEM for c in req.context):  # T775: count caps miss this
+        raise HTTPException(status_code=422,
+                            detail={"code": "E_CONTEXT",
+                                    "message": f"context item capped at {MAX_ITEM} chars"})
     from fastapi import HTTPException
 
     from .config import GateConfig, questions_knob
@@ -400,10 +410,24 @@ def systemone(body: dict, request: Request):
     _rate(request)  # T224: passthrough shares guards too
     _auth(request)
     state = body.get("state", {}) or {}
+    questions = body.get("questions", {}) or {}
+    # T775: keys and item text are unvalidated on this raw path — bound the
+    # keys (reject: they can't be trimmed coherently) at both top levels
+    for part in (state, questions):
+        if isinstance(part, dict) and any(len(k) > MAX_KEY for k in part):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=422,
+                                detail={"code": "E_STATE",
+                                        "message": f"state/questions key capped at "
+                                                   f"{MAX_KEY} chars"})
     # T774: this raw path forwards `state` straight to the router, so nothing
     # else caps it — bound history to the newest MAX_CONTEXT items, the same
     # window /predict's context (T308) and the engine's [-history_n:] use.
     if isinstance(state, dict) and isinstance(state.get("history"), list):
-        state = {**state, "history": state["history"][-MAX_CONTEXT:]}
+        hist = state["history"][-MAX_CONTEXT:]
+        # T775: per-item text is bounded too — trim (passthrough precedent
+        # from T774), while structured /predict rejects the same bound
+        hist = [h[:MAX_ITEM] if isinstance(h, str) else h for h in hist]
+        state = {**state, "history": hist}
     r = get_router()
-    return r.predict(state, body.get("questions", {}))
+    return r.predict(state, questions)
