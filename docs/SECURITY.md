@@ -105,6 +105,8 @@ and nothing drops.
   text (T273). Reversible reconstruction from the log isn't possible; if you need
   the original message for an appeal, keep it in your own system.
 * Snapshots contain counters and per-user strike counts — no message content.
+  They're written **0600** (owner-only) by the atomic writer, so umask can't
+  leak them world-readable (T783).
 * Rate limiting is per-IP (60 req/min). Behind a reverse proxy set
   `BOUNCER_TRUSTED_PROXY` to your proxy's IP (comma-separate several): only
   when the **direct peer** matches does bouncer take the client IP from

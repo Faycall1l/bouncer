@@ -645,3 +645,33 @@ def test_rate_limit_xff_spoof_bypass():  # T782: the attack, not the mechanism
 
     # the threat model claims this attack is dead — keep the claim cited
     assert "T782" in Path("docs/threat-model.md").read_text()
+
+
+def test_snapshot_files_written_0600():  # T783
+    import json as _json
+    import os as _os
+    import stat
+    import tempfile
+
+    from gatekeeper.cli import main as cli_main
+    from gatekeeper.persist import atomic_write
+
+    def mode(p):
+        return stat.S_IMODE(_os.stat(p).st_mode)
+
+    with tempfile.TemporaryDirectory() as d:
+        # the writer's contract: born 0600, no matter the umask
+        target = f"{d}/snap.json"
+        atomic_write(target, _json.dumps({"v": 1}))
+        assert mode(target) == 0o600, oct(mode(target))
+        # a stale tmp from a crashed run doesn't get to leave its old mode
+        # behind — the replace lands 0600 regardless
+        _os.chmod(target, 0o644)
+        atomic_write(target, _json.dumps({"v": 1, "t": 2}))
+        assert mode(target) == 0o600, oct(mode(target))
+        # end-to-end through the CLI command operators actually run
+        via_cli = f"{d}/via-cli.json"
+        assert cli_main(["snapshot", "save", via_cli]) == 0
+        assert mode(via_cli) == 0o600, oct(mode(via_cli))
+        # ...and the data handling doc says so
+        assert "0600" in Path("docs/SECURITY.md").read_text()

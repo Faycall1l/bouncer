@@ -13,11 +13,15 @@ class SnapshotError(Exception):
 
 
 def atomic_write(path: str, text: str) -> None:
-    """T431: write via tmp + rename so crashes never leave half a snapshot."""
+    """T431: write via tmp + rename so crashes never leave half a snapshot.
+    T783: the file is born 0600 — snapshots carry strike counters keyed by
+    user id, and a umask-dependent 0644 would ship them world-readable."""
     parent = os.path.dirname(os.path.abspath(path))
     os.makedirs(parent, exist_ok=True)
     tmp = f"{path}.tmp-{os.getpid()}"
-    with open(tmp, "w") as f:
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)  # a stale tmp from a crashed run keeps no old mode
+    with os.fdopen(fd, "w") as f:
         f.write(text)
     os.replace(tmp, path)
 
