@@ -294,7 +294,7 @@ def cmd_export(args) -> int:
 
 def cmd_pack(args) -> int:
     from gatekeeper import get_preset
-    from gatekeeper.rules import validate_rules, warn_overlapping
+    from gatekeeper.rules import RuleError, validate_rules, warn_overlapping
     if args.action == "init":  # T545: template pack to edit, based on a preset
         import os
         if os.path.exists(args.file) and not getattr(args, "force", False):
@@ -308,8 +308,19 @@ def cmd_pack(args) -> int:
               f"{args.preset!r}); edit ids/text then `bouncer pack lint --rules {args.file}`")
         return 0
     if args.rules:
-        with open(args.rules) as f:
-            rules = json.load(f)
+        # T786: adversarial packs die HERE with machine codes, not as raw
+        # tracebacks — the file used to be opened unguarded
+        import os as _os
+        if not _os.path.exists(args.rules):
+            print(f"bouncer: no pack file {args.rules!r}", file=sys.stderr)
+            return 4
+        try:
+            with open(args.rules) as f:
+                rules = json.load(f)
+        except (OSError, ValueError) as e:  # ValueError == JSONDecodeError
+            print(f"bouncer: cannot read pack {args.rules!r} ({e})",
+                  file=sys.stderr)
+            return 4
     else:
         rules = get_preset(args.preset)
     if args.action == "show":
@@ -319,7 +330,11 @@ def cmd_pack(args) -> int:
         else:
             print(json.dumps(rules, indent=2, ensure_ascii=False))
     else:
-        validate_rules(rules)
+        try:
+            validate_rules(rules)
+        except RuleError as e:  # T786: machine code + exit 4, never a traceback
+            print(f"bouncer: bad rules: {e}", file=sys.stderr)
+            return 4
         warns = warn_overlapping(rules)
         for w in warns:
             print("warn:", w)

@@ -760,3 +760,60 @@ def test_webhook_ssrf_guard(monkeypatch):  # T785
     sec = Path("docs/SECURITY.md").read_text()
     for needle in ("BOUNCER_FORWARD_ALLOW", "http(s)", "T785", "10s"):
         assert needle in sec, needle
+
+
+def test_adversarial_rule_pack(capsys):  # T786: hostile packs die as codes
+    import json as _json
+    import tempfile
+    import time
+
+    from gatekeeper.cli import main as cli_main
+
+    with tempfile.TemporaryDirectory() as d:
+        def pack(name, text):
+            p = f"{d}/{name}"
+            with open(p, "w") as f:
+                f.write(text)
+            return p
+
+        # huge K: 5000 rules, refused by the T773 count cap — fast, no
+        # traceback, exit 4 like every other bad-rules failure
+        big = pack("big.json", _json.dumps({f"r{i}": "t" for i in range(5000)}))
+        t0 = time.perf_counter()
+        assert cli_main(["pack", "lint", "--rules", big]) == 4
+        assert time.perf_counter() - t0 < 5, "5000 rules took >5s to reject"
+
+        # recursive/pathy/hostile ids: none may pass as a rule id, so none
+        # can ever be echoed back into a log line or a path
+        hostile = ("../..", "..", "a/b", "./x", "%s%n", "id\x00nul",
+                   "id\u202ex", "x" * 100, "", " ")
+        for rid in hostile:
+            p = pack("h.json", _json.dumps({rid: "t"}))
+            assert cli_main(["pack", "lint", "--rules", p]) == 4, rid
+        # the reserved word and a text bomb
+        assert cli_main(["pack", "lint",
+                         "--rules", pack("ok.json", _json.dumps({"ok": "t"}))]) == 4
+        assert cli_main(["pack", "lint", "--rules", pack(
+            "text.json", _json.dumps({"a": "x" * 100_000}))]) == 4
+
+        # structurally hostile DOCUMENTS: not a mapping, non-string text,
+        # 300-deep nesting and truncated JSON — the loader refuses them all
+        for name, text in (("list.json", _json.dumps(["a", "b"])),
+                           ("scalar.json", _json.dumps(42)),
+                           ("nested.json", _json.dumps({"a": {"b": 1}})),
+                           ("deep.json", "[" * 2000 + "]" * 2000),
+                           ("trunc.json", '{"a": "t')):
+            assert cli_main(["pack", "lint", "--rules", pack(name, text)]) == 4, name
+        # a missing file is a clean message, not an OSError traceback
+        assert cli_main(["pack", "lint", "--rules", f"{d}/nope.json"]) == 4
+
+        err = capsys.readouterr().err
+        assert "Traceback" not in err, err[:300]
+        assert "bouncer:" in err  # every failure lands in the same funnel
+
+        # a valid pack still lints clean (positive control)
+        good = pack("good.json", _json.dumps({"no-spam": "no ads or links"}))
+        assert cli_main(["pack", "lint", "--rules", good]) == 0
+
+    # the threat model row cites the box
+    assert "T786" in Path("docs/threat-model.md").read_text()
