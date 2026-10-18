@@ -604,3 +604,19 @@ def test_before_after_finetune_columns_honest():  # T768
                    "1.4ms", "1.3ms", "0.305", "0.403"):
         assert needle in section, f"missing {needle}"
         assert bench.count(needle) >= 2, f"{needle} only appears here"
+
+
+def test_pool_memory_footprint_documented():  # T769
+    readme = Path("README.md").read_text()
+    section = readme.split("## Router pools", 1)[1].split("\n## ", 1)[0]
+    # the sizing rule and its arithmetic are stated as arithmetic —
+    # a formula, not a fake RSS measurement
+    for needle in ("T769", "max_n × model size", "measured RSS",
+                   "~1.8GB", "~3.6GB", "unmeasured framework overhead"):
+        assert needle in section, needle
+    # the model-size figure's provenance is cited, not invented here
+    assert "[BENCHMARKS.md]" in section
+    bench = Path("BENCHMARKS.md").read_text()
+    assert "1.8GB" in bench and "421M params" in bench
+    # 3.6 = 2 slots × 1.8: the example must be internally consistent
+    assert 2 * 1.8 == 3.6

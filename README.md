@@ -147,6 +147,12 @@ LRU pool keyed by constructor kwargs:
   from your own pressure handling (K8s eviction callback, an RSS watcher,
   before a big spawn). The next request rebuilds on demand and pays COLD
   again — that cost is the documented trade, not a surprise.
+* **Memory footprint (T769)** ≈ `max_n × model size`: arithmetic, not a
+  measured RSS — the checkpoint ships at ~1.8GB (421M params fp32, the
+  Run-costs row in [BENCHMARKS.md](BENCHMARKS.md)), so `BOUNCER_POOL_MAX=2`
+  budgets ~3.6GB of resident weights plus unmeasured framework overhead.
+  Every extra slot is another full model in RAM; the COLD half of
+  `eval/bench_warm.py` re-pays that load after `release_memory()`.
 * Pool size/hits/evictions appear in `GET /stats`, `GET /ready`, and
   `bouncer models`.
 

@@ -847,7 +847,7 @@
 - [x] T766 perf: perf-regression gate in gate.py (T674) wired to reports
 - [x] T767 perf: README perf section with measured, dated numbers
 - [x] T768 perf: honest note — all numbers before finetune vs after columns
-- [ ] T769 perf: memory footprint of pool (max_n × model size) documented
+- [x] T769 perf: memory footprint of pool (max_n × model size) documented
 - [ ] T770 test: P40 perf sweep (weightless paths only)
 
 ## P41 Security & ops (T771–T790)
