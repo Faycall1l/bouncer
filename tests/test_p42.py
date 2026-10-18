@@ -661,3 +661,37 @@ def test_doc_freshness_header_every_page():  # T809
     assert not problems, "\n".join(problems)
     # floor: the whole published corpus is in scope
     assert len(list(Path("docs").glob("*.md"))) >= 20
+
+
+def test_p42_docs_site_sweep():  # T810: P42 closer — every box ticked,
+    # every box has a receipt outside TODO.md, no invented citations
+    todo = Path("TODO.md").read_text()
+    p42 = [b for b in re.findall(r"- \[[ x]\] (T\d{3,4})\b", todo)
+           if 791 <= int(b[1:]) <= 810]
+    assert sorted(p42) == [f"T{n}" for n in range(791, 811)], p42
+    for b in p42:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+    assert "## P42 Docs site (T791–T810)" in todo
+
+    # receipts live OUTSIDE TODO.md — across the batch's own surfaces
+    corpus = (Path("README.md").read_text()
+              + Path("CONTRIBUTING.md").read_text()
+              + Path("mkdocs.yml").read_text()
+              + Path("verify.sh").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if (p.is_file()
+                    and p.suffix in (".md", ".py", ".yml", ".yaml", ".sh")):
+                corpus += p.read_text()
+    for b in p42:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity over every surface this batch added: each
+    # T-number they cite is a box TODO.md actually knows
+    for f in [Path("docs") / n for n in (
+            "getting-started.md", "cookbook.md", "versions.md",
+            "ROADMAP.md", "environment.md", "error-codes.md", "api.md")] + [
+            Path(".github/workflows/docs.yml"), Path("verify.sh"),
+            Path("CONTRIBUTING.md"), Path("mkdocs.yml")]:
+        for t in set(re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")

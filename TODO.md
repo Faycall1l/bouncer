@@ -892,7 +892,7 @@
 - [x] T807 docs: every env var documented table (from T609 list) in one page
 - [x] T808 docs: error-code index page (E_* → meaning → fix)
 - [x] T809 docs: doc freshness header (last-checked version) per page
-- [ ] T810 test: P42 docs-site sweep
+- [x] T810 test: P42 docs-site sweep
 
 ## P43 Release 0.4.0 (T811–T830)
 - [ ] T811 pkg: version 0.4.0
