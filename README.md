@@ -107,11 +107,12 @@ naming the file. The full annotated example lives in
 network — one line per check, three sections, then a summary:
 
 ```
-ok    env    bouncer: 0.3.0
+ok    env    python: 3.12.13 (requires >=3.10)
+ok    env    bouncer: 0.4.0
 info  env    TELEGRAM_TOKEN: telegram_bot: env unset (bouncer.toml may supply it)
 warn  dep    laya: missing — System One router (predicts) unavailable
 ok    route  model[zh]: multilingual
-doctor: 27 checks, 4 warn, 0 fail
+doctor: 30 checks, 4 warn, 0 fail
 ```
 
 * **env** — interpreter floor, package version, config file (broken TOML =
