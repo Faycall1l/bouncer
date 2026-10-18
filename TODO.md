@@ -861,7 +861,7 @@
 - [ ] T778 sec: /metrics exposure gate (bind-local or key by default)
 - [x] T779 sec: log injection guard (control chars stripped from reasons)
 - [x] T780 sec: demo share mode warning (public gradio = public rules)
-- [ ] T781 sec: dependency audit job (pip-audit/uv audit) in CI
+- [x] T781 sec: dependency audit job (pip-audit/uv audit) in CI
 - [ ] T782 sec: rate-limit bypass test via X-Forwarded-For spoofing
 - [ ] T783 sec: snapshot file permissions check (0600 by default)
 - [ ] T784 sec: review queue never contains raw message? (documented, tested)

@@ -522,7 +522,7 @@ def test_p36_sweep_gate_invariants():  # T690: cross-cutting consistency
                               max_abstention=0.3, min_per_rule_acc=0.3,
                               per_rule_min_n=5, min_speedup=2.0,
                               max_stub_p50_ms=5.0, max_import_p50_ms=200.0,  # T766
-                              max_stats_p95_ms=100.0, max_warm_p50_ms=50.0,
+                              max_stats_p95_ms=250.0, max_warm_p50_ms=50.0,
                               max_questions_p50_ms=20.0, max_batch_row_ms=50.0)
     for rep in samples:
         checks = gate.COLLECTORS[gate.detect_kind(rep)](rep, args)

@@ -113,3 +113,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: coverage, path: coverage.json }
+  audit:  # T781: known-vuln scan of the declared runtime tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: "pip" }
+      # resolver-only: audits the versions pip would pick from pyproject —
+      # no install, no weights, no imports; core deps, extras not scanned
+      - run: pip install pip-audit
+      - run: pip-audit -r pyproject.toml

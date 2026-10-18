@@ -585,3 +585,13 @@ def test_demo_share_warning(capsys):  # T780
     # documented where operators and users look
     assert "T780" in Path("docs/SECURITY.md").read_text()
     assert "demo --share" in Path("README.md").read_text()
+
+
+def test_dependency_audit_job():  # T781
+    text = Path(".github/workflows/ci.yml").read_text()
+    i = text.index("audit:")  # job key — first occurrence is the T781 job
+    job = text[i:i + 700]
+    # resolver-only scan of the declared runtime tree: no install, no weights
+    assert "pip-audit -r pyproject.toml" in job, job[:200]
+    assert "T781" in job
+    assert "T781" in Path("docs/threat-model.md").read_text()
