@@ -431,3 +431,29 @@ def test_lazy_gradio_import_and_import_bench(tmp_path):  # T762
     doc = Path("BENCHMARKS.md").read_text()
     for needle in ("T762", "30.4ms", "demo_app.build_app"):
         assert needle in doc, needle
+
+
+def test_cli_version_cold_start_measured(tmp_path):  # T763
+    import os
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    # the command itself: version prints and exits 0, no subcommand needed
+    r = _run("-c", "from gatekeeper.cli import main; "
+              "raise SystemExit(main(['--version']))", env=env)
+    assert r.returncode == 0 and "bouncer" in r.stdout, r.stderr
+    # the bench times exactly that command and self-labels the receipt
+    out = tmp_path / "ver.json"
+    r = _run(str(ROOT / "eval/bench_import.py"), "--version", "--n", "3",
+             "--json", "--out", str(out), cwd=tmp_path, env=env)
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(out.read_text())
+    assert rep["cmd"] == "version" and rep["n"] == 3
+    assert rep["p50_ms"] >= 0 and rep["budget_ms"] is None
+    # and the plain-import receipt stays distinguishable from it
+    out2 = tmp_path / "imp.json"
+    r = _run(str(ROOT / "eval/bench_import.py"), "--n", "3", "--out",
+             str(out2), cwd=tmp_path, env=env)
+    assert r.returncode == 0 and json.loads(out2.read_text())["cmd"] == "import"
+    # docs carry the measured cold-start number with its honest scope
+    doc = Path("BENCHMARKS.md").read_text()
+    for needle in ("T763", "57.4ms", "console-script shim"):
+        assert needle in doc, needle

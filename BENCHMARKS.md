@@ -132,8 +132,18 @@ subprocess per run) on this machine 2026-10-18: **p50 30.4ms, p95 43.8ms**.
 The number is the receipt for the lazy-demo contract: gradio is imported
 only inside `demo_app.build_app`, so a core install never pays for the
 demo extra (a machine without gradio — like this one — imports fine).
-`--budget-ms B` turns the bench into a gate (exit 1 over budget); T763/
-T764 wire their own honest floors on top of it.
+`--budget-ms B` turns the bench into a gate (exit 1 over budget); T764
+wires its own honest floor on top of it.
+
+## CLI cold start (T763)
+
+`eval/bench_import.py --version --n 5` — times
+`python -c "from gatekeeper.cli import main; main(['--version'])"`, i.e.
+import + argparse + print (the `bouncer` console-script shim adds a few
+ms of its own, not counted): **p50 57.4ms, p95 102ms** on this machine
+2026-10-18, vs 30.4ms bare import — so the CLI layer costs ~27ms on
+top of the import. The report carries `cmd: "version"` so import and
+version receipts can never be confused.
 
 ## Regex baseline (T210, refreshed T637, local, no weights)
 

@@ -7,10 +7,15 @@ p50/p95/max of the import wall time. The property this bench receipts
 only inside `demo_app.build_app`, so a core install stays fast.
 
     python eval/bench_import.py [--n 5] [--budget-ms 200] [--json] [--out P]
+    python eval/bench_import.py --version --n 5     # T763: CLI cold start
 
+--version times `bouncer --version` instead: import + argparse + print
+(the console-script shim itself adds its own few ms on top — not counted
+here, since the entry point is not installed in every environment).
 --budget-ms B: exit 1 when p50 exceeds B ms (report-only when omitted —
-T763/T764 wire the budget; the floor is theirs to set honestly). The
-report JSON (default eval/reports/import.json) is the receipt.
+T764 wires its floor on top). The report JSON (default
+eval/reports/import.json, or eval/reports/import-version.json with
+--version) is the receipt.
 """
 from __future__ import annotations
 
@@ -27,17 +32,25 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="bench_import")
     ap.add_argument("--n", type=int, default=5, help="fresh subprocesses")
+    ap.add_argument("--version", action="store_true",  # T763
+                    help="time `bouncer --version` instead of the bare import")
     ap.add_argument("--budget-ms", type=float, default=0.0,
                     help="fail when p50 exceeds this (0 = report only)")
     ap.add_argument("--json", action="store_true")
-    ap.add_argument("--out", default="eval/reports/import.json")
+    ap.add_argument("--out", default=None)
     args = ap.parse_args(argv)
 
+    code = ("from gatekeeper.cli import main; "  # T763: import + argparse + print
+            "raise SystemExit(main(['--version']))" if args.version
+            else "import gatekeeper")
+    if args.out is None:
+        args.out = ("eval/reports/import-version.json" if args.version
+                    else "eval/reports/import.json")
     env = {**os.environ, "PYTHONPATH": os.path.join(_HERE, "..", "src")}
     lat = []
     for _ in range(args.n):
         t0 = time.perf_counter()
-        r = subprocess.run([sys.executable, "-c", "import gatekeeper"],
+        r = subprocess.run([sys.executable, "-c", code],
                            check=False, capture_output=True, text=True,
                            timeout=120, env=env)
         if r.returncode != 0:
@@ -47,7 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     lat.sort()
     n = len(lat)
     p50 = round(lat[n // 2], 1)
-    rep = {"n": n, "p50_ms": p50,
+    rep = {"n": n, "cmd": "version" if args.version else "import",  # T763
+           "p50_ms": p50,
            "p95_ms": round(lat[min(n - 1, int(n * 0.95))], 1),
            "max_ms": round(lat[-1], 1),
            "budget_ms": args.budget_ms or None}
