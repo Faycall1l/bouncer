@@ -38,7 +38,7 @@ each opened with a row here and moved up when it landed.
 
 ## Trust boundaries
 
-```
+```text
 [ end user text ]
       |  (1) untrusted strings: message, context[], state, rules{}
       v

@@ -252,3 +252,29 @@ def test_internal_link_checker():  # T798
                     f"{p.name}: dead anchor {href} — no heading slugs to "
                     f"{anchor!r} in {target.name}")
     assert not problems, "\n".join(problems)
+
+
+def test_code_blocks_language_tagged():  # T799
+    untagged, tagged = [], 0
+    for p in sorted(Path("docs").glob("*.md")):
+        in_fence = False
+        for i, line in enumerate(p.read_text().splitlines(), 1):
+            s = line.strip()
+            if not s.startswith("```"):
+                continue
+            info = s[3:].strip()
+            if not in_fence:
+                in_fence = True
+                if info:
+                    tagged += 1
+                else:
+                    untagged.append(f"{p.name}:{i}")  # opener with no language
+            else:
+                if info:
+                    # a tagged ``` inside a fence is a malformed nested
+                    # opener — the closer must be bare
+                    untagged.append(f"{p.name}:{i} (nested opener)")
+                in_fence = False
+    assert not untagged, f"unlanguage-tagged fences: {untagged}"
+    # floor so a scanner that reads nothing can't pass vacuously
+    assert tagged >= 10, f"only {tagged} tagged fences found — scanner broken?"
