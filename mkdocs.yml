@@ -1,0 +1,52 @@
+# Docs site (T791): mkdocs-material skeleton. Nav lists every published
+# doc; T792's test enforces coverage in both directions (nav ⊆ files,
+# files ⊆ nav). drafts/ is excluded — it never ships.
+site_name: bouncer
+site_description: programmable live-chat moderation over a System One router
+site_url: https://faycall1l.github.io/bouncer/
+repo_url: https://github.com/Faycall1l/bouncer
+repo_name: Faycall1l/bouncer
+docs_dir: docs
+exclude_docs: |
+  drafts/
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.sections
+    - content.code.copy
+    - search.highlight
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.tables
+  - toc:
+      permalink: true
+nav:
+  - Home: index.md
+  - Using bouncer:
+      - Rules guide: rule-guide.md
+      - Presets: presets.md
+      - Gates: gates.md
+      - Thresholds: thresholds.md
+      - Answer shape: answer-shape.md
+      - FAQ: faq.md
+      - Demo script: demo-script.md
+  - Reference:
+      - API: api.md
+      - Architecture: architecture.md
+      - Glossary: glossary.md
+      - Golden set: golden.md
+      - MPS scoring: mps.md
+  - Operations:
+      - Security: SECURITY.md
+      - Threat model: threat-model.md
+      - Runbook: runbook.md
+      - Release checklist: RELEASE-CHECKLIST.md
