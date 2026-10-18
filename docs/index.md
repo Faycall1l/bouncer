@@ -20,7 +20,7 @@ bouncer serve                                  # API on :8000
 
 **Reference** — [API](api.md) · [Architecture](architecture.md) ·
 [Glossary](glossary.md) · [Golden set](golden.md) · [MPS scoring](mps.md) ·
-[Version notes](versions.md)
+[Version notes](versions.md) · [Roadmap](ROADMAP.md)
 
 **Operations** — [Security](SECURITY.md) · [Threat model](threat-model.md) ·
 [Runbook](runbook.md) · [Release checklist](RELEASE-CHECKLIST.md)

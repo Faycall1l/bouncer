@@ -48,6 +48,7 @@ nav:
       - Golden set: golden.md
       - MPS scoring: mps.md
       - Version notes: versions.md
+      - Roadmap: ROADMAP.md
   - Operations:
       - Security: SECURITY.md
       - Threat model: threat-model.md

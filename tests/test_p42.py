@@ -443,3 +443,26 @@ def test_contributing_covers_boxes_verify_style():  # T804
         assert step in text, step
     assert "ruff check src tests" not in text
     assert "ruff check src tests" not in con
+
+
+def test_roadmap_post_040():  # T805
+    rm = Path("docs/ROADMAP.md")
+    assert rm.exists(), "ROADMAP.md missing"
+    text = rm.read_text()
+    assert text.startswith("# Roadmap")
+    # both topics the box names, each honestly status-labelled
+    assert "Fine-tune results (status: NOT RUN)" in text
+    assert "Plugins (status: planned — design not started)" in text
+    # the fine-tune section stays inside the receipts policy: real
+    # measured baselines only, after-column still empty, draft cited
+    for needle in ("0.305", "0.403", 'mode:"real"', "finetune-run-impact",
+                   "kaggle/train", "RELEASE-CHECKLIST"):
+        assert needle in text, needle
+    # versioned docs tie back to the T801 flag and the T797 switcher note
+    assert "DOCS_DEPLOY" in text and "](versions.md)" in text
+    # honesty lint: no invented confidence numbers anywhere
+    assert not re.search(r"conf 0\.\d\d", text), "invented confidence?"
+    # discoverable: nav entry + landing page, glossary link present
+    assert "ROADMAP.md" in _nav_paths()
+    assert "](ROADMAP.md)" in Path("docs/index.md").read_text()
+    assert "](glossary.md)" in text
