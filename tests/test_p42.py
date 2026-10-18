@@ -99,3 +99,32 @@ def test_getting_started_page():  # T793
     # discoverable: linked from the landing page, present in the nav
     assert "getting-started.md" in Path("docs/index.md").read_text()
     assert "getting-started.md" in _nav_paths()
+
+
+def test_cookbook_five_recipes():  # T794
+    cb = Path("docs/cookbook.md").read_text()
+    assert cb.startswith("# Cookbook")
+    # exactly five recipes, each verified against the code it names
+    recipes = re.findall(r"^## \d\. (.+)$", cb, re.MULTILINE)
+    assert len(recipes) == 5, recipes
+    for want in ("Discord", "Self-host", "gates", "multilingual", "Back up"):
+        assert any(want.lower() in r.lower() for r in recipes), want
+    # recipe 1: the real adapter command + the real dry-run switch (T697)
+    assert "DISCORD_TOKEN" in cb and "discord_bot" in cb
+    assert "BOUNCER_DRY_RUN" in cb
+    # recipe 2: real compose facts (services, volumes, env-driven secrets)
+    assert "docker compose up" in cb and ".env.example" in cb
+    assert "hf-cache" in cb and ":8000" in cb and ":7860" in cb
+    # recipe 3: both gate flags, both JSON keys, the strike knob
+    for needle in ("--allow-threshold", "--delete-threshold",
+                   "allow_threshold", "BOUNCER_BAN_AT"):
+        assert needle in cb, needle
+    # recipe 4: language-tagged presets + the routing claim from README
+    assert "--preset es" in cb and "--preset ar" in cb and "PRESET_LANG" in cb
+    # recipe 5: the runbook does the heavy lifting — linked, not duplicated
+    assert "runbook.md" in cb and "snapshot save" in cb and "E_SNAPSHOT" in cb
+    # honesty lint: no invented confidence numbers
+    assert not re.search(r"conf 0\.\d\d", cb), "invented confidence?"
+    # discoverable: nav + landing page
+    assert "cookbook.md" in _nav_paths()
+    assert "cookbook.md" in Path("docs/index.md").read_text()

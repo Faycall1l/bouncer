@@ -33,6 +33,7 @@ nav:
   - Home: index.md
   - Using bouncer:
       - Getting started: getting-started.md
+      - Cookbook: cookbook.md
       - Rules guide: rule-guide.md
       - Presets: presets.md
       - Gates: gates.md
