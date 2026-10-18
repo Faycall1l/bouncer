@@ -590,9 +590,14 @@ def test_demo_share_warning(capsys):  # T780
 def test_dependency_audit_job():  # T781
     text = Path(".github/workflows/ci.yml").read_text()
     i = text.index("audit:")  # job key — first occurrence is the T781 job
-    job = text[i:i + 700]
-    # resolver-only scan of the declared runtime tree: no install, no weights
-    assert "pip-audit -r pyproject.toml" in job, job[:200]
+    job = text[i:i + 900]
+    # resolver-only scan of the declared runtime tree: no install, no weights.
+    # -r reads requirements format, not TOML, so the declared core deps are
+    # extracted from pyproject into reqs.txt first — the original
+    # "-r pyproject.toml" errored on line 1 ([project]) every run since T781
+    assert "pip-audit -r reqs.txt" in job, job[:200]
+    assert "pyproject.toml" in job  # the source of the audited deps
+    assert "T814" in job  # the fix that made the job actually run
     assert "T781" in job
     assert "T781" in Path("docs/threat-model.md").read_text()
 

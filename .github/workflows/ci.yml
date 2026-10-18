@@ -122,4 +122,8 @@ jobs:
       # resolver-only: audits the versions pip would pick from pyproject —
       # no install, no weights, no imports; core deps, extras not scanned
       - run: pip install pip-audit
-      - run: pip-audit -r pyproject.toml
+      # T814: pip-audit -r reads requirements format, not a TOML document —
+      # extract the declared core deps first (3.12 job: stdlib tomllib)
+      - run: |
+          python -c "import tomllib; [print(d) for d in tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']]" > reqs.txt
+          pip-audit -r reqs.txt
