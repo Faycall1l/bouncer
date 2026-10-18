@@ -566,3 +566,21 @@ def test_perf_regression_gate_wired_to_reports(tmp_path):  # T766
     for needle in ("import_budget_ms | 200", "--max-stub-p50-ms",
                    "--max-batch-row-ms", "| perf |"):
         assert needle in doc, needle
+
+
+def test_readme_perf_section_measured_dated():  # T767
+    readme = Path("README.md").read_text()
+    assert "## Performance (measured, dated" in readme
+    section = readme.split("## Performance (measured, dated", 1)[1]
+    bench = Path("BENCHMARKS.md").read_text()
+    # every figure the README cites also lives in the method doc — the
+    # README cannot show a number BENCHMARKS doesn't carry
+    for needle in ("30.4ms", "57.4ms", "8.2ms", "11.3ms", "940 rps",
+                   "1.4ms", "1.3ms", "0.2ms", "5.4"):
+        assert needle in section, f"README perf section missing {needle}"
+        assert needle in bench, f"BENCHMARKS missing {needle}"
+    # dated on both bench days + the honest scope label
+    assert "2026-10-18" in section and "2026-10-17" in section
+    assert "stub" in section and "not claimed" in section
+    # and the section says where enforcement lives (gates, not vibes)
+    assert "eval/gate.py" in section and "200ms" in section

@@ -241,3 +241,22 @@ Template bootstrap (6 message shapes), 3 violation types in v1, English-first,
 
 Base is near-blind on unseen rule-sets (Laya's own warning) — the finetune is the
 product. Full numbers: [BENCHMARKS.md](BENCHMARKS.md). Be honest — see `eval/`.
+
+## Performance (measured, dated — T767)
+
+Local, stub router: engine overhead only, no model weights in these numbers
+(method per row in [BENCHMARKS.md](BENCHMARKS.md)); Apple-silicon laptop.
+Model-inclusive latency is **not claimed** until measured with weights —
+T751's rule, no invented numbers.
+
+| what | number | measured |
+|---|---|---|
+| `import gatekeeper` (cold subprocess) | p50 **30.4ms** | 2026-10-18, T762 |
+| `bouncer --version` cold start | p50 **57.4ms** | 2026-10-18, T763 |
+| `GET /stats`, 8 threads × 100 req | p50 **8.2ms** / p95 11.3ms, ~940 rps | 2026-10-18, T760 |
+| `moderate()` end-to-end, 5q vs 3q | **1.4ms** / 1.3ms | 2026-10-18, T755 |
+| batch sweep, per message | ~**0.2ms** | 2026-10-17, T753 |
+| warm pool vs rebuild-every-time | **5.4×** faster | T592 (`bench_pool`) |
+
+Regression-gated: import budget < 200ms (T764) and the per-bench latency
+budgets run in CI on every push through `eval/gate.py` (T766).
