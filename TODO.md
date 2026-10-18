@@ -842,7 +842,7 @@
 - [x] T761 perf: pool `clear()` on memory pressure hook (documented)
 - [x] T762 perf: lazy gradio import — demo extras only (import-time bench)
 - [x] T763 perf: CLI `--version` cold-start time measured
-- [ ] T764 perf: wheel import time budget (< 200ms) test
+- [x] T764 perf: wheel import time budget (< 200ms) test
 - [ ] T765 perf: bench report schema (fixed keys) + docs
 - [ ] T766 perf: perf-regression gate in gate.py (T674) wired to reports
 - [ ] T767 perf: README perf section with measured, dated numbers

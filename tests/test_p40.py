@@ -457,3 +457,28 @@ def test_cli_version_cold_start_measured(tmp_path):  # T763
     doc = Path("BENCHMARKS.md").read_text()
     for needle in ("T763", "57.4ms", "console-script shim"):
         assert needle in doc, needle
+
+
+def test_wheel_import_time_budget_200ms(tmp_path):  # T764
+    import os
+    # the wheel is a pure copy of these sources: no binary extension can
+    # hide import cost that the src-layout measurement doesn't see
+    binaries = [p for p in (ROOT / "src" / "gatekeeper").rglob("*")
+                if p.suffix in (".so", ".pyd", ".dll", ".dylib")]
+    assert not binaries, f"binary extensions: {binaries}"
+    # enforce the budget through the bench's own gate: exit 1 + E_BUDGET
+    # when p50 crosses 200ms (the negative case is pinned in T762)
+    out = tmp_path / "import.json"
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    r = _run(str(ROOT / "eval/bench_import.py"), "--n", "3",
+             "--budget-ms", "200", "--json", "--out", str(out),
+             cwd=tmp_path, env=env)
+    assert r.returncode == 0, f"import budget blown: {r.stderr}"
+    rep = json.loads(out.read_text())
+    assert rep["budget_ms"] == 200.0 and rep["p50_ms"] <= 200.0
+    # CI runs this on every push across the 3.10-3.13 matrix (test job)
+    ci = Path(".github/workflows/ci.yml").read_text()
+    assert "matrix" in ci and "3.10" in ci and "3.13" in ci
+    # the budget is documented where the number lives
+    doc = Path("BENCHMARKS.md").read_text()
+    assert "T764" in doc and "200ms" in doc

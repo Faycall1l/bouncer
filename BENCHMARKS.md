@@ -145,6 +145,12 @@ ms of its own, not counted): **p50 57.4ms, p95 102ms** on this machine
 top of the import. The report carries `cmd: "version"` so import and
 version receipts can never be confused.
 
+**Import budget (T764)** — tests/test_p40 enforces p50 < **200ms** via
+`bench_import --budget-ms 200` on every push (CI's 3.10–3.13 matrix).
+The wheel is pure Python (no binary extensions — the test checks), so
+this src-layout measurement IS the wheel's import cost; local p50 is
+30.4ms, leaving real headroom for slower runners.
+
 ## Regex baseline (T210, refreshed T637, local, no weights)
 
 `python eval/baseline_regex.py data/examples.jsonl` → **0.403** on 300 rows.
