@@ -13,6 +13,21 @@ flowchart LR
     out --> audit[audit + stats + strikes + coalescing]
 ```
 
+Plain-text fallback (same diagram, no renderer needed):
+
+```text
+chat message
+  -> normalize (clean, flood, links)
+  -> fastpath?
+       | link-rules, no links -> allow + stats/audit
+       | else -> cache?
+            | hit  -> decision
+            | miss -> Laya: 5 questions, 1 pass
+                 -> gates: jailbreak, escalate, severity, margin, quiet
+                 -> decision
+  decision -> audit + stats + strikes + coalescing
+```
+
 Cache key covers every decision input: message, rules, both thresholds,
 severity, lang, bounded context, history window, quiet state, gate knobs —
 same text under other settings never gets a stale verdict. Cheap paths
@@ -40,6 +55,24 @@ flowchart LR
     trip -->|cooldown over| probe[half-open: one trial]
     probe -->|success| close[close breaker]
     probe -->|failure| trip
+```
+
+Plain-text fallback (same diagram, no renderer needed):
+
+```text
+moderate(model=, lang=)
+  -> breaker open?  --yes--> escalate, cause=breaker-open
+  -> no: kwargs cached?   [RouterPool: LRU by kwargs]
+       | hit              -> Router
+       | miss + free slot -> build Router -> Router
+       | miss + full      -> evict LRU -> build Router -> Router
+  Router -> error / timeout?
+       | no  -> decision
+       | yes -> consecutive fails += 1
+            -> == breaker_n -> open until cooldown
+            -> cooldown over -> half-open: one trial
+                 | success -> close breaker
+                 | failure -> re-open (back to trip)
 ```
 
 * **Pool** (`pool.py`): LRU keyed by constructor kwargs (`model`, `device`, …),

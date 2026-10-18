@@ -882,7 +882,7 @@
 - [x] T797 docs: version switcher note for 0.1/0.2/0.3 behavior deltas
 - [x] T798 docs: internal link checker (relative md links, test-enforced)
 - [x] T799 docs: code blocks language-tagged (lint)
-- [ ] T800 docs: diagram images fallback (mermaid + ascii pre block)
+- [x] T800 docs: diagram images fallback (mermaid + ascii pre block)
 - [ ] T801 docs: docs deploy workflow (GitHub Pages) behind flag
 - [ ] T802 docs: search-friendly headings (no duplicate H1s) lint
 - [ ] T803 docs: README anchors tested (badges + section links)

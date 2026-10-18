@@ -278,3 +278,35 @@ def test_code_blocks_language_tagged():  # T799
     assert not untagged, f"unlanguage-tagged fences: {untagged}"
     # floor so a scanner that reads nothing can't pass vacuously
     assert tagged >= 10, f"only {tagged} tagged fences found — scanner broken?"
+
+
+def _fence_info(lines, i):
+    """Info string of a fence line at index i, or None if not a fence."""
+    s = lines[i].strip()
+    return s[3:].strip() if s.startswith("```") else None
+
+
+def test_mermaid_has_ascii_fallback():  # T800
+    problems, found = [], 0
+    for p in sorted(Path("docs").glob("*.md")):
+        lines = p.read_text().splitlines()
+        mermaids = [i for i in range(len(lines))
+                    if _fence_info(lines, i) == "mermaid"]
+        texts = [i for i in range(len(lines))
+                 if _fence_info(lines, i) == "text"]
+        headings = [i for i, l in enumerate(lines) if re.match(r"^#{1,6} ", l)]
+        for mi in mermaids:
+            found += 1
+            # a plain-text block in the SAME section (no heading between
+            # either fence and the other) serves as the fallback
+            same_section = any(
+                not any(min(mi, ti) < h < max(mi, ti) for h in headings)
+                for ti in texts)
+            if not same_section:
+                problems.append(
+                    f"{p.name}:{mi + 1} mermaid block has no same-section "
+                    "ascii fallback")
+    assert not problems, problems
+    # the two architecture diagrams exist today — pin the floor so a
+    # scanner regression can't pass vacuously
+    assert found >= 2, f"expected >= 2 mermaid diagrams, found {found}"
