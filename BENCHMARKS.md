@@ -195,6 +195,7 @@ threshold defaults it enforces have drifted from the documented numbers
 | max_ece | 0.15 |
 | max_p95_ms_t4 | 44 |
 | pool_speedup_floor | 2.0 |
+| import_budget_ms | 200 |
 
 ## Running the gates (T688)
 
@@ -221,10 +222,13 @@ Report kinds are detected by shape and gated by family:
 | `per_lang` (eval_i18n.py) | i18n | `errors == 0` |
 | `tripped`/`closed` (breaker_sim.py) | breaker | tripped **and** closed both true |
 | `speedup`/`thrash` (bench_pool.py) | pool | hits-scenario speedup >= 2x |
+| `bench` envelope (other bench_*.py, T765) | perf | known bench id, `schema == 1`, `mode` valid, then the per-bench latency budget (T766) |
 
 Every threshold is a flag (`--min-rule-acc`, `--max-ece`, `--max-p95-ms`,
 `--min-abstention`, `--max-abstention`, `--min-per-rule-acc`,
-`--per-rule-min-n`, `--min-speedup`), with defaults pinned by the
+`--per-rule-min-n`, `--min-speedup`, `--max-stub-p50-ms`,
+`--max-import-p50-ms`, `--max-stats-p95-ms`, `--max-warm-p50-ms`,
+`--max-questions-p50-ms`, `--max-batch-row-ms`), with defaults pinned by the
 Known-numbers table above and
 drift-checked by `--check-docs`. Reports older than
 `--max-report-age-days` (default 14) warn on stderr without changing the

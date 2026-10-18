@@ -844,7 +844,7 @@
 - [x] T763 perf: CLI `--version` cold-start time measured
 - [x] T764 perf: wheel import time budget (< 200ms) test
 - [x] T765 perf: bench report schema (fixed keys) + docs
-- [ ] T766 perf: perf-regression gate in gate.py (T674) wired to reports
+- [x] T766 perf: perf-regression gate in gate.py (T674) wired to reports
 - [ ] T767 perf: README perf section with measured, dated numbers
 - [ ] T768 perf: honest note — all numbers before finetune vs after columns
 - [ ] T769 perf: memory footprint of pool (max_n × model size) documented

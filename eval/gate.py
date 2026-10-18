@@ -153,6 +153,53 @@ def collect_pool(report: dict, args) -> list:
     return checks
 
 
+PERF_BUDGETS = {  # T766: bench id -> [(check name, value keys, threshold attr)]
+    # budgets are ~10x the local measurements (BENCHMARKS) — they catch
+    # order-of-magnitude regressions without flaking on slower CI runners
+    "bench_stub": [("stub_p50_ms", ("p50_ms",), "max_stub_p50_ms")],
+    "bench_import": [("import_p50_ms", ("p50_ms",), "max_import_p50_ms")],
+    "bench_stats": [("stats_p95_ms", ("p95_ms",), "max_stats_p95_ms")],
+    "bench_warm": [("warm_p50_ms", ("p50_ms",), "max_warm_p50_ms")],
+    "bench_questions": [("questions_p50_ms", ("p50_knob_5q_ms",),
+                         "max_questions_p50_ms")],
+    "bench_batch": [("batch_max_row_ms", ("__max_rows__",), "max_batch_row_ms")],
+}
+
+
+def collect_perf(report: dict, args) -> list:
+    """T766: perf reports carry the T765 envelope and stay in budget.
+
+    Structural checks (known bench id, schema, mode) FAIL loudly — a
+    report without the envelope is unusable, not a skip. Each budget
+    SKIPs when its metric is absent; every registered bench maps to at
+    least one budget, so a healthy producer always has something to gate.
+    """
+    checks = []
+    bench = _get(report, "bench")
+    known = isinstance(bench, str)
+    _add(checks, "bench_id", f"one of {sorted(PERF_BUDGETS)}",
+         None if bench is MISSING else bench,
+         (bench in PERF_BUDGETS) if known else False)
+    schema = _num(report, "schema")
+    _add(checks, "bench_schema", "== 1", schema,
+         schema == 1 if schema is not None else False)
+    mode = _get(report, "mode")
+    _add(checks, "bench_mode", "in stub/real/n/a", None if mode is MISSING else mode,
+         (mode in ("stub", "real", "n/a")) if mode is not MISSING else False)
+    for name, keys, attr in PERF_BUDGETS.get(bench, ()) if known else ():
+        thr = getattr(args, attr, None)
+        if keys == ("__max_rows__",):  # bench_batch: worst combo of the sweep
+            rows = _get(report, "rows")
+            vals = [v for v in (rows.values() if isinstance(rows, dict) else ())
+                    if isinstance(v, (int, float)) and not isinstance(v, bool)
+                    and math.isfinite(v)]
+            v = max(vals) if vals else None
+        else:
+            v = _num(report, *keys)
+        _add(checks, name, f"<= {thr}", v, None if v is None else v <= thr)
+    return checks
+
+
 def known_numbers(path: str) -> dict:
     """T684: the Known-numbers table in BENCHMARKS.md, as data."""
     import re
@@ -179,7 +226,8 @@ def collect_docs(args, path: str) -> list:
     known = known_numbers(path)
     pairs = [("regex_floor", args.min_rule_acc), ("max_ece", args.max_ece),
              ("max_p95_ms_t4", args.max_p95_ms),
-             ("pool_speedup_floor", args.min_speedup)]
+             ("pool_speedup_floor", args.min_speedup),
+             ("import_budget_ms", args.max_import_p50_ms)]  # T766: = T764's 200
     for key, enforced in pairs:
         documented = known.get(key)
         _add(checks, f"docs_{key}", f"== default {enforced}", documented,
@@ -188,19 +236,23 @@ def collect_docs(args, path: str) -> list:
 
 
 def detect_kind(report: dict) -> str:
-    """Gate family by report shape (T681-T683; more families may follow)."""
+    """Gate family by report shape (T681-T683+T766; more families may follow)."""
     if "per_lang" in report:
         return "i18n"  # only eval_i18n.py produces per_lang
     if "tripped" in report or "closed" in report:
         return "breaker"  # only breaker_sim.py produces these
     if "speedup" in report or "thrash" in report:
-        return "pool"  # only bench_pool.py produces these
+        return "pool"  # bench_pool has both pool keys AND the T765 envelope —
+        # pool wins so T683's speedup floor never silently stops applying
+    if "bench" in report:
+        return "perf"  # T765 envelope: every other bench_*.py report
     return "eval"
 
 
 COLLECTORS = {"eval": collect, "i18n": collect_i18n,  # T681
               "breaker": collect_breaker,  # T682
-              "pool": collect_pool}  # T683: dispatch table
+              "pool": collect_pool,  # T683: dispatch table
+              "perf": collect_perf}  # T766
 
 
 def gate_report(report: dict, args) -> dict:
@@ -260,7 +312,10 @@ def run_all(args) -> int:
     """T689: make-style single command — gate every known report that exists
     in the reports dir, one summary line per file. Nothing present -> exit 2
     (there is nothing to gate; that is not a green run)."""
-    known = ["latest.json", "i18n.json", "breaker.json", "pool.json"]
+    known = ["latest.json", "i18n.json", "breaker.json", "pool.json",
+             "stub-latency.json", "warm.json", "stats-load.json",  # T766
+             "import.json", "import-version.json", "questions.json",
+             "batch-sweep.json"]
     paths = [os.path.join(args.reports_dir, n) for n in known]
     found = [(n, p) for n, p in zip(known, paths) if os.path.exists(p)]
     if not found:
@@ -343,6 +398,23 @@ def main(argv=None) -> int:
                     help="ignore rules with fewer than N samples (noise floor)")
     ap.add_argument("--min-speedup", type=float, default=2.0,  # T683
                     help="pool hits-scenario speedup floor vs naive rebuilds")
+    ap.add_argument("--max-stub-p50-ms", type=float, default=5.0,  # T766
+                    help="bench_stub p50 budget in ms (local ~0.1ms; the "
+                         "budget is ~10x headroom for slower runners)")
+    ap.add_argument("--max-import-p50-ms", type=float, default=200.0,  # T766
+                    help="import-time p50 budget in ms (200 = T764's wheel "
+                         "budget; local p50 is ~30ms)")
+    ap.add_argument("--max-stats-p95-ms", type=float, default=100.0,  # T766
+                    help="GET /stats p95 budget in ms under threaded load "
+                         "(local ~11ms in-process; T760)")
+    ap.add_argument("--max-warm-p50-ms", type=float, default=50.0,  # T766
+                    help="warm-pool p50 budget in ms (stub path; T751)")
+    ap.add_argument("--max-questions-p50-ms", type=float, default=20.0,  # T766
+                    help="end-to-end moderate() p50 budget for the 5q knob "
+                         "leg in ms (local ~1.4ms stub; T755)")
+    ap.add_argument("--max-batch-row-ms", type=float, default=50.0,  # T766
+                    help="worst single cell of the batch/chunk sweep in ms "
+                         "(local max ~3ms stub; T753)")
     a = ap.parse_args(argv)
     if a.all:  # T689: single command over the whole reports dir
         if a.against or a.changelog:

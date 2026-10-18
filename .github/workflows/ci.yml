@@ -77,6 +77,12 @@ jobs:
         run: |
           python eval/bench_pool.py
           python eval/breaker_sim.py
+          python eval/bench_stub.py 200
+          python eval/bench_warm.py --stub --n 50
+          python eval/bench_stats.py --threads 2 --requests 10
+          python eval/bench_import.py --n 3
+          python eval/bench_questions.py 50
+          python eval/bench_batch.py
       - name: gate them (one-line verdict, stable exits)
         run: python eval/gate.py --all --ci
   secret-scan:  # T746: grep-based, stdlib-only — same command locally and here

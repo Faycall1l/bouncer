@@ -513,3 +513,56 @@ def test_bench_report_schema_fixed_keys(tmp_path):  # T765
     doc = Path("BENCHMARKS.md").read_text()
     for needle in ("Bench report schema (T765)", "schema", "mode"):
         assert needle in doc, needle
+
+
+def test_perf_regression_gate_wired_to_reports(tmp_path):  # T766
+    import os
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    gate_py = str(ROOT / "eval" / "gate.py")
+    # a REAL report passes: envelope + budget, exit 0
+    out = tmp_path / "import.json"
+    r = _run(str(ROOT / "eval" / "bench_import.py"), "--n", "1",
+             "--out", str(out), cwd=tmp_path, env=env)
+    assert r.returncode == 0, r.stderr
+    r = _run(gate_py, str(out), "--json", cwd=tmp_path, env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    v = json.loads(r.stdout)
+    names = {c["name"]: c for c in v["checks"]}
+    assert names["bench_schema"]["ok"] is True
+    assert names["import_p50_ms"]["ok"] is True
+    assert v["skipped"] == 0
+    # over budget -> exit 1 and the check names itself on stderr
+    rep = json.loads(out.read_text())
+    rep["p50_ms"] = 99999.0
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps(rep))
+    r = _run(gate_py, str(bad), "--json", cwd=tmp_path, env=env)
+    assert r.returncode == 1 and "FAIL import_p50_ms" in r.stderr
+    # an unknown bench id is drift, not a skip: a new producer must register
+    rep["p50_ms"], rep["bench"] = 1.0, "bench_newthing"
+    bad.write_text(json.dumps(rep))
+    r = _run(gate_py, str(bad), "--json", cwd=tmp_path, env=env)
+    assert r.returncode == 1 and "FAIL bench_id" in r.stderr
+    # a missing envelope key FAILs (unusable report), never skips
+    del rep["mode"]
+    bad.write_text(json.dumps(rep))
+    r = _run(gate_py, str(bad), "--json", cwd=tmp_path, env=env)
+    assert r.returncode == 1 and "FAIL bench_mode" in r.stderr
+    # a missing METRIC skips (documented contract) without failing
+    rep2 = json.loads(out.read_text())
+    del rep2["p50_ms"]
+    bad.write_text(json.dumps(rep2))
+    r = _run(gate_py, str(bad), "--json", cwd=tmp_path, env=env)
+    assert r.returncode == 0, r.stderr
+    v = json.loads(r.stdout)
+    assert v["skipped"] == 1 and v["failed"] == 0
+    # CI generates the perf reports and gates them in the same job
+    ci = Path(".github/workflows/ci.yml").read_text()
+    for needle in ("bench_stub.py", "bench_warm.py", "bench_import.py",
+                   "gate.py --all --ci"):
+        assert needle in ci, needle
+    # docs carry the perf family row, its flags, and the import budget row
+    doc = Path("BENCHMARKS.md").read_text()
+    for needle in ("import_budget_ms | 200", "--max-stub-p50-ms",
+                   "--max-batch-row-ms", "| perf |"):
+        assert needle in doc, needle

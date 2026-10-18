@@ -509,17 +509,21 @@ def test_p36_sweep_gate_invariants():  # T690: cross-cutting consistency
 
     import gate
     samples = [{"rule_acc": 0.5}, {"per_lang": {}}, {"tripped": True},
-               {"closed": False}, {"speedup": 3.0}, {"thrash": {}}]
+               {"closed": False}, {"speedup": 3.0}, {"thrash": {}},
+               {"bench": "bench_stub", "p50_ms": 0.1}]  # T766: perf family
     # every detectable report shape maps to a registered collector...
     for rep in samples:
         assert gate.detect_kind(rep) in gate.COLLECTORS, rep
-    assert set(gate.COLLECTORS) == {"eval", "i18n", "breaker", "pool"}
+    assert set(gate.COLLECTORS) == {"eval", "i18n", "breaker", "pool", "perf"}
     # ...and every collector emits >= 1 check with the shared {name, expected,
     # value, ok} shape — a family that emits nothing could never fail.
     args = argparse.Namespace(min_n=1, min_rule_acc=0.403, max_ece=0.15,
                               max_p95_ms=44.0, min_abstention=0.0,
                               max_abstention=0.3, min_per_rule_acc=0.3,
-                              per_rule_min_n=5, min_speedup=2.0)
+                              per_rule_min_n=5, min_speedup=2.0,
+                              max_stub_p50_ms=5.0, max_import_p50_ms=200.0,  # T766
+                              max_stats_p95_ms=100.0, max_warm_p50_ms=50.0,
+                              max_questions_p50_ms=20.0, max_batch_row_ms=50.0)
     for rep in samples:
         checks = gate.COLLECTORS[gate.detect_kind(rep)](rep, args)
         assert checks, rep
@@ -536,6 +540,9 @@ def test_p36_sweep_gate_invariants():  # T690: cross-cutting consistency
     help_out = _run_gate("--help").stdout
     for flag in ("--min-rule-acc", "--max-ece", "--max-p95-ms",
                  "--min-abstention", "--max-abstention", "--min-per-rule-acc",
-                 "--per-rule-min-n", "--min-speedup"):
+                 "--per-rule-min-n", "--min-speedup",
+                 "--max-stub-p50-ms", "--max-import-p50-ms",  # T766
+                 "--max-stats-p95-ms", "--max-warm-p50-ms",
+                 "--max-questions-p50-ms", "--max-batch-row-ms"):
         assert flag in help_out, flag
         assert flag in text, flag
