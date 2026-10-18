@@ -109,3 +109,5 @@ Review queue and audit log are plain JSONL — `cp` them back to the paths
 `BOUNCER_REVIEW`/`BOUNCER_AUDIT` name. Nothing here contains raw message
 text except the review queue itself (bounded, 0600, clearable):
 [Security § Data handling](SECURITY.md#data-handling).
+
+Terms used here are defined in the [Glossary](glossary.md).

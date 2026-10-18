@@ -60,3 +60,5 @@ Tuning instinct: escalation volume during an outage ≈ `requests × breaker_coo
 per recovery cycle. If that queue is too big, shorten the cooldown *or* lower
 `breaker_n` (trips earlier, less wasted time before the trip). Simulate before
 changing anything: `eval/breaker_sim.py --storm 3 --cool 0.2`.
+
+Terms used here are defined in the [Glossary](glossary.md).

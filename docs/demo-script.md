@@ -4,3 +4,5 @@
 # 3. lower slider to 0.5, re-run borderline -> escalate; show reason + margin
 # 4. `cat chat.log | bouncer watch --preset gaming` on sample log
 # Record with `asciinema rec demo.cast` or plain screen capture.
+
+Terms used here are defined in the [Glossary](glossary.md).

@@ -41,3 +41,5 @@ edges:
   first use. Cached/fastpath/breaker paths don't reach the model at all.
 * Nothing here re-records the table: same base model, same gates, same
   thresholds. Re-record only if a gate row in `docs/gates.md` changes.
+
+Terms used here are defined in the [Glossary](glossary.md).

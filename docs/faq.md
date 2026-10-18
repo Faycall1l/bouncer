@@ -50,3 +50,5 @@ pool caches every checkpoint you touch, so pinning costs memory × slots — siz
 `BOUNCER_POOL_MAX` accordingly. Note: base zero-shot accuracy is modest
 (regex baseline 0.403 vs model 0.305 on our template data) — the Kaggle
 fine-tune is the path to production quality.
+
+Terms used here are defined in the [Glossary](glossary.md).

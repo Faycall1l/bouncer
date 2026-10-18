@@ -21,3 +21,5 @@ those pairs confuse the scorer (top-2 margin collapses → abstention). Fix by
 merging the rules or by giving each a distinctive verb (`post` vs `share` won't
 cut it; `post links` vs `harass players` will). `pack lint --strict` fails CI
 on any warning.
+
+Terms used here are defined in the [Glossary](glossary.md).

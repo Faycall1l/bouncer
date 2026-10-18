@@ -29,3 +29,5 @@ Demotions (after the ladder):
 Knobs: `delete_bar = delete_threshold - severity_offset` (0.15) for
 `severity == "high"` rules. `require_calm` additionally demands `harm == safe`
 for allow. See [thresholds](thresholds.md).
+
+Terms used here are defined in the [Glossary](glossary.md).

@@ -12,3 +12,5 @@ print(moderate('GG all', get_preset('gaming')))"
 
 Notes: first call ~45s (Metal compile), then 1–5s per 5-question call.
 CPU fallback is ~2x slower. Laya picks device automatically (CUDA → MPS → CPU).
+
+Terms used here are defined in the [Glossary](glossary.md).

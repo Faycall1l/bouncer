@@ -98,3 +98,5 @@ model, not just the process), `GET /version`.
 * [Runbook](runbook.md) — backup, restore, rotate, drain
 * [Security](SECURITY.md) / [Threat model](threat-model.md) — what's enforced
   and how
+
+Terms used here are defined in the [Glossary](glossary.md).

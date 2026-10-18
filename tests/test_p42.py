@@ -160,3 +160,21 @@ def test_api_reference_renders_api_md_unchanged():  # T795
     assert "hooks:" not in raw, "page-rewriting hook would break 'unchanged'"
     # the page itself is still the standalone reference doc
     assert Path("docs/api.md").read_text().startswith("# API reference")
+
+
+# Pages that teach or reference concepts link the glossary. The four
+# operational documents are deliberately out of scope: runbooks and the
+# release checklist point at SECURITY, not at a glossary.
+_OPS_DOCS = {"SECURITY.md", "threat-model.md", "runbook.md",
+             "RELEASE-CHECKLIST.md"}
+
+
+def test_glossary_linked_from_every_relevant_page():  # T796
+    pages = {p.name for p in Path("docs").glob("*.md")} - _OPS_DOCS - {
+        "glossary.md"}
+    missing = sorted(
+        n for n in pages
+        if "](glossary.md)" not in (Path("docs") / n).read_text())
+    assert not missing, f"pages missing a glossary link: {missing}"
+    # the definition page itself is reachable: nav (T792) + landing page
+    assert "glossary.md" in _nav_paths()

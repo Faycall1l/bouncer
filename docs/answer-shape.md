@@ -16,3 +16,5 @@ Gotchas bouncer handles:
 * score `probabilities` keyed by **index strings**, not labels.
 * `confidence` ≠ top probability (act-aware) — gate on it, show both.
 * Base checkpoint warns `invalid temperatures` → treat conf as uncalibrated until refit.
+
+Terms used here are defined in the [Glossary](glossary.md).

@@ -82,3 +82,5 @@
   `Retry-After: 60`.
 * Every response carries `X-Request-ID` (echoed or generated) and
   `X-Bouncer-ms` (server-side ms) — quote the request id in bug reports.
+
+Terms used here are defined in the [Glossary](glossary.md).

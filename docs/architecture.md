@@ -51,3 +51,5 @@ flowchart LR
   open, requests short-circuit to `escalate` (`cause=breaker-open`) — never
   allow. `BOUNCER_BREAKER=off` disables; per-request `timeout_s` feeds the
   failure streak. Simulation: `eval/breaker_sim.py`.
+
+Terms used here are defined in the [Glossary](glossary.md).

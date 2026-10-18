@@ -21,3 +21,5 @@ autofills the `lang` hint — reason language + routing: `ar` pins the
 `multilingual` checkpoint, `es`/`fr` are latin and ride laya's own
 auto-routing — so an explicit `--lang` is only needed to *override* the pack. The base model is English-first, so treat these
 as hinted, not fluent.
+
+Terms used here are defined in the [Glossary](glossary.md).
