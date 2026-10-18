@@ -903,7 +903,7 @@
 - [x] T816 docs: CHANGELOG 0.4.0 dated
 - [x] T817 docs: release notes draft (drafts/release-0.4.0.md)
 - [x] T818 docs: README version-sensitive claims re-checked
-- [ ] T819 test: version strings consistent (0.4.0 everywhere)
+- [x] T819 test: version strings consistent (0.4.0 everywhere)
 - [ ] T820 test: adapters matrix table matches runnable stubs
 - [ ] T821 test: docs link checker green (T798)
 - [ ] T822 test: packaging smoke (wheel builds + installs + --version)
