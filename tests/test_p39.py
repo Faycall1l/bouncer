@@ -25,7 +25,10 @@ def test_ci_workflow_runs_pytest_and_ruff_on_push_and_pr():  # T731
 def test_ci_python_matrix_tracks_classifiers():  # T732
     import re
 
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
     text = (WORKFLOWS / "ci.yml").read_text()
     m = re.search(r"python-version:\s*\[([^\]]+)\]", text)
     assert m, "no python matrix in ci.yml"
@@ -104,7 +107,10 @@ def test_ci_tag_must_match_pyproject():  # T737
     import subprocess
     import sys
 
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
     text = (WORKFLOWS / "publish.yml").read_text()
     assert 'python scripts/check_tag.py "$GITHUB_REF_NAME"' in text
     with open("pyproject.toml", "rb") as f:
@@ -247,7 +253,9 @@ def test_workflow_badge_in_readme():  # T742
 
 
 def test_pr_template_checklist():  # T743
-    t = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text()
+    # the tracked name is lowercase (GitHub's canonical filename); macOS's
+    # case-insensitive FS hid the mismatch that failed Linux CI (T814)
+    t = Path(".github/pull_request_template.md").read_text()
     # the box's three questions — tests? docs? boxes ticked? — all have a
     # checkbox, plus the repo's standing gates (lint, secrets)
     assert "pytest" in t and "ruff" in t

@@ -14,7 +14,10 @@ import argparse
 import json
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+    import tomli as tomllib
 
 OPS = (">=", "==", "~=", "<=")
 

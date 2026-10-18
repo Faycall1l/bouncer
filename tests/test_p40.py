@@ -16,6 +16,7 @@ def _run(*args, timeout=120, cwd=None, env=None):
 
 
 def test_bench_warm_stub_mechanics_and_refusal(tmp_path):  # T751
+    import os
     import re
     # stub mode runs anywhere and labels itself: a bench that can't see
     # the model must never pass its overhead off as model latency
@@ -32,9 +33,16 @@ def test_bench_warm_stub_mechanics_and_refusal(tmp_path):  # T751
     # hit (10) plus the cache-replay call (1) — T752 rides along here too
     assert rep["pool"]["creates"] == 1 and rep["pool"]["hits"] == 11
     # real mode without weights refuses loudly and writes nothing —
-    # E_WARM, no invented report (this env has no laya at all)
+    # E_WARM, no invented report. laya is shadowed by a raising module so
+    # the refusal is deterministic on every host: CI installs the full
+    # package WITH laya, and a real Router() there would happily "run" on
+    # untrained weights and invent a report (T814 caught exactly that)
+    shadow = tmp_path / "shadow"
+    shadow.mkdir()
+    (shadow / "laya.py").write_text('raise ImportError("no weights here")\n')
     out2 = tmp_path / "warm-real.json"
-    r = _run("eval/bench_warm.py", "--n", "5", "--out", str(out2))
+    r = _run("eval/bench_warm.py", "--n", "5", "--out", str(out2),
+             env={**os.environ, "PYTHONPATH": str(shadow)})
     assert r.returncode == 1, r.stdout
     assert "E_WARM" in r.stderr
     assert not out2.exists(), "a refusing bench must write no report"

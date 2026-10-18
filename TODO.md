@@ -898,7 +898,7 @@
 - [x] T811 pkg: version 0.4.0
 - [x] T812 suite: full run green + count recorded
 - [x] T813 lint: `ruff check .` green
-- [ ] T814 ci: workflow green on the release commit (status recorded)
+- [x] T814 ci: workflow green on the release commit (status recorded)
 - [ ] T815 eval: gates run — numbers table refreshed (or explicitly stale)
 - [ ] T816 docs: CHANGELOG 0.4.0 dated
 - [ ] T817 docs: release notes draft (drafts/release-0.4.0.md)

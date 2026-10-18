@@ -44,6 +44,7 @@ dependencies = [  # T216: lower bounds from smoke-tested versions
   "numpy>=1.26",
   "datasets>=3.0.0",
   "huggingface_hub>=0.23",
+  "tomli>=2.0; python_version < '3.11'",  # T814: tomllib backport (stdlib 3.11+)
 ]
 
 [project.urls]

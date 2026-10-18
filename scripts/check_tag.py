@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import sys
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+    import tomli as tomllib
 
 
 def main(argv: list[str]) -> int:

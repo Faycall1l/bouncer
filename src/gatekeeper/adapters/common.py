@@ -35,7 +35,10 @@ def load_config(path: str | None = None) -> dict:
     overrides the default path. Env vars always beat file values: the file
     supplies defaults, the environment is the deployment.
     """
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
     p = path or os.environ.get("BOUNCER_CONFIG", "").strip() or "bouncer.toml"
     try:
         with open(p, "rb") as f:

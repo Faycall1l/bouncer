@@ -317,7 +317,10 @@ def cmd_pack(args) -> int:
         try:
             with open(args.rules) as f:
                 rules = json.load(f)
-        except (OSError, ValueError) as e:  # ValueError == JSONDecodeError
+        except (OSError, ValueError, RecursionError) as e:
+            # ValueError == JSONDecodeError; the C scanner raises
+            # RecursionError (not ValueError) on hostile deep nesting on
+            # some versions — either way the pack is unreadable (T814)
             print(f"bouncer: cannot read pack {args.rules!r} ({e})",
                   file=sys.stderr)
             return 4
@@ -433,10 +436,13 @@ def cmd_doctor(args) -> int:  # T727: env/dep/route self-diagnosis
                      ("pydantic", "HTTP request models"),
                      ("gradio", "demo app"),
                      ("datasets", "eval data loading"),
-                     ("huggingface_hub", "weight downloads")):
+                     ("huggingface_hub", "weight downloads"),
+                     ("tomli", "TOML configs on python<3.11")):
         present = importlib.util.find_spec(mod) is not None
-        note("ok" if present else "warn", "dep", mod,
-             "importable" if present else f"missing — {why} unavailable")
+        detail = "importable" if present else f"missing — {why} unavailable"
+        if mod == "tomli" and sys.version_info >= (3, 11):
+            present, detail = True, "stdlib tomllib covers 3.11+ (backport for 3.10)"
+        note("ok" if present else "warn", "dep", mod, detail)
 
     # -- route: checkpoint per language + device policy. The pool is json/os
     #    only (T458), so this never wakes the model.

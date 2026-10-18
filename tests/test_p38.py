@@ -8,7 +8,10 @@ ADAPTERS = Path("src/gatekeeper/adapters")
 
 
 def _pyproject():
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
     with open("pyproject.toml", "rb") as f:
         return tomllib.load(f)
 
@@ -59,7 +62,10 @@ def test_adapter_extras_cover_every_third_party_import():  # T711
             else:
                 continue
             for m in mods:
-                if m in stdlib or m in ("__future__", "gatekeeper"):
+                # tomli: the tomllib backport — stdlib on 3.11+, core dep
+                # with a python<3.11 marker below (T814), never an extra
+                if m in stdlib or m in ("__future__", "gatekeeper",
+                                        "tomli", "tomllib"):
                     continue
                 found.add((m, path.name))
     assert found, "the scan found no third-party adapter imports"
@@ -377,9 +383,11 @@ def test_dependency_floor_pins():  # T722
     import re
     py = _pyproject()
     deps = py["project"]["dependencies"]
-    # every core dep carries a lower bound (the T216 promise, re-audited)
+    # every core dep carries a lower bound (the T216 promise, re-audited);
+    # env markers are stripped first — the tomli backport is 3.10-only (T814)
     for d in deps:
-        assert re.match(r"^[\w.-]+>=\d[\w.]*$", d), f"no clean floor: {d}"
+        spec = d.split(";")[0].strip()
+        assert re.match(r"^[\w.-]+>=\d[\w.]*$", spec), f"no clean floor: {d}"
     # the box's three all have floors...
     floors = {_floor(d)[0]: _floor(d)[1] for d in deps}
     for pkg in ("fastapi", "gradio", "pydantic"):
@@ -640,7 +648,10 @@ def test_p38_sweep_packaging(tmp_path):  # T730
     # 3) doctor's dep audit drifts from nothing: its list is exactly the
     #    core dependency set, so a new core dep must be diagnosed (the
     #    sweep found pydantic/datasets missing at T730 and fixed it)
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
     with open("pyproject.toml", "rb") as f:
         core = {d.split(">=")[0]
                 for d in tomllib.load(f)["project"]["dependencies"]}
