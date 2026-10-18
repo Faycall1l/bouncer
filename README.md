@@ -230,7 +230,7 @@ See `data/README.md` for dataset spec, `notebooks/README.md` for RLCD loop.
 * [Architecture](docs/architecture.md) · [API reference](docs/api.md)
   · [Gate precedence](docs/gates.md)
 * [Adapters](src/gatekeeper/adapters/README.md) · [Benchmarks](BENCHMARKS.md)
-  · [Security](docs/SECURITY.md)
+  · [Security](docs/SECURITY.md) · [Threat model](docs/threat-model.md)
 
 ## Honest limits (T144)
 

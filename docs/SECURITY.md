@@ -1,5 +1,9 @@
 # Security notes (T598)
 
+The full asset/actor/trust-boundary view lives in
+[threat-model.md](threat-model.md) (T771) — including its known-gaps table;
+this file holds the operational how-tos.
+
 ## API keys
 
 * `BOUNCER_KEY` env — when set, every `POST` requires `X-API-Key`; wrong key is

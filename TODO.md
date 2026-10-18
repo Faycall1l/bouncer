@@ -851,8 +851,8 @@
 - [x] T770 test: P40 perf sweep (weightless paths only)
 
 ## P41 Security & ops (T771–T790)
-- [ ] T771 sec: threat model doc (assets, actors, trust boundaries)
-- [ ] T772 sec: input fuzzing on /predict (random bytes + deep nesting)
+- [x] T771 sec: threat model doc (assets, actors, trust boundaries)
+- [x] T772 sec: input fuzzing on /predict (random bytes + deep nesting)
 - [ ] T773 sec: rules value length cap (rule text bombs)
 - [ ] T774 sec: history item cap enforced server-side (not just docs)
 - [ ] T775 sec: context item + key length validation hardening

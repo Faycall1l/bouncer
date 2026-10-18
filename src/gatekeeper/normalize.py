@@ -12,6 +12,10 @@ _WS_RE = re.compile(r"\s+")  # T275: compiled once, not per message
 def clean_text(msg: str, max_chars: int = 2000) -> str:
     """T013: unicode-fold, collapse whitespace, truncate with marker."""
     t = unicodedata.normalize("NFKC", msg or "") if isinstance(msg, str) else ""  # T263
+    try:
+        t.encode("utf-8")  # T772: JSON \ud800 escapes carry lone surrogates,
+    except UnicodeEncodeError:  # which crash every downstream sha256/encode
+        t = t.encode("utf-8", "replace").decode("utf-8")
     t = _WS_RE.sub(" ", t).strip()
     if len(t) > max_chars:
         t = t[:max_chars] + " …[truncated]"

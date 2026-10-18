@@ -26,6 +26,11 @@ def validate_rule_text(rules: dict, max_chars: int = 280) -> None:
         if not isinstance(text, str):  # T266: name the type, not just "empty"
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} text is {type(text).__name__}, "
                             "expected str")
+        try:
+            text.encode("utf-8")  # T772: lone surrogates are invalid rule text —
+        except UnicodeEncodeError as e:  # they crash the hash/model encode path
+            raise RuleError(f"E_RULES_TEXT: rule {rid!r} has invalid unicode "
+                            "(lone surrogates)") from e
         if not text.strip():
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} has empty text")
         if len(text) > max_chars:
