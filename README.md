@@ -238,7 +238,7 @@ See `data/README.md` for dataset spec, `notebooks/README.md` for RLCD loop.
 
 Template bootstrap (6 message shapes), 3 violation types in v1, English-first,
 ≤20 options per question, refit temperatures on your data. Full list:
-[BENCHMARKS.md](BENCHMARKS.md#honest-limits-t109).
+[BENCHMARKS.md](BENCHMARKS.md#honest-limits).
 
 ## Benchmarks (measured, base `laya`)
 

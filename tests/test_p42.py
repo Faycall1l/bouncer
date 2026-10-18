@@ -372,3 +372,54 @@ def test_search_friendly_headings():  # T802
                     f"{p.name}:{heads[j][2] + 1} skips a heading level "
                     f"(h{heads[j - 1][0]} -> h{heads[j][0]})")
     assert not problems, "\n".join(problems)
+
+
+def test_readme_badges_and_anchor_links():  # T803
+    readme = Path("README.md").read_text()
+    # badges: the CI badge points at THIS repo's ci.yml — a fork or a
+    # renamed repo must update it, not inherit a stranger's green tick
+    assert ("https://github.com/Faycall1l/bouncer/actions/workflows/"
+            "ci.yml/badge.svg") in readme
+    # ...and license/python badges stay truthful ⇄ pyproject ⇄ LICENSE
+    assert "img.shields.io/badge/license-Apache--2.0-green" in readme
+    assert "img.shields.io/badge/python-3.10%2B-blue" in readme
+    assert 'requires-python = ">=3.10"' in Path("pyproject.toml").read_text()
+    assert Path("LICENSE").read_text().splitlines()[0].startswith(
+        "Apache License 2.0")
+    badge_lines = [l for l in readme.splitlines()[:6]
+                   if "img.shields.io" in l or "badge.svg" in l]
+    assert len(badge_lines) >= 3, "badge block missing at the top"
+
+    # every relative link in the README resolves to a real file, and
+    # every #anchor resolves against GitHub heading slugs — this box
+    # exists because both BENCHMARKS anchors had silently gone stale
+    # (heading refresh appended text and nobody noticed)
+    text = _strip_code(readme)
+    problems, anchor_links = [], 0
+    for _label, href in _LINK_RE.findall(text):
+        if href.startswith(("http://", "https://", "mailto:", "//", "/")):
+            continue
+        path, _, anchor = href.partition("#")
+        if not path:
+            target = Path("README.md")
+        else:
+            cands = [Path(path)]
+            if path.endswith("/"):
+                cands.append(Path(path) / "index.md")
+            elif not path.endswith(".md"):
+                cands.append(Path(path + ".md"))
+            target = next((c for c in cands if c.exists()), None)
+            if target is None:
+                problems.append(f"README: dead link {href}")
+                continue
+        if anchor:
+            anchor_links += 1
+            heads = {_slug(m.group(1)) for m in re.finditer(
+                r"^#{1,6}\s+(.+)$", _strip_code(target.read_text()), re.MULTILINE)}
+            if anchor not in heads:
+                problems.append(
+                    f"README: dead anchor {href} (no heading in "
+                    f"{target} slugs to {anchor!r})")
+    assert not problems, "\n".join(problems)
+    # floor: the two BENCHMARKS anchors are the point of this box
+    assert anchor_links >= 2, f"only {anchor_links} anchored links found"

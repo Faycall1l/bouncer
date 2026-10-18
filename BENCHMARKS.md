@@ -270,7 +270,11 @@ at common on-demand rates that's a few dollars per run — cheap enough to
 iterate, expensive enough to run the smoke path first (T659) and the pre-flight
 checks (T656/T657) before burning quota.
 
-## Honest limits (T109, refreshed T407)
+## Honest limits
+
+_(T109, refreshed T407)_ — kept out of the heading on purpose: the anchor
+`#honest-limits` is linked from README and data/README, and refreshes
+must not break it.
 
 * Template bootstrap: 6 message shapes × 3 rule-sets. Zero-shot numbers measure
   transfer to unseen phrasings, not open-world chat.
