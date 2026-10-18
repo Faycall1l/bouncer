@@ -8,7 +8,7 @@ bouncer trusts the transport after the key check.
 
 A threat model that hides its gaps is worse than none. Everything "enforced"
 below cites the box that enforces it; every known gap cites the box tracking
-it (T773–T775) and stays here until that box closes it.
+it (T774–T775) and stays here until that box closes it.
 
 ## Assets
 
@@ -78,12 +78,12 @@ it (T773–T775) and stays here until that box closes it.
 | response leaks | `raw` model output stripped from responses (`_clean`) | — |
 | rule-set ambiguity | rules XOR preset, unknown preset → 422 `E_PRESET` | T471, T482 |
 | hostile input (random bytes, JSON bombs, lone surrogates) | seeded fuzz over `/predict` proves no 5xx: malformed bodies 400, nesting 422, surrogate text sanitized (message/history) or rejected (`E_RULES_TEXT`) at the engine boundary | T772 |
+| rule-set bombs (oversized value/id/count) | `validate_rules` rejects >280-char values (`E_RULES_TEXT`), non-slug ids >24 chars (`E_RULES_ID`), >12 rules (`E_RULES_COUNT`) — was already enforced, now pinned end-to-end and documented | T004–T006, T773 |
 
 ## Known gaps (tracked, not hidden)
 
 | gap | risk | tracked |
 |---|---|---|
-| no length cap on `rules` values | rule-text bombs: unbounded strings ride into the prompt | T773 |
 | history item cap only on the `/predict` path | `/v1/systemone` forwards `state` raw — no item/length caps on its history | T774 |
 | context per-item and dict-key lengths | long items/keys bypass count-based caps | T775 |
 | no body-size pre-check on `/predict` | giant bodies are parsed before field caps apply (batch only has T291) | (covered with T775) |

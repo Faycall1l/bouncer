@@ -131,3 +131,46 @@ def test_fuzz_predict_random_bytes_and_deep_nesting():  # T772
     from gatekeeper import moderate
     res = moderate("engine \ud800 path", rules, router=_FuzzStub())
     assert res["action"] == "allow"
+
+
+def test_rules_bombs_rejected():  # T773: existed (T004-T006), now pinned
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    gatekeeper._router = _FuzzStub()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+
+    def post(payload):
+        serve._BUCKETS.clear()
+        return client.post("/predict", json=payload)
+
+    # value bomb (>280 chars) with a valid slug id
+    r = post({"message": "p773 value bomb",
+              "rules": {"spam": "A" * 5000}})
+    assert r.status_code == 422 and "E_RULES_TEXT" in r.text, r.text
+    # id bomb (>24 chars / non-slug)
+    r = post({"message": "p773 id bomb",
+              "rules": {"k" * 5000: "valid text"}})
+    assert r.status_code == 422 and "E_RULES_ID" in r.text, r.text
+    # count bomb (>12 rules)
+    r = post({"message": "p773 count bomb",
+              "rules": {f"r{i}": f"rule {i} text" for i in range(13)}})
+    assert r.status_code == 422 and "E_RULES_COUNT" in r.text, r.text
+    # a non-str value is named, not coerced (T266)
+    r = post({"message": "p773 int bomb", "rules": {"spam": 12345}})
+    assert r.status_code == 422, r.text
+    # exactly at the caps: still allowed (the bound is a bound, not a wall)
+    r = post({"message": "p773 at caps",
+              "rules": {"a" * 24: "B" * 280}})
+    assert r.status_code == 200, r.text
+    # engine-level too: the same bomb raises RuleError before any model work
+    import pytest
+
+    from gatekeeper.rules import RuleError
+    with pytest.raises(RuleError):
+        gatekeeper.moderate("p773 engine bomb", {"spam": "C" * 300},
+                            router=_FuzzStub())
+    # documented in the API reference (undocumented caps drift silently)
+    assert "E_RULES_TEXT" in Path("docs/api.md").read_text()

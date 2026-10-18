@@ -853,7 +853,7 @@
 ## P41 Security & ops (T771–T790)
 - [x] T771 sec: threat model doc (assets, actors, trust boundaries)
 - [x] T772 sec: input fuzzing on /predict (random bytes + deep nesting)
-- [ ] T773 sec: rules value length cap (rule text bombs)
+- [x] T773 sec: rules value length cap (rule text bombs)
 - [ ] T774 sec: history item cap enforced server-side (not just docs)
 - [ ] T775 sec: context item + key length validation hardening
 - [ ] T776 sec: API key rotation without downtime (two-key window) design

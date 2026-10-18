@@ -2,7 +2,9 @@
 
 * `POST /predict` `{message, rules, context?, threshold?, allow_threshold?,
   delete_threshold?, lang?}` → decision + reason. `context` ≤ 20 items (else 422),
-  message ≤ 8000 chars (else 413). Rule errors → 422 `{code, message}`.
+  message ≤ 8000 chars (else 413). `rules` caps (T773): 1–12 keys, each a
+  ≤24-char slug (`a-z0-9-`) with value ≤ 280 chars — bombs get 422
+  `E_RULES_COUNT`/`E_RULES_ID`/`E_RULES_TEXT`. Rule errors → 422 `{code, message}`.
 * `POST /predict/batch` `{messages[], rules, threshold?, allow_threshold?,
   delete_threshold?}` → array, order kept. 1–32 messages (else 422/413), each
   ≤ 8000 chars. Shares rate/auth guards with `/predict`.
