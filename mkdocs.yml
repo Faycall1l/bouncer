@@ -44,6 +44,7 @@ nav:
   - Reference:
       - Environment variables: environment.md
       - API: api.md
+      - Error codes: error-codes.md
       - Architecture: architecture.md
       - Glossary: glossary.md
       - Golden set: golden.md

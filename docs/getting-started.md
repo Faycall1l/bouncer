@@ -84,9 +84,9 @@ The response carries the decision itself (fields, not sample values — see
 | `strikes` | the user's strike count, when a `user_id` was sent |
 
 Errors are always structured: `{"detail": {"code": "E_*", "message": ...}}`
-(`E_PRESET`, `E_RULES_*`, `E_CONTEXT`, `E_STATE`, ... — the README's error
-table maps each code to its meaning). Rate limiting is 60 requests/min per
-IP; 429s carry `Retry-After: 60`.
+(`E_PRESET`, `E_RULES_*`, `E_CONTEXT`, `E_STATE`, ... — meaning and fix for
+every code live in the [error-code index](error-codes.md). Rate limiting
+is 60 requests/min per IP; 429s carry `Retry-After: 60`.
 
 Health checks for load balancers: `GET /health`, `GET /ready` (checks the
 model, not just the process), `GET /version`.

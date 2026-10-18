@@ -890,7 +890,7 @@
 - [x] T805 docs: ROADMAP.md for post-0.4.0 (finetune results, plugins)
 - [x] T806 docs: examples/ directory with 3 copy-paste scripts
 - [x] T807 docs: every env var documented table (from T609 list) in one page
-- [ ] T808 docs: error-code index page (E_* → meaning → fix)
+- [x] T808 docs: error-code index page (E_* → meaning → fix)
 - [ ] T809 docs: doc freshness header (last-checked version) per page
 - [ ] T810 test: P42 docs-site sweep
 

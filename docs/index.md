@@ -19,7 +19,8 @@ bouncer serve                                  # API on :8000
 [Demo script](demo-script.md)
 
 **Reference** — [Environment variables](environment.md) ·
-[API](api.md) · [Architecture](architecture.md) ·
+[API](api.md) · [Error codes](error-codes.md) ·
+[Architecture](architecture.md) ·
 [Glossary](glossary.md) · [Golden set](golden.md) · [MPS scoring](mps.md) ·
 [Version notes](versions.md) · [Roadmap](ROADMAP.md)
 

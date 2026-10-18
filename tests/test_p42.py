@@ -602,3 +602,40 @@ def test_env_var_table_is_the_one_true_table():  # T807
     assert "environment.md" in _nav_paths()
     assert "](environment.md)" in Path("docs/index.md").read_text()
     assert "](glossary.md)" in text
+
+
+def test_error_code_index_covers_every_code():  # T808
+    page = Path("docs/error-codes.md")
+    assert page.exists(), "docs/error-codes.md missing"
+    text = page.read_text()
+    assert text.startswith("# Error codes")
+    # the four-column contract: meaning AND fix, not just a list
+    assert "| code | surface | meaning | fix |" in text
+
+    # forward: every E_* the code (src + eval + scripts) can emit has a
+    # row — rstrip handles the E_RULES_ prefix into its base row, whose
+    # specific composites are rows of their own
+    src = "\n".join(
+        p.read_text() for d in ("src", "eval", "scripts")
+        for p in Path(d).rglob("*") if p.suffix in (".py", ".sh"))
+    codes = {c.rstrip("_") for c in re.findall(r"\bE_[A-Z][A-Z0-9_]*", src)}
+    missing = sorted(c for c in codes if f"`{c}`" not in text)
+    assert not missing, f"codes without a row: {missing}"
+    # composites are individually indexed, not covered by the prefix alone
+    for specific in ("E_RULES_EMPTY", "E_RULES_ID", "E_RULES_TEXT",
+                     "E_RULES_COUNT", "E_RULES_SEVERITY"):
+        assert f"`{specific}`" in text, specific
+
+    # reverse: every row is a code something really emits — dead rows die
+    rows = set(re.findall(r"^\| `([A-Z][A-Z0-9_]*)` \|", text, re.MULTILINE))
+    dead = sorted(r for r in rows if r not in codes)
+    assert not dead, f"rows with no emitter: {dead}"
+    assert len(rows) >= 24, f"only {len(rows)} rows"
+
+    # discoverable: getting-started points here (the index IS the fix
+    # destination for its structured-error section), nav + landing too
+    gs = Path("docs/getting-started.md").read_text()
+    assert "](error-codes.md)" in gs
+    assert "error-codes.md" in _nav_paths()
+    assert "](error-codes.md)" in Path("docs/index.md").read_text()
+    assert "](glossary.md)" in text
