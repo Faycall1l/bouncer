@@ -1,5 +1,24 @@
 # Benchmarks
 
+## Bench report schema (T765)
+
+Every `eval/bench_*.py` report (JSON under `eval/reports/`) carries this
+fixed envelope **before** its bench-specific keys:
+
+* `bench` — the producer (`"bench_warm"`): a copied/renamed file can't be
+  misread as another bench's numbers.
+* `schema` — envelope version, currently `1`; breaking changes bump it so
+  consumers can reject old files.
+* `mode` — `"stub"` (our bookkeeping only), `"real"` (checkpoint-backed —
+  never emitted without receipts), or `"n/a"` (no model in the loop:
+  import time, `/stats` load).
+
+Latency benches additionally report `p50_ms` (and `p95_ms` where sampled)
+plus their own keys (`rows`, `pool`, `rps`, ...). `tests/test_p40.py`
+enforces the envelope on every push. `eval_gatekeeper`/`gate`/`breaker`
+reports are scores and gate verdicts, not latency — they keep their own
+documented shapes.
+
 ## Zero-shot base Laya on gatekeeper-chatmix (T108)
 
 Kernel `faycal00/bouncer-eval-zero` (CPU, 200 rows, 1 choice question). COMPLETE.

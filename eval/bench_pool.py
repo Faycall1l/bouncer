@@ -34,7 +34,9 @@ def main(max_n=2, n_requests=10, n_devices=2):
     for i in range(n_requests):
         t.get(device=f"dev{i % (max_n + 1)}")
     thrash_s = time.perf_counter() - t0
-    return {"max_n": max_n, "requests": n_requests, "devices": n_devices,
+    return {"bench": "bench_pool", "schema": 1,  # T765: fixed report keys
+            "mode": "stub",  # fake factory — construction timing only
+            "max_n": max_n, "requests": n_requests, "devices": n_devices,
             "pooled_s": round(pooled_s, 3), "naive_s": round(naive_s, 3),
             "speedup": round(naive_s / pooled_s, 1) if pooled_s else None,
             "stats": s,

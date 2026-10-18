@@ -26,7 +26,8 @@ if __name__ == "__main__":
             t0 = time.perf_counter()
             moderate_batch(msgs, rules, router=Stub(), chunk=chunk)
             rows[f"batch{size}/chunk{chunk}"] = round((time.perf_counter() - t0) * 1000, 1)
-    report = {"rows": rows}
+    report = {"bench": "bench_batch", "schema": 1, "mode": "stub",  # T765
+              "rows": rows}
     os.makedirs("eval/reports", exist_ok=True)
     with open("eval/reports/batch-sweep.json", "w") as f:
         json.dump(report, f, indent=2)

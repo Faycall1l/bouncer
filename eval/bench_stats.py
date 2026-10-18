@@ -65,7 +65,8 @@ def main(argv: list[str] | None = None) -> int:
 
     lat.sort()
     n = len(lat)
-    rep = {"threads": args.threads, "requests": args.requests, "n": n,
+    rep = {"bench": "bench_stats", "schema": 1, "mode": "n/a",  # T765
+           "threads": args.threads, "requests": args.requests, "n": n,
            "ok": oks[0], "errors": errors[:3],
            "p50_ms": round(lat[n // 2], 3),
            "p95_ms": round(lat[min(n - 1, int(n * 0.95))], 3),

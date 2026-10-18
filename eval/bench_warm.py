@@ -96,6 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     replay = moderate("warm-pool bench message 0", RULES, router=pool.get())
     cache_hit_ms = (time.perf_counter() - t0) * 1000.0
     rep = {
+        "bench": "bench_warm", "schema": 1,  # T765: fixed report keys
         "mode": mode,  # stub = mechanics only; real = measured with weights
         "n": n,
         "cold_ms": round(cold_ms, 2),  # pool miss: incl. checkpoint load

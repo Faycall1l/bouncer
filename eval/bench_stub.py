@@ -30,7 +30,8 @@ if __name__ == "__main__":
         moderate(f"bench stub msg {i}", rules, router=r)
         lat.append((time.perf_counter() - t0) * 1000)
     lat.sort()
-    report = {"n": n, "p50_ms": round(lat[n // 2], 2),
+    report = {"bench": "bench_stub", "schema": 1, "mode": "stub",  # T765
+              "n": n, "p50_ms": round(lat[n // 2], 2),
               "p95_ms": round(lat[int(n * 0.95)], 2),
               "mean_ms": round(sum(lat) / n, 2)}
     os.makedirs("eval/reports", exist_ok=True)

@@ -60,7 +60,9 @@ def main(argv: list[str] | None = None) -> int:
     lat.sort()
     n = len(lat)
     p50 = round(lat[n // 2], 1)
-    rep = {"n": n, "cmd": "version" if args.version else "import",  # T763
+    rep = {"bench": "bench_import", "schema": 1,  # T765
+           "mode": "n/a",  # no model in the loop — import cost only
+           "n": n, "cmd": "version" if args.version else "import",  # T763
            "p50_ms": p50,
            "p95_ms": round(lat[min(n - 1, int(n * 0.95))], 1),
            "max_ms": round(lat[-1], 1),

@@ -50,7 +50,9 @@ if __name__ == "__main__":
     r, state = Stub(), {"message": "bench q-count msg"}
     q1 = {"rule": build_questions({"a": "rule a text"})["rule"]}
     q5 = build_questions({"a": "rule a text"})
-    report = {"n": n, "p50_1q_ms": bench(r, state, q1, n), "p50_5q_ms": bench(r, state, q5, n),
+    report = {"bench": "bench_questions", "schema": 1,  # T765
+              "mode": "stub",  # payload timing — no weights
+              "n": n, "p50_1q_ms": bench(r, state, q1, n), "p50_5q_ms": bench(r, state, q5, n),
               "p50_knob_3q_ms": bench_knob(3, n),  # T755: BOUNCER_QUESTIONS knob
               "p50_knob_5q_ms": bench_knob(5, n)}
     os.makedirs("eval/reports", exist_ok=True)  # T383: persist, don't just print

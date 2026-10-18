@@ -482,3 +482,34 @@ def test_wheel_import_time_budget_200ms(tmp_path):  # T764
     # the budget is documented where the number lives
     doc = Path("BENCHMARKS.md").read_text()
     assert "T764" in doc and "200ms" in doc
+
+
+def test_bench_report_schema_fixed_keys(tmp_path):  # T765
+    import os
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    # static: every bench_*.py that WRITES a JSON report declares the
+    # envelope (print-only scripts like bench_latency emit no receipt)
+    for f in sorted((ROOT / "eval").glob("bench_*.py")):
+        src = f.read_text()
+        if "eval/reports" not in src:
+            continue
+        for key in ('"bench":', '"schema":', '"mode":'):
+            assert key in src, f"{f.name}: report lacks {key}"
+    # live: cheap benches emit it end-to-end with their documented mode
+    cases = [
+        ("bench_warm", ("--stub", "--n", "3"), "stub"),
+        ("bench_stats", ("--threads", "2", "--requests", "5"), "n/a"),
+        ("bench_import", ("--n", "1"), "n/a"),
+    ]
+    for name, args, mode in cases:
+        out = tmp_path / f"{name}.json"
+        r = _run(str(ROOT / "eval" / f"{name}.py"), *args, "--json",
+                 "--out", str(out), cwd=tmp_path, env=env)
+        assert r.returncode == 0, f"{name}: {r.stderr}"
+        rep = json.loads(out.read_text())
+        assert rep["bench"] == name and rep["schema"] == 1, rep
+        assert rep["mode"] == mode, f"{name}: {rep['mode']}"
+    # the contract itself is documented
+    doc = Path("BENCHMARKS.md").read_text()
+    for needle in ("Bench report schema (T765)", "schema", "mode"):
+        assert needle in doc, needle
