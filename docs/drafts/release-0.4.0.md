@@ -9,5 +9,6 @@ surface, and docs around it.
 
 * `pytest -q`: **412 passed, 1 warning** (2026-10-18, weightless env,
   macOS arm64) — T812.
+* `ruff check .`: **clean** (repo-wide, line-length 100) — T813.
 
 (Highlights / bugs / upgrade notes land with T817.)
