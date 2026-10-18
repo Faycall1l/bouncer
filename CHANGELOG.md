@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 0.4.0 — 2026-10-18 (T811)
+## 0.4.0 — 2026-10-19 (T811)
 
 * Eval gates (T671-T689): `eval/gate.py` pass/fail runner over report JSONs —
   exit-code contract 0/1/2 (`--ci` one-liner), threshold flags
@@ -19,6 +19,24 @@
   `BOUNCER_ZL_DELETE`), `BOUNCER_DRY_RUN=1` prints instead of posting,
   `BOUNCER_RULES_<ADAPTER>` per-adapter rule overrides, fail-closed
   startup with coded `E_ADAPTER` faults, platform env vars documented.
+* Packaging (T711-T730): optional-deps groups (`server`/`demo`/`adapters`,
+  `finetune` pins training deps separately), `bouncer` console script, clean
+  `uv build` wheel + sdist (LICENSE/README/examples included), Dockerfile
+  (slim, non-root, OCI labels, start-time self-test) + docker-compose,
+  dependency floor pins (`>=`), core import stays weightless (no numpy/laya
+  hard dep), `py.typed` marker, `bouncer doctor` self-diagnosis command.
+* CI/CD (T731-T750): GitHub Actions on push/PR — pytest + ruff across the
+  3.10–3.13 matrix (fail-fast off), wheel build on tags, release job
+  attaching wheel + SBOM, tag-vs-version guard, weightless bench +
+  eval-gate jobs, secret scan, coverage artifact, nightly stub suite,
+  release-notes check, PR/issue templates.
+* Performance (T751-T770): warm-pool/cache-hit latency benches, batch-size
+  sweep, coalescing metric in `/stats`, question-count knob, token-budget
+  context guard, `watch` throughput summary, audit write batching, review
+  queue append, `/stats` under threaded load, lazy gradio import (import
+  budget < 200ms), fixed bench-report schema (T765) gated by `gate.py`
+  perf budgets (T766), measured dated numbers in README/BENCHMARKS with
+  honest before/after-finetune columns, pool memory footprint documented.
 * Security & ops (T771-T790): threat-model/runbook/SECURITY doc set,
   key-rotation window (`BOUNCER_KEY_OLD`, T776), proxy-pinned rate keys
   (`BOUNCER_TRUSTED_PROXY`, T777), `/v1/systemone` passthrough with
@@ -30,6 +48,15 @@
   scripts, test-enforced link/heading/fence/diagram-fallback/freshness
   lints, GitHub Pages workflow behind the `DOCS_DEPLOY` flag, rewritten
   CONTRIBUTING with a shipped `verify.sh`.
+* Fixes found by the first green release CI (T814-T815): `tomli>=2.0`
+  backport dep for python < 3.11 (`tomllib` is stdlib only from 3.11 —
+  the whole 3.10 matrix leg used to cascade-fail) with import shims at
+  all 8 sites; the T781 audit job now extracts pyproject deps to a
+  requirements file before `pip-audit -r` (it read TOML as requirements
+  and errored on line 1 every run since introduction); `cmd_pack` guards
+  `RecursionError` on adversarially deep JSON (exit 4); the
+  `latest.json` eval pointer lands beside `--out` so test runs never
+  poison the real reports dir.
 
 ## 0.3.0 — 2026-10-17 (T626)
 * Persistence: atomic writes + `E_SNAPSHOT`, decision/stats snapshots
