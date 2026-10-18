@@ -563,3 +563,42 @@ def test_examples_three_copy_paste_scripts(tmp_path, monkeypatch):  # T806
         assert "](examples/03_custom_rules.py)" in cb
     finally:
         monkeypatch.setattr(gatekeeper, "_router", old_router)
+
+
+def test_env_var_table_is_the_one_true_table():  # T807
+    page = Path("docs/environment.md")
+    assert page.exists(), "docs/environment.md missing"
+    text = page.read_text()
+    assert text.startswith("# Environment variables")
+
+    # forward: every env var the code reads gets a row — T609's core
+    # four, extended over all of src/eval/scripts, .py and .sh alike
+    src = "\n".join(
+        p.read_text() for d in ("src", "eval", "scripts")
+        for p in Path(d).rglob("*") if p.suffix in (".py", ".sh"))
+    bouncers = {v.rstrip("_") for v in re.findall(r"BOUNCER_[A-Z_]+", src)}
+    missing = sorted(v for v in bouncers if v not in text)
+    assert not missing, f"undocumented in environment.md: {missing}"
+    # the dynamic prefix row is spelled out for readers, not just implied
+    assert "BOUNCER_RULES_<ADAPTER>" in text
+
+    # platform tokens derived from the code's own redaction list (T700/
+    # T710) plus the require_env + hub reads, so this list can't rot
+    sys.path.insert(0, "src")
+    from gatekeeper.adapters.common import _ENV_TOKEN_VARS
+    platform = (set(_ENV_TOKEN_VARS) | {"TWITCH_CHAN", "HF_TOKEN"}) - {
+        "BOUNCER_FORWARD_URL"}  # a BOUNCER_* — covered by the sweep above
+    missing_p = sorted(v for v in platform if v not in text)
+    assert not missing_p, f"platform tokens without a row: {missing_p}"
+
+    # reverse: every table row must be a real code read — dead rows die
+    rows = set(re.findall(r"^\| `([A-Z][A-Z0-9_]*)` \|", text, re.MULTILINE))
+    dead = sorted(r for r in rows if r not in (bouncers | platform))
+    assert not dead, f"rows with no code read: {dead}"
+    # and the inventory is substantial — a truncated page can't pass
+    assert len(rows) >= 40, f"only {len(rows)} rows"
+
+    # reachable: nav entry + landing page + glossary line (T796 mirrors)
+    assert "environment.md" in _nav_paths()
+    assert "](environment.md)" in Path("docs/index.md").read_text()
+    assert "](glossary.md)" in text

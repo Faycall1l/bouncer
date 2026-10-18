@@ -42,6 +42,7 @@ nav:
       - FAQ: faq.md
       - Demo script: demo-script.md
   - Reference:
+      - Environment variables: environment.md
       - API: api.md
       - Architecture: architecture.md
       - Glossary: glossary.md

@@ -18,7 +18,8 @@ bouncer serve                                  # API on :8000
 [Answer shape](answer-shape.md) · [FAQ](faq.md) ·
 [Demo script](demo-script.md)
 
-**Reference** — [API](api.md) · [Architecture](architecture.md) ·
+**Reference** — [Environment variables](environment.md) ·
+[API](api.md) · [Architecture](architecture.md) ·
 [Glossary](glossary.md) · [Golden set](golden.md) · [MPS scoring](mps.md) ·
 [Version notes](versions.md) · [Roadmap](ROADMAP.md)
 
