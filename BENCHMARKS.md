@@ -205,17 +205,19 @@ exactly why the demo shows both side by side, and why calibration + finetune mat
 `python eval/gate.py REPORT --check-docs` reads this table and fails if the
 threshold defaults it enforces have drifted from the documented numbers
 (T669 release-checklist companion). The `_acc` rows are reference values
-(nothing enforces them; they are what the gates are built around):
+(nothing enforces them; they are what the gates are built around). The
+status column (T815) says when each row was last measured or why it is
+stale — the value column stays first so the gate's parser reads it unchanged:
 
-| metric | value |
-|---|---|
-| zero_shot_rule_acc | 0.305 |
-| regex_baseline_acc | 0.403 |
-| regex_floor | 0.403 |
-| max_ece | 0.15 |
-| max_p95_ms_t4 | 44 |
-| pool_speedup_floor | 2.0 |
-| import_budget_ms | 200 |
+| metric | value | status (T815, 2026-10-19) |
+|---|---|---|
+| zero_shot_rule_acc | 0.305 | **STALE** — needs laya + `data/gatekeeper-12k.jsonl`, both absent from a weightless env; last measured on the T108 CPU kernel |
+| regex_baseline_acc | 0.403 | refreshed 2026-10-19: `baseline_regex.py data/examples.jsonl` re-measured exactly 0.403 |
+| regex_floor | 0.403 | enforced default (`--min-rule-acc`), drift-checked by `--check-docs` |
+| max_ece | 0.15 | enforced default (`--max-ece`) |
+| max_p95_ms_t4 | 44 | enforced default (`--max-p95-ms`; T4 product target, no T4 here) |
+| pool_speedup_floor | 2.0 | enforced default (`--min-speedup`) |
+| import_budget_ms | 200 | enforced default (`--max-import-p50-ms`) |
 
 ## Running the gates (T688)
 

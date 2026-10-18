@@ -98,8 +98,11 @@ if __name__ == "__main__":
               "overconfident_errors": overconf,
               "per_rule": {k: [per_rule_ok[k], per_rule[k]] for k in per_rule}}
     import os
-    os.makedirs("eval/reports", exist_ok=True)
+    out_dir = os.path.dirname(a.out) or "."  # T815: never write beside --out
+    os.makedirs(out_dir, exist_ok=True)
     with open(a.out, "w") as f:
         json.dump(report, f, indent=2)
-    write_latest(report, a.out)  # T686: eval/reports/latest.json pointer
+    # T686+T815: the pointer sits BESIDE the report — a --out into tmp (as
+    # every test does) must not clobber the real eval/reports/latest.json
+    write_latest(report, a.out, out_dir=out_dir)
     print(json.dumps(report, indent=2))

@@ -375,6 +375,28 @@ def test_gate_check_docs_reads_benchmarks(tmp_path):  # T684: no docs/default dr
     assert r.returncode == 2 and "cannot read docs" in r.stderr
 
 
+def test_known_numbers_table_status_column():  # T815: refreshed or explicitly stale
+    import re
+    text = Path("BENCHMARKS.md").read_text()
+    i = text.index("## Known numbers")
+    section = text[i:i + 1400]
+    # the status column exists and every row carries a verdict
+    assert "| status (T815" in section
+    # the two _acc reference rows are honestly labelled: the regex baseline
+    # re-measured green, the zero-shot number marked STALE (weightless envs
+    # have neither laya nor the 12k dataset — it cannot be refreshed here)
+    for needle in ("| zero_shot_rule_acc | 0.305 | **STALE**", "T108 CPU kernel",
+                   "| regex_baseline_acc | 0.403 | refreshed 2026-10-19"):
+        assert needle in section, needle
+    # the threshold rows name the flag that enforces them
+    for needle in ("`--min-rule-acc`", "`--max-ece`", "`--max-p95-ms`",
+                   "`--min-speedup`", "`--max-import-p50-ms`"):
+        assert needle in section, needle
+    # the gate's parser only reads the first two columns — the extra column
+    # cannot cause docs/default drift (verified live: --check-docs rc=0)
+    assert re.search(r"\|\s*regex_floor\s*\|\s*0\.403\s*\|", section)
+
+
 def test_gate_stale_report_warning(tmp_path):  # T685: warn, never re-verdict
     import os
     import time
@@ -418,8 +440,10 @@ def test_latest_report_pointer(tmp_path):  # T686
     r = _run_gate(latest)
     assert r.returncode == 0, r.stderr
     # and eval_gatekeeper's __main__ actually calls it after writing a report
+    # — with the pointer beside --out (T815), so tmp runs never touch the
+    # real eval/reports/latest.json
     src = Path("eval/eval_gatekeeper.py").read_text()
-    assert "write_latest(report, a.out)" in src
+    assert "write_latest(report, a.out, out_dir=out_dir)" in src
 
 
 def test_gate_fails_loudly_on_bad_reports(tmp_path):  # T687: the battery

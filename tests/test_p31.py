@@ -91,6 +91,10 @@ def test_eval_model_flag_in_report(tmp_path):  # T583
                        check=False, capture_output=True, text=True, env=env, timeout=60)
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout)["model"] == "base-router"
+    # T815: the latest-pointer lands BESIDE --out (tmp), never in the real
+    # eval/reports/ — a leaked stub latest.json used to fail gate.py --all
+    latest = json.loads((tmp_path / "latest.json").read_text())
+    assert latest["_source"].endswith("rep2.json")
 
 
 def test_baseline_limit_truncates(tmp_path):  # T584
@@ -182,7 +186,10 @@ def test_p31_sweep(tmp_path):  # T590: eval/data cross-checks in one pass
         r = _run(script, "--help")
         assert r.returncode == 0, f"{script}: {r.stderr}"
     # 2. eval_i18n and validate_data agree on the shipped fixtures
-    rep = json.loads([l for l in _run("eval/eval_i18n.py", "--json").stdout.splitlines()
+    #    (--out into tmp: T815 — a test never writes the real reports dir)
+    rep = json.loads([l for l in _run("eval/eval_i18n.py", "--json",
+                                      "--out", str(tmp_path / "i18n.json"))
+                      .stdout.splitlines()
                       if l.startswith("{")][-1])
     assert rep["n"] == 12 and rep["errors"] == []
     # 3. synth with a seed is byte-stable across runs (T382 reproducibility)
