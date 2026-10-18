@@ -202,3 +202,53 @@ def test_version_switcher_note():  # T797
     # reachable: nav entry + landing page link
     assert "versions.md" in _nav_paths()
     assert "](versions.md)" in Path("docs/index.md").read_text()
+
+
+# --- T798: internal link checker -------------------------------------
+_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
+
+
+def _strip_code(text: str) -> str:
+    """Drop fenced blocks and inline spans — links there aren't links."""
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    return re.sub(r"`[^`]*`", "", text)
+
+
+def _slug(heading: str) -> str:
+    """GitHub/markdown-toc heading slug (parens stripped, spaces→hyphens)."""
+    h = heading.strip().lower()
+    h = re.sub(r"[^\w\s-]", "", h)
+    return re.sub(r"\s+", "-", h.strip())
+
+
+def _headings(text: str) -> set:
+    return {_slug(m.group(1))
+            for m in re.finditer(r"^#{1,6}\s+(.+)$", _strip_code(text), re.MULTILINE)}
+
+
+def test_internal_link_checker():  # T798
+    problems = []
+    for p in sorted(Path("docs").glob("*.md")):
+        text = _strip_code(p.read_text())
+        for _label, href in _LINK_RE.findall(text):
+            # external schemes and absolute paths are out of scope here
+            if href.startswith(("http://", "https://", "mailto:", "//", "/")):
+                continue
+            path, _, anchor = href.partition("#")
+            if not path:
+                target = p  # same-page anchor
+            else:
+                cands = [p.parent / path]
+                if path.endswith("/"):
+                    cands.append(p.parent / path / "index.md")
+                elif not path.endswith(".md"):
+                    cands.append(p.parent / (path + ".md"))
+                target = next((c for c in cands if c.exists()), None)
+                if target is None:
+                    problems.append(f"{p.name}: dead link {href}")
+                    continue
+            if anchor and anchor not in _headings(target.read_text()):
+                problems.append(
+                    f"{p.name}: dead anchor {href} — no heading slugs to "
+                    f"{anchor!r} in {target.name}")
+    assert not problems, "\n".join(problems)

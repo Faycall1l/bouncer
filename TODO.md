@@ -880,7 +880,7 @@
 - [x] T795 docs: API reference page renders api.md unchanged
 - [x] T796 docs: glossary page linked from every relevant page
 - [x] T797 docs: version switcher note for 0.1/0.2/0.3 behavior deltas
-- [ ] T798 docs: internal link checker (relative md links, test-enforced)
+- [x] T798 docs: internal link checker (relative md links, test-enforced)
 - [ ] T799 docs: code blocks language-tagged (lint)
 - [ ] T800 docs: diagram images fallback (mermaid + ascii pre block)
 - [ ] T801 docs: docs deploy workflow (GitHub Pages) behind flag
