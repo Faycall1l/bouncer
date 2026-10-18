@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 import subprocess
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -343,3 +344,31 @@ def test_docs_deploy_workflow_behind_flag():  # T801
     assert list(jobs) == ["build", "deploy"], jobs
     assert jobs["deploy"]["needs"] == "build"
     assert flag in jobs["deploy"]["if"]
+
+
+def test_search_friendly_headings():  # T802
+    problems = []
+    for p in sorted(Path("docs").glob("*.md")):
+        lines = _strip_code(p.read_text()).splitlines()
+        heads = [(len(m.group(1)), m.group(2), i)
+                 for i, l in enumerate(lines)
+                 if (m := re.match(r"^(#{1,6})\s+(.+)$", l))]
+        # exactly one H1 per page: it is the page's title in search
+        # results and in the rendered toc — six (T149 demo-script had
+        # '#' comment lines that markdown reads as headings) broke that
+        h1s = [h for h in heads if h[0] == 1]
+        if len(h1s) != 1:
+            problems.append(f"{p.name}: {len(h1s)} H1 headings (want exactly 1)")
+        # unique heading slugs within a page — duplicate anchors get
+        # -1 suffixes and search can't tell the sections apart
+        slugs = Counter(_slug(h[1]) for h in heads)
+        dups = sorted(s for s, c in slugs.items() if c > 1)
+        if dups:
+            problems.append(f"{p.name}: duplicate headings {dups}")
+        # no skipped levels (h2 -> h4): the toc tree must nest honestly
+        for j in range(1, len(heads)):
+            if heads[j][0] > heads[j - 1][0] + 1:
+                problems.append(
+                    f"{p.name}:{heads[j][2] + 1} skips a heading level "
+                    f"(h{heads[j - 1][0]} -> h{heads[j][0]})")
+    assert not problems, "\n".join(problems)

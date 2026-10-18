@@ -884,7 +884,7 @@
 - [x] T799 docs: code blocks language-tagged (lint)
 - [x] T800 docs: diagram images fallback (mermaid + ascii pre block)
 - [x] T801 docs: docs deploy workflow (GitHub Pages) behind flag
-- [ ] T802 docs: search-friendly headings (no duplicate H1s) lint
+- [x] T802 docs: search-friendly headings (no duplicate H1s) lint
 - [ ] T803 docs: README anchors tested (badges + section links)
 - [ ] T804 docs: CONTRIBUTING (boxes workflow, verify.sh, code style)
 - [ ] T805 docs: ROADMAP.md for post-0.4.0 (finetune results, plugins)
