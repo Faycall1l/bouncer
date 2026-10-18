@@ -858,7 +858,7 @@
 - [x] T775 sec: context item + key length validation hardening
 - [x] T776 sec: API key rotation without downtime (two-key window) design
 - [x] T777 sec: trusted-proxy IP handling (`BOUNCER_TRUSTED_PROXY`)
-- [ ] T778 sec: /metrics exposure gate (bind-local or key by default)
+- [x] T778 sec: /metrics exposure gate (bind-local or key by default)
 - [x] T779 sec: log injection guard (control chars stripped from reasons)
 - [x] T780 sec: demo share mode warning (public gradio = public rules)
 - [x] T781 sec: dependency audit job (pip-audit/uv audit) in CI
@@ -870,7 +870,7 @@
 - [x] T787 sec: error messages leak nothing (path/version sweep test)
 - [x] T788 sec: SECURITY.md threat-model link + disclosure contact
 - [x] T789 sec: ops runbook (backup, restore, rotate, drain) in docs
-- [ ] T790 test: P41 security sweep
+- [x] T790 test: P41 security sweep
 
 ## P42 Docs site (T791–T810)
 - [ ] T791 docs: mkdocs-material skeleton (nav from docs/*.md)

@@ -925,3 +925,29 @@ def test_ops_runbook():  # T789
     # discoverable from every security surface
     for f in ("README.md", "SECURITY.md", "docs/SECURITY.md"):
         assert "runbook.md" in Path(f).read_text(), f
+
+
+def test_p41_security_sweep():  # T790: P41 closer — every box ticked, cited,
+    # and no invented T-numbers in the security docs
+    todo = Path("TODO.md").read_text()
+    p41 = [b for b in re.findall(r"- \[[ x]\] (T7\d\d)\b", todo)
+           if 771 <= int(b[1:]) <= 790]
+    assert len(p41) == 20, p41  # T771-T790, none missing from TODO
+    for b in p41:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+
+    # every box has a receipt OUTSIDE TODO.md: docs, tests, src, CI, eval
+    corpus = (Path("README.md").read_text() + Path("SECURITY.md").read_text()
+              + Path("BENCHMARKS.md").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if p.is_file() and p.suffix in (".md", ".py", ".yml", ".yaml"):
+                corpus += p.read_text()
+    for b in p41:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity over the P41 security docs: every T-number they
+    # mention is a box TODO.md knows — invented receipts fail here
+    for f in ("docs/threat-model.md", "docs/SECURITY.md", "SECURITY.md"):
+        for t in set(re.findall(r"T\d{3,4}", Path(f).read_text())):
+            assert t in todo, (f, t)
