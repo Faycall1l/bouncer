@@ -875,7 +875,7 @@
 ## P42 Docs site (T791–T810)
 - [x] T791 docs: mkdocs-material skeleton (nav from docs/*.md)
 - [x] T792 docs: `mkdocs.yml` nav covers every doc file (checked by test)
-- [ ] T793 docs: getting-started page (install → first decision → serve)
+- [x] T793 docs: getting-started page (install → first decision → serve)
 - [ ] T794 docs: cookbook page (5 recipes: discord, self-host, gates, i18n, backup)
 - [ ] T795 docs: API reference page renders api.md unchanged
 - [ ] T796 docs: glossary page linked from every relevant page

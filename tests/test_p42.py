@@ -1,6 +1,7 @@
 """P42 tests (T791-T810): docs site. mkdocs.yml is parsed with a real
 YAML parser where one exists (ruby Psych — same deal as T750)."""
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -74,3 +75,27 @@ def test_nav_covers_every_doc_file():  # T792
     drafts = {str(p.relative_to("docs")) for p in Path("docs").rglob("*.md")
               if "drafts" in p.parts}
     assert not (nav & drafts), sorted(nav & drafts)
+
+
+def test_getting_started_page():  # T793
+    gs = Path("docs/getting-started.md").read_text()
+    assert gs.startswith("# Getting started")
+    # the three stages, in order: install → first decision → serve
+    stages = [gs.index("## 1. Install"), gs.index("## 2. First decision"),
+              gs.index("## 3. Serve")]
+    assert stages == sorted(stages), "stages out of order"
+    assert 'pip install -e ".[server,demo]"' in gs
+    assert "3.10" in gs and "3.13" in gs  # the CI matrix, stated
+    assert "bouncer check" in gs and "bouncer serve" in gs
+    assert "x-api-key" in gs and "/predict" in gs
+    # exit codes match the CLI contract (0/2/3/4)
+    for row in ("| 0 | allow |", "| 2 | delete", "| 3 | escalate",
+                "| 4 | configuration"):
+        assert row in gs, row
+    # honesty lint: no invented confidence numbers on this page — the
+    # format shows 0.NN placeholders, measured values live in BENCHMARKS
+    assert not re.search(r"conf 0\.\d\d", gs), "invented confidence?"
+    assert "BENCHMARKS" in gs
+    # discoverable: linked from the landing page, present in the nav
+    assert "getting-started.md" in Path("docs/index.md").read_text()
+    assert "getting-started.md" in _nav_paths()

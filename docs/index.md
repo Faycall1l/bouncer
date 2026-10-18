@@ -11,7 +11,8 @@ bouncer serve                                  # API on :8000
 
 ## Find your page
 
-**Using bouncer** — [Rules guide](rule-guide.md) · [Presets](presets.md) ·
+**Using bouncer** — [Getting started](getting-started.md) ·
+[Rules guide](rule-guide.md) · [Presets](presets.md) ·
 [Gates](gates.md) · [Thresholds](thresholds.md) ·
 [Answer shape](answer-shape.md) · [FAQ](faq.md) ·
 [Demo script](demo-script.md)

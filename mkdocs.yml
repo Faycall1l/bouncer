@@ -32,6 +32,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Using bouncer:
+      - Getting started: getting-started.md
       - Rules guide: rule-guide.md
       - Presets: presets.md
       - Gates: gates.md
