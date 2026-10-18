@@ -107,6 +107,12 @@ and nothing drops.
 * Snapshots contain counters and per-user strike counts — no message content.
   They're written **0600** (owner-only) by the atomic writer, so umask can't
   leak them world-readable (T783).
+* The **review queue is the one artifact that holds raw message text** — by
+  design: a reviewer can't adjudicate a hash. Rows are bounded (≤500 chars),
+  the file is gitignored, prunable (`prune`, T442) and clearable
+  (`bouncer review --clear --yes`, T318) — and written **0600** like the
+  snapshots, since it's the file where raw text actually lives (T784). The
+  audit log itself stays hashed (T273).
 * Rate limiting is per-IP (60 req/min). Behind a reverse proxy set
   `BOUNCER_TRUSTED_PROXY` to your proxy's IP (comma-separate several): only
   when the **direct peer** matches does bouncer take the client IP from

@@ -864,7 +864,7 @@
 - [x] T781 sec: dependency audit job (pip-audit/uv audit) in CI
 - [x] T782 sec: rate-limit bypass test via X-Forwarded-For spoofing
 - [x] T783 sec: snapshot file permissions check (0600 by default)
-- [ ] T784 sec: review queue never contains raw message? (documented, tested)
+- [x] T784 sec: review queue never contains raw message? (documented, tested)
 - [ ] T785 sec: SSRF guard on webhook forward URL (scheme + opt-in allowlist)
 - [ ] T786 sec: adversarial rule pack test (huge K, recursive-looking ids)
 - [ ] T787 sec: error messages leak nothing (path/version sweep test)

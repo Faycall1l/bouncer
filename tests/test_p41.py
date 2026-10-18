@@ -675,3 +675,37 @@ def test_snapshot_files_written_0600():  # T783
         assert mode(via_cli) == 0o600, oct(mode(via_cli))
         # ...and the data handling doc says so
         assert "0600" in Path("docs/SECURITY.md").read_text()
+
+
+def test_review_queue_raw_but_bounded_and_private():  # T784
+    import os as _os
+    import stat
+    import tempfile
+
+    import gatekeeper.review as _rv
+
+    orig = _rv._PATH
+    with tempfile.TemporaryDirectory() as d:
+        _rv._PATH = f"{d}/queue.jsonl"
+        try:
+            # the queue DOES hold raw message text — by design: a human
+            # can't adjudicate a hash — so it gets the private-file
+            # treatment and the docs say it out loud
+            _rv.add("x" * 600, {"action": "flag", "rule": "no-spam",
+                                "confidence": 0.9})
+            row = _rv.list_queue()[0]
+            assert row["message"] == "x" * 500  # bounded (T170's cap)
+            assert row["action"] == "flag" and row["conf"] == 0.9
+            mode = stat.S_IMODE(_os.stat(_rv._PATH).st_mode)
+            assert mode == 0o600, oct(mode)
+            # a pre-existing loose file is fchmod'd down on the next append
+            _os.chmod(_rv._PATH, 0o644)
+            _rv.add("y", {"action": "escalate", "rule": "x", "confidence": 0.1})
+            mode = stat.S_IMODE(_os.stat(_rv._PATH).st_mode)
+            assert mode == 0o600, oct(mode)
+        finally:
+            _rv._PATH = orig
+
+    sec = Path("docs/SECURITY.md").read_text()
+    for needle in ("review queue", "raw message", "0600", "T784"):
+        assert needle in sec, needle

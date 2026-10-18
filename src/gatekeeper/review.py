@@ -13,7 +13,12 @@ _PATH = os.environ.get("BOUNCER_REVIEW", "review-queue.jsonl")
 def add(message: str, res: dict) -> None:  # T170
     parent = os.path.dirname(os.path.abspath(_PATH))  # T281
     os.makedirs(parent, exist_ok=True)
-    with open(_PATH, "a") as f:
+    # T784: the queue is the ONE artifact that holds raw message text (by
+    # design — a human can't adjudicate a hash), so it gets the same 0600
+    # treatment as snapshots; fchmod also drops a stale file's old mode.
+    fd = os.open(_PATH, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "a") as f:
         f.write(json.dumps({"t": int(time.time()),  # T441: for prune()
                             "message": message[:500], "action": res["action"],
                             "rule": res["rule"], "conf": round(res["confidence"], 3),
