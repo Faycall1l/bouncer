@@ -1,5 +1,7 @@
 # Error codes (T808)
 
+_(Last checked against v0.3.0.)_
+
 Every `E_*` code bouncer can emit → what it means → the fix. Three
 surfaces carry them:
 

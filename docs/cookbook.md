@@ -1,5 +1,7 @@
 # Cookbook (T794)
 
+_(Last checked against v0.3.0.)_
+
 Five copy-paste recipes. Each one is a complete loop — the linked pages
 hold the full contracts. Finished scripts you can lift verbatim:
 [01 in-process](examples/01_in_process.py) ·

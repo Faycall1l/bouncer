@@ -1,5 +1,7 @@
 # Getting started (T793)
 
+_(Last checked against v0.3.0.)_
+
 Install → first decision → serve, in that order. Every command here is
 verbatim; where a value depends on your checkpoint, this page says so
 instead of inventing one (measured numbers live in

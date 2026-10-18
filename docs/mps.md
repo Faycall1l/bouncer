@@ -1,5 +1,7 @@
 # Local MPS setup (T219, Apple Silicon)
 
+_(Last checked against v0.3.0.)_
+
 ```bash
 python3.12 -m venv /tmp/laya-venv
 /tmp/laya-venv/bin/pip install "laya>=0.4.3"

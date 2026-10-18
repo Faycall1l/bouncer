@@ -639,3 +639,25 @@ def test_error_code_index_covers_every_code():  # T808
     assert "error-codes.md" in _nav_paths()
     assert "](error-codes.md)" in Path("docs/index.md").read_text()
     assert "](glossary.md)" in text
+
+
+def test_doc_freshness_header_every_page():  # T809
+    # the checked version == the shipped version: a release that bumps
+    # pyproject must re-verify every page (the marker IS the receipt)
+    current = re.search(
+        r'^version = "([^"]+)"', Path("pyproject.toml").read_text(), re.MULTILINE)
+    assert current, "no version in pyproject"
+    version = current.group(1)
+    marker = re.compile(r"^_\(Last checked against v(\d+\.\d+\.\d+)\.\)_$",
+                        re.MULTILINE)
+    problems = []
+    for p in sorted(Path("docs").glob("*.md")):
+        found = marker.findall(p.read_text())
+        if len(found) != 1:
+            problems.append(f"{p.name}: {len(found)} freshness markers (want 1)")
+        elif found[0] != version:
+            problems.append(f"{p.name}: checked against v{found[0]}, "
+                            f"current is v{version}")
+    assert not problems, "\n".join(problems)
+    # floor: the whole published corpus is in scope
+    assert len(list(Path("docs").glob("*.md"))) >= 20

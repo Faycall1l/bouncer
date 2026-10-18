@@ -1,5 +1,7 @@
 # Demo gif script (T149) — 20s, no editing
 
+_(Last checked against v0.3.0.)_
+
 1. `bouncer check "FREE NITRO http://x.gg" --preset stream` -> red DELETE
 2. open demo, pick stream preset, click example "GG that clutch was insane" -> green ALLOW
 3. lower slider to 0.5, re-run borderline -> escalate; show reason + margin

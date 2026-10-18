@@ -1,5 +1,7 @@
 # Release checklist (T669)
 
+_(Last checked against v0.3.0.)_
+
 Run before every version tag. The 0.3.0 release did these steps by hand; 0.4.0
 (P43) follows this list literally.
 

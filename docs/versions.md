@@ -1,5 +1,7 @@
 # Version notes (T797)
 
+_(Last checked against v0.3.0.)_
+
 This site tracks `main` — the newest code, currently package version
 **0.3.0** (`pyproject.toml`, `bouncer --version`). If you're reading an
 older release — a `v0.x.y` tag checkout or, once versioned builds ship,

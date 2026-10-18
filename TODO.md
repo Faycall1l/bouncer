@@ -891,7 +891,7 @@
 - [x] T806 docs: examples/ directory with 3 copy-paste scripts
 - [x] T807 docs: every env var documented table (from T609 list) in one page
 - [x] T808 docs: error-code index page (E_* → meaning → fix)
-- [ ] T809 docs: doc freshness header (last-checked version) per page
+- [x] T809 docs: doc freshness header (last-checked version) per page
 - [ ] T810 test: P42 docs-site sweep
 
 ## P43 Release 0.4.0 (T811–T830)

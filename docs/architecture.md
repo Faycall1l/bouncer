@@ -1,5 +1,7 @@
 # Architecture (T140, updated T395)
 
+_(Last checked against v0.3.0.)_
+
 ```mermaid
 flowchart LR
     msg[chat message] --> norm[normalize: clean, flood, links]

@@ -1,5 +1,7 @@
 # Preset catalogue (T147, lang tags T603)
 
+_(Last checked against v0.3.0.)_
+
 | preset | lang tag | rules | best for |
 |---|---|---|---|
 | gaming | `en` | no-cheat, be-kind, no-spam, no-spoiler | clan / lobby chat |

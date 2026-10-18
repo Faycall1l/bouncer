@@ -1,5 +1,7 @@
 # Real Laya answer shape (T202, measured laya 0.4.6)
 
+_(Last checked against v0.3.0.)_
+
 ```json
 {"answers": {
   "choice_q": {"type": "choice", "choice": "billing",

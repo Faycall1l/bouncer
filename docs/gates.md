@@ -1,5 +1,7 @@
 # Gate precedence (T334)
 
+_(Last checked against v0.3.0.)_
+
 Decisions run one ordered ladder. First match wins; later demotions apply after.
 
 | order | condition | action | cause |

@@ -1,5 +1,7 @@
 # Golden transcript (T204) — base Laya, gaming preset, real model, 2026-10-12
 
+_(Last checked against v0.3.0.)_
+
 | message | action | rule | conf | note |
 |---|---|---|---|---|
 | GG that clutch was insane | escalate | ok | 0.26 | low conf, honest abstention |

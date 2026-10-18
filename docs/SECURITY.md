@@ -1,5 +1,7 @@
 # Security notes (T598)
 
+_(Last checked against v0.3.0.)_
+
 The full asset/actor/trust-boundary view lives in
 [threat-model.md](threat-model.md) (T771) — including its known-gaps table;
 this file holds the operational how-tos, and the 3am procedures (backup,

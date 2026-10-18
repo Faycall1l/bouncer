@@ -1,5 +1,7 @@
 # Threat model (T771)
 
+_(Last checked against v0.3.0.)_
+
 Scope: bouncer as deployed — the HTTP API (`bouncer serve`, including the
 `/v1/systemone` passthrough), the CLI, and the files it writes (audit log,
 review store, strikes). Non-goals: the caller's product (we moderate its

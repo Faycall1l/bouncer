@@ -1,5 +1,7 @@
 # bouncer
 
+_(Last checked against v0.3.0.)_
+
 Programmable live-chat moderation over a System One router — regex speed,
 one forward pass, evidence-carrying decisions.
 
