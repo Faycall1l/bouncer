@@ -366,3 +366,73 @@ def test_short_old_key_warns_at_boot():  # T776: T292's warning, window key too
                        check=False, env=env)
     assert "BOUNCER_KEY_OLD shorter than 16 chars" in p.stdout, p.stdout
     assert "BOUNCER_KEY shorter" not in p.stdout  # the primary is unset here
+
+
+def test_trusted_proxy_client_ip():  # T777
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    orig_trusted = list(serve._TRUSTED)
+
+    class Peer:
+        def __init__(self, host):
+            self.host = host
+
+    class Req:
+        def __init__(self, host, headers=None):
+            self.client = Peer(host) if host is not None else None
+            self.headers = headers or {}
+
+    try:
+        # trusted peer: the rightmost XFF hop wins — that's the one OUR
+        # proxy appended; client-sent entries to its left never count
+        serve._TRUSTED[:] = ["10.0.0.1"]
+        got = serve._client_ip(Req("10.0.0.1",
+                                   {"x-forwarded-for": "spoofed, 203.0.113.9"}))
+        assert got == "203.0.113.9", got
+        # trusted peer with no header, or a blank rightmost hop: fall back
+        # to the socket peer rather than an empty bucket key
+        assert serve._client_ip(Req("10.0.0.1")) == "10.0.0.1"
+        assert serve._client_ip(Req("10.0.0.1",
+                                    {"x-forwarded-for": "  "})) == "10.0.0.1"
+
+        # untrusted peer: forwarding headers are ignored outright — the
+        # spoof attempt changes nothing
+        assert serve._client_ip(Req("203.0.113.66",
+                                    {"x-forwarded-for": "1.2.3.4"})) == "203.0.113.66"
+        # no config at all (the default): never trust, whatever the peer
+        serve._TRUSTED[:] = []
+        assert serve._client_ip(Req("10.0.0.1",
+                                    {"x-forwarded-for": "1.2.3.4"})) == "10.0.0.1"
+        assert serve._client_ip(Req(None)) == "?"  # client=None safe
+    finally:
+        serve._TRUSTED[:] = orig_trusted
+
+    # end-to-end: with the TestClient peer trusted, buckets key by the
+    # forwarded client — one IP can still hit the wall, another still walks
+    gatekeeper._router = _FuzzStub()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    payload = {"message": "p777 proxy rate", "rules": {"no-spam": "no ads or links"}}
+    serve._TRUSTED[:] = ["testclient"]
+    try:
+        serve._BUCKETS.clear()
+        wall = None
+        for i in range(61):
+            r = client.post("/predict", json=payload,
+                            headers={"X-Forwarded-For": "198.51.100.7"})
+            if r.status_code == 429:
+                wall = i
+                break
+        assert wall == 60, f"forwarded client hit the wall at request {wall}"
+        # a different forwarded client is a different bucket: untouched
+        r = client.post("/predict", json=payload,
+                        headers={"X-Forwarded-For": "198.51.100.8"})
+        assert r.status_code == 200, r.status_code
+        # ...and the doc tells operators how to switch this on
+        sec = Path("docs/SECURITY.md").read_text()
+        assert "BOUNCER_TRUSTED_PROXY" in sec and "rightmost" in sec
+    finally:
+        serve._TRUSTED[:] = orig_trusted
+        serve._BUCKETS.clear()

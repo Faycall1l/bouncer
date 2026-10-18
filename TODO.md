@@ -857,7 +857,7 @@
 - [x] T774 sec: history item cap enforced server-side (not just docs)
 - [x] T775 sec: context item + key length validation hardening
 - [x] T776 sec: API key rotation without downtime (two-key window) design
-- [ ] T777 sec: trusted-proxy IP handling (`BOUNCER_TRUSTED_PROXY`)
+- [x] T777 sec: trusted-proxy IP handling (`BOUNCER_TRUSTED_PROXY`)
 - [ ] T778 sec: /metrics exposure gate (bind-local or key by default)
 - [ ] T779 sec: log injection guard (control chars stripped from reasons)
 - [ ] T780 sec: demo share mode warning (public gradio = public rules)

@@ -53,10 +53,26 @@ def _sweep(now: float) -> None:
                 del _BUCKETS[ip]
 
 
+_TRUSTED = [s.strip() for s in __import__("os").environ.get(  # T777: peers whose
+    "BOUNCER_TRUSTED_PROXY", "").split(",") if s.strip()]  # forwarding headers we believe
+
+
+def _client_ip(request) -> str:
+    """T777: socket peer — unless that peer is a trusted proxy, in which
+    case the RIGHTMOST X-Forwarded-For hop (what our proxy appended;
+    anything the client sent itself sits further left and never counts)."""
+    ip = request.client.host if request.client else "?"
+    if _TRUSTED and ip in _TRUSTED:
+        xff = request.headers.get("x-forwarded-for", "").split(",")[-1].strip()
+        if xff:
+            return xff
+    return ip
+
+
 def _rate(request: Request) -> None:
     if request is None:
         return
-    ip = request.client.host if request.client else "?"
+    ip = _client_ip(request)
     now = time.time()
     _sweep(now)  # T227
     hits = [t for t in _BUCKETS.get(ip, []) if now - t < 60]

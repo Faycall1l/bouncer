@@ -57,5 +57,11 @@ and nothing drops.
   text (T273). Reversible reconstruction from the log isn't possible; if you need
   the original message for an appeal, keep it in your own system.
 * Snapshots contain counters and per-user strike counts — no message content.
-* Rate limiting is per-IP (60 req/min); behind a proxy set the real client IP
-  via your reverse proxy's forwarding headers, or every user shares one bucket.
+* Rate limiting is per-IP (60 req/min). Behind a reverse proxy set
+  `BOUNCER_TRUSTED_PROXY` to your proxy's IP (comma-separate several): only
+  when the **direct peer** matches does bouncer take the client IP from
+  `X-Forwarded-For` — and only the rightmost entry, the one your proxy
+  appended (anything a client sends itself sits further left, so it never
+  counts). Without the var, or from any other peer, forwarding headers are
+  ignored entirely and every request buckets by the socket peer — spoofed
+  headers buy nobody extra rate (T777).
