@@ -128,3 +128,35 @@ def test_cookbook_five_recipes():  # T794
     # discoverable: nav + landing page
     assert "cookbook.md" in _nav_paths()
     assert "cookbook.md" in Path("docs/index.md").read_text()
+
+
+def test_api_reference_renders_api_md_unchanged():  # T795
+    # the site's API page is docs/api.md itself — the same file the
+    # contract tests pin (T141/T394, test_p22), served verbatim
+    nav = json.loads(_mkdocs_yaml(
+        'print JSON.generate(YAML.load_file(ARGV[0])["nav"])'))
+
+    def pairs(items):
+        out = []
+        for it in items:
+            if isinstance(it, dict):
+                for k, v in it.items():
+                    out.append((k, v))
+                    if isinstance(v, list):
+                        out += pairs(v)
+        return out
+
+    assert ("API", "api.md") in pairs(nav), "API nav entry must be api.md itself"
+    # no generated or duplicated reference page anywhere under docs/
+    assert not Path("docs/api-reference.md").exists()
+    assert not Path("docs/api").exists()
+    for p in Path("docs").rglob("*.md"):
+        if p.name == "api.md" or "drafts" in p.parts:
+            continue
+        assert not p.read_text().startswith("# API reference"), \
+            f"{p} duplicates the API reference H1"
+    # no build hooks — mkdocs serves docs/ byte-for-byte
+    raw = MKDOCS.read_text()
+    assert "hooks:" not in raw, "page-rewriting hook would break 'unchanged'"
+    # the page itself is still the standalone reference doc
+    assert Path("docs/api.md").read_text().startswith("# API reference")
