@@ -859,7 +859,7 @@
 - [x] T776 sec: API key rotation without downtime (two-key window) design
 - [x] T777 sec: trusted-proxy IP handling (`BOUNCER_TRUSTED_PROXY`)
 - [ ] T778 sec: /metrics exposure gate (bind-local or key by default)
-- [ ] T779 sec: log injection guard (control chars stripped from reasons)
+- [x] T779 sec: log injection guard (control chars stripped from reasons)
 - [ ] T780 sec: demo share mode warning (public gradio = public rules)
 - [ ] T781 sec: dependency audit job (pip-audit/uv audit) in CI
 - [ ] T782 sec: rate-limit bypass test via X-Forwarded-For spoofing

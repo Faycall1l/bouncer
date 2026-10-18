@@ -100,6 +100,7 @@ def cmd_watch(args) -> int:
     import time
 
     from gatekeeper import moderate
+    from gatekeeper.normalize import strip_controls  # T779: previews/errors scrubbed
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
     only = {a.strip() for a in (getattr(args, "action", None) or "").split(",")
@@ -126,7 +127,7 @@ def cmd_watch(args) -> int:
             res = moderate(msg, rules, config=cfg, user_id=user,  # T534
                            lang=lang)  # T541
         except Exception as e:  # noqa: BLE001
-            print(f"bouncer: watch error: {e}", file=sys.stderr)  # T328
+            print(f"bouncer: watch error: {strip_controls(str(e))}", file=sys.stderr)  # T328
             continue
         totals[res["action"]] = totals.get(res["action"], 0) + 1
         if sum(totals.values()) % 100 == 0:  # T326: heartbeat for long tails
@@ -139,7 +140,8 @@ def cmd_watch(args) -> int:
             continue
         c = COLORS.get(res["action"], "")
         extra = " -> review queue" if res["action"] in ("flag", "escalate") else ""  # T208
-        print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {msg[:120]}{extra}",
+        preview = strip_controls(msg)[:120]  # T779: raw user text on a TTY, scrubbed
+        print(f"{c}{res['action']:8}\033[0m {res['rule']}@{res['confidence']:.2f} {preview}{extra}",
               flush=True)
     if totals:  # T286: EOF summary to stderr (keeps stdout pipe-clean)
         print("totals: " + " ".join(f"{a}={n}" for a, n in sorted(totals.items())),

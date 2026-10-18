@@ -28,6 +28,27 @@ The file is read once at startup, stripped of surrounding whitespace, and loaded
 into `BOUNCER_KEY` for the server process. Missing or empty file → exit 4
 (refuses to serve half-configured). The file is never logged or echoed.
 
+## Log & terminal injection (T779)
+
+Anything a client or an operator can type ends up in stdout somewhere, so
+the guard sits at the source, not in the reader:
+
+* every server log line (`access`, `internal-error`) is `json.dumps`-emitted:
+  quotes and controls in an `X-Request-ID` or a %-decoded path get escaped
+  and the key set is fixed — a hostile value can't close its string and
+  forge fields, and the line always parses;
+* `X-Request-ID` is scrubbed to printables **before** it's echoed in the
+  response header and written to the log;
+* decision **reasons** are scrubbed inside `explain()` itself — one source,
+  every consumer: rule text carrying ANSI wipes, bells or newlines never
+  reaches `bouncer check`/`watch` output or an API response;
+* `watch` scrubs the 120-char message preview and any `watch error:` line
+  before they touch your terminal.
+
+The decision line and the JSON file outputs (`audit.jsonl`, review queue)
+were already `json.dumps` — controls there were always escaped, and stay
+that way.
+
 ## `/metrics` exposure (T778)
 
 `GET /metrics` (traffic counters, cache, breaker, latency) is gated as soon

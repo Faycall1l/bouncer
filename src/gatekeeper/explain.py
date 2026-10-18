@@ -2,9 +2,18 @@
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
+from .normalize import strip_controls
 
 
 def explain(res: dict, rules: dict) -> str:
+    """T035: one-line reason citing the rule text; T036 includes text, T037
+    runner-up. T779: the assembled line is scrubbed HERE, at the source —
+    CLI output, logs and API responses all get a reason that can't carry
+    control chars, whatever the rule text contained."""
+    return strip_controls(_explain(res, rules))
+
+
+def _explain(res: dict, rules: dict) -> str:
     """T035: one-line reason citing the rule text; T036 includes text, T037 runner-up."""
     action, rule, conf = res["action"], res["rule"], res["confidence"]
     if res.get("forced"):  # T204+T276: overrides lead; ok-forced touches no dists

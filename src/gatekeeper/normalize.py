@@ -22,6 +22,13 @@ def clean_text(msg: str, max_chars: int = 2000) -> str:
     return t
 
 
+def strip_controls(text: str) -> str:
+    """T779: drop every non-printable char (C0/C1 controls, ESC, DEL, bidi
+    marks) — nothing that could rewrite a terminal or forge a log line
+    survives; printable content passes through untouched."""
+    return "".join(ch for ch in text if ch.isprintable())
+
+
 def caps_flood(msg: str, ratio: float = 0.7, min_len: int = 12) -> bool:
     """T014: True when mostly-caps shouting on a long-enough message."""
     if not isinstance(msg, str):  # T265

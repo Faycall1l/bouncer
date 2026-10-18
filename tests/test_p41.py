@@ -504,3 +504,63 @@ def test_metrics_exposure_gate():  # T778
     # documented where operators and integrators look
     assert "T778" in Path("docs/SECURITY.md").read_text()
     assert "T778" in Path("docs/api.md").read_text()
+
+
+def test_log_injection_guard(capfd, monkeypatch):  # T779
+    import io
+    import json as _json
+
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+    from gatekeeper.cli import main as cli_main
+    from gatekeeper.explain import explain
+    from gatekeeper.normalize import strip_controls
+
+    # reasons are scrubbed at the SOURCE: operator rule text carrying an
+    # ANSI screen-wipe, bells, a newline and a bidi override never survives
+    s = explain({"action": "flag", "rule": "no-spam", "confidence": 0.9,
+                 "rule_dist": {}},
+                {"no-spam": "no ads\x1b[2J\x07\nor \u202eevil"})
+    assert all(c.isprintable() for c in s), repr(s)
+    assert "no ads[2J" in s and "or evil" in s  # printable text intact
+    assert strip_controls("hi\x1b[2J there\t") == "hi[2J there"
+
+    # watch: the message preview is raw user text on a TTY — scrubbed too
+    gatekeeper._router = _FuzzStub()
+    monkeypatch.setattr("sys.stdin", io.StringIO("preview \x1b[2J wipe here\n"))
+    assert cli_main(["watch", "--preset", "gaming"]) == 0
+    out = capfd.readouterr().out
+    assert "preview [2J wipe here" in out, out
+    assert "\x1b[2J" not in out  # the only ESC left are the color codes
+
+    # server log lines parse as JSON no matter what rides in: a quote in
+    # the request id can't close its string and forge fields, keys are fixed
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    serve._BUCKETS.clear()
+    r = client.get('/foo%22bar', headers={"X-Request-ID": 'evil","forged":true'})
+    # printable chars (quotes included) are echoed intact — only the LOG
+    # encoding changes, not the contract
+    assert r.headers["X-Request-ID"] == 'evil","forged":true'
+    line = [ln for ln in capfd.readouterr().out.splitlines() if '"rid"' in ln][-1]
+    obj = _json.loads(line)  # the old f-string made this unparseable/forged
+    assert set(obj) == {"rid", "path", "ms"}
+    assert obj["rid"] == 'evil","forged":true'
+
+    # the internal-error line is dumped too
+    class Boom:
+        def predict(self, state, questions):
+            raise RuntimeError("nope")
+
+    gatekeeper._router = Boom()
+    serve._BUCKETS.clear()
+    r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
+    assert r.status_code == 500 and r.json()["detail"]["code"] == "E_INTERNAL"
+    line = [ln for ln in capfd.readouterr().out.splitlines()
+            if '"internal-error"' in ln][-1]
+    obj = _json.loads(line)
+    assert set(obj) == {"event", "path", "err"} and obj["err"] == "RuntimeError"
+
+    # documented where operators look
+    assert "T779" in Path("docs/SECURITY.md").read_text()

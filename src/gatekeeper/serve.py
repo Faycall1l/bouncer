@@ -118,8 +118,11 @@ def _metrics_gate(request) -> None:  # T778: /metrics is the box's or a key hold
 
 @app.middleware("http")  # T052+T056+T065: request id, access log, latency header
 async def _mw(request, call_next):
+    import json as _json  # T779: log lines are DUMPED, never interpolated
     import uuid
-    rid = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+
+    from .normalize import strip_controls  # T779: rid scrubbed before echo+log
+    rid = strip_controls(request.headers.get("X-Request-ID", "")) or uuid.uuid4().hex[:12]
     t0 = time.time()
     if request.method == "POST" and _body_too_big(request):  # T775: 413 BEFORE
         from fastapi.responses import JSONResponse  # the body is ever read/parsed
@@ -130,7 +133,8 @@ async def _mw(request, call_next):
     resp.headers["X-Request-ID"] = rid
     resp.headers["X-Bouncer-ms"] = f"{ms:.1f}"
     resp.headers["X-Content-Type-Options"] = "nosniff"  # T304
-    print(f'{{"rid": "{rid}", "path": "{request.url.path}", "ms": {ms:.1f}}}', flush=True)
+    print(_json.dumps({"rid": rid, "path": request.url.path,
+                       "ms": round(ms, 1)}), flush=True)
     return resp
 
 
@@ -142,8 +146,9 @@ async def _internal(request: Request, exc: Exception):
         return JSONResponse(status_code=exc.status_code,
                             content={"detail": exc.detail},
                             headers=exc.headers)
-    print(f'{{"event": "internal-error", "path": "{request.url.path}", '
-          f'"err": "{type(exc).__name__}"}}', flush=True)
+    import json as _json  # T779: dumped, not interpolated — path can carry %22
+    print(_json.dumps({"event": "internal-error", "path": request.url.path,
+                       "err": type(exc).__name__}), flush=True)
     return JSONResponse(status_code=500,
                         content={"detail": {"code": "E_INTERNAL",
                                             "message": "internal error"}})
