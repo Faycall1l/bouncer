@@ -71,7 +71,7 @@ each opened with a row here and moved up when it landed.
 |---|---|---|
 | key guessing / timing | constant-time compare, 401, `<16`-char boot warning | T292 |
 | key material in `ps` / compose files | `serve --key-file` (docker-secrets style) | T547 |
-| request floods | rate buckets (≤512), shared by batch + passthrough; per-client keying reads `X-Forwarded-For` only from a `BOUNCER_TRUSTED_PROXY` peer (rightmost hop), so spoofed headers can't split buckets | T409, T224, T777 |
+| request floods | rate buckets (≤512), shared by batch + passthrough; per-client keying reads `X-Forwarded-For` only from a `BOUNCER_TRUSTED_PROXY` peer (rightmost hop), so spoofed headers can't split buckets — rotation, fake-prefix and full-chain attacks all hit the same wall | T409, T224, T777, T782 |
 | oversized messages | 8000-char cap → 413 (single + per batch item) | T064, T309 |
 | oversized batch | body-size pre-parse check + ≤32 messages → 413 | T291, T224 |
 | unbounded context lists | ≤20 items → `422 E_CONTEXT`; token budget on top | T308, T756 |

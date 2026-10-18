@@ -595,3 +595,53 @@ def test_dependency_audit_job():  # T781
     assert "pip-audit -r pyproject.toml" in job, job[:200]
     assert "T781" in job
     assert "T781" in Path("docs/threat-model.md").read_text()
+
+
+def test_rate_limit_xff_spoof_bypass():  # T782: the attack, not the mechanism
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    gatekeeper._router = _FuzzStub()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    payload = {"message": "p782 spoof burst", "rules": {"no-spam": "no ads"}}
+    orig = list(serve._TRUSTED)
+
+    def wall(headers_fn, tries=61):
+        for i in range(tries):
+            if client.post("/predict", json=payload,
+                           headers=headers_fn(i)).status_code == 429:
+                return i
+        return None  # no wall at all — the bypass worked
+
+    try:
+        # 1. untrusted peer rotating a FRESH forwarded ip per request: the
+        # header is ignored wholesale, so it's still one socket-peer bucket
+        # and the wall lands exactly where it would with no header at all
+        serve._TRUSTED[:] = ["10.0.0.1"]
+        serve._BUCKETS.clear()
+        n = wall(lambda i: {"X-Forwarded-For": f"203.0.113.{i % 250}"})
+        assert n == 60, f"rotating spoofed XFF bought {n} requests before the wall"
+
+        # 2. attacker BEHIND a trusted proxy prepending fake hops: the proxy
+        # appends the real client last, and the rightmost hop is the only
+        # one counted — fake prefixes can't fragment the bucket
+        serve._TRUSTED[:] = ["testclient"]  # TestClient peer plays the proxy
+        serve._BUCKETS.clear()
+        n = wall(lambda i: {"X-Forwarded-For": f"fake{i}, 198.51.100.42"})
+        assert n == 60, f"fake XFF prefixes bought {n} requests behind the proxy"
+
+        # 3. same attack with a full chain of lies: one counted hop, one
+        # bucket, same wall — the length of the header is free to waste
+        serve._BUCKETS.clear()
+        n = wall(lambda i: {"X-Forwarded-For":
+                            ", ".join(f"lie{i}-{j}" for j in range(20))
+                            + ", 198.51.100.42"})
+        assert n == 60, f"a 20-lie chain bought {n} requests"
+    finally:
+        serve._TRUSTED[:] = orig
+        serve._BUCKETS.clear()
+
+    # the threat model claims this attack is dead — keep the claim cited
+    assert "T782" in Path("docs/threat-model.md").read_text()
