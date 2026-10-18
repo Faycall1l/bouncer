@@ -61,3 +61,16 @@ def test_mkdocs_material_skeleton():  # T791
         assert (Path("docs") / p).exists(), p
     # the landing page ships with the skeleton
     assert Path("docs/index.md").exists()
+
+
+def test_nav_covers_every_doc_file():  # T792
+    nav = set(_nav_paths())
+    files = {p.name for p in Path("docs").glob("*.md")}
+    # every published page is reachable from the nav — no orphans
+    assert files <= nav, sorted(files - nav)
+    # every nav entry is a real file, drafts excluded (T791's direction,
+    # pinned once more so a broken nav can't land with this test green)
+    assert nav <= files, sorted(nav - files)
+    drafts = {str(p.relative_to("docs")) for p in Path("docs").rglob("*.md")
+              if "drafts" in p.parts}
+    assert not (nav & drafts), sorted(nav & drafts)
