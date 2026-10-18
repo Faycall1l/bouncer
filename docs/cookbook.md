@@ -1,7 +1,10 @@
 # Cookbook (T794)
 
 Five copy-paste recipes. Each one is a complete loop — the linked pages
-hold the full contracts.
+hold the full contracts. Finished scripts you can lift verbatim:
+[01 in-process](examples/01_in_process.py) ·
+[02 API client](examples/02_api_client.py) ·
+[03 custom rules](examples/03_custom_rules.py).
 
 ## 1. Moderate a Discord server
 

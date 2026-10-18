@@ -888,7 +888,7 @@
 - [x] T803 docs: README anchors tested (badges + section links)
 - [x] T804 docs: CONTRIBUTING (boxes workflow, verify.sh, code style)
 - [x] T805 docs: ROADMAP.md for post-0.4.0 (finetune results, plugins)
-- [ ] T806 docs: examples/ directory with 3 copy-paste scripts
+- [x] T806 docs: examples/ directory with 3 copy-paste scripts
 - [ ] T807 docs: every env var documented table (from T609 list) in one page
 - [ ] T808 docs: error-code index page (E_* → meaning → fix)
 - [ ] T809 docs: doc freshness header (last-checked version) per page

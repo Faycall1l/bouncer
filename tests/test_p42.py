@@ -1,16 +1,30 @@
 """P42 tests (T791-T810): docs site. mkdocs.yml is parsed with a real
 YAML parser where one exists (ruby Psych — same deal as T750)."""
+import ast
+import importlib.util
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
+import urllib.request
 from collections import Counter
 from pathlib import Path
 
 import pytest
 
 MKDOCS = Path("mkdocs.yml")
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_script(path: Path, name: str):
+    """Import an example script as a module (top-level defs, no main run)."""
+    spec = importlib.util.spec_from_file_location(name, str(path))
+    assert spec is not None and spec.loader is not None, f"no loader for {path}"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _mkdocs_yaml(expr: str, path: Path = MKDOCS):
@@ -466,3 +480,86 @@ def test_roadmap_post_040():  # T805
     assert "ROADMAP.md" in _nav_paths()
     assert "](ROADMAP.md)" in Path("docs/index.md").read_text()
     assert "](glossary.md)" in text
+
+
+def test_examples_three_copy_paste_scripts(tmp_path, monkeypatch):  # T806
+    ex = ROOT / "docs/examples"
+    assert ex.is_dir(), "docs/examples missing"
+    files = sorted(p.name for p in ex.glob("*.py"))
+    for required in ("01_in_process.py", "02_api_client.py",
+                     "03_custom_rules.py"):
+        assert required in files, required
+    assert len(files) >= 3, files
+    # every script is valid Python (ruff lints them too — repo-wide)
+    for p in ex.glob("*.py"):
+        ast.parse(p.read_text(), filename=str(p))
+
+    sys.path.insert(0, "src")
+    import gatekeeper
+
+    class Stub:  # the weightless router protocol (same as test_cli's)
+        def __init__(self, choice="ok", conf=0.95):
+            self.a = {"rule": {"choice": choice, "confidence": conf,
+                               "probabilities": {choice: conf}},
+                      "harm": {"score": "safe"}, "hype": {"score": "chill"},
+                      "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}
+
+        def predict(self, state, questions):
+            return {"answers": self.a}
+
+    monkeypatch.chdir(tmp_path)  # scripts write files + audit lines
+    old_router = getattr(gatekeeper, "_router", None)
+    monkeypatch.setattr(gatekeeper, "_router", Stub())
+    try:
+        # 01: really runs end-to-end on the stub — CLI exit contract holds
+        m1 = _load_script(ex / "01_in_process.py", "bouncer_example_01")
+        assert m1.main() in (0, 2, 3)
+        # 03: runs too — writes the pack file, its own caps pass, a bad
+        # id fails them, and the split gates are really configured
+        m3 = _load_script(ex / "03_custom_rules.py", "bouncer_example_03")
+        assert m3.main() in (0, 2, 3)
+        pack = json.loads((tmp_path / "my-pack.json").read_text())
+        assert set(pack) == set(m3.RULES)
+        m3.check_pack(pack)
+        with pytest.raises(AssertionError):
+            m3.check_pack({"BAD ID": "x"})  # E_RULES_ID mirrors
+        assert m3.GATES.allow_threshold == 0.9
+        assert m3.GATES.delete_threshold == 0.6
+        # 02: import only (no live server in tests), then drive decide()
+        # against a faked urlopen and inspect the request it really made
+        m2 = _load_script(ex / "02_api_client.py", "bouncer_example_02")
+        monkeypatch.setenv("BOUNCER_KEY", "test-key-16chars-min")
+        seen = {}
+
+        class FakeResp:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def read(self):
+                return json.dumps({"action": "allow", "rule": "ok",
+                                   "confidence": 0.9,
+                                   "reason": "ok: no rule violated"}).encode()
+
+        def fake_urlopen(req, timeout=None):
+            seen["req"] = req
+            return FakeResp()
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+        res = m2.decide("hello there")
+        assert res["action"] == "allow"
+        req = seen["req"]
+        assert req.method == "POST" and req.full_url.endswith("/predict")
+        body = json.loads(req.data)
+        assert body == {"message": "hello there", "preset": "gaming"}
+        header_names = {k.lower() for k in req.headers}
+        assert "content-type" in header_names and "x-api-key" in header_names
+        # linked from both entry-point pages (T798 validates the targets)
+        gs = (ROOT / "docs/getting-started.md").read_text()
+        cb = (ROOT / "docs/cookbook.md").read_text()
+        assert "examples/01_in_process.py" in gs
+        assert "](examples/03_custom_rules.py)" in cb
+    finally:
+        monkeypatch.setattr(gatekeeper, "_router", old_router)

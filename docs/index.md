@@ -5,7 +5,7 @@ one forward pass, evidence-carrying decisions.
 
 ```bash
 pip install -e ".[server]"
-bouncer check "you all suck" --preset gaming   # → DELETE (exit 2)
+bouncer check "you all suck" --preset gaming   # → prints ACTION: reason, exits 0/2/3
 bouncer serve                                  # API on :8000
 ```
 

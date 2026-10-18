@@ -93,6 +93,8 @@ model, not just the process), `GET /version`.
 
 ## Next
 
+* [Example scripts](examples/01_in_process.py) — three copy-paste starting
+  points in `docs/examples/`: in-process, API client, custom rule pack
 * [Demo script](demo-script.md) — the Gradio UI tour
 * [Rules guide](rule-guide.md) — writing rules that behave
 * [Runbook](runbook.md) — backup, restore, rotate, drain
