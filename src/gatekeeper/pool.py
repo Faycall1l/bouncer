@@ -63,6 +63,19 @@ class RouterPool:
 POOL = RouterPool()
 
 
+def release_memory() -> dict:  # T761: the documented memory-pressure hook
+    """Drop every pooled Router when the HOST is under memory pressure.
+
+    Call it from your own pressure handling — a K8s eviction callback, an
+    RSS watcher, or right before a big spawn. Returns the pool stats after
+    clearing (size 0; hits/creates kept as the lifetime record) so the drop
+    is loggable. The next request rebuilds on demand: you pay COLD again
+    (T751's number), which is the documented trade of this hook.
+    """
+    POOL.clear()
+    return POOL.stats()
+
+
 def get_pooled_router(**kw):  # T454: public constructor cache
     mdir = os.environ.get("BOUNCER_MODEL_DIR", "").strip()  # T664: finetuned dir
     if mdir and "model" not in kw:

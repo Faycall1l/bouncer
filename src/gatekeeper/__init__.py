@@ -20,6 +20,7 @@ __all__ = [
     "list_presets",
     "moderate",
     "moderate_batch",
+    "release_memory",  # T761: memory-pressure hook
     "validate_rules",
 ]
 
@@ -31,7 +32,7 @@ from .cache import CACHE  # T023/T024 decision cache
 from .config import GateConfig, questions_knob
 from .explain import explain as _explain  # T273
 from .normalize import clean_text, detect_script, extract_links
-from .pool import model_for_lang  # T458: json/os only, no cycle
+from .pool import model_for_lang, release_memory  # T458+T761: json/os, no cycle
 from .presets import get_preset, list_presets
 from .review import add as _qadd  # T273
 from .rules import RuleError, validate_rules

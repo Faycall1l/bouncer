@@ -377,3 +377,27 @@ def test_stats_load_bench(tmp_path):  # T760
     doc = Path("BENCHMARKS.md").read_text()
     for needle in ("T760", "940 rps", "TestClient", "NOT uvicorn"):
         assert needle in doc, needle
+
+
+def test_release_memory_pool_hook(monkeypatch):  # T761
+    import gatekeeper.pool as pl
+    from gatekeeper import release_memory
+
+    assert release_memory is pl.release_memory  # discoverable at top level
+    fake = pl.RouterPool(max_n=2, factory=lambda **kw: object())
+    monkeypatch.setattr(pl, "POOL", fake)  # the hook clears the module's POOL
+    fake.get(device="cpu")
+    fake.get(device="gpu")
+    assert fake.stats()["size"] == 2
+    stats = release_memory()
+    # every resident is gone — and the lifetime record survives for logging
+    assert stats == {"size": 0, "max_n": 2, "hits": 0, "creates": 2,
+                     "evictions": 0}
+    # the pool still works after the drop: the next get rebuilds (COLD again)
+    assert fake.get(device="cpu") is not None
+    assert fake.stats() == {"size": 1, "max_n": 2, "hits": 0, "creates": 3,
+                            "evictions": 0}
+    # the hook ships documented: README tells embedders when to call it
+    readme = Path("README.md").read_text()
+    for needle in ("release_memory()", "memory-pressure hook", "pays COLD"):
+        assert needle in readme, needle

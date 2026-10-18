@@ -142,6 +142,11 @@ LRU pool keyed by constructor kwargs:
   `POST /predict {"model": "typed-decisions"}`, `bouncer check --model english`.
   `None`/`auto` routes by language hint: non-latin scripts (ar/zh/ru/fa/ur/he) pin
   `multilingual`, latin rides laya's own auto-routing.
+* `gatekeeper.release_memory()` (T761) — the memory-pressure hook: drops every
+  pooled router and returns the post-drop pool stats for your logs. Call it
+  from your own pressure handling (K8s eviction callback, an RSS watcher,
+  before a big spawn). The next request rebuilds on demand and pays COLD
+  again — that cost is the documented trade, not a surprise.
 * Pool size/hits/evictions appear in `GET /stats`, `GET /ready`, and
   `bouncer models`.
 
