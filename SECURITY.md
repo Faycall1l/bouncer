@@ -12,6 +12,8 @@
 * **Operational security** — key rotation, `/metrics` exposure, log/demo
   handling, the webhook SSRF guard, what bouncer does and doesn't store:
   [docs/SECURITY.md](docs/SECURITY.md) (T598).
+* **Ops runbook** — backup, restore, rotate, drain, at 3am:
+  [docs/runbook.md](docs/runbook.md) (T789).
 
 ## Reporting a vulnerability (T788)
 

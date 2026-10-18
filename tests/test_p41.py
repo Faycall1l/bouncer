@@ -909,3 +909,19 @@ def test_security_md_link_and_disclosure():  # T788
         assert var in root, var
     # docs/SECURITY.md links back to the threat model too (P41 needle)
     assert "threat-model.md" in Path("docs/SECURITY.md").read_text()
+
+
+def test_ops_runbook():  # T789
+    rb = Path("docs/runbook.md").read_text()
+    for section in ("## Backup", "## Restore", "## Rotate", "## Drain"):
+        assert section in rb, section
+    # every T-box it cites must exist in TODO.md — no invented receipts
+    for t in set(re.findall(r"T\d{3,4}", rb)):
+        assert t in Path("TODO.md").read_text(), t
+    # every env var it names must be a real code-read var — no drift
+    src = "\n".join(p.read_text() for p in Path("src/gatekeeper").rglob("*.py"))
+    for var in set(re.findall(r"BOUNCER_[A-Z_]+", rb)):
+        assert var in src, var
+    # discoverable from every security surface
+    for f in ("README.md", "SECURITY.md", "docs/SECURITY.md"):
+        assert "runbook.md" in Path(f).read_text(), f

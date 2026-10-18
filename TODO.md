@@ -869,7 +869,7 @@
 - [x] T786 sec: adversarial rule pack test (huge K, recursive-looking ids)
 - [x] T787 sec: error messages leak nothing (path/version sweep test)
 - [x] T788 sec: SECURITY.md threat-model link + disclosure contact
-- [ ] T789 sec: ops runbook (backup, restore, rotate, drain) in docs
+- [x] T789 sec: ops runbook (backup, restore, rotate, drain) in docs
 - [ ] T790 test: P41 security sweep
 
 ## P42 Docs site (T791–T810)
