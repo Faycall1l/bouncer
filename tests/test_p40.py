@@ -606,6 +606,53 @@ def test_before_after_finetune_columns_honest():  # T768
         assert bench.count(needle) >= 2, f"{needle} only appears here"
 
 
+def test_p40_perf_sweep_weightless(tmp_path):  # T770: batch closer
+    import os
+    import re
+    # 1. every P40 bench runs WITHOUT weights in a fresh cwd, writes its
+    # report into the T765 envelope, and passes its T766 gate — the whole
+    # performance surface in one sweep
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    gate_py = str(ROOT / "eval" / "gate.py")
+    benches = [
+        ("bench_stub.py", ("20",), "stub-latency.json"),
+        ("bench_batch.py", (), "batch-sweep.json"),
+        ("bench_questions.py", ("20",), "questions.json"),
+        ("bench_warm.py", ("--stub", "--n", "10"), "warm.json"),
+        ("bench_stats.py", ("--threads", "2", "--requests", "5"), "stats-load.json"),
+        ("bench_import.py", ("--n", "1"), "import.json"),
+    ]
+    for name, args, report in benches:
+        r = _run(str(ROOT / "eval" / name), *args, cwd=tmp_path, env=env)
+        assert r.returncode == 0, f"{name} failed: {r.stderr[-400:]}"
+        path = tmp_path / "eval" / "reports" / report
+        assert path.exists(), f"{name} wrote no {report}"
+        rep = json.loads(path.read_text())
+        assert rep.get("schema") == 1 and rep.get("bench") == name[:-3], rep
+        g = _run(gate_py, str(path), "--json", cwd=tmp_path, env=env)
+        assert g.returncode == 0, f"gate {report}: {g.stdout} {g.stderr}"
+    # 2. drift: every report-writing bench must be a report that
+    # `gate.py --all` knows about — a new producer without a gate fails here
+    known = (ROOT / "eval" / "gate.py").read_text()
+    for f in sorted((ROOT / "eval").glob("bench_*.py")):
+        # (?!\w) so bench-audit.jsonl (an audit log) is not a JSON report
+        for report in re.findall(
+                r"eval/reports/([\w.-]+\.json)(?!\w)", f.read_text()):
+            assert f'"{report}"' in known, \
+                f"{f.name} report {report} missing from gate.py known list"
+    # 3. this batch's documentation sections all exist
+    doc = Path("BENCHMARKS.md").read_text()
+    for needle in ("Warm-pool latency (T751)", "/stats under load (T760)",
+                   "Import time (T762)", "CLI cold start (T763)",
+                   "Bench report schema (T765)",
+                   "Before vs after finetune (T768)"):
+        assert needle in doc, needle
+    # 4. the batch is closed: every P40 box carries its tick
+    todo = Path("TODO.md").read_text()
+    for i in range(751, 771):
+        assert f"- [x] T{i} " in todo, f"T{i} not ticked"
+
+
 def test_pool_memory_footprint_documented():  # T769
     readme = Path("README.md").read_text()
     section = readme.split("## Router pools", 1)[1].split("\n## ", 1)[0]

@@ -848,7 +848,7 @@
 - [x] T767 perf: README perf section with measured, dated numbers
 - [x] T768 perf: honest note — all numbers before finetune vs after columns
 - [x] T769 perf: memory footprint of pool (max_n × model size) documented
-- [ ] T770 test: P40 perf sweep (weightless paths only)
+- [x] T770 test: P40 perf sweep (weightless paths only)
 
 ## P41 Security & ops (T771–T790)
 - [ ] T771 sec: threat model doc (assets, actors, trust boundaries)
