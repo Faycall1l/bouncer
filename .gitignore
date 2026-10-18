@@ -26,3 +26,6 @@ eval/reports/*.jsonl
 .coverage.*
 coverage.json
 htmlcov/
+
+# mkdocs build output (T801)
+site/

@@ -11,14 +11,14 @@ import pytest
 MKDOCS = Path("mkdocs.yml")
 
 
-def _mkdocs_yaml(expr: str):
+def _mkdocs_yaml(expr: str, path: Path = MKDOCS):
     """Run a ruby expression over parsed mkdocs.yml, return stdout."""
     ruby = shutil.which("ruby")
     if ruby is None:
         pytest.skip("no ruby — macOS and GH runners both ship one, "
                     "but a box without a YAML parser can't prove parsing")
     r = subprocess.run(
-        [ruby, "-ryaml", "-rjson", "-e", expr, str(MKDOCS)],
+        [ruby, "-ryaml", "-rjson", "-e", expr, str(path)],
         check=False, capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr
     return r.stdout
@@ -310,3 +310,36 @@ def test_mermaid_has_ascii_fallback():  # T800
     # the two architecture diagrams exist today — pin the floor so a
     # scanner regression can't pass vacuously
     assert found >= 2, f"expected >= 2 mermaid diagrams, found {found}"
+
+
+def test_docs_deploy_workflow_behind_flag():  # T801
+    wf = Path(".github/workflows/docs.yml")
+    assert wf.exists(), "docs workflow missing"
+    text = wf.read_text()
+    # triggers: docs-touching PRs (build check), main pushes, manual runs
+    assert "pull_request" in text and "workflow_dispatch" in text
+    # the build is the same strict command that must pass locally...
+    assert "mkdocs build --strict" in text
+    # ...with mkdocs 2.0 excluded (material depends on 1.x systems)
+    assert 'mkdocs>=1.6,<2' in text and "mkdocs-material" in text
+    # THE FLAG: publish steps gated on the DOCS_DEPLOY repo variable —
+    # unset (default) means nothing ever reaches Pages
+    flag = "vars.DOCS_DEPLOY == 'true'"
+    assert text.count(flag) == 2, "artifact upload and deploy both gated"
+    assert "DOCS_DEPLOY" in text.split("jobs:")[0], \
+        "flag must be documented in the workflow header"
+    # no secret-based alternate publish path
+    assert "secrets." not in text
+    # Pages plumbing: artifact, deploy action, OIDC perms, the env
+    for needle in ("actions/upload-pages-artifact", "actions/deploy-pages",
+                   "pages: write", "id-token: write", "github-pages"):
+        assert needle in text, needle
+    # and the whole file is real YAML with build before deploy, deploy
+    # needing build, and the flag expression inside the deploy job itself
+    jobs = json.loads(_mkdocs_yaml(
+        'print JSON.generate(YAML.load_file(ARGV[0])["jobs"]'
+        '.transform_values { |j| {"if" => j["if"], "needs" => j["needs"]} })',
+        wf))
+    assert list(jobs) == ["build", "deploy"], jobs
+    assert jobs["deploy"]["needs"] == "build"
+    assert flag in jobs["deploy"]["if"]
