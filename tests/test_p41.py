@@ -817,3 +817,79 @@ def test_adversarial_rule_pack(capsys):  # T786: hostile packs die as codes
 
     # the threat model row cites the box
     assert "T786" in Path("docs/threat-model.md").read_text()
+
+
+def test_errors_leak_nothing(capfd, monkeypatch):  # T787: path/version sweep
+    import pytest
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+    from gatekeeper.cli import main as cli_main
+
+    class Boom:
+        def predict(self, state, questions):
+            # a planted internal path: if any exception text ever reaches
+            # the client, this marker shows up in the sweep
+            raise RuntimeError("boom at /Users/planted/site-packages/x.py")
+
+    gatekeeper._router = Boom()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    ver = gatekeeper.__version__
+    forbidden = ("Traceback", "site-packages", "/Users/", ver, "planted")
+
+    def sweep(r):
+        blob = r.text + " " + " ".join(f"{k}: {v}" for k, v in r.headers.items())
+        for m in forbidden:
+            assert m not in blob, (r.status_code, m, blob[:200])
+
+    orig_key, orig_trusted = serve._KEY, list(serve._TRUSTED)
+    try:
+        serve._KEY = "top"  # 401 path (auth runs before anything else)
+        serve._BUCKETS.clear()
+        r = client.get("/metrics")
+        assert r.status_code == 401
+        sweep(r)
+        serve._KEY = ""
+        battery = (
+            client.get("/nope"),                                     # 404
+            client.post("/predict"),                                 # 422 validation
+            client.post("/predict", content="{",                     # bad JSON
+                         headers={"content-type": "application/json"}),
+            client.post("/predict", json={"message": "x",
+                                          "rules": {"../..": "t"}}),  # E_RULES
+            client.post("/predict", json={"message": "x",             # E_CONTEXT
+                                          "context": ["x" * 9000]}),
+            client.post("/v1/systemone", json={"state": {"k" * 100: "v"},
+                                               "questions": {}}),    # E_STATE
+            client.post("/v1/systemone", json={"state": {},
+                                               "questions": {}}),    # 500 E_INTERNAL
+        )
+        for r in battery:
+            sweep(r)
+        codes = {r.json().get("detail", {}).get("code") for r in battery
+                 if isinstance(r.json().get("detail"), dict)}
+        assert {"E_RULES", "E_STATE", "E_CONTEXT", "E_INTERNAL"} <= codes, codes
+        # /version is the only sanctioned version disclosure (T052 contract)
+        assert ver in client.get("/version").text
+    finally:
+        serve._KEY, serve._TRUSTED[:] = orig_key, orig_trusted
+        serve._BUCKETS.clear()
+
+    # the CLI side: a known error CLASS is a one-line coded exit, never a
+    # traceback — and never the install's own paths
+    assert cli_main(["snapshot", "load", "/nonexistent/x.json"]) == 4
+    err = capfd.readouterr().err
+    assert "bouncer: E_SNAPSHOT" in err, err[:200]
+    for m in forbidden:
+        assert m not in err, (m, err[:200])
+    # ...while a genuinely unexpected exception still surfaces honestly
+    # (no blanket except: the wrapper only swallows CLASSES with .code)
+    def boom(args):
+        raise ValueError("unexpected, must surface")
+
+    monkeypatch.setattr("gatekeeper.cli.cmd_snapshot", boom)
+    with pytest.raises(ValueError, match="must surface"):
+        cli_main(["snapshot", "load", "/x"])
+    # the threat model row cites the box
+    assert "T787" in Path("docs/threat-model.md").read_text()

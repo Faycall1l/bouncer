@@ -76,7 +76,7 @@ each opened with a row here and moved up when it landed.
 | oversized batch | body-size pre-parse check + ≤32 messages → 413 | T291, T224 |
 | unbounded context lists | ≤20 items → `422 E_CONTEXT`; token budget on top | T308, T756 |
 | threshold / model abuse | thresholds outside `[0,1]` → 422, `model` whitelist → 422, per-request timeout budget | T223, T459, T515 |
-| response leaks | `raw` model output stripped from responses (`_clean`) | — |
+| response leaks | `raw` model output stripped from responses (`_clean`); every error response is a machine code + fixed message — a sweep pins that no failure body or header carries an install path, a version, or a traceback (exception text with a planted internal path dies at `E_INTERNAL`), and the CLI converts known error CLASSES into one-line `bouncer: E_*` exits instead of tracebacks | T787 |
 | rule-set ambiguity | rules XOR preset, unknown preset → 422 `E_PRESET` | T471, T482 |
 | hostile input (random bytes, JSON bombs, lone surrogates) | seeded fuzz over `/predict` proves no 5xx: malformed bodies 400, nesting 422, surrogate text sanitized (message/history) or rejected (`E_RULES_TEXT`) at the engine boundary | T772 |
 | rule-set bombs (oversized value/id/count) | `validate_rules` rejects >280-char values (`E_RULES_TEXT`), non-slug ids >24 chars (`E_RULES_ID`), >12 rules (`E_RULES_COUNT`) — was already enforced, now pinned end-to-end and documented; `pack lint` also refuses hostile pack *documents* (path-looking ids, NUL/bidi/format-string ids, non-mapping or 300-deep JSON, missing file) with machine codes and exit 4, never a traceback | T004–T006, T773, T786 |

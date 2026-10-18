@@ -551,7 +551,14 @@ def main(argv=None) -> int:
             return 0
         p.print_help()
         return 2
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except Exception as e:
+        code = getattr(e, "code", None)  # the operator as one coded line,
+        if code is None:  # never as a traceback (paths, versions, frames)
+            raise
+        print(f"bouncer: {code}: {e}", file=sys.stderr)
+        return 4
 
 
 def _demo(args=None):
