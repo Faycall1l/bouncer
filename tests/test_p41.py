@@ -564,3 +564,24 @@ def test_log_injection_guard(capfd, monkeypatch):  # T779
 
     # documented where operators look
     assert "T779" in Path("docs/SECURITY.md").read_text()
+
+
+def test_demo_share_warning(capsys):  # T780
+    import inspect
+
+    from gatekeeper import demo_app
+
+    demo_app.share_warning(False)
+    assert capsys.readouterr().out == ""  # local demos stay quiet
+    demo_app.share_warning(True)
+    out = capsys.readouterr().out
+    assert '"warn"' in out and "PUBLIC" in out and "URL" in out
+
+    # wired into the launch path, and BEFORE the gradio import — a missing
+    # or slow gradio can't swallow the warning
+    src = inspect.getsource(demo_app.launch)
+    assert src.index("share_warning(share)") < src.index("import gradio")
+
+    # documented where operators and users look
+    assert "T780" in Path("docs/SECURITY.md").read_text()
+    assert "demo --share" in Path("README.md").read_text()

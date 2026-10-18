@@ -79,6 +79,7 @@ bouncer check "you all suck" --preset gaming
 bouncer check "you all suck" --preset gaming --allow-threshold 0.9 --delete-threshold 0.7
 bouncer serve  # API on :8000
 bouncer demo   # Gradio UI
+bouncer demo --share  # public gradio link: rulebook + messages go public (you get a loud warn)
 bouncer watch --preset gaming < chat.log        # live tail, colored verdicts
 bouncer review                                  # queued flags/escalations
 bouncer snapshot save snap.json                 # counters + strikes (T606)

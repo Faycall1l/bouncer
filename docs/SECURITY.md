@@ -28,6 +28,16 @@ The file is read once at startup, stripped of surrounding whitespace, and loaded
 into `BOUNCER_KEY` for the server process. Missing or empty file → exit 4
 (refuses to serve half-configured). The file is never logged or echoed.
 
+## Demo share mode (T780)
+
+`bouncer demo --share` asks Gradio for a public URL. Gradio links carry no
+auth of their own: everyone who gets the URL sees the **rule editor (your
+full rulebook), every typed message, the decision trail and the review
+rows**. Bouncer prints a structured `{"warn": ...}` line at launch — before
+gradio loads and before the port binds — so a shared demo can't start
+quietly. Treat a shared link as full disclosure of everything typed into
+it; for anything beyond disposable demo rules, run without `--share`.
+
 ## Log & terminal injection (T779)
 
 Anything a client or an operator can type ends up in stdout somewhere, so

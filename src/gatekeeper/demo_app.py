@@ -4,6 +4,16 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 
 
+def share_warning(share: bool) -> None:  # T780: public gradio = public rules
+    """Loud, structured, and BEFORE anything binds: a --share link puts the
+    rule editor, every typed message and the review rows in front of
+    whoever holds the URL — gradio links carry no auth of their own."""
+    if share:
+        print('{"warn": "demo --share: this gradio link is PUBLIC — the '
+              'rulebook, every message and the review rows are reachable '
+              'by anyone with the URL. Local demos: skip --share."}', flush=True)
+
+
 def parse_rules(text: str) -> dict:
     d = {}
     for line in text.splitlines():
@@ -72,6 +82,7 @@ def format_trail(trail: list, lats: list, last: int = 8) -> str:
 
 def launch(port: int = 7860, share: bool = False, preset: str | None = None):  # T548
     """T324+T548: port/share/preset settable for `bouncer demo` flags and Spaces."""
+    share_warning(share)  # T780: say it out loud before gradio or the port
     import gradio as gr
 
     from gatekeeper import get_preset, list_presets, moderate
