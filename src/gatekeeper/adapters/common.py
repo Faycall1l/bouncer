@@ -318,6 +318,7 @@ async def areconnect(dial, consume, *, name: str, backoff_s: float = 1.0,
 
 
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
+             backoff_cap_s: float = 60.0, rand=None,
              sleep=time.sleep, health=None, stopping=None):
     """T696: one poll loop for every sync adapter (telegram/matrix/zulip).
 
@@ -330,8 +331,15 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
     T699: `health` (if given) counts real decisions, records errors, and
     emits its health line when due. T702: `stopping` (if given) is polled at
     page boundaries — SIGTERM (via install_shutdown) finishes the current
-    page, then exits cleanly.
+    page, then exits cleanly. T853: fetch failures wait through
+    `backoff_wait` — exponential from `backoff_s`, capped at
+    `backoff_cap_s`, jittered into [half, full] so pollers hitting a downed
+    server don't synchronize into a thundering herd; a good fetch resets the
+    ladder. Retries stay infinite: an outage is not something the bot can
+    fix by exiting, and a second SIGTERM (install_shutdown) force-exits —
+    worst case one capped backoff stands between SIGTERM and shutdown.
     """
+    attempt = 0
     while True:
         if stopping is not None and stopping():  # T702: page boundary exit
             print(f"{name}: shutdown requested — exiting cleanly",
@@ -347,8 +355,11 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
                 print(f"{name}: shutdown requested — exiting cleanly",
                       file=sys.stderr, flush=True)
                 return  # T702: the long-poll died because we're shutting down
-            sleep(backoff_s)
+            sleep(backoff_wait(attempt, base_s=backoff_s,
+                               cap_s=backoff_cap_s, rand=rand))
+            attempt += 1  # T853: consecutive failures climb the ladder
             continue
+        attempt = 0  # T853: a working fetch proves the path again
         for ev in page or []:
             try:
                 res = handle(ev) or {}

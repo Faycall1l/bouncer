@@ -427,7 +427,8 @@ def test_run_loop_is_the_shared_poll_loop(capsys):  # T696
 
     sleeps = []
     try:
-        run_loop(fetch, handle, name="testadp", sleep=sleeps.append)
+        run_loop(fetch, handle, name="testadp", sleep=sleeps.append,
+                 rand=lambda: 1.0)  # T853: full jitter -> the exact base
     except _StopLoop:
         pass
     # fetch failure -> one 5s backoff; bad event -> one line; rest still ran

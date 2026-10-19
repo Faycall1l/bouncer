@@ -69,7 +69,8 @@ names the variable instead of a raw `KeyError`; blank counts as missing (T691).
 
 The shared SDK (`common.py`) is `require_env()` + `run_loop()` (T696): every
 sync poller (telegram, matrix, zulip) runs the same fetch/handle loop —
-fetch failures log and back off 5s, a bad event costs one log line, Ctrl-C
+fetch failures log and back off from 5s, doubling with jitter up to a 60s
+cap (T853), a bad event costs one log line, Ctrl-C
 always stops the bot. Mattermost's websocket session is the async
 exception; its per-event guard matches `run_loop()`'s, and the reconnect
 loop around it is `areconnect()` (T852): a dropped socket logs one

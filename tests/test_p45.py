@@ -330,3 +330,52 @@ def test_mattermost_session_streams_posts_until_shutdown(monkeypatch):  # T852
     assert ws.sent[0]["data"]["token"] == "tok"
     assert handled == ["p1"], "the boundary exit wins before p2 is moderated"
     assert health.decisions == 1 and health.errors == []
+
+
+def test_run_loop_backoff_escalates_to_the_cap_and_keeps_trying(capsys):  # T853
+    """Infinite retries with a shape: 5, 10, 20, 40, 60, 60 — exponential,
+    capped, one redacted line per failure, and no give-up exception (an
+    outage is not something the bot can fix by exiting)."""
+    sleeps = []
+    stop = {"v": False}
+
+    def fetch():
+        raise OSError("server down")
+
+    def fake_sleep(s):
+        sleeps.append(s)
+        if len(sleeps) == 6:
+            stop["v"] = True  # operator gives up; the ladder never does
+
+    common.run_loop(fetch, lambda ev: None, name="t853", sleep=fake_sleep,
+                    rand=lambda: 1.0, stopping=lambda: stop["v"])
+    assert sleeps == [5.0, 10.0, 20.0, 40.0, 60.0, 60.0], sleeps
+    err = capsys.readouterr().err
+    assert err.count("t853 error:") == 6, "one line per failure, no crash"
+    assert "t853: shutdown requested — exiting cleanly" in err
+
+
+def test_run_loop_backoff_resets_after_a_good_fetch(capsys):  # T853
+    """Jitter lands at [half, full] of the span, and one good fetch resets
+    the ladder: the second failure waits the half-base again (2.5), not the
+    doubled half (5.0) it would wait if successes counted for nothing."""
+    calls = {"n": 0}
+    sleeps = []
+    stop = {"v": False}
+
+    def fetch():
+        calls["n"] += 1
+        if calls["n"] == 5:
+            stop["v"] = True  # SIGTERM lands while the long-poll dies
+            raise OSError("dying during shutdown")
+        if calls["n"] in (1, 3):
+            raise OSError("blip")
+        return []
+
+    common.run_loop(fetch, lambda ev: None, name="t853", sleep=sleeps.append,
+                    rand=lambda: 0.0, stopping=lambda: stop["v"])
+    assert sleeps == [2.5, 2.5], f"half-jitter, ladder reset: {sleeps}"
+    err = capsys.readouterr().err
+    assert err.count("t853 error:") == 3, "blip, blip, shutdown-time failure"
+    # T702 ordering intact: the shutdown-time failure exits before sleeping
+    assert "t853: shutdown requested — exiting cleanly" in err
