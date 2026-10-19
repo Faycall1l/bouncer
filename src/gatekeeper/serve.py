@@ -508,12 +508,22 @@ def predict_batch(req: BatchReq, request: Request):
                                               model=req.model)]
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
+class SystemoneReq(BaseModel):  # T832: typed SHAPE, passthrough CONTENTS
+    """The Jev wire contract is exactly {state, questions} — both JSON
+    objects. Untyped, a `"state": "oops"` used to be forwarded raw into
+    the router and died as a 500; now it's a 422 at the door. Contents
+    stay untyped on purpose: the router owns state's fields (T774 pins
+    non-list history straight through), and explicit null means absent."""
+    state: dict | None = None
+    questions: dict | None = None
+
+
 @app.post("/v1/systemone")
-def systemone(body: dict, request: Request):
+def systemone(body: SystemoneReq, request: Request):
     _rate(request)  # T224: passthrough shares guards too
     _auth(request)
-    state = body.get("state", {}) or {}
-    questions = body.get("questions", {}) or {}
+    state = body.state or {}
+    questions = body.questions or {}
     # T775: keys and item text are unvalidated on this raw path — bound the
     # keys (reject: they can't be trimmed coherently) at both top levels
     for part in (state, questions):

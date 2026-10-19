@@ -109,3 +109,48 @@ def test_header_413_still_holds():  # T831: T775's fast path unchanged
     r = client.post("/predict/batch", content=b"x" * (MAX_BODY + 1),
                     headers={"content-type": "application/json"})
     assert r.status_code == 413 and "body too large" in r.text
+
+
+def test_systemone_typed_shape_passthrough_contents():  # T832
+    """state/questions must be JSON objects — a string or list used to be
+    forwarded raw into the router and died as a 500. Contents stay
+    passthrough (the T774 contract): non-list history still reaches the
+    router untouched, and explicit null means absent."""
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen = {}
+
+    class Rec:
+        def predict(self, state, questions):
+            seen["state"], seen["questions"] = state, questions
+            return {"answers": {}}
+
+    gatekeeper._router = Rec()
+    try:
+        from fastapi.testclient import TestClient
+        client = TestClient(serve.app, raise_server_exceptions=False)
+
+        # non-object state/questions: 422 at the door, not a router 500
+        for bad in ("oops", ["a"], 7):
+            serve._BUCKETS.clear()
+            r = client.post("/v1/systemone",
+                            json={"state": bad, "questions": {}})
+            assert r.status_code == 422, (bad, r.status_code)
+            serve._BUCKETS.clear()
+            r = client.post("/v1/systemone",
+                            json={"state": {}, "questions": bad})
+            assert r.status_code == 422, (bad, r.status_code)
+
+        # explicit null == absent (wire compat with SDKs that send nulls)
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone", json={"state": None, "questions": None})
+        assert r.status_code == 200 and seen["state"] == {}
+
+        # contents still pass through — the T774 pin, re-asserted here
+        serve._BUCKETS.clear()
+        client.post("/v1/systemone",
+                    json={"state": {"history": "not-a-list"}, "questions": {}})
+        assert seen["state"]["history"] == "not-a-list"
+    finally:
+        gatekeeper._router = None
