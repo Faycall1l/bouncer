@@ -769,3 +769,73 @@ def test_oversized_chunked_body_stops_mid_stream():  # T846
     assert sent[0]["status"] == 413
     assert pulled["n"] <= 3, (f"cap read {pulled['n']} chunks of a 250-chunk "
                               "upload before rejecting")
+
+
+def test_systemone_parity_caps_breaker_audit(tmp_path, monkeypatch):  # T847
+    """The passthrough used to be the wild west: no caps (T774), no breaker
+    (T833), no audit (T834). This pins all three contracts side by side in
+    one place so a future change can't quietly drop one — same history
+    window as /predict's context, same breaker short-circuit and 503, same
+    hashed audit row + stats cause."""
+    import importlib
+    import json as _json
+
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    import gatekeeper.audit as _au
+    from gatekeeper import serve
+    from gatekeeper.stats import get_stats
+
+    audit = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BOUNCER_AUDIT", str(audit))
+    importlib.reload(_au)
+
+    seen: list[dict] = []
+
+    class Rec:
+        def predict(self, state, questions=None, model=None):
+            seen.append(dict(state))
+            return {"answers": {"rule": {"choice": "ok", "confidence": 0.9}}}
+
+    gatekeeper._router = Rec()
+    gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+    try:
+        client = TestClient(serve.app, raise_server_exceptions=False)
+
+        # caps: history trimmed to /predict's window, oversized items cut
+        # (T774), and the shape check rejects a non-object (T832)
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone",
+                        json={"state": {"history": ["h" * 9000] * 25},
+                              "questions": {}})
+        assert r.status_code == 200, r.text
+        hist = seen[-1]["history"]
+        assert len(hist) == 20 and all(len(h) == 8000 for h in hist)
+        r = client.post("/v1/systemone", json={"state": [], "questions": {}})
+        assert r.status_code == 422, "shape check (T832) must hold"
+
+        # breaker: a dead model trips and the next call short-circuits
+        # without waking it (same breaker as /predict's path)
+        class Dead:
+            def predict(self, state, questions=None, model=None):
+                raise RuntimeError("nope")
+
+        gatekeeper._router = Dead()
+        gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+        before = get_stats()["causes"].get("breaker-open", 0)
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
+        assert r.status_code == 503  # coded E_MODEL, never a hung socket (T833)
+        assert r.json()["detail"]["code"] == "E_MODEL"
+
+        # audit: the passthrough's row is hashed like every decision row and
+        # the failure counted with its cause (T834)
+        rows = [_json.loads(l) for l in audit.read_text().splitlines()]
+        assert rows and all(row["action"] == "passthrough" for row in rows)
+        assert "h" * 100 not in audit.read_text()  # raw state never lands
+        assert get_stats()["causes"].get("breaker-open", 0) >= before
+    finally:
+        gatekeeper._router = None
+        gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+        importlib.reload(_au)

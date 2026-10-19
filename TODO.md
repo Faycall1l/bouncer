@@ -933,7 +933,7 @@
 - [x] T844 docs: api.md request-limits section — body-cap semantics, batch deadline, extra fields, per-worker rate amplification
 - [x] T845 test: CLI serve flags actually reach uvicorn.run kwargs (covered by test_serve_flags_reach_uvicorn, added with T838)
 - [x] T846 test: oversized chunked body rejected without reading it to the end
-- [ ] T847 test: systemone parity — same caps/breaker/audit as /predict
+- [x] T847 test: systemone parity — same caps/breaker/audit as /predict
 - [ ] T848 test: shutdown drain — in-flight request completes, audit flushed
 - [ ] T849 fix: P44 reds — any failure the sweep finds, fixed here
 - [ ] T850 test: P44 server-hardening sweep (every box ticked, receipts outside TODO.md)
