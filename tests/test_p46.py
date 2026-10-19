@@ -248,3 +248,72 @@ def test_completion_generated_from_parser(capsys):  # T875
         raise AssertionError("choices must refuse fish")
     except SystemExit as e:
         assert e.code == 2
+
+
+def test_snapshot_v2_migrates_v1_and_rejects_unknown(tmp_path, capsys):  # T876
+    """The snapshot schema is v2 at both levels (doc + stats): save writes
+    it, load takes v2 natively and v1 through an in-memory migration noted
+    on stdout (stats without adapters ride it, raw user keys are preserved
+    and the table then gains namespaced strikes alongside), while
+    non-object strikes and unknown versions refuse E_SNAPSHOT before
+    anything is applied."""
+    from gatekeeper import strikes as _st
+    from gatekeeper.stats import get_stats, record, reset_stats
+
+    reset_stats()
+    _st.reset()
+    record("flag", "r", 1.0)
+    _st.add_strike("telegram:77", 2)
+    f = tmp_path / "v2.json"
+    assert main(["snapshot", "save", str(f)]) == 0
+    doc = json.loads(f.read_text())
+    assert doc["v"] == 2 and doc["stats"]["v"] == 2, "current schema, both levels"
+    assert "adapters" in doc["stats"], "v2 declares the T867 section"
+
+    # export --stats stamps the same schema — a loadable snapshot doc
+    ex = tmp_path / "ex.json"
+    assert main(["export", "--stats", str(ex)]) == 0
+    exdoc = json.loads(ex.read_text())
+    assert exdoc["v"] == 2 and exdoc.get("bouncer"), "export is a real doc"
+
+    # a v1 doc from an older bouncer: stats without adapters, raw keys
+    reset_stats()
+    _st.reset()
+    old = tmp_path / "v1.json"
+    old.write_text(json.dumps({
+        "v": 1, "t": 1700000000, "bouncer": "0.4.0",
+        "stats": {"v": 1, "t": 1700000000,
+                  "counts": {"allow": 3, "flag": 0, "delete": 0, "escalate": 0},
+                  "by_rule": {"ok": 3}, "joint": [["allow", "ok", 3]],
+                  "causes": {}, "cheap": 3},
+        "strikes": {"legacyuser": 1}}))
+    assert main(["snapshot", "load", str(old)]) == 0
+    out = capsys.readouterr().out
+    assert "migrated v1 -> v2" in out, out
+    assert get_stats()["actions"]["allow"] == 3, "v1 counters restored"
+    assert _st.standing("legacyuser")["strikes"] == 1, "raw keys preserved"
+    # ...and the restored table gains namespaced strikes alongside (T858)
+    _st.add_strike("telegram:77", 1)
+    assert _st.standing("telegram:77")["strikes"] == 1
+    assert _st.standing("legacyuser")["strikes"] == 1, "both live together"
+
+    # v2 loads natively — no migration note, max-wins merge keeps 2
+    reset_stats()
+    assert main(["snapshot", "load", str(f)]) == 0
+    assert "migrated" not in capsys.readouterr().out
+    assert _st.standing("telegram:77")["strikes"] == 2
+
+    # unknown version: coded refusal, nothing applied
+    (tmp_path / "v3.json").write_text(
+        json.dumps({"v": 3, "stats": {}, "strikes": {}}))
+    assert main(["snapshot", "load", str(tmp_path / "v3.json")]) == 4
+    err = capsys.readouterr().err
+    assert "E_SNAPSHOT" in err and "version 3" in err, err
+    # non-object strikes: refused before the merge (v2 contract)
+    (tmp_path / "bad.json").write_text(
+        json.dumps({"v": 2, "stats": {"v": 2}, "strikes": [1, 2]}))
+    assert main(["snapshot", "load", str(tmp_path / "bad.json")]) == 4
+    assert "strikes table must be an object" in capsys.readouterr().err
+    assert _st.standing("legacyuser")["strikes"] == 1, "nothing half-applied"
+    _st.reset()
+    reset_stats()

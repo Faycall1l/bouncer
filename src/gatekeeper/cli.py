@@ -379,15 +379,21 @@ def cmd_snapshot(args) -> int:  # T437+T438
     from gatekeeper.stats import snapshot as _snap
     if args.action == "save":
         snap = _snap()
-        doc = {"v": 1, "t": int(_t.time()), "bouncer": __version__,
+        doc = {"v": 2, "t": int(_t.time()), "bouncer": __version__,  # T876
                "stats": snap, "strikes": dict(_strikes._strikes)}
         atomic_write(args.file, _json.dumps(doc, indent=2))
         print(f"snapshot -> {args.file} "
               f"(total={sum(snap['counts'].values())}, users={len(doc['strikes'])})")
         return 0
     data = read_json(args.file)
-    if data.get("v") != 1:  # T438+T449: version mismatch warns, never fails
-        raise SnapshotError(f"E_SNAPSHOT: unsupported snapshot version {data.get('v')!r}")
+    v = data.get("v")
+    migrated = v == 1  # T876: v1 migrates in memory, v2 is native
+    if migrated:
+        data = dict(data, v=2)  # sections ride through unchanged
+    elif v != 2:
+        raise SnapshotError(f"E_SNAPSHOT: unsupported snapshot version {v!r}")
+    if not isinstance(data.get("strikes", {}), dict):  # v2 contract (T876)
+        raise SnapshotError("E_SNAPSHOT: strikes table must be an object")
     if data.get("bouncer") != __version__:
         print(f"bouncer: snapshot from {data.get('bouncer')} (running {__version__})",
               file=sys.stderr)
@@ -395,7 +401,8 @@ def cmd_snapshot(args) -> int:  # T437+T438
     for user, n in (data.get("strikes", {}) or {}).items():
         if isinstance(n, int) and n > 0:
             _strikes._strikes[user] = max(_strikes._strikes.get(user, 0), n)
-    print(f"snapshot <- {args.file}")
+    print(f"snapshot <- {args.file}"
+          + (" (migrated v1 -> v2)" if migrated else ""))  # T876: say so
     return 0
 
 
@@ -406,13 +413,16 @@ def cmd_export(args) -> int:
     if getattr(args, "stats", None):  # T445: snapshot JSON instead of audit CSV
         import json as _json
 
+        from gatekeeper import __version__
         from gatekeeper import strikes as _strikes
         from gatekeeper.persist import atomic_write
         from gatekeeper.stats import snapshot as _snap
         snap = _snap()
-        atomic_write(args.stats, _json.dumps({"stats": snap,
-                                             "strikes": dict(_strikes._strikes)},
-                                            indent=2))
+        atomic_write(args.stats, _json.dumps({"v": 2,  # T876: a loadable doc
+                                              "bouncer": __version__,
+                                              "stats": snap,
+                                              "strikes": dict(_strikes._strikes)},
+                                             indent=2))
         print(f"snapshot -> {args.stats} (total={sum(snap['counts'].values())})")
         return 0
     since = getattr(args, "since", 0) or 0  # T327: epoch filter on audit "t"

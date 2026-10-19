@@ -31,9 +31,12 @@ one that serves the traffic you care about.
 
 ## Restore
 
-* **counters + strikes**: `bouncer snapshot load FILE`. A schema
-  mismatch (`v != 1`) refuses with `E_SNAPSHOT` (T438) — nothing is
-  half-applied. A snapshot from a *different bouncer version* warns on
+* **counters + strikes**: `bouncer snapshot load FILE`. An unknown schema
+  version (`v` not 1 or 2) refuses with `E_SNAPSHOT` (T438+T876) —
+  nothing is half-applied. A v1 snapshot from an older bouncer migrates
+  in memory to v2 and the load line says so; its stats section rides the
+  same migration (v1 predates the per-adapter counters, T867). A snapshot
+  from a *different bouncer version* warns on
   stderr and restores best-effort (T449); strikes merge taking the max of
   old and new, so a restore never downgrades a standing ban.
 * **audit log / review queue**: they're plain JSONL — `cp` them back to

@@ -83,7 +83,8 @@ def snapshot() -> dict:  # T434
     """Point-in-time copy for save(); restore() takes it back."""
     import time as _t
     with _lock:
-        return {"v": 1, "t": int(_t.time()), "counts": dict(_counts),
+        return {"v": 2,  # T876: v2 declares the adapters section (T867)
+                "t": int(_t.time()), "counts": dict(_counts),
                 "by_rule": dict(_by_rule),
                 "joint": [list(k) + [v] for k, v in _joint.items()],
                 "adapters": [list(k) + [v] for k, v in _adapt.items()],  # T867
@@ -94,8 +95,10 @@ def restore(snap: dict) -> None:  # T434
     """Replace counters from a snapshot(); shape validated (see T447)."""
     global _cheap
     from .persist import SnapshotError
-    if not isinstance(snap, dict) or snap.get("v") != 1:
+    if not isinstance(snap, dict) or snap.get("v") not in (1, 2):
         raise SnapshotError("E_SNAPSHOT: bad stats snapshot version")
+    # T876: v1 files predate the adapters section (T867) — .get() below
+    # defaults it, so migrating is accepting the older version, nothing else
     known = ("allow", "flag", "delete", "escalate")
     extra = sorted(set(snap.get("counts", {})) - set(known))  # T447
     if extra:
