@@ -915,3 +915,223 @@
 - [x] T828 suite: final full green + stats line
 - [x] T829 final: push release commit
 - [x] T830 final: tag v0.4.0 + release notes published
+
+## P44 Server hardening (T831–T850)
+- [ ] T831 serve: stream-bound body cap — chunked POST can no longer bypass MAX_BODY (header-trust only today)
+- [ ] T832 serve: /v1/systemone gets a typed request schema (today: bare dict, key-count cap only, values unbounded)
+- [ ] T833 serve: /v1/systemone routed through the safe predict path (timeout, breaker, retry — it bypasses all three today)
+- [ ] T834 serve: /v1/systemone records decisions + audit like /predict (currently invisible to stats/audit)
+- [ ] T835 serve: ModReq extra=forbid — unknown request fields are 422, not silently dropped
+- [ ] T836 serve: BatchReq gains lang + preset autofill (parity with ModReq — batch has no lang today)
+- [ ] T837 serve: batch overall deadline (worst case today: 32 messages x 60s each)
+- [ ] T838 serve: uvicorn gets timeout_keep_alive + limit_concurrency (CLI flags, wired through cli serve)
+- [ ] T839 serve: graceful shutdown drains in-flight predicts + flushes audit (today the lifespan note is cosmetic)
+- [ ] T840 serve: access log gains method/status, decision log gains rid — X-Request-ID correlates both
+- [ ] T841 serve: rate-limit buckets thread-safe (check-then-append from the threadpool, no lock)
+- [ ] T842 serve: /stats gated behind the key when BOUNCER_KEY set (parity with /metrics — /stats is open today)
+- [ ] T843 docs: 413-before-auth documented as the intentional cheap-reject (api.md + threat model)
+- [ ] T844 docs: api.md request-limits section — body-cap semantics, batch deadline, extra fields, per-worker rate amplification
+- [ ] T845 test: CLI serve flags actually reach uvicorn.run kwargs
+- [ ] T846 test: oversized chunked body rejected without reading it to the end
+- [ ] T847 test: systemone parity — same caps/breaker/audit as /predict
+- [ ] T848 test: shutdown drain — in-flight request completes, audit flushed
+- [ ] T849 fix: P44 reds — any failure the sweep finds, fixed here
+- [ ] T850 test: P44 server-hardening sweep (every box ticked, receipts outside TODO.md)
+
+## P45 Adapter depth (T851–T870)
+- [ ] T851 adp: shared HTTP helper with retry/backoff — 429/5xx retry honoring Retry-After (4 single-shot copies today)
+- [ ] T852 adp: mattermost websocket reconnect with backoff (a dropped socket kills the process today)
+- [ ] T853 adp: run_loop backoff gains jitter + exponential cap (fixed 5s, no jitter, infinite retries)
+- [ ] T854 adp: discord gains Health + RateCap parity (neither today)
+- [ ] T855 adp: twitch gains Health parity (never bans, but should still report)
+- [ ] T856 adp: adapters pass user= to moderate — per-user strikes accrue from platforms (CLI-only today)
+- [ ] T857 adp: adapters pass lang= via detected script — platform traffic stops routing as auto
+- [ ] T858 strikes: keys namespaced platform:user (a Discord id and a Telegram id share one table today)
+- [ ] T859 adp: discord notices become threaded replies (message_reference)
+- [ ] T860 adp: telegram notices reply in-thread (reply_to_message_id)
+- [ ] T861 adp: matrix notices carry the reply relation
+- [ ] T862 adp: mattermost notices thread under the offending post (root_id)
+- [ ] T863 adp: zulip stream replies keep the topic (today only PMs answer)
+- [ ] T864 adp: appeal flow — APPEAL command answered with appeal_text + review-queue row linkage
+- [ ] T865 review: adjudicate command — operator approves/rejects from the queue, strike amnesty path
+- [ ] T866 adp: forward_if_interesting wired into run_loop (BOUNCER_FORWARD_URL never fires from platforms today)
+- [ ] T867 adp: per-adapter decision counters recorded (stats gains adapter tag)
+- [ ] T868 docs: adapters README capability table refreshed (reply/thread/health/ratecap/forward/lang per platform)
+- [ ] T869 test: retry honors Retry-After from a stub 429; backoff has jitter + cap
+- [ ] T870 test: P45 adapter-depth sweep (every box ticked, receipts outside TODO.md)
+
+## P46 CLI, rules, storage (T871–T890)
+- [ ] T871 cli: bouncer config validate — standalone lint of bouncer.toml + GateConfig JSON (today: doctor-only)
+- [ ] T872 cli: pack diff — compare two packs, added/removed/changed rules, exit 2 on drift
+- [ ] T873 cli: pack sign/verify — sha256 manifest over rule ids+text, tamper-evident packs
+- [ ] T874 cli: check --file — batch scoring from a file, one message per line, JSON out
+- [ ] T875 cli: shell completion — bouncer completion bash|zsh generated from the parser
+- [ ] T876 persist: snapshot v2 schema + v1-to-v2 migration on load (v!=1 hard-fails in every loader today)
+- [ ] T877 persist: cache snapshot wired into snapshot save/load (TTLCache.save/load are dead code today)
+- [ ] T878 cli: pack init writes pack metadata (version, created, lang) — typed packs, not bare dicts
+- [ ] T879 rules: pack lint detects exact-duplicate ids + whitespace-only text (beyond validate_rules)
+- [ ] T880 rules: pack lint warns when a rule's text duplicates another preset's rule verbatim
+- [ ] T881 strikes: amnesty command — operator clears a user's strikes after an appeal
+- [ ] T882 review: queue rows gain cause/model/preset fields (adjudication context, not just text+rule)
+- [ ] T883 audit: rows gain cause/preset/model/rid/version fields
+- [ ] T884 stats: /metrics exports per-rule counters + causes + p95 + strikes (all exist in /stats, none in /metrics)
+- [ ] T885 metrics: request-count-by-status + auth-failure + 429 counters
+- [ ] T886 cli: export gains review-queue format (appeal audit trail)
+- [ ] T887 test: config validate accepts good config, names the exact problem in bad
+- [ ] T888 test: pack sign/verify — a flipped byte fails verification with a coded error
+- [ ] T889 test: snapshot v1 loads through migration, gains namespaced strikes
+- [ ] T890 test: P46 CLI/rules/storage sweep (every box ticked, receipts outside TODO.md)
+
+## P47 Multilingual routing (T891–T910)
+- [ ] T891 multilingual: checkpoint routing keys off detected script, not only the caller's lang
+- [ ] T892 serve: /predict autofills lang from script detection when lang omitted
+- [ ] T893 cli: check/watch accept --lang auto explicitly (script detection, documented)
+- [ ] T894 presets: PRESET_LANG coverage — every routed language has a pack or is listed packless in docs
+- [ ] T895 pool: lang-tagged checkout stats — per-checkpoint hits visible in /stats pool block
+- [ ] T896 explain: lang_note wired into check output or removed — no more dead code either way
+- [ ] T897 adp: BOUNCER_ADAPTER_LANG per-platform override (explicit beats detected)
+- [ ] T898 eval: eval_i18n measures routing (script picks the right checkpoint) with honest skip-with-receipt when weights absent
+- [ ] T899 docs: cookbook multilingual recipe (lang hint, script detect, pack tags, pool behavior)
+- [ ] T900 docs: adapters README language section updated (passthrough now exists)
+- [ ] T901 test: script-detection routing sweep — ar/cyrillic/cjk/latin/mixed cases pinned
+- [ ] T902 test: batch lang autofill matches single /predict behavior
+- [ ] T903 test: adapter lang passthrough captured by a stub transport
+- [ ] T904 test: BOUNCER_ADAPTER_LANG beats detection, per platform
+- [ ] T905 test: pool stats carry lang tags without unbounded cardinality
+- [ ] T906 fix: P47 reds — any failure the sweep finds, fixed here
+- [ ] T907 docs: api.md lang section refreshed (autofill, batch parity, script-vs-lang table)
+- [ ] T908 eval: i18n routing report kind added to gate.py dispatch
+- [ ] T909 bench: mixed-language pool bench — thrash risk measured, not folklore
+- [ ] T910 test: P47 multilingual sweep (every box ticked, receipts outside TODO.md)
+
+## P48 Fine-tune pipeline (T911–T930)
+- [ ] T911 ft: train.py import-safe on CPU (cuda assert at import blocks even parsing today)
+- [ ] T912 ft: LoRA target_modules fixed for bert-style encoders (query/value) or dropped — wrong-and-disabled is worse than absent
+- [ ] T913 ft: hyperparameter flags --epochs/--lr/--seed (hardcoded constants today)
+- [ ] T914 ft: resume-from-checkpoint support
+- [ ] T915 ft: ship gate runs the full gate.py thresholds (train.py push gate is narrower: no ECE/per-rule/abstention)
+- [ ] T916 ft: provenance in log_rec — dataset hash + git sha + train config
+- [ ] T917 ft: model card generated for the HF upload (upload_folder today ships no README)
+- [ ] T918 ft: eval_i18n accepts the fine-tuned model dir (i18n eval of the run itself)
+- [ ] T919 test: train.py parses + dry-run config-validates on CPU (no weights needed)
+- [ ] T920 test: ship-gate thresholds match gate.py defaults — single source, no drift
+- [ ] T921 test: provenance fields present in log_rec output
+- [ ] T922 docs: kaggle/README refresh — flags, resume, gate order
+- [ ] T923 notebooks: finetune_kaggle.py signature drift check vs train.py (test-enforced, the fallback warning becomes a failure)
+- [ ] T924 data: validate_data gate runs before training start — hash mismatch refuses
+- [ ] T925 ft: eval report naming matches gate.py report-kind dispatch
+- [ ] T926 test: CPU smoke path scripted (bouncer-ft smoke) without CUDA
+- [ ] T927 ci: nightly runs the train.py CPU smoke (config parse + data validate, no weights)
+- [ ] T928 docs: ROADMAP fine-tune section updated with pipeline receipts (status stays NOT RUN — honest)
+- [ ] T929 fix: P48 reds — any failure the sweep finds, fixed here
+- [ ] T930 test: P48 fine-tune-pipeline sweep (every box ticked, receipts outside TODO.md)
+
+## P49 Observability (T931–T950)
+- [ ] T931 stats: /metrics per-rule decision counters (bouncer_decisions_rule_total)
+- [ ] T932 stats: /metrics cause counters
+- [ ] T933 stats: /metrics p95 latency export
+- [ ] T934 stats: /metrics strikes summary export
+- [ ] T935 stats: /metrics coalesce + breaker fails/half_open export
+- [ ] T936 serve: request counter by status class in /metrics (incl 401/413/429)
+- [ ] T937 serve: auth-failure counter in /metrics
+- [ ] T938 audit: rid in decision log + audit rows (one id across access/decision/audit)
+- [ ] T939 stats: worker-scoping documented + doctor warns with --workers >1 (per-worker counters, /stats under-reports)
+- [ ] T940 review: review-queue depth in /metrics
+- [ ] T941 adp: per-adapter counters exported to /metrics (from T867 recording)
+- [ ] T942 metrics: cardinality guard — label values capped, no unbounded series
+- [ ] T943 test: every /metrics line parses as Prometheus text; HELP/TYPE pairs complete
+- [ ] T944 test: metrics cardinality stays bounded under adversarial rule ids
+- [ ] T945 docs: api.md metrics section — full export list with types
+- [ ] T946 docs: runbook scrape recipe (Prometheus snippet, alert on breaker-open)
+- [ ] T947 perf: /metrics under threaded load — p95 budget measured + reported
+- [ ] T948 gate: metrics report kind added to gate.py dispatch (budget + format)
+- [ ] T949 fix: P49 reds — any failure the sweep finds, fixed here
+- [ ] T950 test: P49 observability sweep (every box ticked, receipts outside TODO.md)
+
+## P50 Refactor & repo hygiene (T951–T970)
+- [ ] T951 adp: shared api() helper moves to common.py — 4 copies deleted
+- [ ] T952 adp: shared command table + parser helper — 5 copies reduced
+- [ ] T953 adp: shared moderate+action skeleton — 4 copies reduced
+- [ ] T954 explain: announce_line wired or removed (dead since introduction)
+- [ ] T955 normalize: caps_flood/emoji_flood wired into the engine cheap paths or demoted to eval-only, honestly documented
+- [ ] T956 serve: duplicate HTTPException import + any other dead branch cleaned
+- [ ] T957 test: no-dead-code sweep — every public function in src/ is referenced (code, docs, or test)
+- [ ] T958 test: adapter parity matrix — all adapters use the shared helpers, no local reimplementation
+- [ ] T959 lint: stricter ruff rule subset enabled repo-wide (existing violations fixed, not noqa'd)
+- [ ] T960 repo: in-tree artifacts untracked + gitignored (audit/review jsonl, build/, site/, egg-info)
+- [ ] T961 repo: test that the repo root carries no unignored runtime artifacts
+- [ ] T962 pkg: sdist/wheel exclude build/ and site/ (verified, not assumed)
+- [ ] T963 config: GateConfig.from_dict unknown-key rejection tested at every entry point
+- [ ] T964 serve: OpenAPI snapshot stable test (schema changes are deliberate, not drift)
+- [ ] T965 cli: every parser flag documented in --help (help-text sweep)
+- [ ] T966 test: import budget re-verified after the refactor (still under 200ms)
+- [ ] T967 test: suite wall-time budget — no new test over 1s without a written justification
+- [ ] T968 docs: CONTRIBUTING refresh — new layout, shared-helper conventions
+- [ ] T969 fix: P50 reds — any failure the sweep finds, fixed here
+- [ ] T970 test: P50 refactor/hygiene sweep (every box ticked, receipts outside TODO.md)
+
+## P51 Security refresh (T971–T990)
+- [ ] T971 sec: threat model updated for the 0.5.x surface (stream cap, typed systemone, appeal flow, namespaced strikes)
+- [ ] T972 sec: known-gaps table re-audited — the "None open" claim re-checked against P44-P50 additions
+- [ ] T973 sec: appeal/adjudicate path is operator-only (CLI), platform users cannot adjudicate — test pins it
+- [ ] T974 sec: strike amnesty is operator-only + audited (who/when/why in the row)
+- [ ] T975 sec: typed systemone schema regression pin — oversized values still refused
+- [ ] T976 sec: preflight OPTIONS remains side-effect-free and auth-free (documented + tested)
+- [ ] T977 sec: rate-limit holds under parallel threads (thread-safe T841 verified under load)
+- [ ] T978 sec: SIGTERM drain-vs-force race documented + tested
+- [ ] T979 sec: SECURITY.md env table refresh (every new var from P44-P50)
+- [ ] T980 sec: SECURITY.md adapters section refresh (new flags + appeal flow)
+- [ ] T981 sec: forward SSRF pin re-tested with adapter-side wiring (T866 made forward fire from platforms)
+- [ ] T982 sec: docker non-root + read-only paths re-verified after changes
+- [ ] T983 sec: SBOM covers the new optional deps
+- [ ] T984 sec: pip-audit still clean over extracted deps
+- [ ] T985 sec: secret-scan covers model cards + provenance fields
+- [ ] T986 sec: review queue 0600 + bounded rows re-verified with new fields
+- [ ] T987 sec: audit rotation unharmed by the new fields (5MB budget, 2 generations)
+- [ ] T988 docs: runbook gains drain + amnesty procedures
+- [ ] T989 fix: P51 reds — any failure the sweep finds, fixed here
+- [ ] T990 test: P51 security sweep (every box ticked, receipts outside TODO.md)
+
+## P52 Docs & versioned site (T991–T1010)
+- [ ] T991 docs: versioned docs build script — per-tag site snapshot
+- [ ] T992 ci: docs workflow builds versioned artifacts behind DOCS_DEPLOY
+- [ ] T993 docs: versions.md switcher story updated (each entry resolves to its delta)
+- [ ] T994 docs: api.md full route table refresh (every endpoint from P44-P49)
+- [ ] T995 docs: error-code index refresh (codes added by P44-P50)
+- [ ] T996 docs: environment.md refresh sweep (every new var, both directions)
+- [ ] T997 docs: cookbook recipes — batch scoring, appeals, metrics scrape, pack signing
+- [ ] T998 docs: getting-started updated for the 0.5.0 surface
+- [ ] T999 docs: RELEASE-CHECKLIST gains the new gates (metrics report, i18n routing)
+- [ ] T1000 docs: ROADMAP graduation — plugin section honest about what P44-P50 did/didn't build
+- [ ] T1001 docs: glossary additions (appeal, amnesty, namespaced strike, script routing)
+- [ ] T1002 docs: example scripts re-run green after every surface change
+- [ ] T1003 test: mkdocs nav still equals the file set
+- [ ] T1004 test: link checker green (root + docs, extends T821)
+- [ ] T1005 test: freshness markers all at the pre-release version (no stale v0.4.0 claims)
+- [ ] T1006 docs: adapters README final pass (every P45/P50 change reflected)
+- [ ] T1007 docs: README perf/claims re-checked against the refreshed benches
+- [ ] T1008 docs: BENCHMARKS known-numbers refreshed (any P49 numbers landed)
+- [ ] T1009 fix: P52 reds — any failure the sweep finds, fixed here
+- [ ] T1010 test: P52 docs sweep (every box ticked, receipts outside TODO.md)
+
+## P53 Release 0.5.0 (T1011–T1030)
+- [ ] T1011 pkg: version 0.5.0
+- [ ] T1012 suite: full run green + count recorded
+- [ ] T1013 lint: ruff check green
+- [ ] T1014 ci: workflow green on the release commit (status recorded)
+- [ ] T1015 eval: gates run — reports refreshed or explicitly stale
+- [ ] T1016 docs: CHANGELOG 0.5.0 dated
+- [ ] T1017 docs: release notes draft (drafts/release-0.5.0.md)
+- [ ] T1018 docs: README version-sensitive claims re-checked
+- [ ] T1019 test: version strings consistent (0.5.0 everywhere, extends T819)
+- [ ] T1020 test: adapters matrix table matches runnable stubs (re-run, extends T820)
+- [ ] T1021 test: docs link checker green (root + docs)
+- [ ] T1022 test: packaging smoke (wheel+sdist stamped 0.5.0, installs, --version)
+- [ ] T1023 test: env-var docs coverage still enforced (ops surfaces + examples)
+- [ ] T1024 test: golden note for 0.5.0 behavior deltas
+- [ ] T1025 pkg: tag-vs-version CI guard passes for v0.5.0
+- [ ] T1026 sec: SECURITY.md updated for the 0.5.0 surface
+- [ ] T1027 docs: BENCHMARKS honest-limits refreshed for this release
+- [ ] T1028 suite: final full green + stats line
+- [ ] T1029 final: push release commit
+- [ ] T1030 final: tag v0.5.0 + release notes published
