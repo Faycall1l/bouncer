@@ -85,6 +85,7 @@ bouncer watch --preset gaming < chat.log        # live tail, colored verdicts
 bouncer review                                  # queued flags/escalations
 bouncer adjudicate ROW_ID reject                # operator verdict; reject = strike amnesty
 bouncer config validate                         # lint bouncer.toml + a gate JSON (E_ADAPTER/E_CONFIG)
+bouncer completion bash                         # shell completion, generated from the parser
 bouncer snapshot save snap.json                 # counters + strikes (T606)
 bouncer snapshot load snap.json
 bouncer export --out audit.csv                  # audit log -> CSV

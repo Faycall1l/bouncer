@@ -200,3 +200,51 @@ def test_check_file_batch_scoring_jsonl(tmp_path, monkeypatch, capsys):  # T874
     # a missing file keeps the file-class exit and names it
     assert main(["check", "--file", str(tmp_path / "nope.txt")]) == 4
     assert "no message file" in capsys.readouterr().err
+
+
+def test_completion_generated_from_parser(capsys):  # T875
+    """completion bash|zsh is built from build_parser() itself: every
+    subcommand lands in the script (new commands complete without touching
+    the generator), options come from each subparser's own actions, and the
+    emitted scripts parse under bash -n / zsh -n."""
+    import argparse
+    import shutil
+    import subprocess
+
+    from gatekeeper.cli import build_parser
+
+    p = build_parser()
+    subs = next(a for a in p._actions
+                if isinstance(a, argparse._SubParsersAction)).choices
+
+    assert main(["completion", "bash"]) == 0
+    bash = capsys.readouterr().out
+    assert "complete -F _bouncer_complete bouncer" in bash
+    assert "compgen -W" in bash
+    for name in subs:  # the whole parser surface, generated
+        assert f"        {name})" in bash, name
+    assert '"--preset' in bash or ' --preset ' in bash, "options per parser"
+    assert "--file" in bash, "check's new flag completes too"
+    if shutil.which("bash"):  # the script must actually parse
+        r = subprocess.run(["bash", "-n"], check=False, input=bash, text=True,
+                           capture_output=True)
+        assert r.returncode == 0, r.stderr
+
+    assert main(["completion", "zsh"]) == 0
+    zsh = capsys.readouterr().out
+    assert zsh.startswith("#compdef bouncer")
+    assert "compdef _bouncer bouncer" in zsh
+    assert "_describe 'command' cmds" in zsh
+    for name in subs:
+        assert f"{name}) compadd" in zsh, name
+    if shutil.which("zsh"):
+        r = subprocess.run(["zsh", "-n"], check=False, input=zsh, text=True,
+                           capture_output=True)
+        assert r.returncode == 0, r.stderr
+
+    # an unknown shell is argparse's refusal, not ours
+    try:
+        main(["completion", "fish"])
+        raise AssertionError("choices must refuse fish")
+    except SystemExit as e:
+        assert e.code == 2

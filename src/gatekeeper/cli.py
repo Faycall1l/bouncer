@@ -305,6 +305,49 @@ def cmd_config(args) -> int:  # T871: standalone config lint
     return 1 if bad else 0
 
 
+def cmd_completion(args) -> int:  # T875: shell completion from the parser
+    """Print a completion script for `bouncer` — `source <(bouncer
+    completion bash)` (or zsh). Generated from build_parser() itself: the
+    subcommand list and every option line come from the parser's actions,
+    so a new command or flag completes without touching this function."""
+    p = build_parser()
+    subs = next(a for a in p._actions
+                if isinstance(a, argparse._SubParsersAction)).choices
+    top = sorted(subs)
+    per = {name: sorted({o for a in pa._actions for o in a.option_strings})
+           for name, pa in sorted(subs.items())}
+    if args.shell == "bash":
+        words = " ".join(top + ["--version", "--help"])
+        out = ["_bouncer_complete() {",
+               '    local cur="${COMP_WORDS[COMP_CWORD]}"',
+               '    if [ "$COMP_CWORD" -eq 1 ]; then',
+               f"        COMPREPLY=( $(compgen -W \"{words}\" -- \"$cur\") )",
+               "        return",
+               "    fi",
+               '    case "${COMP_WORDS[1]}" in']
+        for name, opts in per.items():
+            ow = " ".join(opts) or "--help"
+            out += [f"        {name})",
+                    f"            COMPREPLY=( $(compgen -W \"{ow}\" -- \"$cur\") )",
+                    "            ;;"]
+        out += ["    esac", "}", "complete -F _bouncer_complete bouncer"]
+        print("\n".join(out))
+        return 0
+    out = ["#compdef bouncer", "_bouncer() {", "    local -a cmds",
+           f"    cmds=({' '.join(top)})",
+           "    if (( CURRENT == 2 )); then",
+           "        _describe 'command' cmds",
+           "        return",
+           "    fi",
+           "    case $words[2] in"]
+    for name, opts in per.items():
+        ow = " ".join(opts) or "--help"
+        out += [f"        {name}) compadd -- {ow} ;;"]
+    out += ["    esac", "}", "compdef _bouncer bouncer"]
+    print("\n".join(out))
+    return 0
+
+
 def cmd_stats(args) -> int:
     from gatekeeper.cache import CACHE
     from gatekeeper.pool import POOL  # T461
@@ -746,6 +789,9 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
                     help="GateConfig JSON (same shape as check --config)")
     cf.set_defaults(fn=cmd_config)
     cv.set_defaults(fn=cmd_config)
+    cp = sub.add_parser("completion")  # T875: shell completion script
+    cp.add_argument("shell", choices=("bash", "zsh"))
+    cp.set_defaults(fn=cmd_completion)
     md = sub.add_parser("models")  # T538
     md.set_defaults(fn=cmd_models)
     ps = sub.add_parser("presets")  # T539
