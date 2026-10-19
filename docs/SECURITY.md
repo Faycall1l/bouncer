@@ -113,6 +113,37 @@ further: only those exact hosts receive events (case-insensitive; a
 subdomain of an allowed host is *not* allowed). Timeout is 10s per
 attempt; failures surface as `E_WEBHOOK`, never as a silent drop.
 
+## Platform adapters — nothing destructive by default (T826)
+
+The 0.4.0 adapters (Discord, Twitch, Telegram, Matrix, Mattermost, Zulip,
+webhooks) share one posture, so a bot dropped into a busy channel can't
+act beyond moderation:
+
+* **Flag-only default.** Chat-mutating actions are refused unless the
+  matching opt-in env var is `1`: `BOUNCER_TG_DELETE`,
+  `BOUNCER_MX_REDACT`, `BOUNCER_MM_DELETE`, `BOUNCER_ZL_DELETE`
+  (T692–T695). Out of the box every adapter only flags/escalates; Twitch
+  never bans at all. `BOUNCER_DRY_RUN=1` goes further and prints every
+  would-be action instead of posting it (T697).
+* **Fail-closed startup.** A missing platform token or missing extra stops
+  boot with a coded `E_ADAPTER` naming the first missing var and the fix —
+  never a half-connected bot, never a raw traceback (T691).
+* **Tokens stay env-only.** `DISCORD_TOKEN`, `TWITCH_TOKEN`,
+  `TELEGRAM_TOKEN`, `MATRIX_TOKEN`, `MATTERMOST_TOKEN`, `ZULIP_API_KEY`
+  are read from the environment only, and the shared redaction pass wipes
+  tokens/emails out of anything adapters log (T700). The Mattermost slash
+  token is compared constant-time (`hmac.compare_digest`, T694).
+* **Signed webhooks are fail-closed.** Slack events passed to
+  `receive_slack_event` with a `secret` are verified with constant-time
+  HMAC and a 300s replay window; a missing or bad signature raises
+  `E_SLACK` instead of letting an unsigned event through (T704).
+* Everything an adapter forwards to `BOUNCER_FORWARD_URL` goes through the
+  SSRF pin above (T785) — the platform side inherits the same guard.
+
+Per-platform setup (which extra, which vars) lives in the
+[adapters README](https://github.com/Faycall1l/bouncer/blob/main/src/gatekeeper/adapters/README.md);
+the inventory of every variable is [environment.md](environment.md).
+
 ## Data handling
 
 * The audit log stores a **sha256-truncated hash** of each message, never raw

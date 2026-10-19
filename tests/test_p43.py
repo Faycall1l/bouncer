@@ -206,3 +206,30 @@ def test_env_var_docs_coverage_ops_surfaces():  # T823 (extends T609/T807)
     assert not missing, f"ops-surface env vars without a row: {missing}"
     # floor: the container self-test at least reads its preset override
     assert "BOUNCER_PRESET" in used, "entrypoint no longer reads BOUNCER_PRESET?"
+
+
+def test_security_doc_covers_adapter_surface():  # T826
+    """docs/SECURITY.md carried zero 0.4.0 surface before this box: the
+    adapter posture (flag-only destructive actions, fail-closed startup,
+    env-only tokens, signed webhooks) lived only in the adapters README.
+    Every claim must name its T-box, and every opt-in flag the doc lists
+    must be a real flag the code reads.
+    """
+    sec = Path("docs/SECURITY.md").read_text()
+    # the section exists and claims the posture...
+    assert "## Platform adapters" in sec and "T826" in sec
+    for phrase in ("Flag-only default", "Fail-closed startup",
+                   "Tokens stay env-only", "Signed webhooks are fail-closed"):
+        assert phrase in sec, phrase
+    # ...every destructive opt-in flag it names is real code (env table + src)
+    env_doc = Path("docs/environment.md").read_text()
+    src = "\n".join(p.read_text() for p in Path("src").rglob("*.py"))
+    for flag in ("BOUNCER_TG_DELETE", "BOUNCER_MX_REDACT",
+                 "BOUNCER_MM_DELETE", "BOUNCER_ZL_DELETE", "BOUNCER_DRY_RUN"):
+        assert flag in sec, f"{flag} missing from the security doc"
+        assert f"`{flag}`" in env_doc, f"{flag} has no environment.md row"
+        assert flag in src, f"{flag} is not read by any code"
+    # the cited T-boxes are ones TODO.md actually knows (citation integrity)
+    todo = Path("TODO.md").read_text()
+    for box in ("T691", "T697", "T700", "T704", "T785"):
+        assert f"- [x] {box} " in todo, f"{box} cited but not a ticked box"
