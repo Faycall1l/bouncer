@@ -548,7 +548,8 @@ def test_log_injection_guard(capfd, monkeypatch):  # T779
     assert set(obj) == {"rid", "path", "ms"}
     assert obj["rid"] == 'evil","forged":true'
 
-    # the internal-error line is dumped too
+    # the model-error line is dumped too (T833: the passthrough logs its
+    # own coded failure; the raw text stays in the log, not the response)
     class Boom:
         def predict(self, state, questions):
             raise RuntimeError("nope")
@@ -556,11 +557,12 @@ def test_log_injection_guard(capfd, monkeypatch):  # T779
     gatekeeper._router = Boom()
     serve._BUCKETS.clear()
     r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
-    assert r.status_code == 500 and r.json()["detail"]["code"] == "E_INTERNAL"
+    assert r.status_code == 503 and r.json()["detail"]["code"] == "E_MODEL"
+    assert "nope" not in r.text
     line = [ln for ln in capfd.readouterr().out.splitlines()
-            if '"internal-error"' in ln][-1]
+            if '"model-error"' in ln][-1]
     obj = _json.loads(line)
-    assert set(obj) == {"event", "path", "err"} and obj["err"] == "RuntimeError"
+    assert set(obj) == {"event", "path", "err"} and "nope" in obj["err"]
 
     # documented where operators look
     assert "T779" in Path("docs/SECURITY.md").read_text()
@@ -874,7 +876,9 @@ def test_errors_leak_nothing(capfd, monkeypatch):  # T787: path/version sweep
             sweep(r)
         codes = {r.json().get("detail", {}).get("code") for r in battery
                  if isinstance(r.json().get("detail"), dict)}
-        assert {"E_RULES", "E_STATE", "E_CONTEXT", "E_INTERNAL"} <= codes, codes
+        # T833: the systemone crash in this battery is now a coded
+        # E_MODEL 503 (breaker-aware) instead of an uncoded E_INTERNAL 500
+        assert {"E_RULES", "E_STATE", "E_CONTEXT", "E_MODEL"} <= codes, codes
         # /version is the only sanctioned version disclosure (T052 contract)
         assert ver in client.get("/version").text
     finally:

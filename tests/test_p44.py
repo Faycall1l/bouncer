@@ -154,3 +154,74 @@ def test_systemone_typed_shape_passthrough_contents():  # T832
         assert seen["state"]["history"] == "not-a-list"
     finally:
         gatekeeper._router = None
+
+
+def test_systemone_safe_path_timeout_retry_breaker():  # T833
+    """The passthrough used to call r.predict raw — no timeout, breaker or
+    retry. Now: a slow model times out (twice, then coded 503), failures
+    feed the breaker, and once it trips the next call short-circuits
+    without touching the model. Success closes the circuit again."""
+    import os
+    import time
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    calls = {"n": 0}
+
+    class Slow:
+        def predict(self, state, questions):
+            calls["n"] += 1
+            time.sleep(1.0)  # > the 0.5s floor the timeout is clamped to
+            return {"answers": {}}
+
+    gatekeeper._router = Slow()
+    os.environ["BOUNCER_TIMEOUT"] = "0.5"
+    # fresh breaker state for this test
+    gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+    try:
+        from fastapi.testclient import TestClient
+        client = TestClient(serve.app, raise_server_exceptions=False)
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
+        assert r.status_code == 503, r.text
+        assert "E_MODEL" in r.text and "timed out" in r.text
+        assert calls["n"] == 2, "timeout must retry exactly once"
+
+        # failures now feed the breaker: trip it (default n=5)
+        class Dead:
+            def predict(self, state, questions):
+                calls["n"] += 1
+                raise RuntimeError("model exploded")
+
+        gatekeeper._router = Dead()
+        for _ in range(4):
+            serve._BUCKETS.clear()
+            r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
+            assert r.status_code == 503
+        assert gatekeeper._BREAKER["fails"] >= 5, "failures must count"
+
+        # breaker open: the next call short-circuits — model untouched
+        before = calls["n"]
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
+        assert r.status_code == 503 and "breaker open" in r.text
+        assert calls["n"] == before, "the model was called while open"
+
+        # a success closes the circuit (fresh stub that answers)
+        class Good:
+            def predict(self, state, questions):
+                return {"answers": {"rule": "ok"}}
+
+        gatekeeper._router = Good()
+        # wait out half-open transition: cooldown already set — force it
+        gatekeeper._BREAKER["open_until"] = 0.0
+        gatekeeper._BREAKER["half_open"] = True
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
+        assert r.status_code == 200 and r.json()["answers"]["rule"] == "ok"
+        assert gatekeeper._BREAKER["fails"] == 0, "success must close the breaker"
+    finally:
+        gatekeeper._router = None
+        os.environ.pop("BOUNCER_TIMEOUT", None)
+        gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)

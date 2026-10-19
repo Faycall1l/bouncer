@@ -63,14 +63,17 @@ def test_guards_end_to_end():  # T305+T308+T309+T304
     assert r.status_code == 413
 
 
-def test_internal_handler():  # T269
+def test_internal_handler():  # T269 (contract moved T833: coded 503)
     class Boom:
         def predict(self, state, questions):
             raise RuntimeError("kaput")
     gatekeeper._router = Boom()
     client = TestClient(serve.app, raise_server_exceptions=False)
     r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
-    assert r.status_code == 500 and r.json()["detail"]["code"] == "E_INTERNAL"
+    # T833: a dead model on the passthrough is a coded 503 E_MODEL (with a
+    # breaker counted), no longer an uncoded 500 through the generic handler
+    assert r.status_code == 503 and r.json()["detail"]["code"] == "E_MODEL"
+    assert "kaput" not in r.text  # the raw exception text stays server-side
 
 
 def test_webhooks(monkeypatch):  # T293+T294+T295+T301+T302

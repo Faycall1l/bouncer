@@ -543,4 +543,32 @@ def systemone(body: SystemoneReq, request: Request):
         hist = [h[:MAX_ITEM] if isinstance(h, str) else h for h in hist]
         state = {**state, "history": hist}
     r = get_router()
-    return r.predict(state, questions)
+    # T833: the passthrough used to call r.predict raw — no timeout, no
+    # breaker, no retry. It now shares the engine's reliability path: the
+    # same env-driven timeout (BOUNCER_TIMEOUT, else 10s), one retry, and
+    # breaker accounting. Failures surface as coded 503 E_MODEL — the Jev
+    # contract stays honest (no fabricated answers) and the model's sick
+    # days are counted like everyone else's.
+    from . import ModelError, _breaker_fail, _breaker_ok, _breaker_tripped, _predict_safe
+    tripped = _breaker_tripped()  # T512: passthrough honors the breaker now
+    try:
+        if tripped:
+            raise ModelError("breaker open (model failing, cooling down)")
+        answers = _predict_safe(r, state, questions, _request_timeout(None))
+        _breaker_ok()  # T514: success closes the circuit
+    except ModelError as e:
+        if not tripped:  # T512: open-state short-circuits don't extend the trip
+            _breaker_fail(5, 30.0)  # T511: engine defaults (GateConfig values)
+        import json as _json  # T787: str(e) can carry internal paths — the
+        # real text goes to the operator's log only; the client gets the
+        # code plus a message we constructed (timeout/breaker) or a generic
+        print(_json.dumps({"event": "model-error", "path": "/v1/systemone",
+                           "err": str(e)[:300]}), flush=True)
+        msg = str(e)
+        if "timed out after" not in msg and "breaker open" not in msg:
+            msg = "model unavailable (details in server logs)"
+        from fastapi import HTTPException as _HE
+        raise _HE(status_code=503,
+                  detail={"code": getattr(e, "code", "E_MODEL"),
+                          "message": msg})
+    return answers

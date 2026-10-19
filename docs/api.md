@@ -13,7 +13,7 @@ _(Last checked against v0.4.0.)_
 * `POST /predict/batch` `{messages[], rules, threshold?, allow_threshold?,
   delete_threshold?}` → array, order kept. 1–32 messages (else 422/413), each
   ≤ 8000 chars. Shares rate/auth guards with `/predict`.
-* `POST /v1/systemone` `{state, questions}` → raw router passthrough (Jev SDKs work).
+* `POST /v1/systemone` `{state, questions}` → raw router passthrough (Jev SDKs work) — contents untyped, but the call shares `/predict`'s timeout/retry/breaker path (T833): a dead model is a coded `503 E_MODEL`, never a hung socket.
   Same rate/auth guards apply. `state.history` is bounded server-side (T774+T775):
   newest 20 items, each trimmed to 8000 chars (silently — passthrough keeps its
   wire contract), and `state`/`questions` dict keys ≤ 64 chars (else 422
