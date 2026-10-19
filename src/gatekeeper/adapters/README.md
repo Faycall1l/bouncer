@@ -26,6 +26,23 @@ counts decisions per adapter. A new adapter gets all
 of it by importing from `common`; nothing in the column may name a helper
 that doesn't exist.
 
+## Capabilities (T868)
+
+Reply / thread / health / rate-cap / forward / lang per platform — every
+cell is a source fact, and `test_readme_capability_matrix_matches_sources`
+checks them against the adapters. `—` means the platform can't express it
+or the adapter never posts.
+
+| Platform | reply anchor | answer / notice threading | health line | rate cap | forward | lang hint |
+|---|---|---|---|---|---|---|
+| Telegram | commands → `reply_to_message_id` (T860) | answers nest under the ask; moderation prints (flag-only default) | T699 | T701 | T866 `message_of` | T857 |
+| Matrix | command notices → `m.relates_to.m.in_reply_to` (T861) | threaded under the trigger; moderation redacts + prints | T699 | T701 | T866 `message_of` | T857 |
+| Zulip | PM/mention answers | stream replies keep the `subject` topic (T863) | T699 | T701 | T866 `message_of` | T857 |
+| Mattermost | slash → `root_id` (T862) | slash answer threads under the command; ws moderation prints | T699 | T701 | — own websocket loop | T857 |
+| Discord | prefix + slash answers, unanchored | delete tombstone → `reference=msg` (T859) | T699 | T701 + T854 | — own event loop | T857 |
+| Twitch | — no command surface | moderation prints, never bans | T855 | — no cap wired | — own loop | T857 |
+| Slack/events | — never posts | — never posts | — library, no loop | — | the forwarder itself (T707) | T857 |
+
 ## Config file (T709)
 
 Every adapter reads `bouncer.toml` from the working directory (override the

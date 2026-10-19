@@ -1082,3 +1082,57 @@ def test_per_adapter_decision_counters():  # T867
             "webhooks": 'adapter="slack"'}
     for f, tag in tags.items():
         assert tag in (ADAPTERS / f"{f}.py").read_text(), f
+
+
+def test_readme_capability_matrix_matches_sources():  # T868
+    """The capability table is code, not prose: reply/thread anchors, health
+    and rate-cap wiring, the T866 forward split (run_loop three vs own
+    loops) and lang= everywhere all match the adapters that claim them."""
+    text = (ADAPTERS / "README.md").read_text()
+    assert "## Capabilities (T868)" in text
+    sec = text.split("## Capabilities (T868)", 1)[1]
+    rows = {ln.split("|")[1].strip(): ln for ln in sec.splitlines()
+            if ln.startswith("| ") and not ln.startswith("| Platform")}
+    expected = ("Telegram", "Matrix", "Zulip", "Mattermost", "Discord",
+                "Twitch", "Slack/events")
+    for platform in expected:
+        assert platform in rows, platform
+    # every reply/thread anchor is in the source that claims it
+    anchors = {"Telegram": ("telegram_bot.py", "reply_to_message_id"),
+               "Matrix": ("matrix_bot.py", "in_reply_to"),
+               "Zulip": ("zulip_bot.py", "subject"),
+               "Mattermost": ("mattermost.py", "root_id"),
+               "Discord": ("discord_bot.py", "reference=msg")}
+    for platform, (f, tok) in anchors.items():
+        assert tok in rows[platform], f"{platform}: table lost {tok}"
+        assert tok in (ADAPTERS / f).read_text(), f"{f}: code lost {tok}"
+    # forward truth (T866): only the run_loop three carry message_of, and
+    # the table says so; the own-loop three say "own" and carry none
+    for f in ("telegram_bot.py", "matrix_bot.py", "zulip_bot.py"):
+        assert "message_of=" in (ADAPTERS / f).read_text(), f
+    for platform, f in (("Mattermost", "mattermost.py"),
+                        ("Discord", "discord_bot.py"),
+                        ("Twitch", "twitch_irc.py")):
+        assert "message_of=" not in (ADAPTERS / f).read_text(), f
+        assert "own" in rows[platform].lower(), f"{platform}: forward cell"
+    # rate-cap truth: five wired claim T701, twitch admits the gap
+    for platform, f in (("Telegram", "telegram_bot.py"),
+                        ("Matrix", "matrix_bot.py"), ("Zulip", "zulip_bot.py"),
+                        ("Mattermost", "mattermost.py"),
+                        ("Discord", "discord_bot.py")):
+        assert "rate_cap_from_env" in (ADAPTERS / f).read_text(), f
+        assert "T701" in rows[platform], platform
+    assert "rate_cap_from_env" not in (ADAPTERS / "twitch_irc.py").read_text()
+    assert "T701" not in rows["Twitch"], "twitch would be lying"
+    # health truth: six loops carry Health (twitch since T855), the library none
+    for f in ("telegram_bot.py", "matrix_bot.py", "zulip_bot.py",
+              "mattermost.py", "discord_bot.py", "twitch_irc.py"):
+        assert "Health(" in (ADAPTERS / f).read_text(), f
+    assert "Health(" not in (ADAPTERS / "webhooks.py").read_text()
+    assert "T699" in rows["Telegram"] and "T855" in rows["Twitch"]
+    # lang truth (T857): every row claims it, every source passes it
+    for platform in expected:
+        assert "T857" in rows[platform], platform
+    for f in ("telegram_bot.py", "matrix_bot.py", "zulip_bot.py", "mattermost.py",
+              "discord_bot.py", "twitch_irc.py", "webhooks.py"):
+        assert "detect_lang(" in (ADAPTERS / f).read_text(), f
