@@ -15,6 +15,7 @@ are what the code falls back to at read time.
 | variable | default | meaning |
 |---|---|---|
 | `BOUNCER_KEY` | unset (API open) | shared secret: when set, every `POST` needs `X-API-Key`, compared constant-time; keys shorter than 16 chars warn at boot (T053, T292) |
+| `BOUNCER_URL` | `http://localhost:8000/predict` | API base URL for the shipped client example (`docs/examples/02_api_client.py`) — a client-side convenience, not read by the server |
 | `BOUNCER_KEY_OLD` | unset | second accepted key during the two-key rotation window (T776) |
 | `BOUNCER_CORS` | `*` | comma-separated allowed origins; `serve --cors` beats the env (T549) |
 | `BOUNCER_TRUSTED_PROXY` | unset | comma-separated proxy peer IPs whose `X-Forwarded-For` counts for rate keys (T777) |

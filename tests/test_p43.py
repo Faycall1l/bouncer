@@ -183,3 +183,26 @@ def test_packaging_smoke_release_tree(tmp_path):  # T822
                        cwd=str(tmp_path))  # cwd away from the repo: no src/ shadow
     assert r.returncode == 0, r.stderr
     assert r.stdout.strip() == version, (r.stdout, r.stderr)
+
+
+def test_env_var_docs_coverage_ops_surfaces():  # T823 (extends T609/T807)
+    """T609 swept four core files; T807 made environment.md the one true
+    table over src/eval/scripts (and, since this box, docs/examples).
+    The surfaces still outside every sweep: the container/CI files —
+    Dockerfile, compose.yaml, the entrypoint script, and the workflows.
+    They SET or READ BOUNCER_* vars too, and each one must have a row.
+    """
+    import glob
+
+    surfaces = [Path(p) for p in (
+        "Dockerfile", "compose.yaml", "scripts/docker-entrypoint.sh",
+        *sorted(glob.glob(".github/workflows/*.yml")))]
+    assert all(p.exists() for p in surfaces), "an ops surface moved — update this sweep"
+    text = Path("docs/environment.md").read_text()
+    used = set()
+    for p in surfaces:
+        used |= set(re.findall(r"BOUNCER_[A-Z_]+", p.read_text()))
+    missing = sorted(v for v in used if v not in text)
+    assert not missing, f"ops-surface env vars without a row: {missing}"
+    # floor: the container self-test at least reads its preset override
+    assert "BOUNCER_PRESET" in used, "entrypoint no longer reads BOUNCER_PRESET?"

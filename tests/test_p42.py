@@ -572,9 +572,11 @@ def test_env_var_table_is_the_one_true_table():  # T807
     assert text.startswith("# Environment variables")
 
     # forward: every env var the code reads gets a row — T609's core
-    # four, extended over all of src/eval/scripts, .py and .sh alike
+    # four, extended over all of src/eval/scripts AND the shipped examples
+    # (.py and .sh alike; examples are code a reader runs — T823)
     src = "\n".join(
-        p.read_text() for d in ("src", "eval", "scripts")
+        p.read_text()
+        for d in ("src", "eval", "scripts", "docs/examples")
         for p in Path(d).rglob("*") if p.suffix in (".py", ".sh"))
     bouncers = {v.rstrip("_") for v in re.findall(r"BOUNCER_[A-Z_]+", src)}
     missing = sorted(v for v in bouncers if v not in text)
