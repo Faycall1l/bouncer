@@ -733,3 +733,39 @@ def test_request_limits_section_exists():  # T844
     for needle in ("byte level", "T831", "extra=\"forbid\"", "T835",
                    "batch-deadline", "T837", "per worker process", "T777"):
         assert needle in section, needle
+
+
+def test_oversized_chunked_body_stops_mid_stream():  # T846
+    """T831 proved the over-cap body 413s before the handler. This proves
+    the other half: the cap stops PULLING chunks the moment the limit is
+    crossed — a 100 MB chunked upload isn't read to its end (or even close)
+    before the client is cut off."""
+    from gatekeeper import serve
+
+    pulled = {"n": 0}
+
+    def make_receive(total_chunks, chunk=b"x" * 400):
+        remaining = {"left": total_chunks}
+
+        async def receive():
+            if remaining["left"] <= 0:
+                return {"type": "http.disconnect"}
+            remaining["left"] -= 1
+            pulled["n"] += 1
+            return {"type": "http.request", "body": chunk, "more_body": True}
+        return receive
+
+    sent = []
+    capped = serve._StreamBodyCap(_echo_app([]), limit=1000)
+
+    async def send(message):
+        sent.append(message)
+
+    # 250 chunks = 100 KB offered; the cap crosses 1000 bytes on chunk 3
+    scope = {"type": "http", "method": "POST", "path": "/predict",
+             "headers": [], "query_string": b""}
+    _run(capped(scope, make_receive(250), send))
+
+    assert sent[0]["status"] == 413
+    assert pulled["n"] <= 3, (f"cap read {pulled['n']} chunks of a 250-chunk "
+                              "upload before rejecting")
