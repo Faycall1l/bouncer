@@ -41,3 +41,53 @@ def test_version_strings_consistent_everywhere():  # T819
     vnotes = Path("docs/versions.md").read_text()
     assert f"currently package version\n**{version}**" in vnotes, \
         "versions.md 'currently' claim drifted"
+
+
+def test_adapter_matrix_matches_runnable_modules():  # T820
+    """Every command the matrix's Setup column documents really runs.
+
+    T703 checks files<->rows and SDK-helper existence; this closes the
+    loop on the Setup column: each `python -m gatekeeper.adapters.X`
+    names a real module that fails CLOSED (coded E_ADAPTER — naming the
+    missing env var or the pip extra) under a scrubbed env, never with a
+    raw KeyError/ModuleNotFoundError, and each `.[extra]` it advertises
+    exists in pyproject.
+    """
+    import subprocess
+    import sys
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
+    text = (Path("src/gatekeeper/adapters") / "README.md").read_text()
+    mods = sorted(set(re.findall(
+        r"python -m gatekeeper\.adapters\.(\w+)", text)))
+    assert mods, "matrix documents no runnable adapter"
+    files = sorted(p.stem for p in Path("src/gatekeeper/adapters").glob("*.py"))
+    # every documented command names a real module...
+    assert set(mods) <= set(files), sorted(set(mods) - set(files))
+    # ...and every module is either runnable or explicitly not (by design)
+    for stem in set(files) - set(mods):
+        row = next(line for line in text.splitlines() if stem in line)
+        assert "never run directly" in row or "from your receiver" in row, \
+            f"{stem}.py is undocumented as runnable AND undocumented as not"
+    # every advertised extra exists in pyproject
+    with open("pyproject.toml", "rb") as f:
+        extras = set(tomllib.load(f)["project"]["optional-dependencies"])
+    for extra in sorted(set(re.findall(r"\.\[(\w+)\]", text))):
+        assert extra in extras, f"matrix advertises .[{extra}] but pyproject has no such extra"
+    # each runnable adapter fails closed with E_ADAPTER under a scrubbed env
+    env = {"PATH": "/usr/bin:/bin", "PYTHONPATH": "src"}
+    for mod in mods:
+        r = subprocess.run([sys.executable, "-m", f"gatekeeper.adapters.{mod}"],
+                           check=False, capture_output=True, text=True,
+                           env=env, timeout=60)
+        assert r.returncode != 0, f"adapter {mod} ran with no env at all"
+        assert "E_ADAPTER" in r.stderr, f"{mod}: not coded — {r.stderr[-200:]}"
+        # our error has the last word (T694 pattern: the raw ImportError may
+        # ride along as __cause__ for diagnostics, but never ends the trace)
+        last = r.stderr.strip().splitlines()[-1]
+        assert last.startswith("gatekeeper.adapters.common.AdapterError"), \
+            f"{mod}: raw traceback ended the run — {last}"
+        assert "KeyError" not in r.stderr, \
+            f"{mod}: raw KeyError leaked — {r.stderr[-200:]}"

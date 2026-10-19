@@ -37,7 +37,13 @@ def command_reply(cmd: str, rules: dict, stats=None) -> str | None:  # T705
 
 
 def run(token: str | None = None, preset: str = "gaming"):
-    import discord  # optional dep; ImportError message tells the extra
+    from gatekeeper.adapters.common import AdapterError
+    try:
+        import discord  # optional dep: pip install -e .[discord]
+    except ImportError as e:  # T820: coded, not a raw ModuleNotFoundError
+        raise AdapterError(
+            "E_ADAPTER: discord needs the discord.py extra — "
+            "pip install -e .[discord]") from e
 
     from gatekeeper import moderate
     from gatekeeper.adapters.common import (
