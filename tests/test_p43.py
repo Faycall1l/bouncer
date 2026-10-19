@@ -91,3 +91,37 @@ def test_adapter_matrix_matches_runnable_modules():  # T820
             f"{mod}: raw traceback ended the run — {last}"
         assert "KeyError" not in r.stderr, \
             f"{mod}: raw KeyError leaked — {r.stderr[-200:]}"
+
+
+def test_root_entry_files_link_checker_green():  # T821 (extends T798)
+    """The T798 checker scans docs/*.md only — but the repo's entry files
+    (README, SECURITY, CONTRIBUTING, BENCHMARKS, CHANGELOG, TODO) are the
+    first thing a reader opens, and they link into docs/ and each other.
+    Same rules, same helpers (imported from test_p42 — one implementation):
+    dead relative links and dead anchors fail the box.
+    """
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_p42 import _LINK_RE, _headings, _strip_code
+
+    problems, checked = [], 0
+    for p in sorted(Path(".").glob("*.md")):
+        text = _strip_code(p.read_text())
+        for _label, href in _LINK_RE.findall(text):
+            if href.startswith(("http://", "https://", "mailto:", "//", "/")):
+                continue
+            checked += 1
+            path, _, anchor = href.partition("#")
+            if not path:
+                target = p  # same-page anchor
+            else:
+                target = Path(path)
+                if not target.exists():
+                    problems.append(f"{p.name}: dead link {href}")
+                    continue
+            if anchor and anchor not in _headings(target.read_text()):
+                problems.append(
+                    f"{p.name}: dead anchor {href} — no heading slug "
+                    f"{anchor!r} in {target.name}")
+    assert not problems, "\n".join(problems)
+    # floor: the README alone links into docs/ and BENCHMARKS many times
+    assert checked >= 10, f"only {checked} relative links found — scanner broken?"
