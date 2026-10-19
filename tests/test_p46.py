@@ -155,3 +155,48 @@ def test_pack_sign_and_verify_roundtrip(tmp_path, capsys):  # T873
     assert "sign needs a file" in capsys.readouterr().err
     assert main(["pack", "verify"]) == 4
     assert "verify needs a file" in capsys.readouterr().err
+
+
+def test_check_file_batch_scoring_jsonl(tmp_path, monkeypatch, capsys):  # T874
+    """check --file scores one message per line as JSONL: each object
+    carries its 1-based input line number and the CLI's own reason, blank
+    lines are skipped, the batch exits with the worst action — and
+    MESSAGE/--file is an XOR while neither alone is a usage error."""
+    import gatekeeper
+
+    class LineStub:
+        def predict(self, state, questions):
+            choice = "no-cheat" if "aimbot" in state["message"] else "ok"
+            conf = 0.95
+            return {"answers": {
+                "rule": {"choice": choice, "confidence": conf,
+                         "probabilities": {choice: conf}},
+                "harm": {"score": "safe"}, "hype": {"score": "chill"},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    monkeypatch.setattr(gatekeeper, "_router", LineStub())
+    f = tmp_path / "batch.txt"
+    f.write_text("good game\n\naimbot for sale\nanother clean line\n")
+
+    assert main(["check", "--file", str(f), "--preset", "gaming"]) == 2, \
+        "the batch exits with its worst action"
+    rows = [json.loads(ln) for ln in capsys.readouterr().out.splitlines()]
+    assert len(rows) == 3, "the blank line is not a message"
+    assert [r["line"] for r in rows] == [1, 3, 4], "1-based input mapping"
+    assert rows[0]["action"] == "allow" and rows[2]["action"] == "allow"
+    assert rows[1]["action"] in ("delete", "flag"), rows[1]
+    assert all(r["reason"] for r in rows), "the CLI reason rides every row"
+
+    # a clean batch is exit 0 like a single allow
+    clean = tmp_path / "clean.txt"
+    clean.write_text("good game\n")
+    assert main(["check", "--file", str(clean), "--preset", "gaming"]) == 0
+
+    # MESSAGE and --file are mutually exclusive; neither alone is usage
+    assert main(["check", "hi", "--file", str(clean)]) == 4
+    assert "exactly one" in capsys.readouterr().err
+    assert main(["check"]) == 4
+    assert "needs MESSAGE or --file" in capsys.readouterr().err
+    # a missing file keeps the file-class exit and names it
+    assert main(["check", "--file", str(tmp_path / "nope.txt")]) == 4
+    assert "no message file" in capsys.readouterr().err

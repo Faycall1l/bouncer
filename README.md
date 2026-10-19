@@ -77,6 +77,7 @@ print(moderate('FREE NITRO http://x.gg', get_preset('gaming')))
 pip install -e ".[server,demo]"
 bouncer check "you all suck" --preset gaming
 bouncer check "you all suck" --preset gaming --allow-threshold 0.9 --delete-threshold 0.7
+bouncer check --file batch.txt --preset gaming   # batch: one message per line, JSONL out, worst action exits
 bouncer serve  # API on :8000
 bouncer demo   # Gradio UI
 bouncer demo --share  # public gradio link: rulebook + messages go public (you get a loud warn)

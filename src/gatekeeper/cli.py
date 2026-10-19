@@ -60,9 +60,29 @@ def _cfg_from_args(args):
     return cfg
 
 
-def cmd_check(args) -> int:  # T066+T067+T071+T072
+def cmd_check(args) -> int:  # T066+T067+T071+T072+T874
     from gatekeeper import moderate
     from gatekeeper.explain import explain
+    path = getattr(args, "file", None)  # T874: argument checks before rules
+    if path is not None and args.message is not None:
+        print("bouncer: pass exactly one of MESSAGE or --file", file=sys.stderr)
+        return 4
+    if path is None and args.message is None:
+        print("bouncer: check needs MESSAGE or --file", file=sys.stderr)
+        return 4
+    lines: list = []
+    if path is not None:
+        import os
+        if not os.path.exists(path):
+            print(f"bouncer: no message file {path!r}", file=sys.stderr)
+            return 4
+        try:
+            with open(path) as f:
+                lines = f.readlines()
+        except OSError as e:
+            print(f"bouncer: cannot read message file {path!r} "
+                  f"({e.strerror or e})", file=sys.stderr)
+            return 4
     rules = _load_rules(args)
     cfg = _cfg_from_args(args)
     model = getattr(args, "model", None)
@@ -81,6 +101,21 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072
             print(f"bouncer: bad --model {model!r} (pick from {list(MODELS)})",
                   file=sys.stderr)
             return 4
+    if path is not None:  # T874: batch scoring — args checked, lines read up top
+        code = {"allow": 0, "delete": 2, "flag": 2, "escalate": 3}
+        worst = 0
+        for i, line in enumerate(lines, 1):  # 1-based: maps back to the file
+            msg = line.rstrip("\r\n")
+            if not msg.strip():  # blank separators aren't messages
+                continue
+            res = moderate(msg, rules, config=cfg, lang=args.lang,
+                           context=args.context or [], model=model,
+                           user_id=getattr(args, "user", None))
+            res["line"] = i
+            res["reason"] = explain(res, rules)  # the CLI's own wording
+            print(json.dumps(res, default=str))  # one JSON per input line
+            worst = max(worst, code[res["action"]])
+        return worst  # the worst action in the batch, like the single shot
     res = moderate(args.message, rules, config=cfg, lang=args.lang,  # T311+T312
                    context=args.context or [], model=model,
                    user_id=getattr(args, "user", None))  # T533
@@ -646,7 +681,8 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     sub = p.add_subparsers(dest="cmd", required=False)
     sub.required = False
     c = sub.add_parser("check")
-    c.add_argument("message")
+    c.add_argument("message", nargs="?", default=None)  # T874: or --file
+    c.add_argument("--file", default=None)  # T874: one message per line, JSONL out
     c.add_argument("--rules", default=None)  # T483: None = not passed (conflict check)
     c.add_argument("--preset")
     _add_threshold_flags(c)

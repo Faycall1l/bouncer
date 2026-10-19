@@ -964,7 +964,7 @@
 - [x] T871 cli: bouncer config validate — standalone lint of bouncer.toml (E_ADAPTER, absent-default ok, named-missing fails) and GateConfig JSON (E_CONFIG unknown keys, bad ranges, non-object shape, malformed JSON); exit 0/1/2; README operator block + tests/test_p46.py
 - [x] T872 cli: pack diff OLD NEW — added/removed/changed rules one per line (+/-/~), identical packs say so and exit 0, drift exits 2; shared hardened _read_pack now guards show/lint/diff alike (missing, unreadable, non-object); cookbook documents it
 - [x] T873 cli: pack sign FILE writes FILE.sig (sha256 over sorted id+text lines, canonical across key order), pack verify recomputes — missing/unreadable/non-sha256 manifest exits 4 with E_PACK_SIG, content mismatch exits 2 with E_PACK_SIG; E_PACK_SIG indexed, cookbook documents
-- [ ] T874 cli: check --file — batch scoring from a file, one message per line, JSON out
+- [x] T874 cli: check --file — batch scoring, one message per line, JSONL out with 1-based line numbers and the CLI reason; blanks skipped; exit = worst action (0/2/3); MESSAGE/--file is an XOR checked before rules, argument errors exit 4; README example
 - [ ] T875 cli: shell completion — bouncer completion bash|zsh generated from the parser
 - [ ] T876 persist: snapshot v2 schema + v1-to-v2 migration on load (v!=1 hard-fails in every loader today)
 - [ ] T877 persist: cache snapshot wired into snapshot save/load (TTLCache.save/load are dead code today)
