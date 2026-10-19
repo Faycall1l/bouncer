@@ -1196,3 +1196,40 @@ def test_readme_capability_matrix_matches_sources():  # T868
     for f in ("telegram_bot.py", "matrix_bot.py", "zulip_bot.py", "mattermost.py",
               "discord_bot.py", "twitch_irc.py", "webhooks.py"):
         assert "detect_lang(" in (ADAPTERS / f).read_text(), f
+
+
+def test_p45_adapter_depth_sweep():  # T870: P45 closer — every box ticked,
+    # every box has a receipt outside TODO.md, no invented citations
+    import re
+    from pathlib import Path
+
+    todo = Path("TODO.md").read_text()
+    p45 = [b for b in re.findall(r"- \[[ x]\] (T\d{3,4})\b", todo)
+           if 851 <= int(b[1:]) <= 870]
+    assert sorted(p45) == [f"T{n}" for n in range(851, 871)], p45
+    for b in p45:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+    assert "## P45 Adapter depth (T851–T870)" in todo
+
+    # receipts live OUTSIDE TODO.md — across this batch's own surfaces
+    corpus = (Path("README.md").read_text()
+              + Path("CONTRIBUTING.md").read_text()
+              + Path("verify.sh").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if (p.is_file()
+                    and p.suffix in (".md", ".py", ".yml", ".yaml", ".sh")):
+                corpus += p.read_text()
+    for b in p45:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity: every T-number the surfaces this batch touched
+    # cite is a box TODO.md actually knows — invented receipts fail here
+    for name in ("error-codes.md", "api.md", "threat-model.md", "SECURITY.md",
+                 "runbook.md"):
+        f = Path("docs") / name
+        for t in set(re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
+    # and this batch's own README matrix is grounded, not aspirational
+    adp = Path("src/gatekeeper/adapters/README.md").read_text()
+    assert "## Capabilities (T868)" in adp, "the capability table is the receipt"
