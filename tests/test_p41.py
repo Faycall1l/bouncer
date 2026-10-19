@@ -467,7 +467,8 @@ def test_metrics_exposure_gate():  # T778
         assert r.status_code == 200 and "bouncer_" in r.text, r.text
         assert client.get("/metrics", headers={"X-API-Key": "nope"}).status_code == 401
         # this box gates metrics alone: LB-facing GETs keep their contract
-        for path in ("/health", "/ready", "/version", "/stats"):
+        # (T842 later put /stats under the same gate — see the /stats pin)
+        for path in ("/health", "/ready", "/version"):
             assert client.get(path).status_code == 200, path
 
         # loopback exemptions (unit — TestClient's peer can't be loopback)

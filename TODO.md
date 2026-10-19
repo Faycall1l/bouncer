@@ -928,7 +928,7 @@
 - [x] T839 serve: graceful shutdown drains in-flight predicts + flushes audit (today the lifespan note is cosmetic)
 - [x] T840 serve: access log gains method/status, decision log gains rid — X-Request-ID correlates both
 - [x] T841 serve: rate-limit buckets thread-safe (check-then-append from the threadpool, no lock)
-- [ ] T842 serve: /stats gated behind the key when BOUNCER_KEY set (parity with /metrics — /stats is open today)
+- [x] T842 serve: /stats gated behind the key when BOUNCER_KEY set (parity with /metrics — /stats is open today)
 - [ ] T843 docs: 413-before-auth documented as the intentional cheap-reject (api.md + threat model)
 - [ ] T844 docs: api.md request-limits section — body-cap semantics, batch deadline, extra fields, per-worker rate amplification
 - [ ] T845 test: CLI serve flags actually reach uvicorn.run kwargs

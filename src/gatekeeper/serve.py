@@ -254,7 +254,10 @@ def models():
 
 
 @app.get("/stats")  # T057
-def stats():
+def stats(request: Request):  # T842: same exposure gate as /metrics (T778) —
+    # with a key set, decision counts/breaker/strikes are no more public than
+    # the prometheus text; loopback keeps its exemption, no key stays open
+    _metrics_gate(request)
     from . import coalesce_stats  # T754: joined/total effectiveness
     from . import strikes as _strikes  # T439: counts only, never user ids
     from .cache import CACHE

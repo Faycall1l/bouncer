@@ -62,7 +62,7 @@ The decision line and the JSON file outputs (`audit.jsonl`, review queue)
 were already `json.dumps` — controls there were always escaped, and stay
 that way.
 
-## `/metrics` exposure (T778)
+## `/metrics` + `/stats` exposure (T778, T842)
 
 `GET /metrics` (traffic counters, cache, breaker, latency) is gated as soon
 as `BOUNCER_KEY` is set:
@@ -76,8 +76,9 @@ The gate reads the **socket peer**, which no header can spoof: a
 `X-Forwarded-For` can only *remove* the local exemption (your local proxy
 forwarded the request), never grant it. With no key configured the server
 is open on every route anyway — metrics follow the same bargain. `/health`,
-`/ready`, and the other GETs keep their LB-facing contract; this gate is
-metrics alone.
+`/ready`, and the other GETs keep their LB-facing contract. `GET /stats`
+(decisions, breaker, strikes tallies — same data, JSON) rides the **same
+gate** since T842; this gate is metrics and stats alone.
 
 ## Key rotation — two-key window (T776)
 

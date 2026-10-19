@@ -26,7 +26,8 @@ _(Last checked against v0.4.0.)_
   wire contract), and `state`/`questions` dict keys ≤ 64 chars (else 422
   `E_STATE` — keys can't be trimmed coherently, so they're rejected).
 * `GET /health` loaded/unavailable + uptime · `GET /version` · `GET /models` ·
-  `GET /stats` (decisions + cache + version + uptime) · `GET /presets` ·
+  `GET /stats` (decisions + cache + version + uptime; gated like `/metrics`
+  when `BOUNCER_KEY` is set — T842) · `GET /presets` ·
   `GET /metrics` (per-action counters, cache hits/misses/rate, latency p50,
   `bouncer_info{version}`, uptime, `bouncer_breaker_open`, `bouncer_pool_*`)
   — exposed to loopback or with `X-API-Key` once `BOUNCER_KEY` is set (T778;

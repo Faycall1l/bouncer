@@ -657,3 +657,49 @@ def test_rate_limit_holds_under_parallel_threads():  # T841
     assert len(admitted) == 60, f"admitted {len(admitted)} under concurrency"
     assert len(refused) == 100
     assert len(serve._BUCKETS["10.9.9.9"]) == 60  # the bucket keeps the cap
+
+
+def test_stats_gated_behind_key_like_metrics():  # T842
+    """/stats was the one introspection route with no exposure gate —
+    decision counts, breaker state and strike tallies answered anyone, while
+    /metrics (same data, prometheus format) already demanded the key (T778).
+    It now rides the exact same gate: keyless = open, keyed = key required
+    for non-loopback peers, loopback exempt."""
+    import types
+
+    import pytest
+    from fastapi import HTTPException
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import serve
+
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    orig = serve._KEY
+    try:
+        # keyless server: /stats open (the same bargain as every route)
+        serve._KEY = ""
+        serve._BUCKETS.clear()
+        assert client.get("/stats").status_code == 200
+
+        # key set: TestClient's peer isn't loopback -> key required
+        serve._KEY = "stats-key-0123456789"
+        serve._BUCKETS.clear()
+        assert client.get("/stats").status_code == 401
+        r = client.get("/stats", headers={"X-API-Key": "stats-key-0123456789"})
+        assert r.status_code == 200 and r.json()["name"] == "bouncer", r.text
+        assert client.get("/stats", headers={"X-API-Key": "nope"}).status_code == 401
+
+        # the loopback exemption is the gate's own (unit — TestClient can't
+        # be loopback): direct local scrape free, remote needs the key
+        class Req:
+            def __init__(self, host, headers=None):
+                self.client = types.SimpleNamespace(host=host)
+                self.headers = headers or {}
+
+        serve._metrics_gate(Req("127.0.0.1"))  # /stats shares this gate
+        with pytest.raises(HTTPException) as e:
+            serve._metrics_gate(Req("203.0.113.5"))
+        assert e.value.status_code == 401
+    finally:
+        serve._KEY = orig
+        serve._BUCKETS.clear()
