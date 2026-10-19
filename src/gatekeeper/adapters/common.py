@@ -204,12 +204,10 @@ def http_json(req, *, timeout: float = 30.0, opener=None, attempts: int = 3,
     Returns parsed JSON, like the copies it replaced.
     """
     import json
-    import random
     import urllib.error
     import urllib.request
 
     open_ = opener or urllib.request.urlopen
-    rnd = rand if rand is not None else random.random
     wait = 0.0
     for attempt in range(attempts):
         if wait:
@@ -233,8 +231,90 @@ def http_json(req, *, timeout: float = 30.0, opener=None, attempts: int = 3,
             if ra is not None:
                 wait = min(ra, retry_after_cap_s)
             else:
-                span = min(backoff_s * (2 ** attempt), backoff_cap_s)
-                wait = span * (0.5 + 0.5 * rnd())  # jitter: never 0, never early
+                wait = backoff_wait(attempt, base_s=backoff_s,
+                                    cap_s=backoff_cap_s, rand=rand)
+
+
+def backoff_wait(attempt: int, *, base_s: float = 1.0, cap_s: float = 60.0,
+                 rand=None) -> float:  # T852 (T853 reuses this)
+    """T852: one wait on the retry/reconnect ladder — pure, no sleeping.
+
+    `base_s` doubles per attempt, capped at `cap_s` (an attempt counter a
+    week long must not overflow the float on its way to the cap), then
+    jittered into [half, full] of the span: never 0 (that's a hot loop
+    against a dead server), never past the cap, and never the same instant
+    for two callers — so a Mattermost restart doesn't synchronize every
+    bot's retries into a thundering herd. `rand` injects the jitter
+    (1.0 = full span, 0.0 = half) so tests stay deterministic.
+    """
+    import random
+
+    rnd = rand if rand is not None else random.random
+    exp = min(attempt, 60)  # clamp: 2**6000 would OverflowError, not wait
+    span = min(base_s * (2 ** exp), cap_s)
+    return span * (0.5 + 0.5 * rnd())
+
+
+async def areconnect(dial, consume, *, name: str, backoff_s: float = 1.0,
+                     cap_s: float = 60.0, stable_s: float = 30.0,
+                     sleep=None, clock=None, rand=None,
+                     health=None, stopping=None):  # T852
+    """T852: keep an async stream connection alive — the reconnect loop a
+    websocket adapter needs (mattermost today).
+
+    `dial()` opens the connection (async context manager); `consume(conn)`
+    reads events until the socket dies or `stopping()`. A dropped socket
+    used to raise straight out of `asyncio.run(...)` and end the process —
+    a Mattermost restart took the bot with it. Now a session that ends
+    without us asking logs one redacted line (T700), records
+    `health.error`, and redials after `backoff_wait`: capped exponential
+    with jitter, forever — a bot outlives its server's restarts. Liveness
+    is time, not traffic: a session that stayed up `stable_s` proves the
+    path works and resets the ladder, while consecutive short-lived
+    sessions (dial failures, a bad token flapping, accept-then-close)
+    escalate — frames alone would lie, since some servers send a `hello`
+    before rejecting you and an idle channel sends nothing for hours.
+    KeyboardInterrupt and SystemExit are BaseException: `except Exception`
+    never catches them — Ctrl-C must stop a bot. `stopping` (T702) exits
+    cleanly at a session boundary, where run_loop exits at a page
+    boundary; worst case a SIGTERM waits out one capped backoff, and a
+    second SIGTERM (install_shutdown) exits immediately.
+    """
+    import asyncio
+
+    sleep = sleep or asyncio.sleep
+    clock = clock or time.monotonic
+    attempt = 0
+    while True:
+        if stopping is not None and stopping():
+            print(f"{name}: shutdown requested — exiting cleanly",
+                  file=sys.stderr, flush=True)
+            return
+        born = clock()
+        err = None
+        try:
+            async with dial() as conn:
+                await consume(conn)
+            if stopping is None or not stopping():
+                # consume only returns early on shutdown — anything else
+                # means the server closed the socket under us
+                err = ConnectionError("server closed the connection")
+        except Exception as e:  # noqa: BLE001 — a dead socket kills no bots
+            err = e
+        if err is not None:
+            print(f"{name} connection error: {redact(err)}",
+                  file=sys.stderr, flush=True)
+            if health is not None:
+                health.error(redact(err))  # T700: no secrets in the health line
+        if clock() - born >= stable_s:
+            attempt = 0  # the session was healthy — restart the ladder
+        if stopping is not None and stopping():
+            print(f"{name}: shutdown requested — exiting cleanly",
+                  file=sys.stderr, flush=True)
+            return
+        await sleep(backoff_wait(attempt, base_s=backoff_s, cap_s=cap_s,
+                                 rand=rand))
+        attempt += 1
 
 
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
@@ -245,7 +325,8 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
     one event. Fetch failures log, back off, and keep the loop alive; a bad
     event costs one log line, never the process. KeyboardInterrupt always
     passes through — Ctrl-C must stop a bot. The Mattermost websocket adapter
-    is async and keeps its own loop; its per-event guard matches this one.
+    is async: its session body lives in mattermost.py and the reconnect loop
+    around it is `areconnect` (T852); its per-event guard matches this one.
     T699: `health` (if given) counts real decisions, records errors, and
     emits its health line when due. T702: `stopping` (if given) is polled at
     page boundaries — SIGTERM (via install_shutdown) finishes the current

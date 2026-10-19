@@ -4,9 +4,11 @@ Usage: MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.
 The only adapter with a dependency: `pip install -e .[mattermost]` (websockets
 extra) — stdlib can't speak RFC6455, and a hand-rolled frame parser is a
 security patch waiting to happen. Posts stream in via `/api/v4/websocket`
-(`posted` events); `handle_slash()` answers slash-command webhooks
-(`MATTERMOST_SLASH_TOKEN` compared constant-time). Flag-only default —
-`BOUNCER_MM_DELETE=1` opts into `deletePost`.
+(`posted` events); the session body is `_session`, wrapped by the shared
+`areconnect` loop — a dropped socket redials with capped, jittered backoff
+(T852) instead of ending the process. `handle_slash()` answers
+slash-command webhooks (`MATTERMOST_SLASH_TOKEN` compared constant-time).
+Flag-only default — `BOUNCER_MM_DELETE=1` opts into `deletePost`.
 """
 from __future__ import annotations
 
@@ -100,12 +102,47 @@ def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,
     return {"action": "command", "command": cmd, "reply": reply}
 
 
+async def _session(ws, *, token, rules, server, can_delete, cap, health,
+                   stopping):
+    """T694+T852: one websocket session — authenticate, then drain events.
+
+    Ends when the socket dies (areconnect redials it) or `stopping` flips
+    (T702: message-boundary exit; areconnect prints the clean-exit line).
+    Returns via `async for` completing — the disconnect itself is
+    areconnect's to observe, log (T700) and back off from.
+    """
+    await ws.send(json.dumps({"action": "authentication", "seq": 1,
+                              "data": {"token": token}}))
+    async for raw in ws:
+        if stopping():  # T702: message boundary exit
+            break
+        msg = json.loads(raw)
+        if msg.get("event") != "posted":
+            continue
+        post = (msg.get("data") or {}).get("post")
+        post = json.loads(post) if isinstance(post, str) else post
+        if not post:
+            continue
+        try:
+            res = handle_post(post, rules, token=token, server=server,
+                              can_delete=can_delete,
+                              cap=cap) or {}  # T701
+            if res.get("action") not in ("ignored", "command"):
+                health.decision()
+        except Exception as e:  # noqa: BLE001 — one bad post, one line
+            from gatekeeper.adapters.common import redact
+            print("post error:", redact(e), file=sys.stderr, flush=True)
+            health.error(redact(e))
+        health.maybe_log()
+
+
 def run():
     import asyncio
 
     from gatekeeper.adapters.common import (
         AdapterError,
         Health,
+        areconnect,
         cfg_get,
         install_shutdown,
         load_config,
@@ -132,37 +169,21 @@ def run():
     health = Health("mattermost")  # T699: same counters as run_loop's
     stopping = install_shutdown("mattermost")  # T702: SIGTERM -> clean exit
 
-    async def _loop():
-        async with websockets.connect(
-                f"{server}/api/v4/websocket",
-                additional_headers={"Authorization": f"Bearer {token}"}) as ws:
-            await ws.send(json.dumps({"action": "authentication", "seq": 1,
-                                      "data": {"token": token}}))
-            async for raw in ws:
-                if stopping():  # T702: message boundary exit
-                    print("mattermost: shutdown requested — exiting cleanly",
-                          file=sys.stderr, flush=True)
-                    break
-                msg = json.loads(raw)
-                if msg.get("event") != "posted":
-                    continue
-                post = (msg.get("data") or {}).get("post")
-                post = json.loads(post) if isinstance(post, str) else post
-                if not post:
-                    continue
-                try:
-                    res = handle_post(post, rules, token=token, server=server,
-                                      can_delete=can_delete,
-                                      cap=cap) or {}  # T701
-                    if res.get("action") not in ("ignored", "command"):
-                        health.decision()
-                except Exception as e:  # noqa: BLE001 — one bad post, one line
-                    from gatekeeper.adapters.common import redact
-                    print("post error:", redact(e), file=sys.stderr, flush=True)
-                    health.error(redact(e))
-                health.maybe_log()
+    def _dial():
+        """T852: one connection attempt — areconnect owns the retry ladder."""
+        return websockets.connect(
+            f"{server}/api/v4/websocket",
+            additional_headers={"Authorization": f"Bearer {token}"})
 
-    asyncio.run(_loop())  # SIGTERM handling is T702's job
+    async def _consume(ws):
+        await _session(ws, token=token, rules=rules, server=server,
+                       can_delete=can_delete, cap=cap, health=health,
+                       stopping=stopping)
+
+    # T852: a dropped socket used to end the process — areconnect redials
+    # with capped, jittered backoff until SIGTERM (T702) says otherwise
+    asyncio.run(areconnect(_dial, _consume, name="mattermost",
+                           health=health, stopping=stopping))
 
 
 if __name__ == "__main__":

@@ -6,11 +6,11 @@
 | Twitch | `adapters/twitch_irc.py` | stdlib only. `TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc` (flag-only, never bans) | require_env, load_rules, redact (delegates to shared pass), dry-run (no-op — print-only), SIGTERM (between reconnects) |
 | Telegram | `adapters/telegram_bot.py` | stdlib only. `TELEGRAM_TOKEN=... python -m gatekeeper.adapters.telegram_bot` (long-poll, `/rules` `/stats` `/help`, flag-only default; `BOUNCER_TG_DELETE=1` opts into deleteMessage) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Matrix | `adapters/matrix_bot.py` | stdlib only. `MATRIX_TOKEN=... MATRIX_HOMESERVER=... python -m gatekeeper.adapters.matrix_bot` (sync timeline, `!bouncer rules` `!bouncer stats`, flag-only default; `BOUNCER_MX_REDACT=1` opts into redactions) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
-| Mattermost | `adapters/mattermost.py` | `pip install -e .[mattermost]`. `MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.mattermost` (websocket `posted` events + `/bouncer` slash webhook, `MATTERMOST_SLASH_TOKEN` compared constant-time; `BOUNCER_MM_DELETE=1` opts into deletePost) | own async loop (per-event guard matches run_loop), Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
+| Mattermost | `adapters/mattermost.py` | `pip install -e .[mattermost]`. `MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.mattermost` (websocket `posted` events + `/bouncer` slash webhook, `MATTERMOST_SLASH_TOKEN` compared constant-time; `BOUNCER_MM_DELETE=1` opts into deletePost) | areconnect + `_session` (T852: dropped socket redials with capped jittered backoff), Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Zulip | `adapters/zulip_bot.py` | stdlib only. `ZULIP_EMAIL=... ZULIP_API_KEY=... ZULIP_SITE=... python -m gatekeeper.adapters.zulip_bot` (event-queue poll, stream messages moderated, PMs/mentions are `bouncer` commands; `BOUNCER_ZL_DELETE=1` opts into delete) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver; pass `secret`+`raw`+`ts`+`signature` to enforce Slack v0 signature verification (fail-closed) | dry-run, redact, verify_signature |
 | Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events; breaker-open results fire too and carry `cause`; http(s) only, and `BOUNCER_FORWARD_ALLOW` (comma-separated hosts) pins exact destinations (T785) | dry-run, redact |
-| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, Health, RateCap, redact, dry_run, install_shutdown, verify_signature, load_config |
+| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, http_json, backoff_wait, areconnect, Health, RateCap, redact, dry_run, install_shutdown, verify_signature, load_config |
 
 The matrix's SDK column is the T703 truth: `common.py` (T691–T709) is the
 whole shared surface — `require_env`/`load_rules`/`load_config` at startup,
@@ -70,8 +70,11 @@ names the variable instead of a raw `KeyError`; blank counts as missing (T691).
 The shared SDK (`common.py`) is `require_env()` + `run_loop()` (T696): every
 sync poller (telegram, matrix, zulip) runs the same fetch/handle loop —
 fetch failures log and back off 5s, a bad event costs one log line, Ctrl-C
-always stops the bot. Mattermost's websocket loop is the async exception;
-its per-event guard matches `run_loop()`'s.
+always stops the bot. Mattermost's websocket session is the async
+exception; its per-event guard matches `run_loop()`'s, and the reconnect
+loop around it is `areconnect()` (T852): a dropped socket logs one
+redacted line, records a health error, and redials with capped exponential
+backoff + jitter — bounded by SIGTERM, never by a server restart.
 
 `BOUNCER_DRY_RUN=1` (T697) applies to every adapter: outbound calls
 (delete/redact/PM/reply/forward) are printed as `[dry-run] would ...` and

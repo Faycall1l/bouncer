@@ -3,11 +3,14 @@ import io
 import json
 import sys
 import urllib.error
+from pathlib import Path
 
 sys.path.insert(0, "src")
 
 from gatekeeper.adapters import common, matrix_bot, mattermost, telegram_bot
 from gatekeeper.adapters import zulip_bot as zulip
+
+ADAPTERS = Path("src/gatekeeper/adapters")
 
 
 class _Resp:
@@ -118,3 +121,212 @@ def test_all_four_api_copies_use_the_shared_helper(monkeypatch):  # T851
     assert matrix_bot.api("tok", "https://hs", "PUT", "/send") == {"stub": True}
     assert zulip.api("bot@x", "key", "https://z", "POST", "/messages") == {"stub": True}
     assert len(seen) == 4, "every bot api() must route through http_json"
+
+
+def test_backoff_wait_doubles_caps_and_jitters():  # T852 (T853 reuses it)
+    """The shared ladder: exponential, capped, jittered into [half, full] —
+    never 0 (that's a hot loop against a dead server), never past the cap."""
+
+    def full(attempt, base_s=1.0, cap_s=60.0):
+        return common.backoff_wait(attempt, base_s=base_s, cap_s=cap_s,
+                                   rand=lambda: 1.0)
+
+    def half(attempt, base_s=1.0, cap_s=60.0):
+        return common.backoff_wait(attempt, base_s=base_s, cap_s=cap_s,
+                                   rand=lambda: 0.0)
+
+    assert full(0) == 1.0 and half(0) == 0.5, "attempt 0 waits base (halved)"
+    assert full(3) == 8.0, "the span doubles per attempt"
+    assert full(10, cap_s=8.0) == 8.0, "the cap is a ceiling, not a target"
+    assert half(10, cap_s=8.0) == 4.0, "jitter still halves the capped span"
+    assert full(10 ** 9) == 60.0, "a week of failures must not OverflowError"
+    for r in (0.0, 0.25, 0.5, 1.0):  # every jitter lands inside the span
+        w = common.backoff_wait(4, base_s=1.0, cap_s=60.0, rand=lambda r=r: r)
+        assert 8.0 <= w <= 16.0, w
+
+
+def test_areconnect_redials_with_escalating_capped_backoff(capsys):  # T852
+    """A dropped socket used to end the process; now it costs one redacted
+    line, one health error, and a jittered wait — escalating while sessions
+    stay short-lived, resetting once one stays up (time, not frames: a
+    server can send `hello` before rejecting your token, and an idle
+    healthy channel sends nothing for hours)."""
+    import asyncio
+
+    t = {"now": 0.0}
+    slept, dials = [], {"n": 0}
+    stop = {"v": False}
+
+    class _Conn:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    def dial():
+        dials["n"] += 1
+        return _Conn()
+
+    async def consume(conn):
+        n = dials["n"]
+        if n == 1:
+            raise ConnectionError("reset by peer")  # short-lived drop
+        if n == 2:
+            return  # server closed us — also short-lived
+        if n == 3:
+            t["now"] += 60  # stable session: proves the path, resets ladder
+            return
+        if n == 4:
+            raise ConnectionError("reset by peer")  # short again
+        t["now"] += 60  # session 5 stays up ...
+        stop["v"] = True  # ... until SIGTERM lands
+
+    async def fake_sleep(s):
+        slept.append(s)
+
+    class _Health:
+        def __init__(self):
+            self.errors = []
+
+        def error(self, msg):
+            self.errors.append(str(msg))
+
+    health = _Health()
+    asyncio.run(common.areconnect(
+        dial, consume, name="t852", sleep=fake_sleep, clock=lambda: t["now"],
+        rand=lambda: 1.0, health=health, stopping=lambda: stop["v"]))
+
+    assert dials["n"] == 5, "four dead sessions, four redials, then shutdown"
+    # 1, 2 escalate across short sessions; the stable session 3 resets the
+    # ladder so session 4 waits 1.0 again — not 4.0 — and 2.0 once more
+    assert slept == [1.0, 2.0, 1.0, 2.0], f"ladder shape: {slept}"
+    err = capsys.readouterr().err
+    assert err.count("t852 connection error:") == 4, "one line per dead session"
+    assert "reset by peer" in err and "server closed the connection" in err
+    assert len(health.errors) == 4, "every drop lands in health (T699/T700)"
+    assert "t852: shutdown requested — exiting cleanly" in err
+
+
+def test_areconnect_lets_ctrl_c_through():  # T852: BaseException is sacred
+    import asyncio
+
+    slept = []
+    stop = {"v": False}
+
+    class _Conn:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    async def consume(conn):
+        raise KeyboardInterrupt
+
+    async def fake_sleep(s):
+        slept.append(s)
+        stop["v"] = True  # only reachable if KeyboardInterrupt were swallowed
+
+    try:
+        asyncio.run(common.areconnect(lambda: _Conn(), consume, name="t852",
+                                      sleep=fake_sleep,
+                                      stopping=lambda: stop["v"]))
+        raise AssertionError("Ctrl-C must end a bot, not reconnect it")
+    except KeyboardInterrupt:
+        pass
+    assert slept == [], "no backoff after Ctrl-C"
+
+
+def test_areconnect_exits_cleanly_before_dialing(capsys):  # T852 + T702
+    """SIGTERM while disconnected: no new connection, one clean-exit line."""
+    import asyncio
+
+    dials = {"n": 0}
+    slept = []
+
+    def dial():
+        dials["n"] += 1
+        raise AssertionError("shutdown must not open connections")
+
+    async def fake_sleep(s):
+        slept.append(s)
+
+    asyncio.run(common.areconnect(dial, lambda c: None, name="t852",
+                                  sleep=fake_sleep, stopping=lambda: True))
+    err = capsys.readouterr().err
+    assert dials["n"] == 0 and slept == [], "exit before the ladder runs"
+    assert "t852: shutdown requested — exiting cleanly" in err
+
+
+def test_mattermost_run_wires_areconnect():  # T852
+    """run() owns no loop anymore — the redial ladder lives in common.py
+    (test_p37 pins: no `while True` in mattermost, `async for` stays here)."""
+    src = (ADAPTERS / "mattermost.py").read_text()
+    assert "asyncio.run(areconnect(_dial, _consume" in src
+    assert "async def _loop" not in src, "the old single-shot closure is gone"
+
+
+def test_mattermost_session_streams_posts_until_shutdown(monkeypatch):  # T852
+    """The extracted session body behaves exactly as _loop did: auth frame
+    first, non-posted frames skipped, one decision per moderated post, and
+    a message-boundary exit when SIGTERM flips the flag."""
+    import asyncio
+
+    handled = []
+    stop = {"v": False}
+
+    def fake_handle_post(post, rules, *, token=None, server=None,
+                         can_delete=False, api_fn=None, out=None, cap=None):
+        handled.append(post["id"])
+        stop["v"] = True  # SIGTERM lands mid-session
+        return {"action": "normal"}
+
+    monkeypatch.setattr(mattermost, "handle_post", fake_handle_post)
+
+    class _WS:
+        def __init__(self, frames):
+            self.frames = list(frames)
+            self.sent = []
+
+        async def send(self, payload):
+            self.sent.append(json.loads(payload))
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            if not self.frames:
+                raise StopAsyncIteration
+            return json.dumps(self.frames.pop(0))
+
+    class _Health:
+        def __init__(self):
+            self.decisions = 0
+            self.errors = []
+
+        def decision(self):
+            self.decisions += 1
+
+        def error(self, msg):
+            self.errors.append(str(msg))
+
+        def maybe_log(self):
+            pass
+
+    ws = _WS([
+        {"event": "hello"},  # not a posted event: skipped, not a decision
+        {"event": "posted", "data": {}},  # no post: skipped
+        {"event": "posted",
+         "data": {"post": json.dumps({"id": "p1", "message": "hi"})}},
+        {"event": "posted",
+         "data": {"post": json.dumps({"id": "p2", "message": "unread"})}},
+    ])
+    health = _Health()
+    asyncio.run(mattermost._session(ws, token="tok", rules={}, server="https://mm",
+                                    can_delete=False, cap=None, health=health,
+                                    stopping=lambda: stop["v"]))
+    assert ws.sent and ws.sent[0]["action"] == "authentication", "auth first"
+    assert ws.sent[0]["data"]["token"] == "tok"
+    assert handled == ["p1"], "the boundary exit wins before p2 is moderated"
+    assert health.decisions == 1 and health.errors == []

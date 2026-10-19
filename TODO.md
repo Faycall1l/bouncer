@@ -940,7 +940,7 @@
 
 ## P45 Adapter depth (T851–T870)
 - [x] T851 adp: shared HTTP helper with retry/backoff — 429/5xx retry honoring Retry-After (replaces the four single-shot copies: telegram/mattermost/matrix/zulip api() now route through common.http_json)
-- [ ] T852 adp: mattermost websocket reconnect with backoff (a dropped socket kills the process today)
+- [x] T852 adp: mattermost websocket reconnect with backoff — shared areconnect + backoff_wait loop in common.py (a dropped socket used to kill the process; now: redacted log line, health.error, capped jittered redial, ladder resets after a stable session)
 - [ ] T853 adp: run_loop backoff gains jitter + exponential cap (fixed 5s, no jitter, infinite retries)
 - [ ] T854 adp: discord gains Health + RateCap parity (neither today)
 - [ ] T855 adp: twitch gains Health parity (never bans, but should still report)
