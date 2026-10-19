@@ -212,6 +212,64 @@ def cmd_adjudicate(args) -> int:  # T865: operator verdict on one queued row
     return 0
 
 
+def cmd_config(args) -> int:  # T871: standalone config lint
+    """`bouncer config validate` — parse bouncer.toml (E_ADAPTER) and/or a
+    GateConfig JSON (E_CONFIG: unknown keys, bad ranges, wrong shape,
+    malformed JSON) without running a decision, a server, or the doctor.
+    No paths given = the default adapter file (absent is fine); an
+    explicitly named file that doesn't exist fails. Exit 0 all valid,
+    1 any failure, 2 a bare `config` with no subcommand."""
+    import os
+
+    from gatekeeper.adapters.common import AdapterError, load_config
+    from gatekeeper.config import ConfigError, GateConfig
+
+    if getattr(args, "cfg_cmd", None) != "validate":
+        print("bouncer: config needs a subcommand (validate)", file=sys.stderr)
+        return 2
+    toml_path = getattr(args, "toml", None)
+    json_path = getattr(args, "json", None)
+    if toml_path is None and json_path is None:  # default target: adapter file
+        toml_path = os.environ.get("BOUNCER_CONFIG", "").strip() or "bouncer.toml"
+    bad = 0
+    if toml_path is not None:
+        if not os.path.exists(toml_path):
+            if getattr(args, "toml", None) is not None:  # named: must exist
+                print(f"fail: {toml_path} — no such file")
+                bad += 1
+            else:
+                print(f"ok: {toml_path} absent (defaults)")
+        else:
+            try:
+                load_config(toml_path)
+                print(f"ok: {toml_path}")
+            except AdapterError as e:  # E_ADAPTER names the file
+                print(f"fail: {toml_path} — {e}")
+                bad += 1
+    if json_path is not None:
+        try:
+            with open(json_path) as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                raise ConfigError("E_CONFIG: expected a JSON object of gate keys")
+            cfg = GateConfig.from_dict(data)
+            cfg.validate()
+            print(f"ok: {json_path}")
+        except FileNotFoundError:
+            print(f"fail: {json_path} — no such file")
+            bad += 1
+        except json.JSONDecodeError as e:
+            print(f"fail: {json_path} — not valid JSON: {e}")
+            bad += 1
+        except ConfigError as e:  # E_CONFIG: unknown keys or bad ranges
+            print(f"fail: {json_path} — {e}")
+            bad += 1
+        except OSError as e:
+            print(f"fail: {json_path} — unreadable: {e.strerror or e}")
+            bad += 1
+    return 1 if bad else 0
+
+
 def cmd_stats(args) -> int:
     from gatekeeper.cache import CACHE
     from gatekeeper.pool import POOL  # T461
@@ -548,6 +606,15 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     aj.add_argument("row_id")
     aj.add_argument("verdict", choices=("approve", "reject"))
     aj.set_defaults(fn=cmd_adjudicate)
+    cf = sub.add_parser("config")  # T871: standalone config lint
+    cf_sub = cf.add_subparsers(dest="cfg_cmd")
+    cv = cf_sub.add_parser("validate")  # lint only — no decision, no server
+    cv.add_argument("--toml", default=None,
+                    help="adapter TOML (default: BOUNCER_CONFIG or bouncer.toml)")
+    cv.add_argument("--json", default=None,
+                    help="GateConfig JSON (same shape as check --config)")
+    cf.set_defaults(fn=cmd_config)
+    cv.set_defaults(fn=cmd_config)
     md = sub.add_parser("models")  # T538
     md.set_defaults(fn=cmd_models)
     ps = sub.add_parser("presets")  # T539

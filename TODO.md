@@ -961,7 +961,7 @@
 - [x] T870 test: P45 adapter-depth sweep — test_p45_adapter_depth_sweep pins all 20 boxes ticked, every one has a receipt outside TODO.md, the docs this batch touched cite only known boxes, and the T868 capability table exists
 
 ## P46 CLI, rules, storage (T871–T890)
-- [ ] T871 cli: bouncer config validate — standalone lint of bouncer.toml + GateConfig JSON (today: doctor-only)
+- [x] T871 cli: bouncer config validate — standalone lint of bouncer.toml (E_ADAPTER, absent-default ok, named-missing fails) and GateConfig JSON (E_CONFIG unknown keys, bad ranges, non-object shape, malformed JSON); exit 0/1/2; README operator block + tests/test_p46.py
 - [ ] T872 cli: pack diff — compare two packs, added/removed/changed rules, exit 2 on drift
 - [ ] T873 cli: pack sign/verify — sha256 manifest over rule ids+text, tamper-evident packs
 - [ ] T874 cli: check --file — batch scoring from a file, one message per line, JSON out
