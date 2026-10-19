@@ -14,8 +14,7 @@ State lives in four places (paths are yours; defaults shown):
 |---|---|---|---|
 | audit log | `bouncer-audit.jsonl` (`BOUNCER_AUDIT`) | every decision | hashes only, never text (T273); append-only |
 | review queue | `review-queue.jsonl` (`BOUNCER_REVIEW`) | flags/escalations | raw text ≤500 chars/row, file is 0600 (T784) |
-| counters + strikes | any path you pick | `bouncer snapshot save FILE` | 0600 via the atomic writer (T783) |
-| decision cache | in-process | — | not backed up; it rebuilds itself |
+| counters + strikes + cache | any path you pick | `bouncer snapshot save FILE` | 0600 via the atomic writer (T783); the cache section holds live entries only (T877) |
 
 The audit log is append-only, so a plain copy is a consistent snapshot:
 
@@ -24,16 +23,17 @@ cp -a bouncer-audit.jsonl "audit-$(date +%F-%H%M).jsonl"
 bouncer snapshot save snap-$(date +%F).json
 ```
 
-Honest scope: counters and strikes live in process memory (per worker), so
-`snapshot save` sees what *that* process accumulated — with the default
-`--workers 1` (T322) that's everything; with more workers, save from the
-one that serves the traffic you care about.
+Honest scope: counters, strikes and the cache live in process memory (per
+worker), so `snapshot save` sees what *that* process accumulated — with
+the default `--workers 1` (T322) that's everything; with more workers,
+save from the one that serves the traffic you care about.
 
 ## Restore
 
-* **counters + strikes**: `bouncer snapshot load FILE`. An unknown schema
+* **counters + strikes + cache**: `bouncer snapshot load FILE`. An unknown schema
   version (`v` not 1 or 2) refuses with `E_SNAPSHOT` (T438+T876) —
-  nothing is half-applied. A v1 snapshot from an older bouncer migrates
+  nothing is half-applied, and a malformed cache section refuses the same
+  way before anything is applied (T877). A v1 snapshot from an older bouncer migrates
   in memory to v2 and the load line says so; its stats section rides the
   same migration (v1 predates the per-adapter counters, T867). A snapshot
   from a *different bouncer version* warns on
@@ -41,7 +41,10 @@ one that serves the traffic you care about.
   old and new, so a restore never downgrades a standing ban.
 * **audit log / review queue**: they're plain JSONL — `cp` them back to
   the env-var paths and keep the mode at 0600.
-* After a restore the cache is empty and repopulates on the next decisions.
+* The cache section restores still-fresh entries and prunes expired ones
+  at load time (T877); a snapshot with no cache section (v1, or saved
+  before T877) restores an empty cache that repopulates on the next
+  decisions.
 
 ## Rotate (API key)
 

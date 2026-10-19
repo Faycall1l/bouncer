@@ -374,16 +374,19 @@ def cmd_snapshot(args) -> int:  # T437+T438
 
     from gatekeeper import __version__
     from gatekeeper import strikes as _strikes
+    from gatekeeper.cache import CACHE  # T877: the cache rides along
     from gatekeeper.persist import SnapshotError, atomic_write, read_json
     from gatekeeper.stats import restore as _restore
     from gatekeeper.stats import snapshot as _snap
     if args.action == "save":
         snap = _snap()
         doc = {"v": 2, "t": int(_t.time()), "bouncer": __version__,  # T876
-               "stats": snap, "strikes": dict(_strikes._strikes)}
+               "stats": snap, "strikes": dict(_strikes._strikes),
+               "cache": CACHE.dump()}  # T877: live decisions only
         atomic_write(args.file, _json.dumps(doc, indent=2))
         print(f"snapshot -> {args.file} "
-              f"(total={sum(snap['counts'].values())}, users={len(doc['strikes'])})")
+              f"(total={sum(snap['counts'].values())}, users={len(doc['strikes'])},"
+              f" cache={len(doc['cache']['entries'])})")
         return 0
     data = read_json(args.file)
     v = data.get("v")
@@ -394,6 +397,8 @@ def cmd_snapshot(args) -> int:  # T437+T438
         raise SnapshotError(f"E_SNAPSHOT: unsupported snapshot version {v!r}")
     if not isinstance(data.get("strikes", {}), dict):  # v2 contract (T876)
         raise SnapshotError("E_SNAPSHOT: strikes table must be an object")
+    if "cache" in data:  # T877: every section validated before any applies
+        CACHE.check(data["cache"])
     if data.get("bouncer") != __version__:
         print(f"bouncer: snapshot from {data.get('bouncer')} (running {__version__})",
               file=sys.stderr)
@@ -401,8 +406,10 @@ def cmd_snapshot(args) -> int:  # T437+T438
     for user, n in (data.get("strikes", {}) or {}).items():
         if isinstance(n, int) and n > 0:
             _strikes._strikes[user] = max(_strikes._strikes.get(user, 0), n)
+    cached = CACHE.restore(data["cache"]) if "cache" in data else 0  # T877
     print(f"snapshot <- {args.file}"
-          + (" (migrated v1 -> v2)" if migrated else ""))  # T876: say so
+          + (" (migrated v1 -> v2)" if migrated else "")  # T876: say so
+          + (f", cache={cached}" if "cache" in data else ""))
     return 0
 
 

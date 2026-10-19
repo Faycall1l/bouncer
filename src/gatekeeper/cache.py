@@ -67,33 +67,49 @@ class TTLCache:
             return {"hits": self.hits, "misses": self.misses, "size": len(self._d),
                     "hit_rate": round(self.hits / tot, 3) if tot else 0.0}  # T245
 
-    def save(self, path: str) -> str:  # T436
-        """Persist live entries atomically; returns the path written."""
-        import json as _json
-
-        from .persist import atomic_write
+    def dump(self) -> dict:  # T877: live entries as a snapshot section
         now = time.time()
         with self._lock:
             live = {k: [exp, v] for k, (exp, v) in self._d.items() if exp > now}
-        atomic_write(path, _json.dumps({"v": 1, "entries": live}))
-        return path
+        return {"v": 1, "entries": live}
 
-    def load(self, path: str) -> int:  # T436: expired entries pruned on read
-        from .persist import SnapshotError, read_json
-        data = read_json(path)
-        if data.get("v") != 1 or not isinstance(data.get("entries"), dict):
+    @staticmethod
+    def check(doc) -> None:  # T877: validate a section before anything applies
+        from .persist import SnapshotError
+        if (not isinstance(doc, dict) or doc.get("v") != 1
+                or not isinstance(doc.get("entries"), dict)):
             raise SnapshotError("E_SNAPSHOT: bad cache snapshot")
+        for pair in doc["entries"].values():  # entries too — hostile docs die
+            if not isinstance(pair, (list, tuple)) or len(pair) != 2:  # here, coded
+                raise SnapshotError("E_SNAPSHOT: bad cache entry")
+            try:
+                float(pair[0])
+            except (TypeError, ValueError):
+                raise SnapshotError("E_SNAPSHOT: bad cache entry") from None
+
+    def restore(self, doc: dict) -> int:  # T877: merge a dump() back
+        self.check(doc)
         now = time.time()
         n = 0
         with self._lock:
-            for k, pair in data["entries"].items():
-                exp, v = pair
-                if exp > now and isinstance(v, dict):
+            for k, (exp, v) in doc["entries"].items():  # check() passed: safe
+                if float(exp) > now and isinstance(v, dict):
                     self._d[k] = (float(exp), v)
                     n += 1
             while len(self._d) > self.maxsize:
                 self._d.popitem(last=False)
         return n
+
+    def save(self, path: str) -> str:  # T436+T877: file wrapper over dump()
+        import json as _json
+
+        from .persist import atomic_write
+        atomic_write(path, _json.dumps(self.dump()))
+        return path
+
+    def load(self, path: str) -> int:  # T436+T877: file wrapper over restore()
+        from .persist import read_json
+        return self.restore(read_json(path))
 
 
 def _env_int(name: str, default: int) -> int:

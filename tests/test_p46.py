@@ -317,3 +317,71 @@ def test_snapshot_v2_migrates_v1_and_rejects_unknown(tmp_path, capsys):  # T876
     assert _st.standing("legacyuser")["strikes"] == 1, "nothing half-applied"
     _st.reset()
     reset_stats()
+
+
+def test_snapshot_carries_the_decision_cache(tmp_path, capsys):  # T877
+    """snapshot save/load carries the decision cache: live entries ride in
+    the doc and are counted on both lines, restore merges them back and
+    prunes expired ones, a section-less (v1) snapshot restores none and
+    says nothing, and a malformed section refuses before anything applies."""
+    import time
+
+    from gatekeeper.cache import CACHE
+    from gatekeeper.stats import get_stats, record, reset_stats
+
+    reset_stats()
+    CACHE.clear()
+    key = CACHE.key("warm message", {"r": "t"}, 0.85, 0.9)
+    CACHE.set(key, {"action": "allow", "rule": "ok"})
+
+    f = tmp_path / "c.json"
+    assert main(["snapshot", "save", str(f)]) == 0
+    doc = json.loads(f.read_text())
+    assert "cache" in doc and doc["cache"]["v"] == 1, "v1-shaped section"
+    assert key in doc["cache"]["entries"], "the live entry rides along"
+    assert "cache=1" in capsys.readouterr().out, "counted on the save line"
+
+    # round-trip: empty cache in, the entry back
+    CACHE.clear()
+    assert main(["snapshot", "load", str(f)]) == 0
+    out = capsys.readouterr().out
+    assert "cache=1" in out, out
+    hit = CACHE.get(key)
+    assert hit is not None and hit["action"] == "allow", "merged back"
+
+    # expired entries are pruned at restore, never resurrected
+    stale = tmp_path / "stale.json"
+    stale.write_text(json.dumps(dict(
+        doc, cache={"v": 1, "entries":
+                    {"stale": [time.time() - 5, {"action": "allow"}]}})))
+    CACHE.clear()
+    assert main(["snapshot", "load", str(stale)]) == 0
+    assert "cache=0" in capsys.readouterr().out
+
+    # a pre-T877 v1 doc has no section: migration note, no cache note
+    bare = {k: doc[k] for k in ("v", "t", "bouncer", "stats", "strikes")}
+    bare["v"] = 1
+    bpath = tmp_path / "bare.json"
+    bpath.write_text(json.dumps(bare))
+    CACHE.clear()
+    assert main(["snapshot", "load", str(bpath)]) == 0
+    out = capsys.readouterr().out
+    assert "migrated v1 -> v2" in out and "cache=" not in out, out
+    assert CACHE.get(key) is None, "no section, no entries"
+
+    # malformed sections refuse before anything applies
+    reset_stats()
+    record("allow", "ok", 1.0)
+    p1 = tmp_path / "badsec.json"
+    p1.write_text(json.dumps(dict(doc, cache={"v": 1, "entries": "nope"})))
+    assert main(["snapshot", "load", str(p1)]) == 4
+    assert "bad cache snapshot" in capsys.readouterr().err
+    assert get_stats()["actions"]["allow"] == 1, "nothing half-applied"
+    p2 = tmp_path / "badentry.json"
+    p2.write_text(json.dumps(dict(
+        doc, cache={"v": 1, "entries": {"k": 5}})))
+    assert main(["snapshot", "load", str(p2)]) == 4
+    assert "bad cache entry" in capsys.readouterr().err
+    assert get_stats()["actions"]["allow"] == 1, "still nothing applied"
+    reset_stats()
+    CACHE.clear()

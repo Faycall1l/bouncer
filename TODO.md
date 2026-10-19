@@ -967,7 +967,7 @@
 - [x] T874 cli: check --file — batch scoring, one message per line, JSONL out with 1-based line numbers and the CLI reason; blanks skipped; exit = worst action (0/2/3); MESSAGE/--file is an XOR checked before rules, argument errors exit 4; README example
 - [x] T875 cli: bouncer completion bash|zsh — scripts generated from build_parser's own subparsers and option actions (new commands complete with no generator edit), emitted to stdout for source <(...); README operator block; test parses both scripts with bash -n / zsh -n
 - [x] T876 persist: snapshot schema v2 at both levels — doc save stamps v, stats.snapshot declares the adapters section, load migrates v1 in memory (noted on stdout) and refuses unknown versions plus non-object strikes before applying anything; export --stats stamps a loadable v2 doc; runbook restore section rewritten
-- [ ] T877 persist: cache snapshot wired into snapshot save/load (TTLCache.save/load are dead code today)
+- [x] T877 persist: cache snapshot wired into snapshot save/load (TTLCache.save/load are dead code today)
 - [ ] T878 cli: pack init writes pack metadata (version, created, lang) — typed packs, not bare dicts
 - [ ] T879 rules: pack lint detects exact-duplicate ids + whitespace-only text (beyond validate_rules)
 - [ ] T880 rules: pack lint warns when a rule's text duplicates another preset's rule verbatim
