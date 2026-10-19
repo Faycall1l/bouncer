@@ -906,7 +906,7 @@
 - [x] T819 test: version strings consistent (0.4.0 everywhere)
 - [x] T820 test: adapters matrix table matches runnable stubs
 - [x] T821 test: docs link checker green (T798)
-- [ ] T822 test: packaging smoke (wheel builds + installs + --version)
+- [x] T822 test: packaging smoke (wheel builds + installs + --version)
 - [ ] T823 test: env-var docs coverage still enforced (extends T609)
 - [ ] T824 test: golden note for 0.4.0 behavior deltas
 - [ ] T825 pkg: tag-vs-version CI guard passes for v0.4.0

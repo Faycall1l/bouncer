@@ -125,3 +125,61 @@ def test_root_entry_files_link_checker_green():  # T821 (extends T798)
     assert not problems, "\n".join(problems)
     # floor: the README alone links into docs/ and BENCHMARKS many times
     assert checked >= 10, f"only {checked} relative links found — scanner broken?"
+
+
+def test_packaging_smoke_release_tree(tmp_path):  # T822
+    """Build wheel AND sdist on the release tree, install the wheel into a
+    fresh venv, and hold `bouncer --version` against the pyproject version
+    itself (the string the tag will carry).
+
+    T713 builds the wheel and inspects contents; T721 installs and checks
+    `--version` against `__version__`. This is the release-box superset:
+    both artifacts must build, and the installed console script must agree
+    with pyproject directly — no import chain in between.
+    """
+    import glob
+    import os
+    import shutil
+    import subprocess
+
+    import pytest
+    uv = shutil.which("uv") or os.path.expanduser("~/.local/bin/uv")
+    if not os.path.exists(uv):
+        pytest.skip("uv not available — the packaging smoke needs a builder")
+    version = _pyproject_version()
+    # one PEP 517 build produces both artifacts from the same tree
+    r = subprocess.run([uv, "build", "-o", str(tmp_path)],
+                       check=False, capture_output=True, text=True,
+                       timeout=300, cwd=str(Path.cwd()))
+    assert r.returncode == 0, r.stderr
+    wheels = glob.glob(str(tmp_path / "*.whl"))
+    sdists = glob.glob(str(tmp_path / "*.tar.gz"))
+    assert len(wheels) == 1 and len(sdists) == 1, (wheels, sdists)
+    # both artifacts are stamped with the release version
+    assert f"-{version}-" in os.path.basename(wheels[0]), wheels[0]
+    assert f"-{version}.tar.gz" in os.path.basename(sdists[0]), sdists[0]
+    # install the wheel --no-deps: entry-point wiring must stand alone
+    venv = tmp_path / "venv"
+    r = subprocess.run([uv, "venv", str(venv)], check=False,
+                       capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr
+    py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    r = subprocess.run([uv, "pip", "install", "--python", str(py),
+                        "--no-deps", wheels[0]],
+                       check=False, capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr
+    # the installed console script answers with the pyproject version
+    bin_dir = venv / ("Scripts" if os.name == "nt" else "bin")
+    script = bin_dir / ("bouncer.exe" if os.name == "nt" else "bouncer")
+    assert script.exists(), "console script not installed"
+    r = subprocess.run([str(script), "--version"], check=False,
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == f"bouncer {version}", r.stdout
+    # and the installed package imports with the same version (no src/)
+    r = subprocess.run([str(py), "-c",
+                        "import gatekeeper; print(gatekeeper.__version__)"],
+                       check=False, capture_output=True, text=True, timeout=60,
+                       cwd=str(tmp_path))  # cwd away from the repo: no src/ shadow
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == version, (r.stdout, r.stderr)
