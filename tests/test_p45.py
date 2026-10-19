@@ -807,3 +807,24 @@ def test_discord_removed_notice_is_a_threaded_reply():  # T859
     assert kw["delete_after"] == 10, "tombstone, not a monument"
     src = (ADAPTERS / "discord_bot.py").read_text()
     assert "await send_removed_notice(msg, res)" in src, "on_message wired"
+
+
+def test_telegram_command_replies_thread_under_their_trigger():  # T860
+    """Notices reply in-thread: the sendMessage carries the
+    reply_to_message_id of the command it answers; a caller with no
+    trigger (reply_to=None) still sends bare, exactly as before."""
+    from gatekeeper.adapters.telegram_bot import _command, handle_update
+
+    calls = []
+    handle_update({"message": {"text": "/rules", "message_id": 7,
+                               "chat": {"id": 1}, "from": {"id": 99}}},
+                  {"r": "t"}, token="tok",
+                  api_fn=lambda *a, **k: calls.append((a, k)))
+    args, kwargs = calls[0]
+    assert args[1] == "sendMessage" and kwargs["chat_id"] == 1
+    assert kwargs["reply_to_message_id"] == 7, "threads under the command"
+    assert kwargs["text"].startswith("active:")
+    bare = []
+    _command("/help", {"r": "t"}, 1, "tok",
+             lambda *a, **k: bare.append((a, k)), print)
+    assert "reply_to_message_id" not in bare[0][1], "no trigger, no thread"

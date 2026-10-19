@@ -30,8 +30,11 @@ def api(token: str, method: str, **params):
     return http_json(req, timeout=60)
 
 
-def _command(text: str, rules: dict, chat_id, token, api_fn, out):
-    """T692: `/` commands answer in place; no model call, no side effects."""
+def _command(text: str, rules: dict, chat_id, token, api_fn, out,
+             reply_to=None):
+    """T692: `/` commands answer in place; no model call, no side effects.
+    T860: the answer threads under its trigger (reply_to_message_id), so
+    in a busy group the notice says which command it answers."""
     from gatekeeper.adapters.common import dry_run
     cmd = text.split("@", 1)[0].lstrip("/").split()[0].lower()
     if cmd == "rules":
@@ -46,7 +49,8 @@ def _command(text: str, rules: dict, chat_id, token, api_fn, out):
     else:
         return {"action": "ignored", "reason": "unknown-command"}
     if token and not dry_run():
-        api_fn(token, "sendMessage", chat_id=chat_id, text=reply)
+        api_fn(token, "sendMessage", chat_id=chat_id, text=reply,
+               **({"reply_to_message_id": reply_to} if reply_to else {}))  # T860
     else:
         out(("[dry-run] would send: " if token else "") + reply)
     return {"action": "command", "command": cmd, "reply": reply}
@@ -63,7 +67,8 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
     if not text or chat_id is None:
         return {"action": "ignored", "reason": "no-text"}  # stickers/embeds
     if text.startswith("/"):
-        return _command(text, rules, chat_id, token, api_fn, out)
+        return _command(text, rules, chat_id, token, api_fn, out,
+                        reply_to=msg.get("message_id"))  # T860: in-thread
     if cap is not None and not cap.allow(chat_id):  # T701: flood != model fuel
         out(f"[rate-limited] chat {chat_id} over the per-user cap; "
             "message not moderated")

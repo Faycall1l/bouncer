@@ -948,7 +948,7 @@
 - [x] T857 adp: adapters pass lang= via detected script — new common.detect_lang maps detect_script to ar/zh/ru (pins the multilingual checkpoint, T457); latin/other stay None (laya's auto stays the documented route); all seven call sites wired
 - [x] T858 strikes: keys namespaced platform:user — as_user_id gained a platform argument (telegram/matrix/zulip/mattermost/discord/twitch/slack at all seven sites; CLI keys stay raw and remain addressable); also fixed the decision cache (T221) swallowing per-user data: cached/coalesced payloads never carry strikes, and new _accrue re-runs on every exit path so a cached repeat still accrues
 - [x] T859 adp: discord notices become threaded replies (message_reference) — send_removed_notice extracted as a module coroutine: reference=msg anchors the notice to the message it removed, in a thread msg.channel is the thread
-- [ ] T860 adp: telegram notices reply in-thread (reply_to_message_id)
+- [x] T860 adp: telegram notices reply in-thread (reply_to_message_id) — command replies carry the trigger's message_id; reply_to=None callers still send bare
 - [ ] T861 adp: matrix notices carry the reply relation
 - [ ] T862 adp: mattermost notices thread under the offending post (root_id)
 - [ ] T863 adp: zulip stream replies keep the topic (today only PMs answer)
