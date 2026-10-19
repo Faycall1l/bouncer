@@ -44,4 +44,23 @@ edges:
 * Nothing here re-records the table: same base model, same gates, same
   thresholds. Re-record only if a gate row in `docs/gates.md` changes.
 
+## 0.4.0 behavior notes (T824)
+
+Verdicts on this transcript are unchanged on 0.4.0 too — eval gates,
+adapters, packaging and CI are all plumbing around the ladder; no gate
+row, threshold or model changed. Two edges differ, and only for inputs
+this transcript doesn't exercise:
+
+* History now has a token budget (`max_context_tokens`, default 1000,
+  T756): requests with long histories get older turns trimmed and report
+  `ctx_dropped` — the same message with a huge history can verdict
+  differently than 0.3.0's unbounded window. This transcript is
+  single-turn, so nothing is dropped.
+* `BOUNCER_QUESTIONS` (T755) pins the question count to 3 or 5; the
+  default stays 5 (identical coverage), but `3` trades gate coverage for
+  latency, which can move low-confidence rows like the first one above.
+
+New counters around the same verdicts: request coalescing and warm-pool
+hits surface in `/stats`; none of them reach the result body.
+
 Terms used here are defined in the [Glossary](glossary.md).
