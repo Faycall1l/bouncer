@@ -44,9 +44,13 @@ def _command(body, rules, event, token, homeserver, api_fn, out):
         return {"action": "ignored", "reason": "unknown-command"}
     if token and homeserver and not dry_run():
         import time
+        content = {"msgtype": "m.notice", "body": reply}  # T861: reply relation
+        if event.get("event_id"):
+            content["m.relates_to"] = {"m.in_reply_to":
+                                       {"event_id": event["event_id"]}}
         api_fn(token, homeserver, "PUT",
                f"/rooms/{event['room_id']}/send/m.room.message/"
-               f"{int(time.time() * 1000)}", {"msgtype": "m.notice", "body": reply})
+               f"{int(time.time() * 1000)}", content)
     else:
         out(("[dry-run] would send notice: " if token else "") + reply)
     return {"action": "command", "command": cmd, "reply": reply}

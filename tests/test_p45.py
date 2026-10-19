@@ -828,3 +828,27 @@ def test_telegram_command_replies_thread_under_their_trigger():  # T860
     _command("/help", {"r": "t"}, 1, "tok",
              lambda *a, **k: bare.append((a, k)), print)
     assert "reply_to_message_id" not in bare[0][1], "no trigger, no thread"
+
+
+def test_matrix_notice_carries_the_reply_relation():  # T861
+    """Notices answer with the m.in_reply_to relation on their trigger —
+    the notice threads under the command in the timeline; an event
+    without an event_id sends a bare notice, as before."""
+    from gatekeeper.adapters.matrix_bot import _command, handle_event
+
+    calls = []
+    handle_event(
+        {"type": "m.room.message", "event_id": "$cmd1", "room_id": "!r",
+         "sender": "@u:example.org",
+         "content": {"msgtype": "m.text", "body": "!bouncer rules"}},
+        {"r": "t"}, token="tok", homeserver="https://mx.example",
+        api_fn=lambda *a, **k: calls.append((a, k)))
+    args, _kw = calls[0]
+    content = args[4]
+    assert args[2] == "PUT" and "/rooms/!r/send/m.room.message/" in args[3]
+    assert content["msgtype"] == "m.notice" and content["body"].startswith("active:")
+    assert content["m.relates_to"]["m.in_reply_to"]["event_id"] == "$cmd1"
+    bare = []
+    _command("!bouncer rules", {"r": "t"}, {"room_id": "!r"}, "tok",
+             "https://mx.example", lambda *a, **k: bare.append((a, k)), print)
+    assert "m.relates_to" not in bare[0][0][4], "no event_id, no relation"
