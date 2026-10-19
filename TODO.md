@@ -936,7 +936,7 @@
 - [x] T847 test: systemone parity — same caps/breaker/audit as /predict
 - [x] T848 test: shutdown drain — in-flight request completes, audit flushed (covered by test_graceful_shutdown_drains_and_flushes, added with T839)
 - [x] T849 fix: P44 reds — any failure the sweep finds, fixed here (CI red since T839: test_graceful_shutdown_drains_and_flushes assumed warmup was faster than its 0.3s in-flight sleep; CI has huggingface/laya so warmup outlasted it and the drain legitimately measured ~0 — work now starts after __aenter__)
-- [ ] T850 test: P44 server-hardening sweep (every box ticked, receipts outside TODO.md)
+- [x] T850 test: P44 server-hardening sweep (every box ticked, receipts outside TODO.md)
 
 ## P45 Adapter depth (T851–T870)
 - [ ] T851 adp: shared HTTP helper with retry/backoff — 429/5xx retry honoring Retry-After (4 single-shot copies today)

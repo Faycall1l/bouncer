@@ -465,7 +465,7 @@ def test_batch_shares_one_deadline():  # T837
         gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
 
 
-def test_serve_flags_reach_uvicorn(monkeypatch):  # T838
+def test_serve_flags_reach_uvicorn(monkeypatch):  # T838 (receipt for T845)
     """timeout_keep_alive and limit_concurrency were unconfigurable —
     proxies drop idle connections at 5s and there's no backpressure valve.
     The serve subcommand now wires both through to uvicorn.run, and when
@@ -495,7 +495,7 @@ def test_serve_flags_reach_uvicorn(monkeypatch):  # T838
     assert "limit_concurrency" not in seen
 
 
-def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  # T839
+def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  # T839 (receipt for T848)
     """The shutdown used to print a note and hope. Now the lifespan waits for
     queued/running predicts (a timed-out _predict_safe does NOT cancel the
     future — the model keeps running in its thread), fsyncs+ closes the
@@ -846,3 +846,36 @@ def test_systemone_parity_caps_breaker_audit(tmp_path, monkeypatch):  # T847
         gatekeeper._router = None
         gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
         importlib.reload(_au)
+
+
+def test_p44_server_hardening_sweep():  # T850: P44 closer — every box ticked,
+    # every box has a receipt outside TODO.md, no invented citations
+    import re
+    from pathlib import Path
+
+    todo = Path("TODO.md").read_text()
+    p44 = [b for b in re.findall(r"- \[[ x]\] (T\d{3,4})\b", todo)
+           if 831 <= int(b[1:]) <= 850]
+    assert sorted(p44) == [f"T{n}" for n in range(831, 851)], p44
+    for b in p44:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+    assert "## P44 Server hardening (T831–T850)" in todo
+
+    # receipts live OUTSIDE TODO.md — across this batch's own surfaces
+    corpus = (Path("README.md").read_text()
+              + Path("CONTRIBUTING.md").read_text()
+              + Path("verify.sh").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if (p.is_file()
+                    and p.suffix in (".md", ".py", ".yml", ".yaml", ".sh")):
+                corpus += p.read_text()
+    for b in p44:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity: every T-number the surfaces this batch changed
+    # cite is a box TODO.md actually knows — invented receipts fail here
+    for name in ("api.md", "threat-model.md", "SECURITY.md", "runbook.md"):
+        f = Path("docs") / name
+        for t in set(re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
