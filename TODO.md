@@ -962,7 +962,7 @@
 
 ## P46 CLI, rules, storage (T871–T890)
 - [x] T871 cli: bouncer config validate — standalone lint of bouncer.toml (E_ADAPTER, absent-default ok, named-missing fails) and GateConfig JSON (E_CONFIG unknown keys, bad ranges, non-object shape, malformed JSON); exit 0/1/2; README operator block + tests/test_p46.py
-- [ ] T872 cli: pack diff — compare two packs, added/removed/changed rules, exit 2 on drift
+- [x] T872 cli: pack diff OLD NEW — added/removed/changed rules one per line (+/-/~), identical packs say so and exit 0, drift exits 2; shared hardened _read_pack now guards show/lint/diff alike (missing, unreadable, non-object); cookbook documents it
 - [ ] T873 cli: pack sign/verify — sha256 manifest over rule ids+text, tamper-evident packs
 - [ ] T874 cli: check --file — batch scoring from a file, one message per line, JSON out
 - [ ] T875 cli: shell completion — bouncer completion bash|zsh generated from the parser

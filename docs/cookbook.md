@@ -95,7 +95,10 @@ bouncer presets                               # es, fr, ar + the English packs
 * `bouncer pack init FILE --preset gaming` exports any pack as editable
   JSON — translate the rule *texts*, keep the ids slugs, ship it back with
   `--rules FILE`. Ids stay language-neutral on purpose (they're machine
-  keys, and `E_RULES_ID` enforces it).
+  keys, and `E_RULES_ID` enforces it). `bouncer pack diff OLD NEW` lists
+  what changed between two packs (`+` added, `-` removed, `~` changed,
+  one rule per line) and exits 2 on drift, so a CI job can gate on it
+  (T872).
 
 ## 5. Back up (and restore) state
 

@@ -70,3 +70,45 @@ def test_config_validate_lints_toml_and_gate_json(tmp_path, monkeypatch,
     # a bare `config` is a usage error, not a crash
     assert main(["config"]) == 2
     assert "validate" in capsys.readouterr().err
+
+
+def test_pack_diff_reports_added_removed_changed(tmp_path, capsys):  # T872
+    """pack diff compares two packs: added (+), removed (-) and changed (~)
+    rules each on their own line, an exact match says so and exits 0, any
+    drift exits 2 — while missing/unreadable/non-object files keep the
+    hardened T786 exits and messages."""
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    a.write_text(json.dumps({"spam": "no spam", "hate": "no hate",
+                             "old": "legacy rule"}))
+    b.write_text(json.dumps({"spam": "no spam at all", "hate": "no hate",
+                             "new": "fresh rule"}))
+
+    assert main(["pack", "diff", str(a), str(b)]) == 2, "drift exits 2"
+    out = capsys.readouterr().out
+    assert "+ new: fresh rule" in out, out
+    assert "- old: legacy rule" in out, out
+    assert "~ spam: 'no spam' -> 'no spam at all'" in out, out
+    assert "+1 -1 ~1" in out, out
+    assert "hate" not in out, "unchanged rules stay quiet"
+
+    assert main(["pack", "diff", str(a), str(a)]) == 0
+    assert "packs identical: 3 rules" in capsys.readouterr().out
+
+    # one file is not a diff
+    assert main(["pack", "diff", str(a)]) == 4
+    assert "two files" in capsys.readouterr().err
+    # missing and unreadable files keep the hardened read (T786)
+    assert main(["pack", "diff", str(tmp_path / "nope.json"), str(b)]) == 4
+    assert "no pack file" in capsys.readouterr().err
+    bad = tmp_path / "bad.json"
+    bad.write_text("{oops")
+    assert main(["pack", "diff", str(bad), str(b)]) == 4
+    assert "cannot read pack" in capsys.readouterr().err
+    arr = tmp_path / "arr.json"
+    arr.write_text("[1, 2]")
+    assert main(["pack", "diff", str(arr), str(b)]) == 4
+    assert "is not a rules object" in capsys.readouterr().err
+    # the same hardened read drives pack lint's --rules path
+    assert main(["pack", "lint", "--rules", str(arr)]) == 4
+    assert "is not a rules object" in capsys.readouterr().err

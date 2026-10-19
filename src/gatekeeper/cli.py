@@ -370,6 +370,32 @@ def cmd_export(args) -> int:
     return 0
 
 
+def _read_pack(path: str):
+    """T786+T872: one hardened read for every pack file — missing/unreadable/
+    hostile nesting die with a machine code line, never a traceback; a
+    parsed non-object isn't a rules pack ({id: text}) either. Returns the
+    rules dict, or None (message already printed; caller exits)."""
+    import os as _os
+    if not _os.path.exists(path):
+        print(f"bouncer: no pack file {path!r}", file=sys.stderr)
+        return None
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (OSError, ValueError, RecursionError) as e:
+        # ValueError == JSONDecodeError; the C scanner raises
+        # RecursionError (not ValueError) on hostile deep nesting on
+        # some versions — either way the pack is unreadable (T814)
+        print(f"bouncer: cannot read pack {path!r} ({e})",
+              file=sys.stderr)
+        return None
+    if not isinstance(data, dict):
+        print(f"bouncer: {path!r} is not a rules object ({{id: text}})",
+              file=sys.stderr)
+        return None
+    return data
+
+
 def cmd_pack(args) -> int:
     from gatekeeper import get_preset
     from gatekeeper.rules import RuleError, validate_rules, warn_overlapping
@@ -385,22 +411,34 @@ def cmd_pack(args) -> int:
         print(f"pack -> {args.file} ({len(template)} template rules from "
               f"{args.preset!r}); edit ids/text then `bouncer pack lint --rules {args.file}`")
         return 0
-    if args.rules:
-        # T786: adversarial packs die HERE with machine codes, not as raw
-        # tracebacks — the file used to be opened unguarded
-        import os as _os
-        if not _os.path.exists(args.rules):
-            print(f"bouncer: no pack file {args.rules!r}", file=sys.stderr)
-            return 4
-        try:
-            with open(args.rules) as f:
-                rules = json.load(f)
-        except (OSError, ValueError, RecursionError) as e:
-            # ValueError == JSONDecodeError; the C scanner raises
-            # RecursionError (not ValueError) on hostile deep nesting on
-            # some versions — either way the pack is unreadable (T814)
-            print(f"bouncer: cannot read pack {args.rules!r} ({e})",
+    if args.action == "diff":  # T872: compare two packs, exit 2 on drift
+        if not args.file or not args.file2:
+            print("bouncer: pack diff needs two files: bouncer pack diff OLD NEW",
                   file=sys.stderr)
+            return 4
+        old = _read_pack(args.file)
+        if old is None:
+            return 4
+        new = _read_pack(args.file2)
+        if new is None:
+            return 4
+        added = sorted(set(new) - set(old))
+        removed = sorted(set(old) - set(new))
+        changed = sorted(k for k in set(old) & set(new) if old[k] != new[k])
+        for rid in added:
+            print(f"+ {rid}: {new[rid]}")
+        for rid in removed:
+            print(f"- {rid}: {old[rid]}")
+        for rid in changed:
+            print(f"~ {rid}: {old[rid]!r} -> {new[rid]!r}")
+        if not (added or removed or changed):
+            print(f"packs identical: {len(old)} rules")
+            return 0
+        print(f"pack drift: +{len(added)} -{len(removed)} ~{len(changed)}")
+        return 2
+    if args.rules:
+        rules = _read_pack(args.rules)  # T786+T872: the shared hardened read
+        if rules is None:
             return 4
     else:
         rules = get_preset(args.preset)
@@ -635,8 +673,9 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     sn.add_argument("file")
     sn.set_defaults(fn=cmd_snapshot)
     pk = sub.add_parser("pack")  # T173+T174
-    pk.add_argument("action", choices=["show", "lint", "init"])  # T545
+    pk.add_argument("action", choices=["show", "lint", "init", "diff"])  # T545+T872
     pk.add_argument("file", nargs="?", default=None)  # T545: init target path
+    pk.add_argument("file2", nargs="?", default=None)  # T872: diff NEW
     pk.add_argument("--force", action="store_true")  # T545: overwrite on init
     pk.add_argument("--preset", default="gaming")
     pk.add_argument("--rules")
