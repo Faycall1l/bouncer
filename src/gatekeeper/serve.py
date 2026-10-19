@@ -18,9 +18,15 @@ async def _lifespan(app: FastAPI):  # T226: lifespan replaces deprecated on_even
         r.predict({"message": "warmup"}, {"q": {"type": "noul", "instructions": "warmup?"}})
     except Exception as e:  # noqa: BLE001 — first real call loads instead
         print(f"warmup skipped: {e}", flush=True)
-    yield
-    print('{"event": "shutdown", "note": "in-flight predict calls drain with workers"}',  # T179
-          flush=True)
+    yield  # T839: the shutdown note below used to be ALL this was — now we
+    # actually drain the inference pool (a timed-out predict keeps running in
+    # its thread) and fsync+close the audit tail before the process goes.
+    from . import audit, drain_inference
+    drained_s = drain_inference()
+    audit.close()
+    import json as _json
+    print(_json.dumps({"event": "shutdown", "inference_drained_s": round(drained_s, 3),
+                       "audit": "closed"}), flush=True)
 
 
 def _cors_origins() -> list:

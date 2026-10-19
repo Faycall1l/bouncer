@@ -55,6 +55,14 @@ def flush() -> None:  # T758: force the batched tail to disk (shutdown hooks)
             _SINCE = 0
 
 
+def close() -> None:  # T839: graceful shutdown — fsync the tail, drop the handle
+    with _LOCK:
+        if _F is not None:
+            _F.flush()
+            os.fsync(_F.fileno())
+        _close_handle()
+
+
 def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: float,
                  lang: str | None = None, context_n: int = 0,
                  thresholds: tuple | None = None) -> None:

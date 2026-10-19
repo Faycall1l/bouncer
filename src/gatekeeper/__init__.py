@@ -213,6 +213,27 @@ def _executor() -> ThreadPoolExecutor:
 _EXEC = None
 
 
+def drain_inference() -> float:  # T839
+    """Shutdown helper: wait for queued/running predicts, then drop the pool.
+
+    `_predict_safe` timeouts do NOT cancel the model future — the call keeps
+    running in its thread. Python joins non-daemon pool threads at interpreter
+    exit anyway, so waiting adds no new unboundedness; draining in the lifespan
+    just makes the order deterministic (drain, then flush the audit tail)
+    instead of an atexit accident. `_EXEC` resets so a later submit (tests,
+    reload) lazily builds a fresh pool. Seconds waited, 0.0 if pool never ran.
+    """
+    global _EXEC
+    ex = _EXEC
+    if ex is None:
+        return 0.0
+    import time as _t
+    t0 = _t.monotonic()
+    ex.shutdown(wait=True)
+    _EXEC = None
+    return _t.monotonic() - t0
+
+
 def _predict_safe(router: Router, state: dict, questions: dict, timeout_s: float,
                   model: str | None = None) -> dict:
     """T025+T026: timeout guard, one retry, escalate-shaped fallback on failure."""

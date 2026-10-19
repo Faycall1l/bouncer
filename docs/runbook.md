@@ -59,7 +59,11 @@ version — the two-key window means no client deadline:
    body, not the status code.
 2. Let in-flight requests finish: uvicorn completes open requests on
    SIGTERM; serve enforces its own per-request timeouts (`E_TIMEOUT`), so
-   one timeout window is a safe wait.
+   one timeout window is a safe wait. On shutdown the lifespan drains the
+   inference pool (a timed-out predict keeps running in its thread — this
+   waits for it) and fsyncs+closes the audit tail before the process goes;
+   the last log line reports both: `{"event": "shutdown",
+   "inference_drained_s": ..., "audit": "closed"}` (T839).
 3. `bouncer snapshot save` before the process exits, then stop it.
 4. The review queue drains by hand: `bouncer review` to list, adjudicate
    out-of-band, then `bouncer review --clear --yes` (T318) — `--clear`

@@ -493,3 +493,66 @@ def test_serve_flags_reach_uvicorn(monkeypatch):  # T838
     assert rc == 0
     assert "timeout_keep_alive" not in seen
     assert "limit_concurrency" not in seen
+
+
+def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  # T839
+    """The shutdown used to print a note and hope. Now the lifespan waits for
+    queued/running predicts (a timed-out _predict_safe does NOT cancel the
+    future — the model keeps running in its thread), fsyncs+ closes the
+    audit tail, and the shutdown line reports the measured drain."""
+    import asyncio
+    import importlib
+    import json as _json
+    import time as _time
+
+    import gatekeeper
+    import gatekeeper.audit as _au
+    from gatekeeper import serve
+
+    audit = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BOUNCER_AUDIT", str(audit))
+    importlib.reload(_au)
+
+    # a predict still in flight when shutdown begins
+    gatekeeper._EXEC = None
+    ex = gatekeeper._executor()
+    fut = ex.submit(_time.sleep, 0.3)
+
+    # one decision lands while batching is active (legacy mode writes
+    # per-call, so force the batched handle to prove the tail is flushed)
+    monkeypatch.setattr(_au, "_FSYNC_N", 3)
+    _au.log_decision("t839 in-flight decision", "ok", 0.9, "allow", 1.0)
+    # T758 flushes to the OS per write; what batching defers is the fsync —
+    # so the observable pre-shutdown state is the still-open handle
+    assert _au._F is not None, "batching should hold an open handle"
+
+    try:
+        # drive the lifespan directly: p13env's FastAPI has a broken
+        # telemetry import in its lifespan scope path, and the drain/flush
+        # logic under test lives entirely in our post-yield block
+        async def _run():
+            agen = serve._lifespan(None)
+            await agen.__aenter__()   # startup: warmup (laya absent -> skipped)
+            await agen.__aexit__(None, None, None)  # shutdown: drain + close
+
+        asyncio.run(_run())
+
+        # the in-flight predict finished BEFORE the audit closed
+        assert fut.done(), "shutdown must drain running predicts first"
+        assert gatekeeper._EXEC is None, "pool is dropped after the drain"
+
+        # the buffered tail reached the fsynced file, handle released
+        assert _au._F is None, "shutdown closes the audit handle"
+        row = _json.loads(audit.read_text().splitlines()[-1])
+        assert row["action"] == "allow" and row["msg"], "batched tail must land on shutdown"
+        assert "t839" not in row["msg"], "message stays hashed (T029)"
+
+        # the shutdown line is a measurement, not a note
+        line = [l for l in capsys.readouterr().out.splitlines()
+                if '"shutdown"' in l][-1]
+        ev = _json.loads(line)
+        assert ev["inference_drained_s"] >= 0.25, ev  # it really waited
+        assert ev["audit"] == "closed"
+    finally:
+        gatekeeper._EXEC = None
+        importlib.reload(_au)  # restore the default audit path/mode
