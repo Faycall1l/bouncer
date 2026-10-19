@@ -31,6 +31,12 @@ jobs:
     permissions:
       contents: write  # creating a release needs it; nothing else does
     steps:
+      # T830 fix: the release job used to start with no checkout, so
+      # `gh release create --verify-tag --generate-notes` died with
+      # "fatal: not a git repository" on the first real tag (v0.4.0) —
+      # full history, since --generate-notes diffs against the previous tag
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
       - uses: actions/download-artifact@v4
         with: { name: wheel, path: dist }
       - uses: actions/download-artifact@v4

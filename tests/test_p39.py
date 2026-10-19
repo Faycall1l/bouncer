@@ -98,6 +98,10 @@ def test_ci_release_attaches_wheel_and_sbom():  # T736
     assert "dist/*.whl" in job and "dist/sbom.json" in job
     # the write is explicitly permitted, and only for it
     assert "contents: write" in job
+    # T830: gh release create needs a git repo (--verify-tag,
+    # --generate-notes diffs tags) — the job must check out first
+    assert "actions/checkout" in job, "release job has no checkout (T830 bug)"
+    assert "fetch-depth: 0" in job, "generate-notes needs full tag history"
     # re-runs stay idempotent: an existing release gets --clobber uploads
     assert "--clobber" in job
     assert "GH_TOKEN" in job
