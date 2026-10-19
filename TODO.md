@@ -913,5 +913,5 @@
 - [x] T826 sec: SECURITY.md updated for 0.4.0 surface
 - [x] T827 docs: BENCHMARKS honest-limits refreshed for this release
 - [x] T828 suite: final full green + stats line
-- [ ] T829 final: push release commit
+- [x] T829 final: push release commit
 - [ ] T830 final: tag v0.4.0 + release notes published
