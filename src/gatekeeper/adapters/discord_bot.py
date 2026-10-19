@@ -74,6 +74,17 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
     return res
 
 
+async def send_removed_notice(msg, res):  # T859
+    """The post-delete notice, as a threaded reply rather than a bare
+    channel message: `reference=msg` keeps message_reference on it, so the
+    notice stays anchored to the message it removed — in a thread
+    msg.channel is the thread, in a channel the reference carries the
+    context. delete_after=10 stays: a tombstone, not a monument."""
+    await msg.channel.send(
+        f"removed ({res['rule']} @ {res['confidence']:.2f})",
+        delete_after=10, reference=msg)
+
+
 def run(token: str | None = None, preset: str = "gaming"):
     from gatekeeper.adapters.common import AdapterError
     try:
@@ -140,8 +151,7 @@ def run(token: str | None = None, preset: str = "gaming"):
             except Exception:  # noqa: BLE001 — fall back to flagging in place
                 await msg.add_reaction("⚠️")
                 return
-            await msg.channel.send(f"removed ({res['rule']} @ {res['confidence']:.2f})",
-                                   delete_after=10)
+            await send_removed_notice(msg, res)  # T859: threaded reply
         elif res["action"] in ("flag", "escalate"):
             await msg.add_reaction("⚠️")
 

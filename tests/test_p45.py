@@ -778,3 +778,32 @@ def test_adapters_pass_detected_lang_to_moderate(monkeypatch):  # T857
     for name in ("telegram_bot", "matrix_bot", "zulip_bot", "mattermost",
                  "discord_bot", "twitch_irc", "webhooks"):  # all seven wired
         assert "detect_lang(" in (ADAPTERS / f"{name}.py").read_text(), name
+
+
+def test_discord_removed_notice_is_a_threaded_reply():  # T859
+    """The post-delete notice carries message_reference: it stays anchored
+    to the message it removed instead of floating as a bare channel line
+    (in a thread, msg.channel IS the thread)."""
+    import asyncio
+
+    from gatekeeper.adapters.discord_bot import send_removed_notice
+
+    sent = []
+
+    class _Chan:
+        async def send(self, content, **kw):
+            sent.append((content, kw))
+
+    class _Msg:
+        content = "buy followers now"
+        channel = _Chan()
+
+    msg = _Msg()
+    asyncio.run(send_removed_notice(
+        msg, {"action": "delete", "rule": "no-spam", "confidence": 0.98}))
+    content, kw = sent[0]
+    assert content == "removed (no-spam @ 0.98)"
+    assert kw["reference"] is msg, "notice anchors to the message it removed"
+    assert kw["delete_after"] == 10, "tombstone, not a monument"
+    src = (ADAPTERS / "discord_bot.py").read_text()
+    assert "await send_removed_notice(msg, res)" in src, "on_message wired"
