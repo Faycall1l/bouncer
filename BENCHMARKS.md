@@ -274,9 +274,9 @@ checks (T656/T657) before burning quota.
 
 ## Honest limits
 
-_(T109, refreshed T407)_ — kept out of the heading on purpose: the anchor
-`#honest-limits` is linked from README and data/README, and refreshes
-must not break it.
+_(T109, refreshed T407, refreshed again T827 for 0.4.0)_ — kept out of the
+heading on purpose: the anchor `#honest-limits` is linked from README and
+data/README, and refreshes must not break it.
 
 * Template bootstrap: 6 message shapes × 3 rule-sets. Zero-shot numbers measure
   transfer to unseen phrasings, not open-world chat.
@@ -289,3 +289,12 @@ must not break it.
 * Regex baseline (0.403 post-T637, was 0.480 pre-hard-negatives) beats zero-shot
   (0.305) on template data by construction: templates are link/caps-shaped.
   It says nothing about open chat.
+* 0.4.0 refresh (T827): the numbers above are single-machine measurements
+  (macOS arm64) gated in CI as *budgets* (gate.py threshold flags) — CI
+  proves nothing got slower, it does not reproduce these exact values on
+  other hardware. The zero-shot row is marked **STALE** in the
+  Known-numbers table (T815): re-measuring needs laya plus the 12k template
+  set, neither of which ships here — don't quote 0.305 as a current number.
+  Long-history requests are now trimmed to a history token budget
+  (`max_context_tokens`, 1000 default, T756): benchmarks with huge
+  conversation windows measure the trimmed path, not an unbounded one.
