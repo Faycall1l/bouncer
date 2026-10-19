@@ -931,7 +931,7 @@
 - [x] T842 serve: /stats gated behind the key when BOUNCER_KEY set (parity with /metrics — /stats is open today)
 - [x] T843 docs: 413-before-auth documented as the intentional cheap-reject (api.md + threat model)
 - [x] T844 docs: api.md request-limits section — body-cap semantics, batch deadline, extra fields, per-worker rate amplification
-- [ ] T845 test: CLI serve flags actually reach uvicorn.run kwargs
+- [x] T845 test: CLI serve flags actually reach uvicorn.run kwargs (covered by test_serve_flags_reach_uvicorn, added with T838)
 - [ ] T846 test: oversized chunked body rejected without reading it to the end
 - [ ] T847 test: systemone parity — same caps/breaker/audit as /predict
 - [ ] T848 test: shutdown drain — in-flight request completes, audit flushed
