@@ -350,7 +350,8 @@ async def areconnect(dial, consume, *, name: str, backoff_s: float = 1.0,
 
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
              backoff_cap_s: float = 60.0, rand=None,
-             sleep=time.sleep, health=None, stopping=None):
+             sleep=time.sleep, health=None, stopping=None,
+             message_of=None):  # T866: event -> text for the forwarder
     """T696: one poll loop for every sync adapter (telegram/matrix/zulip).
 
     `fetch()` returns the next page of events (or None); `handle()` consumes
@@ -369,7 +370,12 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
     ladder. Retries stay infinite: an outage is not something the bot can
     fix by exiting, and a second SIGTERM (install_shutdown) force-exits —
     worst case one capped backoff stands between SIGTERM and shutdown.
+    T866: `message_of` (if given) extracts the event's text so every
+    interesting decision fires `forward_if_interesting` (BOUNCER_FORWARD_URL)
+    from platform traffic, not just the HTTP receivers; allow/ignored/
+    command results are skipped by the forwarder's own filter.
     """
+    from gatekeeper.adapters.webhooks import forward_if_interesting  # T866
     attempt = 0
     while True:
         if stopping is not None and stopping():  # T702: page boundary exit
@@ -397,6 +403,8 @@ def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
                 if health is not None and res.get("action") not in (
                         "ignored", "command"):
                     health.decision()  # T699: ignored traffic isn't a decision
+                if message_of is not None:  # T866: platforms forward too
+                    forward_if_interesting(res, message_of(ev) or "")
             except Exception as e:  # noqa: BLE001
                 print(f"{name} event error: {redact(e)}",
                       file=sys.stderr, flush=True)

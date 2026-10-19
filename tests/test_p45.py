@@ -1005,3 +1005,40 @@ def test_adjudicate_approve_reject_and_strike_amnesty(monkeypatch,
         assert rv.list_queue()[-1]["verdict"] == "approve"
     finally:
         st.reset()  # T249: test isolation
+
+
+def test_run_loop_forwards_platform_traffic(monkeypatch):  # T866
+    """BOUNCER_FORWARD_URL fires from platform loops now: run_loop hands
+    every handled decision to forward_if_interesting with the event's text
+    (message_of); allow traffic never leaves the box, and no URL means no
+    fire and no raise."""
+    import gatekeeper.adapters.webhooks as wh
+
+    sent = []
+    monkeypatch.setattr(wh, "forward", lambda url, ev: sent.append((url, ev)))
+    monkeypatch.setenv("BOUNCER_FORWARD_URL", "https://ops.example/hook")
+    pages = [[("spam text", {"action": "delete", "rule": "no-spam",
+                             "confidence": 0.9, "reason": "matched"}),
+             ("hello", {"action": "allow", "rule": "ok", "confidence": 0.99})]]
+
+    def fetch():
+        return pages.pop(0) if pages else []
+
+    common.run_loop(fetch, lambda ev: ev[1], name="t866",
+                    stopping=lambda: not pages,
+                    message_of=lambda ev: ev[0])
+    assert len(sent) == 1, "only the delete fires"
+    url, payload = sent[0]
+    assert url == "https://ops.example/hook"
+    assert payload["action"] == "delete" and payload["message"] == "spam text"
+    assert payload["rule"] == "no-spam" and payload["reason"] == "matched"
+    sent.clear()
+    monkeypatch.delenv("BOUNCER_FORWARD_URL")
+    pages[:] = [[("spam text", {"action": "delete", "rule": "no-spam",
+                                "confidence": 0.9})]]
+    common.run_loop(fetch, lambda ev: ev[1], name="t866",
+                    stopping=lambda: not pages,
+                    message_of=lambda ev: ev[0])
+    assert sent == [], "no URL: nothing fires, nothing raises"
+    for name in ("telegram_bot", "matrix_bot", "zulip_bot"):  # all three wired
+        assert "message_of=lambda" in (ADAPTERS / f"{name}.py").read_text(), name

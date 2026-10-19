@@ -167,7 +167,8 @@ def run():
                      can_redact=can_redact, cap=cap)  # T701
 
     run_loop(fetch, handle, name="matrix",  # T696 loop, T699 health line
-             health=Health("matrix"), stopping=stopping)  # T702
+             health=Health("matrix"), stopping=stopping,  # T702
+             message_of=lambda e: ((e.get("content") or {}).get("body") or ""))  # T866
 
 
 if __name__ == "__main__":

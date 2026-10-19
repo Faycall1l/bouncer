@@ -137,7 +137,8 @@ def run():
                       cap=cap)  # T701
 
     run_loop(fetch, handle, name="telegram",  # T696 loop, T699 health line
-             health=Health("telegram"), stopping=stopping)  # T702
+             health=Health("telegram"), stopping=stopping,  # T702
+             message_of=lambda u: (u.get("message") or {}).get("text", ""))  # T866
 
 
 if __name__ == "__main__":

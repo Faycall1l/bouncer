@@ -846,7 +846,7 @@ def test_adapters_install_shutdown():  # T702: every adapter, one way or another
     # the pollers hand the flag to run_loop; mattermost/twitch/discord check
     # it in their own loops (discord's is hard: discord.py owns cleanup)
     for name in ("telegram_bot", "matrix_bot", "zulip_bot"):
-        assert "stopping=stopping)" in (ADAPTERS / f"{name}.py").read_text()
+        assert "stopping=stopping," in (ADAPTERS / f"{name}.py").read_text()
     assert "hard=True" in (ADAPTERS / "discord_bot.py").read_text()
     assert "if stopping():" in (ADAPTERS / "twitch_irc.py").read_text()
     assert "if stopping():" in (ADAPTERS / "mattermost.py").read_text()

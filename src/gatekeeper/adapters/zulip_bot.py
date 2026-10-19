@@ -154,7 +154,8 @@ def run():
                      can_delete=can_delete, cap=cap)  # T701
 
     run_loop(fetch, handle, name="zulip",  # T696 loop, T699 health line
-             health=Health("zulip"), stopping=stopping)  # T702
+             health=Health("zulip"), stopping=stopping,  # T702
+             message_of=lambda e: ((e.get("message") or {}).get("content") or ""))  # T866
 
 
 if __name__ == "__main__":
