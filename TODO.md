@@ -914,4 +914,4 @@
 - [x] T827 docs: BENCHMARKS honest-limits refreshed for this release
 - [x] T828 suite: final full green + stats line
 - [x] T829 final: push release commit
-- [ ] T830 final: tag v0.4.0 + release notes published
+- [x] T830 final: tag v0.4.0 + release notes published
