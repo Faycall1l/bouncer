@@ -84,8 +84,9 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
             "message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import dry_run
-    res = dict(moderate(text, rules))
+    from gatekeeper.adapters.common import as_user_id, dry_run
+    res = dict(moderate(text, rules,  # T856: strikes accrue per platform user
+                        user_id=as_user_id(msg.get("sender_id"))))
     res["deleted"] = False
     if (res["action"] == "delete" and can_delete and creds
             and msg.get("id") is not None):

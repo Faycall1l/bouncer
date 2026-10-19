@@ -69,8 +69,9 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
             "message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import dry_run
-    res = dict(moderate(text, rules))
+    from gatekeeper.adapters.common import as_user_id, dry_run
+    res = dict(moderate(text, rules,  # T856: strikes accrue per platform user
+                        user_id=as_user_id((msg.get("from") or {}).get("id"))))
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token:
         if dry_run():  # T697: print the intent, never the act

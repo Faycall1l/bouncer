@@ -72,8 +72,9 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
             "per-user cap; message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import dry_run
-    res = dict(moderate(body, rules))
+    from gatekeeper.adapters.common import as_user_id, dry_run
+    res = dict(moderate(body, rules,  # T856: strikes accrue per platform user
+                        user_id=as_user_id(event.get("sender"))))
     res["redacted"] = False
     if res["action"] == "delete" and can_redact and token and homeserver:
         if dry_run():  # T697: print the intent, never the act

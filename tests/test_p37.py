@@ -105,7 +105,7 @@ def test_telegram_flag_only_by_default(monkeypatch):  # T692: delete is opt-in
     import gatekeeper
     from gatekeeper.adapters import telegram_bot as tg
     monkeypatch.setattr(gatekeeper, "moderate",
-                        lambda text, rules: {"action": "delete",
+                        lambda text, rules, **kw: {"action": "delete",
                                              "rule": "sin-spam",
                                              "confidence": 0.99})
     rules = {"sin-spam": "t"}
@@ -207,7 +207,7 @@ def test_matrix_commands_and_redaction_opt_in(monkeypatch):  # T693
         {"action": "ignored", "reason": "unknown-command"}
     # redaction is opt-in and needs token + homeserver to fire
     monkeypatch.setattr(gatekeeper, "moderate",
-                        lambda text, r: {"action": "delete", "rule": "sin-spam",
+                        lambda text, r, **kw: {"action": "delete", "rule": "sin-spam",
                                          "confidence": 0.99})
     calls = []
     ev = _mx_event("buy followers", event_id="$bad")
@@ -271,7 +271,7 @@ def test_mattermost_posts_moderated_flag_only(monkeypatch):  # T694
     assert res["action"] in ("allow", "flag", "delete", "escalate")
     assert res["deleted"] is False
     monkeypatch.setattr(gatekeeper, "moderate",
-                        lambda text, r: {"action": "delete", "rule": "sin-spam",
+                        lambda text, r, **kw: {"action": "delete", "rule": "sin-spam",
                                          "confidence": 0.99})
     calls = []
     res = handle_post(_mm_post("buy followers", pid="p9"), rules)
@@ -378,7 +378,7 @@ def test_zulip_delete_is_opt_in(monkeypatch):  # T695: flag-only default
     import gatekeeper
     from gatekeeper.adapters import zulip_bot as zl
     monkeypatch.setattr(gatekeeper, "moderate",
-                        lambda text, r: {"action": "delete", "rule": "sin-spam",
+                        lambda text, r, **kw: {"action": "delete", "rule": "sin-spam",
                                          "confidence": 0.99})
     rules = {"sin-spam": "t"}
     calls = []
@@ -471,7 +471,7 @@ def test_dry_run_prints_never_posts(monkeypatch, capsys):  # T697
     monkeypatch.setenv("BOUNCER_DRY_RUN", "1")
     assert dry_run() is True
     monkeypatch.setattr(gatekeeper, "moderate",
-                        lambda t, r: {"action": "delete", "rule": "sin-spam",
+                        lambda t, r, **kw: {"action": "delete", "rule": "sin-spam",
                                       "confidence": 0.99})
     rules = {"sin-spam": "t"}
     calls = []
@@ -683,7 +683,7 @@ def test_adapter_output_is_redacted(monkeypatch, capsys):  # T700: wired
     import gatekeeper
     monkeypatch.setenv("TELEGRAM_TOKEN", "sekrit-token-xyz")
     monkeypatch.setattr(gatekeeper, "moderate",
-                        lambda t, r: {"action": "flag", "rule": "r",
+                        lambda t, r, **kw: {"action": "flag", "rule": "r",
                                       "confidence": 0.9})
     from gatekeeper.adapters.telegram_bot import handle_update
     handle_update(_tg_message("give me sekrit-token-xyz please "
@@ -753,7 +753,7 @@ def test_rate_cap_blocks_model_calls(monkeypatch, capsys):  # T701 e2e
     from gatekeeper.adapters.telegram_bot import handle_update
     calls = []
     monkeypatch.setattr(gatekeeper, "moderate",
-                        lambda t, r: (calls.append(t),
+                        lambda t, r, **kw: (calls.append(t),
                                       {"action": "allow", "rule": "ok",
                                        "confidence": 1.0})[1])
     rules = {"r": "t"}
@@ -1080,7 +1080,7 @@ def test_forward_fires_on_breaker_open(monkeypatch):  # T707
 # Each drives the adapter's own entry point through a complete event
 # sequence and asserts the exact outbound transcript — no network, no SDK.
 
-def _no_spam_or_allow(text, rules):  # deterministic session decisions
+def _no_spam_or_allow(text, rules, **kw):  # T856: kw carries user_id
     if "buy followers" in text:
         return {"action": "delete", "rule": "no-spam", "confidence": 0.99}
     return {"action": "allow", "rule": "ok", "confidence": 1.0}

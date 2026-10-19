@@ -66,6 +66,7 @@ def receive_slack_event(body, rules, *, secret=None, raw=None, ts=None,  # T704
     ):
         raise SlackError("E_SLACK: bad signature (T704)")
     from gatekeeper import moderate
+    from gatekeeper.adapters.common import as_user_id
     if not isinstance(body, dict):  # T301
         raise SlackError(f"E_SLACK: event body is {type(body).__name__}, expected dict")
     text = body.get("text", "")
@@ -74,7 +75,8 @@ def receive_slack_event(body, rules, *, secret=None, raw=None, ts=None,  # T704
     if body.get("subtype") == "bot_message" or body.get("bot_id"):  # T302: no bot loops
         return {"action": "allow", "rule": "ok", "confidence": 1.0, "ignored": True,
                 "reason": "slack: bot message ignored"}
-    return moderate(text, rules)
+    return moderate(text, rules,  # T856: strikes accrue per platform user
+                    user_id=as_user_id(body.get("user")))
 
 
 def forward(url: str, event: dict) -> None:  # T079

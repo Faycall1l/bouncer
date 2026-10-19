@@ -402,7 +402,7 @@ def test_discord_moderate_message_caps_then_counts(monkeypatch, capsys):  # T854
 
     calls = []
 
-    def fake_moderate(text, rules):
+    def fake_moderate(text, rules, **kw):
         calls.append(text)
         return {"action": "delete", "rule": "r", "confidence": 0.9}
 
@@ -445,7 +445,7 @@ def test_discord_moderate_message_survives_model_failure(monkeypatch, capsys):  
     import gatekeeper
     from gatekeeper.adapters import discord_bot as db
 
-    def boom(text, rules):
+    def boom(text, rules, **kw):
         raise RuntimeError("model down")
 
     monkeypatch.setattr(gatekeeper, "moderate", boom)
@@ -489,7 +489,7 @@ def test_twitch_watch_once_counts_decisions_and_errors(monkeypatch, capsys):  # 
     import gatekeeper
     from gatekeeper.adapters import twitch_irc as tw
 
-    def fake_moderate(text, rules):
+    def fake_moderate(text, rules, **kw):
         if "buy followers" in text:
             return {"action": "delete", "rule": "no-spam", "confidence": 0.99}
         if text == "boom":
@@ -546,3 +546,111 @@ def test_twitch_watch_once_counts_decisions_and_errors(monkeypatch, capsys):  # 
     assert health.decisions == 3, "delete + two allows are decisions"
     assert health.errors == ["model down"], "the crash is recorded once"
     assert health.logged == 4, "every message keeps the health line on time"
+
+
+def test_as_user_id_normalizes_for_the_strike_table():  # T856
+    """Strikes keys round-trip through JSON: ints become str or today's
+    live count would split from its reloaded key — and a payload without
+    a sender stays None, never the literal strike target "None"."""
+    from gatekeeper.adapters.common import as_user_id
+    assert as_user_id(42) == "42" and as_user_id("u1") == "u1"
+    assert as_user_id(None) is None and as_user_id(0) == "0"
+
+
+def test_every_adapter_passes_the_platform_user_to_moderate(monkeypatch):  # T856
+    """Per-user strikes accrue from platform traffic (CLI-only before):
+    all seven moderate() call sites hand the platform's user over, already
+    normalized as moderate()'s str | None signature demands."""
+    import gatekeeper
+    from gatekeeper.adapters import discord_bot as db
+    from gatekeeper.adapters import matrix_bot, mattermost, webhooks
+    from gatekeeper.adapters import telegram_bot as tg
+    from gatekeeper.adapters import twitch_irc as tw
+    from gatekeeper.adapters import zulip_bot as zl
+
+    seen = []
+
+    def record(text, rules, **kw):
+        seen.append(kw.get("user_id"))
+        return {"action": "allow", "rule": "ok", "confidence": 1.0}
+
+    monkeypatch.setattr(gatekeeper, "moderate", record)
+    rules = {"r": "t"}
+
+    # 1) telegram: message.from.id  2) matrix: event.sender
+    tg.handle_update({"message": {"text": "hi", "message_id": 7,
+                                  "chat": {"id": 1}, "from": {"id": 99}}}, rules)
+    matrix_bot.handle_event(
+        {"type": "m.room.message", "event_id": "$e", "room_id": "!r",
+         "sender": "@user:example.org",
+         "content": {"msgtype": "m.text", "body": "hi"}}, rules)
+    # 3) zulip: message.sender_id  4) mattermost: post.user_id
+    zl.handle_event({"type": "message",
+                     "message": {"type": "stream", "content": "hi",
+                                 "sender_id": 42, "id": 11}}, rules)
+    mattermost.handle_post({"id": "p1", "message": "hi",
+                            "user_id": "mm-user"}, rules)
+    # 5) discord: msg.author.id (through moderate_message)
+    class _H:
+        def decision(self):
+            pass
+
+        def maybe_log(self):
+            pass
+
+        def error(self, e):
+            pass
+
+    db.moderate_message("hi", 4242, rules, health=_H(), cap=None)
+
+    # 6) twitch: the PRIVMSG nick (transcript ends -> OSError, not ours)
+    class _Sock:
+        def __init__(self, lines):
+            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._pos = 0
+
+        def recv(self, n):
+            if self._pos >= len(self._data):
+                raise OSError("transcript over")
+            chunk = self._data[self._pos:self._pos + n]
+            self._pos += len(chunk)
+            return chunk
+
+        def sendall(self, b):
+            pass
+
+    try:
+        tw._watch_once(_Sock([":u!u@h PRIVMSG #c :hi"]), rules)
+    except OSError:
+        pass
+    # 7) slack: event.user
+    webhooks.receive_slack_event({"text": "hi", "user": "U123"}, rules)
+
+    assert seen == ["99", "@user:example.org", "42", "mm-user", "4242",
+                    "u", "U123"], seen
+    assert all(isinstance(u, str) for u in seen), "str keys, always (T340)"
+
+
+def test_platform_traffic_accrues_real_strikes(monkeypatch):  # T856
+    """The point of the box: a delete issued for a platform user lands in
+    the same strike table the CLI writes — and res tells the operator."""
+    from test_cli import Stub  # the deterministic router shape (T134)
+
+    import gatekeeper
+    from gatekeeper import strikes
+    from gatekeeper.adapters.telegram_bot import handle_update
+
+    monkeypatch.setattr(gatekeeper, "_router", Stub(choice="no-cheat",
+                                                    conf=0.99))
+    strikes.reset()
+    try:
+        res = handle_update(
+            {"message": {"text": "aimbot for sale", "message_id": 7,
+                         "chat": {"id": 1}, "from": {"id": 77}}},
+            gatekeeper.get_preset("gaming"))
+        assert res["action"] == "delete", res
+        assert res["strikes"]["user"] == "77", res["strikes"]
+        assert res["strikes"]["strikes"] == strikes.standing("77")["strikes"] >= 1
+        assert strikes.standing(77)["strikes"] == 0, "int key would split the table"
+    finally:
+        strikes.reset()  # T249: test isolation

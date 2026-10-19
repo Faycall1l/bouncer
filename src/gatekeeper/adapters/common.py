@@ -106,6 +106,17 @@ def redact(s: str) -> str:
     return s
 
 
+def as_user_id(value):  # T856
+    """Platform user id as `moderate(user_id=...)` must see it (T340's
+    per-user strike table): `str`, because the table round-trips through
+    JSON and an int key would split today's live count from its reloaded
+    string key — and None stays None, so a payload without a sender never
+    becomes the literal strike target "None". Ids from different platforms
+    still share one table until T858 namespaces them.
+    """
+    return None if value is None else str(value)
+
+
 def verify_signature(secret: str, header: str, body, *, prefix: str = "",
                      digestmod: str = "sha256") -> bool:
     """T704: constant-time HMAC signature check for webhook receivers.
