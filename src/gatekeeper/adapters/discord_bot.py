@@ -20,7 +20,8 @@ def parse_command(text: str) -> str | None:  # T705: one parser, both surfaces
     return None
 
 
-def command_reply(cmd: str, rules: dict, stats=None) -> str | None:  # T705
+def command_reply(cmd: str, rules: dict, stats=None,  # T705
+                  user=None) -> str | None:  # T864: user feeds the appeal
     """The single command table — the prefix handler and the slash handler
     both call this, so the two surfaces cannot drift apart."""
     if cmd == "rules":
@@ -31,9 +32,12 @@ def command_reply(cmd: str, rules: dict, stats=None) -> str | None:  # T705
             stats = get_stats()["actions"]
         return "decisions: " + ", ".join(
             f"{a}={n}" for a, n in sorted(stats.items()))
+    if cmd == "appeal":  # T864: row-linked appeal answer
+        from gatekeeper.review import appeal_reply
+        return appeal_reply(user, rules)
     if cmd == "help":
-        return ("commands: !bouncer rules | !bouncer stats | !bouncer help "
-                "(slash: /bouncer command:)")
+        return ("commands: !bouncer rules | !bouncer stats | !bouncer appeal "
+                "| !bouncer help (slash: /bouncer command:)")
     return None
 
 
@@ -117,12 +121,15 @@ def run(token: str | None = None, preset: str = "gaming"):
                          description="moderation bot commands")
     @discord.app_commands.choices(command=[
         discord.app_commands.Choice(name=c, value=c)
-        for c in ("rules", "stats", "help")
+        for c in ("rules", "stats", "appeal", "help")
     ])
     async def bouncer_slash(interaction, command: str):
         """Same table as the prefix surface — parity by construction."""
+        from gatekeeper.adapters.common import as_user_id
+        uid = as_user_id("discord", interaction.user.id)  # T864
         await interaction.response.send_message(
-            command_reply(command, rules) or command_reply("help", rules))
+            command_reply(command, rules, user=uid)
+            or command_reply("help", rules))
 
     @client.event
     async def on_message(msg):  # T073
@@ -132,8 +139,11 @@ def run(token: str | None = None, preset: str = "gaming"):
             return
         cmd = parse_command(msg.content)  # T705: prefix surface
         if cmd is not None:
-            await msg.channel.send(command_reply(cmd, rules)
-                                   or command_reply("help", rules))  # T705
+            from gatekeeper.adapters.common import as_user_id
+            await msg.channel.send(
+                command_reply(cmd, rules,
+                              user=as_user_id("discord", msg.author.id))  # T864
+                or command_reply("help", rules))  # T705
             return
         res = moderate_message(msg.content, msg.author.id,  # T854: cap+health
                                rules, health=health, cap=cap)

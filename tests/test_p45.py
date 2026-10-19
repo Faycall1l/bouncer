@@ -905,3 +905,45 @@ def test_zulip_stream_replies_keep_the_topic():  # T863
         api_fn=lambda *a, **k: calls.append((a, k)))
     _args, pm = calls[1]
     assert pm["type"] == "private" and pm["to"] == 42
+
+
+def test_appeal_command_answers_with_the_users_queue_row(monkeypatch,
+                                                        tmp_path):  # T864
+    """APPEAL answers with the T183 template for the asker's newest queue
+    row, carrying the row id so the reply links to the exact entry an
+    operator will adjudicate (T865); rows are keyed by the T858 namespaced
+    platform user."""
+    import importlib
+
+    import gatekeeper.review as rv
+    monkeypatch.setenv("BOUNCER_REVIEW", str(tmp_path / "review.jsonl"))
+    importlib.reload(rv)
+    rv.add("older one", {"action": "escalate", "rule": "no-spam",
+                         "confidence": 0.4, "latency_ms": 1.0},
+           user="telegram:77")
+    rv.add("buy followers now", {"action": "flag", "rule": "no-spam",
+                                 "confidence": 0.62, "latency_ms": 1.0},
+           user="telegram:77")
+    rv.add("someone else", {"action": "flag", "rule": "no-spam",
+                            "confidence": 0.5, "latency_ms": 1.0},
+           user="discord:42")
+    row = rv.latest_for("telegram:77")
+    assert row and row["action"] == "flag" and len(row["id"]) == 8, "newest wins"
+    assert rv.latest_for("telegram:99") is None, "no row, no claim"
+    reply = rv.appeal_reply("telegram:77", {"no-spam": "no spam here"})
+    assert "flagged for 'no-spam'" in reply, "T183 grammar fixed (T864)"
+    assert "no spam here" in reply, "rule text cited (T242)"
+    assert f"(queue row {row['id']})" in reply, "links to the queue entry"
+    assert "nothing queued" in rv.appeal_reply("telegram:99",
+                                               {"no-spam": "no spam here"})
+    assert "nothing queued" in rv.appeal_reply(None, {}), "no user, no claim"
+
+    # end-to-end: /appeal through the telegram surface answers row-linked
+    from gatekeeper.adapters.telegram_bot import handle_update
+    calls = []
+    handle_update({"message": {"text": "/appeal", "message_id": 9,
+                               "chat": {"id": 1}, "from": {"id": 77}}},
+                  {"no-spam": "no spam here"}, token="t",
+                  api_fn=lambda *a, **k: calls.append((a, k)))
+    assert calls[0][1]["reply_to_message_id"] == 9, "threads under ask (T860)"
+    assert f"(queue row {row['id']})" in calls[0][1]["text"], "row-linked"

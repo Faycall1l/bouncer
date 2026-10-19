@@ -44,7 +44,9 @@ def appeal_text(res: dict, rules: dict | None = None) -> str:
     """T183: copy-paste appeal helper (template, no LLM). T242 cites rule text."""
     text = (rules or {}).get(res["rule"], "")
     cite = f" Rule: '{res['rule']}' — {text}" if text else f" Rule: '{res['rule']}'"
-    return (f"Your message was {res['action']}d for '{res['rule']}'"
+    past = {"flag": "flagged", "delete": "deleted",  # T864: no "flagd"
+            "escalate": "escalated"}.get(res["action"], res["action"])
+    return (f"Your message was {past} for '{res['rule']}'"
             f" (confidence {res['confidence']:.0%}).{cite} "
             "If this looks wrong, reply APPEAL and a human reviews it within a day.")
 

@@ -44,8 +44,12 @@ def _command(text, rules, msg, creds, api_fn, out):
         from gatekeeper.stats import get_stats
         s = get_stats()["actions"]
         reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
+    elif cmd == "appeal":  # T864: row-linked appeal answer
+        from gatekeeper.adapters.common import as_user_id
+        from gatekeeper.review import appeal_reply
+        reply = appeal_reply(as_user_id("zulip", msg.get("sender_id")), rules)
     else:
-        reply = "usage: bouncer rules | bouncer stats"
+        reply = "usage: bouncer rules | bouncer stats | bouncer appeal"
         cmd = cmd or "help"
     from gatekeeper.adapters.common import dry_run
     if creds:

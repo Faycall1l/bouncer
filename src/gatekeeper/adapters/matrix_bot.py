@@ -40,6 +40,10 @@ def _command(body, rules, event, token, homeserver, api_fn, out):
         from gatekeeper.stats import get_stats
         s = get_stats()["actions"]
         reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
+    elif cmd == "appeal":  # T864: row-linked appeal answer
+        from gatekeeper.adapters.common import as_user_id
+        from gatekeeper.review import appeal_reply
+        reply = appeal_reply(as_user_id("matrix", event.get("sender")), rules)
     else:
         return {"action": "ignored", "reason": "unknown-command"}
     if token and homeserver and not dry_run():

@@ -952,7 +952,7 @@
 - [x] T861 adp: matrix notices carry the reply relation — m.relates_to.m.in_reply_to.event_id on the notice content; event_id-less events still send bare
 - [x] T862 adp: mattermost notices thread under the offending post (root_id) — slash replies carry the trigger post's root_id; post_id-less forms still post flat
 - [x] T863 adp: zulip stream replies keep the topic — stream commands with a named stream answer in-stream with subject kept; PMs and display_recipient-less payloads keep the PM route (test_p37 comment corrected)
-- [ ] T864 adp: appeal flow — APPEAL command answered with appeal_text + review-queue row linkage
+- [x] T864 adp: appeal flow — APPEAL answered with appeal_text + review-queue row linkage: rows now carry an id and the T858 namespaced user (moderate stamps both queue writes), review.latest_for/appeal_reply render the newest row in the T183 template citing (queue row ID); wired through all five command surfaces (telegram, matrix, zulip, mattermost slash, discord prefix+slash); help/usage strings list it; T183 grammar fixed (flagged, not flagd)
 - [ ] T865 review: adjudicate command — operator approves/rejects from the queue, strike amnesty path
 - [ ] T866 adp: forward_if_interesting wired into run_loop (BOUNCER_FORWARD_URL never fires from platforms today)
 - [ ] T867 adp: per-adapter decision counters recorded (stats gains adapter tag)

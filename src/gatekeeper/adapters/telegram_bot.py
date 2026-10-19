@@ -31,7 +31,7 @@ def api(token: str, method: str, **params):
 
 
 def _command(text: str, rules: dict, chat_id, token, api_fn, out,
-             reply_to=None):
+             reply_to=None, user=None):
     """T692: `/` commands answer in place; no model call, no side effects.
     T860: the answer threads under its trigger (reply_to_message_id), so
     in a busy group the notice says which command it answers."""
@@ -43,9 +43,12 @@ def _command(text: str, rules: dict, chat_id, token, api_fn, out,
         from gatekeeper.stats import get_stats
         s = get_stats()["actions"]
         reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
+    elif cmd == "appeal":  # T864: row-linked appeal answer
+        from gatekeeper.review import appeal_reply
+        reply = appeal_reply(user, rules)
     elif cmd == "help":
-        reply = "bouncer: /rules, /stats, /help — messages are moderated, " \
-                "flag-only by default (BOUNCER_TG_DELETE=1 to delete)"
+        reply = "bouncer: /rules, /stats, /appeal, /help — messages are " \
+                "moderated, flag-only by default (BOUNCER_TG_DELETE=1 to delete)"
     else:
         return {"action": "ignored", "reason": "unknown-command"}
     if token and not dry_run():
@@ -67,8 +70,11 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
     if not text or chat_id is None:
         return {"action": "ignored", "reason": "no-text"}  # stickers/embeds
     if text.startswith("/"):
+        from gatekeeper.adapters.common import as_user_id
         return _command(text, rules, chat_id, token, api_fn, out,
-                        reply_to=msg.get("message_id"))  # T860: in-thread
+                        reply_to=msg.get("message_id"),  # T860: in-thread
+                        user=as_user_id("telegram",  # T864: appeal target
+                                        (msg.get("from") or {}).get("id")))
     if cap is not None and not cap.allow(chat_id):  # T701: flood != model fuel
         out(f"[rate-limited] chat {chat_id} over the per-user cap; "
             "message not moderated")

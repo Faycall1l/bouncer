@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 import os
 import time
+import uuid
 from collections import deque
 
 _PATH = os.environ.get("BOUNCER_REVIEW", "review-queue.jsonl")
 
 
-def add(message: str, res: dict) -> None:  # T170
+def add(message: str, res: dict, user: str | None = None) -> None:  # T170+T864
     parent = os.path.dirname(os.path.abspath(_PATH))  # T281
     os.makedirs(parent, exist_ok=True)
     # T784: the queue is the ONE artifact that holds raw message text (by
@@ -20,6 +21,8 @@ def add(message: str, res: dict) -> None:  # T170
     os.fchmod(fd, 0o600)
     with os.fdopen(fd, "a") as f:
         f.write(json.dumps({"t": int(time.time()),  # T441: for prune()
+                            "id": uuid.uuid4().hex[:8],  # T864: appeal linkage
+                            "user": user,  # T864: T858 namespaced key, or None
                             "message": message[:500], "action": res["action"],
                             "rule": res["rule"], "conf": round(res["confidence"], 3),
                             "cause": res.get("cause", ""),  # T448
@@ -39,6 +42,31 @@ def list_queue(limit: int = 20, action: str | None = None,
     if rule:  # T543: rows for this rule id only
         rows = [r for r in rows if r.get("rule") == rule]
     return rows[-max(limit, 1):]
+
+
+def latest_for(user: str | None) -> dict | None:  # T864
+    """Newest queue row for this namespaced user (T858 keys); rows without
+    a user (CLI escalations) are nobody's appeal target."""
+    if not user:
+        return None
+    for row in reversed(list_queue(limit=1000)):
+        if row.get("user") == user:
+            return row
+    return None
+
+
+def appeal_reply(user: str | None, rules: dict) -> str:  # T864
+    """The APPEAL command's answer: the user's newest queue row rendered in
+    the T183 appeal template, with the row id so the reply links back to
+    the exact queue entry an operator will adjudicate (T865)."""
+    row = latest_for(user)
+    if row is None:
+        return ("nothing queued for this user — APPEAL answers your newest "
+                "flagged message; this user has none.")
+    from gatekeeper.explain import appeal_text
+    res = {"action": row["action"], "rule": row["rule"],
+           "confidence": row.get("conf", 0.0)}
+    return f"{appeal_text(res, rules)} (queue row {row['id']})"
 
 
 def clear_queue() -> int:  # T318: truncate; returns rows dropped

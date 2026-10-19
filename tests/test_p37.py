@@ -996,10 +996,10 @@ def test_discord_surfaces_share_the_command_table():  # T705: wired for real
     src = (ADAPTERS / "discord_bot.py").read_text()
     # on_message routes commands through parse_command + command_reply...
     assert "cmd = parse_command(msg.content)" in src
-    assert "command_reply(cmd, rules)" in src
+    assert "command_reply(cmd, rules," in src  # T864: user kwarg rides along
     # ...and the slash command answers from the same table
     assert "client.tree.command" in src
-    assert "command_reply(command, rules)" in src
+    assert "command_reply(command, rules," in src
     # no hardcoded "!bouncer ..." message checks left in the handler
     assert '"!bouncer rules"' not in src and '"!bouncer stats"' not in src
 

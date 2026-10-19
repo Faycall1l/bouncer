@@ -476,7 +476,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         log_decision(msg, "ok", 0.0, "escalate", 0.0)
         try:
             _qadd(msg, {"action": "escalate", "rule": "ok", "confidence": 0.0,
-                        "latency_ms": 0.0})
+                        "latency_ms": 0.0}, user=user_id)  # T864: appeal target
         except OSError:
             pass
         with _FLY_LOCK:
@@ -512,7 +512,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                  lang, len(hist), (cfg.allow_threshold, cfg.delete_threshold))
     if res["action"] in ("flag", "escalate"):  # T207: humans work the queue
         try:
-            _qadd(msg, res)
+            _qadd(msg, res, user=user_id)  # T864: appeal target per row
         except OSError:
             pass
     res["reason"] = _explain(res, rules)  # T213: reason ships in every result
