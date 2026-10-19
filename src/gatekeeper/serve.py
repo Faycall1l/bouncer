@@ -1,5 +1,6 @@
 # Apache-2.0. See LICENSE.
 """FastAPI: /predict + Jev-compatible /v1/systemone passthrough."""
+import threading  # T841: rate-limit buckets are shared across the threadpool
 import time
 from contextlib import asynccontextmanager
 
@@ -103,6 +104,8 @@ if 0 < len(_KEY_OLD) < 16:  # T776: the outgoing key deserves the same warning
     print('{"warn": "BOUNCER_KEY_OLD shorter than 16 chars"}', flush=True)
 
 _BUCKETS: dict = {}  # T054: >60 req/min per IP -> 429
+_RATE_LOCK = threading.Lock()  # T841: handlers run in the threadpool — the
+# check-then-append in _rate used to race, losing hits and admitting >60/min
 
 
 def _sweep(now: float) -> None:
@@ -134,10 +137,11 @@ def _rate(request: Request) -> None:
         return
     ip = _client_ip(request)
     now = time.time()
-    _sweep(now)  # T227
-    hits = [t for t in _BUCKETS.get(ip, []) if now - t < 60]
-    hits.append(now)
-    _BUCKETS[ip] = hits[-60:]
+    with _RATE_LOCK:  # T841: check-then-append must be one atomic step
+        _sweep(now)  # T227
+        hits = [t for t in _BUCKETS.get(ip, []) if now - t < 60]
+        hits.append(now)
+        _BUCKETS[ip] = hits[-60:]
     if len(hits) > 60:
         from fastapi import HTTPException
         raise HTTPException(status_code=429, detail="rate limited",

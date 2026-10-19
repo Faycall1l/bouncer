@@ -605,3 +605,55 @@ def test_access_log_method_status_and_rid_correlation(capsys):  # T840
         assert access["status"] == 422 and access["method"] == "POST"
     finally:
         gatekeeper._router = None
+
+
+def test_rate_limit_holds_under_parallel_threads():  # T841
+    """_rate was check-then-append with no lock while handlers run in the
+    threadpool — concurrent requests read the same bucket, both appended,
+    one write won, and the loser's hit vanished (a client could exceed
+    60/min under concurrency). Now the check+append is one atomic step:
+    hammering from 8 threads admits exactly 60, never 61."""
+    import threading
+    import types
+    import typing
+
+    from fastapi import HTTPException
+
+    from gatekeeper import serve
+
+    class Req:  # minimal duck-type: _client_ip only touches client.host
+        client = types.SimpleNamespace(host="10.9.9.9")
+        headers: typing.ClassVar[dict] = {}
+
+    admitted: list = []  # list.append is atomic under the GIL — counters
+    refused: list = []   # aren't, and the tight switch interval would expose that
+    barrier = threading.Barrier(8)
+
+    def hammer():
+        barrier.wait()  # all 8 threads collide on the same bucket
+        for _ in range(20):  # 160 attempts total for one IP
+            try:
+                serve._rate(Req())
+                admitted.append(1)
+            except HTTPException as e:
+                assert e.status_code == 429
+                refused.append(1)
+
+    serve._BUCKETS.clear()
+    # force preemption inside the check-then-append window: without this the
+    # GIL makes the race nearly impossible to hit (verified by neutering the
+    # lock and watching this test still pass at the default 5ms interval)
+    old_si = sys.getswitchinterval()
+    sys.setswitchinterval(1e-6)
+    try:
+        threads = [threading.Thread(target=hammer) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    finally:
+        sys.setswitchinterval(old_si)
+
+    assert len(admitted) == 60, f"admitted {len(admitted)} under concurrency"
+    assert len(refused) == 100
+    assert len(serve._BUCKETS["10.9.9.9"]) == 60  # the bucket keeps the cap
