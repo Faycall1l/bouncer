@@ -33,6 +33,60 @@ app = FastAPI(title="bouncer", lifespan=_lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=_cors_origins(), allow_methods=["*"],
                    allow_headers=["*"])  # T055: demo-friendly
 app.add_middleware(GZipMiddleware, minimum_size=1000)  # T284
+
+
+class _BodyTooLarge(Exception):  # T831: raised inside the wrapped receive
+    """Marker: the real byte count crossed MAX_BODY mid-stream."""
+
+
+class _StreamBodyCap:  # T831: byte-level cap — Content-Length is client-trust
+    """T775's check reads the Content-Length HEADER, so a chunked POST (no
+    header at all) or a lying one slips past untouched. This middleware
+    wraps receive and counts actual body bytes; past the cap it raises
+    _BodyTooLarge inside the body read — before the handler runs and
+    before any response starts — and answers the same 413 as the header
+    path. Sits under _mw so the access log and X-Request-ID still see it."""
+
+    def __init__(self, app, limit: int | None = None):
+        self.app = app
+        self.limit = limit  # None = MAX_BODY at call time (defined later)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope.get("method") != "POST":
+            await self.app(scope, receive, send)
+            return
+        limit = self.limit if self.limit is not None else MAX_BODY
+        total = 0
+        started = False
+
+        async def _send(message):
+            nonlocal started
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
+
+        async def counting_receive():
+            nonlocal total
+            message = await receive()
+            if message.get("type") == "http.request":
+                total += len(message.get("body", b""))
+                if total > limit:
+                    raise _BodyTooLarge
+            return message
+
+        try:
+            await self.app(scope, counting_receive, _send)
+        except _BodyTooLarge:
+            if started:  # response already streaming — nothing honest to do
+                raise
+            body = b'{"detail": "body too large"}'
+            await send({"type": "http.response.start", "status": 413,
+                        "headers": [(b"content-type", b"application/json"),
+                                    (b"content-length", str(len(body)).encode())]})
+            await send({"type": "http.response.body", "body": body})
+
+
+app.add_middleware(_StreamBodyCap)  # T831: under _mw, over the routes
 _START = time.time()
 
 _KEY = __import__("os").environ.get("BOUNCER_KEY", "")  # T053: optional shared key
