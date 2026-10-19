@@ -549,8 +549,11 @@ def systemone(body: SystemoneReq, request: Request):
     # breaker accounting. Failures surface as coded 503 E_MODEL — the Jev
     # contract stays honest (no fabricated answers) and the model's sick
     # days are counted like everyone else's.
+    import time as _time
+
     from . import ModelError, _breaker_fail, _breaker_ok, _breaker_tripped, _predict_safe
     tripped = _breaker_tripped()  # T512: passthrough honors the breaker now
+    t0 = _time.time()
     try:
         if tripped:
             raise ModelError("breaker open (model failing, cooling down)")
@@ -564,6 +567,9 @@ def systemone(body: SystemoneReq, request: Request):
         # code plus a message we constructed (timeout/breaker) or a generic
         print(_json.dumps({"event": "model-error", "path": "/v1/systemone",
                            "err": str(e)[:300]}), flush=True)
+        # T834: the passthrough used to be invisible — failures now count
+        # like /predict's (action + cause in /stats, hashed line in audit)
+        _record_passthrough(state, cause="breaker-open" if tripped else "model-error")
         msg = str(e)
         if "timed out after" not in msg and "breaker open" not in msg:
             msg = "model unavailable (details in server logs)"
@@ -571,4 +577,18 @@ def systemone(body: SystemoneReq, request: Request):
         raise _HE(status_code=503,
                   detail={"code": getattr(e, "code", "E_MODEL"),
                           "message": msg})
+    # T834: successes are counted and audited too — a raw-path decision
+    # lands in /stats (action "passthrough") and the audit log (hashed
+    # message), exactly like the structured path's rows
+    _record_passthrough(state, latency_ms=(_time.time() - t0) * 1000)
     return answers
+
+
+def _record_passthrough(state: dict, latency_ms: float = 0.0,
+                        cause: str | None = None) -> None:  # T834
+    """One decision row for the raw path: hashed message, no text stored."""
+    from .audit import log_decision
+    from .stats import record
+    text = state.get("message", "") if isinstance(state, dict) else ""
+    record("passthrough", "ok", latency_ms, cause=cause)  # T834
+    log_decision(str(text), "ok", 0.0, "passthrough", latency_ms)

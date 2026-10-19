@@ -225,3 +225,62 @@ def test_systemone_safe_path_timeout_retry_breaker():  # T833
         gatekeeper._router = None
         os.environ.pop("BOUNCER_TIMEOUT", None)
         gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+
+
+def test_systemone_records_decisions_and_audit(tmp_path, monkeypatch):  # T834
+    """The raw path used to be invisible to /stats and the audit log.
+    Now every passthrough call is one decision row: action 'passthrough'
+    in /stats, a hashed-message line in audit (never the text), and
+    failures carry a cause like /predict's fallback rows."""
+    import importlib
+
+    import gatekeeper
+    import gatekeeper.audit as _au
+    from gatekeeper import serve
+    from gatekeeper.stats import get_stats
+
+    audit = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BOUNCER_AUDIT", str(audit))
+    importlib.reload(_au)
+
+    class Rec:
+        def predict(self, state, questions):
+            return {"answers": {"rule": "ok"}}
+
+    gatekeeper._router = Rec()
+    gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+    try:
+        from fastapi.testclient import TestClient
+        client = TestClient(serve.app, raise_server_exceptions=False)
+        before = get_stats()["actions"].get("passthrough", 0)
+
+        # success: counted + one hashed audit row (message never stored)
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone",
+                        json={"state": {"message": "secret words here"},
+                              "questions": {}})
+        assert r.status_code == 200
+        assert get_stats()["actions"]["passthrough"] == before + 1
+        row = audit.read_text().splitlines()[-1]
+        assert "secret words here" not in row  # hashed, like every row (T029)
+        import json as _json
+        obj = _json.loads(row)
+        assert obj["action"] == "passthrough" and obj["msg"]  # hash present
+
+        # failure: 503 + a cause-counted row, breaker fed
+        class Dead:
+            def predict(self, state, questions):
+                raise RuntimeError("dead")
+
+        gatekeeper._router = Dead()
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone", json={"state": {}, "questions": {}})
+        assert r.status_code == 503
+        stats = get_stats()
+        assert stats["causes"].get("model-error", 0) >= 1, stats["causes"]
+        obj = _json.loads(audit.read_text().splitlines()[-1])
+        assert obj["action"] == "passthrough"  # the failure row lands too
+    finally:
+        gatekeeper._router = None
+        gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+        importlib.reload(_au)  # restore the default audit path
