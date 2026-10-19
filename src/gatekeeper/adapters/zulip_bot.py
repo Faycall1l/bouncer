@@ -49,7 +49,15 @@ def _command(text, rules, msg, creds, api_fn, out):
         cmd = cmd or "help"
     from gatekeeper.adapters.common import dry_run
     if creds:
-        if dry_run():  # T697: print the intent, never the act
+        if msg.get("type") == "stream" and msg.get("display_recipient"):
+            if dry_run():  # T697: print the intent, never the act
+                out(f"[dry-run] would post {msg['display_recipient']}"
+                    f"#{msg.get('subject')}: {reply}")
+            else:  # T863: answer where the ask was, keeping its topic
+                api_fn(*creds, "POST", "/messages", type="stream",
+                       to=msg["display_recipient"],
+                       subject=msg.get("subject") or "", content=reply)
+        elif dry_run():  # T697: print the intent, never the act
             out(f"[dry-run] would PM {msg.get('sender_id')}: {reply}")
         else:
             api_fn(*creds, "POST", "/messages", type="private",

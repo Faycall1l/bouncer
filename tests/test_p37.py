@@ -360,7 +360,9 @@ def test_zulip_pms_are_commands_only(monkeypatch):  # T695: mention parity
     rules = get_preset("gaming")
     calls = []
     creds = ("bot@x", "key", "https://zulip")
-    # "bouncer rules" as a PM or as a stream mention answers in PM
+    # "bouncer rules" as a PM or as a stream mention answers in PM — this
+    # fixture carries no display_recipient, so the stream case degrades to
+    # a PM (T863 answers in-stream only when the payload names the stream)
     for text, mtype in (("bouncer rules", "private"),
                         ("/bouncer rules", "stream")):
         res = handle_event(_zl_message(text, mtype), rules, creds=creds,

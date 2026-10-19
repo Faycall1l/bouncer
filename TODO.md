@@ -951,7 +951,7 @@
 - [x] T860 adp: telegram notices reply in-thread (reply_to_message_id) — command replies carry the trigger's message_id; reply_to=None callers still send bare
 - [x] T861 adp: matrix notices carry the reply relation — m.relates_to.m.in_reply_to.event_id on the notice content; event_id-less events still send bare
 - [x] T862 adp: mattermost notices thread under the offending post (root_id) — slash replies carry the trigger post's root_id; post_id-less forms still post flat
-- [ ] T863 adp: zulip stream replies keep the topic (today only PMs answer)
+- [x] T863 adp: zulip stream replies keep the topic — stream commands with a named stream answer in-stream with subject kept; PMs and display_recipient-less payloads keep the PM route (test_p37 comment corrected)
 - [ ] T864 adp: appeal flow — APPEAL command answered with appeal_text + review-queue row linkage
 - [ ] T865 review: adjudicate command — operator approves/rejects from the queue, strike amnesty path
 - [ ] T866 adp: forward_if_interesting wired into run_loop (BOUNCER_FORWARD_URL never fires from platforms today)

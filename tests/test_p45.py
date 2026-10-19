@@ -874,3 +874,34 @@ def test_mattermost_slash_reply_threads_under_its_post():  # T862
                  {"r": "t"}, token="tok", server="https://mm.example",
                  api_fn=lambda *a, **k: bare.append((a, k)))
     assert "root_id" not in bare[0][1], "no trigger post, no thread"
+
+
+def test_zulip_stream_replies_keep_the_topic():  # T863
+    """A stream command answers in the stream, keeping its topic — the
+    reply lands next to the ask; PMs (and payloads without a stream name)
+    keep the old PM route."""
+    from gatekeeper.adapters.zulip_bot import handle_event
+
+    calls = []
+    creds = ("bot@x", "key", "https://zulip")
+    handle_event(
+        {"type": "message",
+         "message": {"type": "stream", "content": "bouncer rules",
+                     "sender_id": 42, "id": 11,
+                     "display_recipient": "gaming", "subject": "spoilers"}},
+        {"r": "t"}, creds=creds,
+        api_fn=lambda *a, **k: calls.append((a, k)))
+    args, kwargs = calls[0]
+    assert args[3:5] == ("POST", "/messages")
+    assert kwargs["type"] == "stream" and kwargs["to"] == "gaming"
+    assert kwargs["subject"] == "spoilers", "topic kept"
+    assert kwargs["content"].startswith("active:")
+    # a PM command still answers in PM
+    handle_event(
+        {"type": "message",
+         "message": {"type": "private", "content": "bouncer rules",
+                     "sender_id": 42, "id": 12}},
+        {"r": "t"}, creds=creds,
+        api_fn=lambda *a, **k: calls.append((a, k)))
+    _args, pm = calls[1]
+    assert pm["type"] == "private" and pm["to"] == 42
