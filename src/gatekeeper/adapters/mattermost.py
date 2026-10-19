@@ -53,9 +53,10 @@ def handle_post(post: dict, rules: dict, *, token=None, server=None,
             "per-user cap; message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import as_user_id, dry_run
-    res = dict(moderate(text, rules,  # T856: strikes accrue per platform user
-                        user_id=as_user_id(post.get("user_id"))))
+    from gatekeeper.adapters.common import as_user_id, detect_lang, dry_run
+    res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
+                        user_id=as_user_id(post.get("user_id")),
+                        lang=detect_lang(text)))
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token and server:
         if dry_run():  # T697: print the intent, never the act

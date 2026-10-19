@@ -176,8 +176,9 @@ Anywhere bouncer takes `rules`, it also takes `preset` — **never both**:
 
 ## Multilingual (T594)
 
-`lang=` (API field, `--lang` CLI flag, per-line `"lang"` with `watch --json-in`)
-hints both the reason language and the model route; omitted (the default) it
+`lang=` (API field, `--lang` CLI flag, per-line `"lang"` with `watch --json-in`;
+adapters derive theirs from the message script since T857) hints both the
+reason language and the model route; omitted (the default) it
 infers from the message script (`detect_script()`: latin vs arabic at minimum).
 Presets tagged `es`/`fr`/`ar` autofill the hint. Bad hints (not a short lowercase
 slug) are rejected with `422 E_LANG`.

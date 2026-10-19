@@ -945,7 +945,7 @@
 - [x] T854 adp: discord gains Health + RateCap parity — moderate_message() enforces the cap before the model, counts decisions, records model failures as one redacted line + health.error (T708 stub gains author.id)
 - [x] T855 adp: twitch gains Health parity — run() builds Health("twitch"), _watch_once counts decisions, records model failures, and runs maybe_log per message (health=None default keeps the T708 session test exact)
 - [x] T856 adp: adapters pass user= to moderate — all seven call sites route through new common.as_user_id (str keys so JSON reloads don't split the table, None stays None); per-user strikes accrue from platform traffic (CLI-only before)
-- [ ] T857 adp: adapters pass lang= via detected script — platform traffic stops routing as auto
+- [x] T857 adp: adapters pass lang= via detected script — new common.detect_lang maps detect_script to ar/zh/ru (pins the multilingual checkpoint, T457); latin/other stay None (laya's auto stays the documented route); all seven call sites wired
 - [ ] T858 strikes: keys namespaced platform:user (a Discord id and a Telegram id share one table today)
 - [ ] T859 adp: discord notices become threaded replies (message_reference)
 - [ ] T860 adp: telegram notices reply in-thread (reply_to_message_id)

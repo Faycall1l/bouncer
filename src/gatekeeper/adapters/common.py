@@ -117,6 +117,22 @@ def as_user_id(value):  # T856
     return None if value is None else str(value)
 
 
+def detect_lang(text):  # T857
+    """`detect_script()` (T492) as a `moderate(lang=...)` hint: arabic/cjk/
+    cyrillic become ar/zh/ru so platform traffic pins the multilingual
+    checkpoint (T457 `model_for_lang`) instead of routing as auto on the
+    default model. Every tag maps to that same checkpoint, so the guess
+    only has to be script-honest, not language-honest — exactly the claim
+    detect_script makes ("a routing hint, not an identity claim").
+    latin/other stay None: the default model plus laya's auto-routing is
+    the documented route for those (README), and claiming "en" for every
+    Latin-script message would be the identity claim we refuse to make.
+    """
+    from gatekeeper.normalize import detect_script
+    return {"arabic": "ar", "cjk": "zh", "cyrillic": "ru"}.get(
+        detect_script(text))
+
+
 def verify_signature(secret: str, header: str, body, *, prefix: str = "",
                      digestmod: str = "sha256") -> bool:
     """T704: constant-time HMAC signature check for webhook receivers.

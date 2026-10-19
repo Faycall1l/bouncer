@@ -654,3 +654,90 @@ def test_platform_traffic_accrues_real_strikes(monkeypatch):  # T856
         assert strikes.standing(77)["strikes"] == 0, "int key would split the table"
     finally:
         strikes.reset()  # T249: test isolation
+
+
+def test_detect_lang_maps_script_to_checkpoint_tags():  # T857
+    """Script hint -> routing tag: arabic/cjk/cyrillic become ar/zh/ru (all
+    three pin the same multilingual checkpoint), latin/other stay None so
+    nothing claims a language detect_script refuses to claim."""
+    from gatekeeper.adapters.common import detect_lang
+    from gatekeeper.pool import model_for_lang
+    assert detect_lang("hello world") is None, "latin keeps laya's auto route"
+    assert detect_lang("مباراة جيدة") == "ar"
+    assert detect_lang("привет") == "ru"
+    assert detect_lang("你好世界") == "zh"
+    assert detect_lang("123 !!!") is None and detect_lang("") is None
+    assert detect_lang(None) is None
+    for msg in ("مرحبا", "你好", "привет"):  # the point: these stop auto-routing
+        assert model_for_lang(detect_lang(msg)) == "multilingual", msg
+
+
+def test_adapters_pass_detected_lang_to_moderate(monkeypatch):  # T857
+    """Platform traffic stops routing as auto: every moderate() call carries
+    lang= from detect_lang — non-latin text gets the tag that pins the
+    multilingual checkpoint, latin text passes None (documented auto)."""
+    import gatekeeper
+    from gatekeeper.adapters import discord_bot as db
+    from gatekeeper.adapters import matrix_bot, mattermost, webhooks
+    from gatekeeper.adapters import telegram_bot as tg
+    from gatekeeper.adapters import twitch_irc as tw
+    from gatekeeper.adapters import zulip_bot as zl
+
+    seen = []
+
+    def record(text, rules, **kw):
+        seen.append(kw.get("lang"))
+        return {"action": "allow", "rule": "ok", "confidence": 1.0}
+
+    monkeypatch.setattr(gatekeeper, "moderate", record)
+    rules = {"r": "t"}
+
+    tg.handle_update({"message": {"text": "مباراة جميلة", "message_id": 7,
+                                  "chat": {"id": 1}, "from": {"id": 99}}}, rules)
+    matrix_bot.handle_event(
+        {"type": "m.room.message", "event_id": "$e", "room_id": "!r",
+         "sender": "@user:example.org",
+         "content": {"msgtype": "m.text", "body": "привет всем"}}, rules)
+    zl.handle_event({"type": "message",
+                     "message": {"type": "stream", "content": "你好世界",
+                                 "sender_id": 42, "id": 11}}, rules)
+    mattermost.handle_post({"id": "p1", "message": "hello channel",
+                            "user_id": "mm-user"}, rules)
+
+    class _H:
+        def decision(self):
+            pass
+
+        def maybe_log(self):
+            pass
+
+        def error(self, e):
+            pass
+
+    db.moderate_message("مرحبا بالجميع", 4242, rules, health=_H(), cap=None)
+
+    class _Sock:  # test_p37 T708's scripted transcript, then "closes"
+        def __init__(self, lines):
+            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._pos = 0
+
+        def recv(self, n):
+            if self._pos >= len(self._data):
+                raise OSError("transcript over")
+            chunk = self._data[self._pos:self._pos + n]
+            self._pos += len(chunk)
+            return chunk
+
+        def sendall(self, b):
+            pass
+
+    try:
+        tw._watch_once(_Sock([":u!u@h PRIVMSG #c :привет"]), rules)
+    except OSError:
+        pass
+    webhooks.receive_slack_event({"text": "你好", "user": "U123"}, rules)
+
+    assert seen == ["ar", "ru", "zh", None, "ar", "ru", "zh"], seen
+    for name in ("telegram_bot", "matrix_bot", "zulip_bot", "mattermost",
+                 "discord_bot", "twitch_irc", "webhooks"):  # all seven wired
+        assert "detect_lang(" in (ADAPTERS / f"{name}.py").read_text(), name
