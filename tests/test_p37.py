@@ -1247,7 +1247,7 @@ def test_discord_full_session_stubbed_sdk(monkeypatch):  # T708
     class _Msg:
         def __init__(self, content, bot=False):
             self.content = content
-            self.author = types.SimpleNamespace(bot=bot)
+            self.author = types.SimpleNamespace(bot=bot, id=42)  # T854: RateCap key
             self.channel = types.SimpleNamespace(send=self._send)
             self.deleted = False
 

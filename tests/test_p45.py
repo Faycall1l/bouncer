@@ -379,3 +379,94 @@ def test_run_loop_backoff_resets_after_a_good_fetch(capsys):  # T853
     assert err.count("t853 error:") == 3, "blip, blip, shutdown-time failure"
     # T702 ordering intact: the shutdown-time failure exits before sleeping
     assert "t853: shutdown requested — exiting cleanly" in err
+
+
+def test_discord_wires_health_and_ratecap():  # T854
+    """Parity box: discord reports Health and enforces RateCap like every
+    other acting adapter — built in run(), enforced in moderate_message."""
+    src = (ADAPTERS / "discord_bot.py").read_text()
+    assert 'Health("discord")' in src and "rate_cap_from_env(cfg)" in src
+    assert "moderate_message(msg.content, msg.author.id," in src
+    assert "health=health, cap=cap" in src
+    assert "health.decision()" in src and "health.error(" in src
+    assert "health.maybe_log()" in src and "cap.allow(" in src
+
+
+def test_discord_moderate_message_caps_then_counts(monkeypatch, capsys):  # T854
+    """RateCap runs before the model (a flood never reaches it), Health
+    counts real decisions but not capped or ignored traffic, and
+    maybe_log() fires on every message — the guards the pollers had."""
+    import gatekeeper
+    from gatekeeper.adapters import discord_bot as db
+    from gatekeeper.adapters.common import RateCap
+
+    calls = []
+
+    def fake_moderate(text, rules):
+        calls.append(text)
+        return {"action": "delete", "rule": "r", "confidence": 0.9}
+
+    monkeypatch.setattr(gatekeeper, "moderate", fake_moderate)
+
+    class _Health:
+        def __init__(self):
+            self.decisions = 0
+            self.logged = 0
+
+        def decision(self):
+            self.decisions += 1
+
+        def maybe_log(self):
+            self.logged += 1
+
+        def error(self, e):
+            raise AssertionError("no errors in this session")
+
+    health = _Health()
+    cap = RateCap(max_calls=2, window_s=60.0, clock=lambda: 0.0)
+    out = [db.moderate_message("spam one", 42, {}, health=health, cap=cap),
+           db.moderate_message("spam two", 42, {}, health=health, cap=cap),
+           db.moderate_message("spam three", 42, {}, health=health, cap=cap)]
+    assert [r["action"] for r in out] == ["delete", "delete", "ignored"]
+    assert out[2]["reason"] == "rate-limited"
+    assert calls == ["spam one", "spam two"], "the capped call never hits the model"
+    assert health.decisions == 2 and health.logged == 3
+    assert "[rate-limited] <42> over the per-user cap" in capsys.readouterr().out
+    # cap=None (BOUNCER_RATE_CAP=0) disables the guard — straight to the model
+    assert db.moderate_message("x", 42, {}, health=health,
+                               cap=None)["action"] == "delete"
+    assert calls == ["spam one", "spam two", "x"]
+
+
+def test_discord_moderate_message_survives_model_failure(monkeypatch, capsys):  # T854
+    """A model crash costs one redacted line plus one recorded health
+    error, answers ignored, and keeps the health line due — the per-event
+    guard run_loop gives its traffic, now on discord too."""
+    import gatekeeper
+    from gatekeeper.adapters import discord_bot as db
+
+    def boom(text, rules):
+        raise RuntimeError("model down")
+
+    monkeypatch.setattr(gatekeeper, "moderate", boom)
+
+    class _Health:
+        def __init__(self):
+            self.errors = []
+            self.logged = 0
+
+        def decision(self):
+            raise AssertionError("a crash is no decision")
+
+        def maybe_log(self):
+            self.logged += 1
+
+        def error(self, e):
+            self.errors.append(str(e))
+
+    health = _Health()
+    res = db.moderate_message("hello", "u1", {}, health=health, cap=None)
+    assert res == {"action": "ignored", "reason": "moderate-error"}
+    err = capsys.readouterr().err
+    assert "discord event error: model down" in err
+    assert health.errors == ["model down"] and health.logged == 1

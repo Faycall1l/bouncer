@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
+import sys
 
 
 def parse_command(text: str) -> str | None:  # T705: one parser, both surfaces
@@ -36,6 +37,40 @@ def command_reply(cmd: str, rules: dict, stats=None) -> str | None:  # T705
     return None
 
 
+def moderate_message(text: str, user_id, rules: dict, *, health,
+                     cap) -> dict:  # T854
+    """T854: one message in, one decision out — with the two guards every
+    other adapter already had.
+
+    RateCap (T701) runs before the model call: one flood can't monopolize
+    it; an over-cap message logs `[rate-limited]` and returns ignored.
+    Health (T699) runs after: real decisions counted, `maybe_log()` on
+    every message, and a model failure costs one redacted line plus a
+    recorded error — never the bot (the per-event guard run_loop and
+    areconnect give their traffic).
+    """
+    from gatekeeper import moderate
+
+    if cap is not None and not cap.allow(user_id):  # T701+T854
+        from gatekeeper.adapters.common import redact
+        print(f"[rate-limited] <{redact(user_id)}> over the "
+              "per-user cap; message not moderated")
+        res = {"action": "ignored", "reason": "rate-limited"}
+    else:
+        try:
+            res = dict(moderate(text, rules))
+            if res["action"] not in ("ignored", "command"):  # T699
+                health.decision()
+        except Exception as e:  # noqa: BLE001 — one bad event, one line
+            from gatekeeper.adapters.common import redact
+            print("discord event error:", redact(e), file=sys.stderr,
+                  flush=True)
+            health.error(redact(e))
+            res = {"action": "ignored", "reason": "moderate-error"}
+    health.maybe_log()
+    return res
+
+
 def run(token: str | None = None, preset: str = "gaming"):
     from gatekeeper.adapters.common import AdapterError
     try:
@@ -45,18 +80,21 @@ def run(token: str | None = None, preset: str = "gaming"):
             "E_ADAPTER: discord needs the discord.py extra — "
             "pip install -e .[discord]") from e
 
-    from gatekeeper import moderate
     from gatekeeper.adapters.common import (
+        Health,
         cfg_get,
         install_shutdown,
         load_config,
         load_rules,
+        rate_cap_from_env,
         require_env,
     )
 
     install_shutdown("discord", hard=True)  # T702: discord.py owns the loop
     cfg = load_config()  # T709: bouncer.toml defaults; env still wins
     rules = load_rules("discord", preset, cfg=cfg)  # T698+T709
+    health = Health("discord")  # T699+T854: same counters as run_loop's
+    cap = rate_cap_from_env(cfg)  # T701+T709+T854: parity with the pollers
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
@@ -83,7 +121,8 @@ def run(token: str | None = None, preset: str = "gaming"):
             await msg.channel.send(command_reply(cmd, rules)
                                    or command_reply("help", rules))  # T705
             return
-        res = moderate(msg.content, rules)
+        res = moderate_message(msg.content, msg.author.id,  # T854: cap+health
+                               rules, health=health, cap=cap)
         from gatekeeper.adapters.common import dry_run
         if dry_run():  # T697: print the intent, never the act
             if res["action"] in ("delete", "flag", "escalate"):
