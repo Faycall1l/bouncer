@@ -513,11 +513,6 @@ def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  #
     monkeypatch.setenv("BOUNCER_AUDIT", str(audit))
     importlib.reload(_au)
 
-    # a predict still in flight when shutdown begins
-    gatekeeper._EXEC = None
-    ex = gatekeeper._executor()
-    fut = ex.submit(_time.sleep, 0.3)
-
     # one decision lands while batching is active (legacy mode writes
     # per-call, so force the batched handle to prove the tail is flushed)
     monkeypatch.setattr(_au, "_FSYNC_N", 3)
@@ -529,13 +524,25 @@ def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  #
     try:
         # drive the lifespan directly: p13env's FastAPI has a broken
         # telemetry import in its lifespan scope path, and the drain/flush
-        # logic under test lives entirely in our post-yield block
+        # logic under test lives entirely in our post-yield block.
+        # T849: the in-flight work is submitted AFTER startup — warmup cost
+        # is environment-dependent (CI has huggingface/laya present and can
+        # spend >0.3s there), so work queued before __aenter__ could finish
+        # during warmup and the drain would legitimately measure ~0. Start
+        # it post-startup and the only thing between it and __aexit__ is the
+        # ordering the drain must enforce.
+        gatekeeper._EXEC = None
+        holder: dict = {}
+
         async def _run():
             agen = serve._lifespan(None)
-            await agen.__aenter__()   # startup: warmup (laya absent -> skipped)
+            await agen.__aenter__()   # startup: warmup runs here, however slow
+            ex = gatekeeper._executor()
+            holder["fut"] = ex.submit(_time.sleep, 0.3)  # in flight at shutdown
             await agen.__aexit__(None, None, None)  # shutdown: drain + close
 
         asyncio.run(_run())
+        fut = holder["fut"]
 
         # the in-flight predict finished BEFORE the audit closed
         assert fut.done(), "shutdown must drain running predicts first"
