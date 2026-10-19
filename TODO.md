@@ -939,7 +939,7 @@
 - [x] T850 test: P44 server-hardening sweep (every box ticked, receipts outside TODO.md)
 
 ## P45 Adapter depth (T851–T870)
-- [ ] T851 adp: shared HTTP helper with retry/backoff — 429/5xx retry honoring Retry-After (4 single-shot copies today)
+- [x] T851 adp: shared HTTP helper with retry/backoff — 429/5xx retry honoring Retry-After (replaces the four single-shot copies: telegram/mattermost/matrix/zulip api() now route through common.http_json)
 - [ ] T852 adp: mattermost websocket reconnect with backoff (a dropped socket kills the process today)
 - [ ] T853 adp: run_loop backoff gains jitter + exponential cap (fixed 5s, no jitter, infinite retries)
 - [ ] T854 adp: discord gains Health + RateCap parity (neither today)

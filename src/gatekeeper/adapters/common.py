@@ -186,6 +186,57 @@ def install_shutdown(name: str, log=print, hard: bool = False):
     return stopping
 
 
+def http_json(req, *, timeout: float = 30.0, opener=None, attempts: int = 3,
+              backoff_s: float = 0.5, backoff_cap_s: float = 8.0,
+              retry_after_cap_s: float = 60.0,
+              sleep=time.sleep, rand=None):  # T851
+    """The one place adapters speak HTTP with retries (replaces four
+    single-shot copies: telegram/mattermost/matrix/zulip `api()`).
+
+    429 and 5xx are transient *because the server said so*: retried up to
+    `attempts`, honoring a numeric `Retry-After` (capped — a broken server
+    demanding an 8-hour wait gets `retry_after_cap_s`, not our process).
+    Without the header it's capped exponential backoff with jitter in
+    [half, full] of each span, so retries from different bots don't
+    synchronize. Every other failure — 4xx that isn't 429, DNS, TLS,
+    timeouts — raises immediately: a 401 or 404 doesn't improve by
+    trying again, and run_loop already backs off network errors (T696).
+    Returns parsed JSON, like the copies it replaced.
+    """
+    import json
+    import random
+    import urllib.error
+    import urllib.request
+
+    open_ = opener or urllib.request.urlopen
+    rnd = rand if rand is not None else random.random
+    wait = 0.0
+    for attempt in range(attempts):
+        if wait:
+            sleep(wait)
+            wait = 0.0
+        try:
+            with open_(req, timeout=timeout) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            ra = None
+            try:  # seconds form; HTTP-date falls back to backoff (rare)
+                ra = max(0.0, float((e.headers.get("Retry-After")
+                                     if e.headers else "") or ""))
+            except (TypeError, ValueError):
+                ra = None
+            e.close()  # the error body is of no use; free the socket
+            if e.code != 429 and not 500 <= e.code < 600:
+                raise  # permanent — retrying a 401/404 just wastes calls
+            if attempt == attempts - 1:
+                raise  # budget spent — surface the real status to the caller
+            if ra is not None:
+                wait = min(ra, retry_after_cap_s)
+            else:
+                span = min(backoff_s * (2 ** attempt), backoff_cap_s)
+                wait = span * (0.5 + 0.5 * rnd())  # jitter: never 0, never early
+
+
 def run_loop(fetch, handle, *, name: str, backoff_s: float = 5.0,
              sleep=time.sleep, health=None, stopping=None):
     """T696: one poll loop for every sync adapter (telegram/matrix/zulip).

@@ -19,15 +19,20 @@ import urllib.request
 
 
 def api(token: str, server: str, method: str, path: str, **params):
-    """One Mattermost REST call as JSON."""
+    """One Mattermost REST call as JSON.
+
+    T851: 429/5xx are retried via the shared `http_json` helper (backoff
+    honoring Retry-After); everything else still raises immediately.
+    """
+    from gatekeeper.adapters.common import http_json
+
     req = urllib.request.Request(
         f"{server}/api/v4{path}",
         data=json.dumps(params).encode() if params else None,
         method=method,
         headers={"Authorization": f"Bearer {token}",
                  "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read())
+    return http_json(req, timeout=30)
 
 
 def handle_post(post: dict, rules: dict, *, token=None, server=None,

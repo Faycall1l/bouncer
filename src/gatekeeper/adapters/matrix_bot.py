@@ -15,15 +15,20 @@ import urllib.request
 
 
 def api(token: str, homeserver: str, method: str, path: str, params=None):
-    """One Matrix client-API call as JSON; raises OSError/URLError on failure."""
+    """One Matrix client-API call as JSON; raises OSError/URLError on failure.
+
+    T851: 429/5xx are retried via the shared `http_json` helper (backoff
+    honoring Retry-After); everything else still raises immediately.
+    """
+    from gatekeeper.adapters.common import http_json
+
     req = urllib.request.Request(
         f"{homeserver}/_matrix/client/v0{path}",
         data=json.dumps(params).encode() if params else None,
         method=method,
         headers={"Authorization": f"Bearer {token}",
                  "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=70) as resp:
-        return json.loads(resp.read())
+    return http_json(req, timeout=70)
 
 
 def _command(body, rules, event, token, homeserver, api_fn, out):

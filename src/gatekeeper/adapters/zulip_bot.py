@@ -17,15 +17,20 @@ import urllib.request
 
 
 def api(email: str, key: str, site: str, method: str, path: str, **params):
-    """One Zulip v1 call as JSON (HTTP Basic: bot email + api key)."""
+    """One Zulip v1 call as JSON (HTTP Basic: bot email + api key).
+
+    T851: 429/5xx are retried via the shared `http_json` helper (backoff
+    honoring Retry-After); everything else still raises immediately.
+    """
+    from gatekeeper.adapters.common import http_json
+
     auth = base64.b64encode(f"{email}:{key}".encode()).decode()
     req = urllib.request.Request(
         f"{site}/api/v1{path}",
         data=urllib.parse.urlencode(params).encode() if params else None,
         method=method,
         headers={"Authorization": f"Basic {auth}"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.loads(resp.read())
+    return http_json(req, timeout=60)
 
 
 def _command(text, rules, msg, creds, api_fn, out):

@@ -16,13 +16,18 @@ API_URL = "https://api.telegram.org/bot{token}/{method}"
 
 
 def api(token: str, method: str, **params):
-    """One Bot API call as JSON; raises OSError/URLError on network failure."""
+    """One Bot API call as JSON; raises OSError/URLError on network failure.
+
+    T851: 429/5xx are retried via the shared `http_json` helper (backoff
+    honoring Retry-After); everything else still raises immediately.
+    """
+    from gatekeeper.adapters.common import http_json
+
     req = urllib.request.Request(
         API_URL.format(token=token, method=method),
         data=json.dumps(params).encode(),
         headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.loads(resp.read())
+    return http_json(req, timeout=60)
 
 
 def _command(text: str, rules: dict, chat_id, token, api_fn, out):
