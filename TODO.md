@@ -921,7 +921,7 @@
 - [x] T832 serve: /v1/systemone gets a typed request schema (today: bare dict, key-count cap only, values unbounded)
 - [x] T833 serve: /v1/systemone routed through the safe predict path (timeout, breaker, retry — it bypasses all three today)
 - [x] T834 serve: /v1/systemone records decisions + audit like /predict (currently invisible to stats/audit)
-- [ ] T835 serve: ModReq extra=forbid — unknown request fields are 422, not silently dropped
+- [x] T835 serve: ModReq extra=forbid — unknown request fields are 422, not silently dropped
 - [ ] T836 serve: BatchReq gains lang + preset autofill (parity with ModReq — batch has no lang today)
 - [ ] T837 serve: batch overall deadline (worst case today: 32 messages x 60s each)
 - [ ] T838 serve: uvicorn gets timeout_keep_alive + limit_concurrency (CLI flags, wired through cli serve)

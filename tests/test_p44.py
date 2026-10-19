@@ -284,3 +284,44 @@ def test_systemone_records_decisions_and_audit(tmp_path, monkeypatch):  # T834
         gatekeeper._router = None
         gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
         importlib.reload(_au)  # restore the default audit path
+
+
+def test_unknown_request_fields_are_rejected():  # T835
+    """A typo like "thresold" used to be silently dropped — the request
+    fell back to defaults and the client never learned. ModReq and
+    BatchReq now forbid extras (422 naming the field). The Jev passthrough
+    stays permissive on purpose: SDK metadata rides along (T832 contract).
+    """
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import serve
+
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    serve._BUCKETS.clear()
+    r = client.post("/predict",
+                    json={"message": "hi", "rules": {"r": "t"},
+                          "thresold": 0.5})  # the typo
+    assert r.status_code == 422, r.text
+    assert "thresold" in r.text  # the offender is named, not swallowed
+
+    serve._BUCKETS.clear()
+    r = client.post("/predict/batch",
+                    json={"messages": ["hi"], "rules": {"r": "t"},
+                          "langg": "en"})  # another typo
+    assert r.status_code == 422 and "langg" in r.text
+
+    # the passthrough tolerates extra top-level keys — ignored, never a 422
+    import gatekeeper
+
+    class Rec:
+        def predict(self, state, questions):
+            return {"answers": {}}
+
+    gatekeeper._router = Rec()
+    try:
+        serve._BUCKETS.clear()
+        r = client.post("/v1/systemone",
+                        json={"state": {}, "questions": {}, "trace_id": "abc"})
+        assert r.status_code == 200, r.text  # extras ignored, no 422
+    finally:
+        gatekeeper._router = None

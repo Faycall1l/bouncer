@@ -321,7 +321,10 @@ class ModReq(BaseModel):
     model: str | None = None  # T459: pin a checkpoint or omit for auto-routing
     timeout_s: float | None = None  # T515: per-request budget (0.5–60s)
 
-    model_config = {"json_schema_extra": {"examples": [  # T063
+    # T835: a typo like "thresold" used to be silently dropped — the request
+    # fell back to defaults and the client never learned. Now it's a 422.
+    model_config = {"extra": "forbid",  # T835
+                    "json_schema_extra": {"examples": [  # T063
         {"message": "FREE NITRO http://x.gg", "rules": {"no-spam": "no ads or links"},
          "threshold": 0.85}]}}
 
@@ -479,6 +482,8 @@ class BatchReq(BaseModel):
     delete_threshold: float | None = None
     model: str | None = None  # T459
     timeout_s: float | None = None  # T515
+
+    model_config = {"extra": "forbid"}  # T835: same typo-blindness as ModReq
 
 
 @app.post("/predict/batch")  # T050

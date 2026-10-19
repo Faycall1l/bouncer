@@ -8,6 +8,8 @@ _(Last checked against v0.4.0.)_
   `rules` caps (T773): 1–12 keys, each a
   ≤24-char slug (`a-z0-9-`) with value ≤ 280 chars — bombs get 422
   `E_RULES_COUNT`/`E_RULES_ID`/`E_RULES_TEXT`. Rule errors → 422 `{code, message}`.
+  Unknown request fields are **422, not silently dropped** (`extra="forbid"`,
+  T835) — a typo like `thresold` can't quietly fall back to defaults.
   All POST bodies whose `Content-Length` exceeds 1 MB are 413 **before**
   they're parsed (T775).
 * `POST /predict/batch` `{messages[], rules, threshold?, allow_threshold?,
