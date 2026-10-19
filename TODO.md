@@ -946,7 +946,7 @@
 - [x] T855 adp: twitch gains Health parity — run() builds Health("twitch"), _watch_once counts decisions, records model failures, and runs maybe_log per message (health=None default keeps the T708 session test exact)
 - [x] T856 adp: adapters pass user= to moderate — all seven call sites route through new common.as_user_id (str keys so JSON reloads don't split the table, None stays None); per-user strikes accrue from platform traffic (CLI-only before)
 - [x] T857 adp: adapters pass lang= via detected script — new common.detect_lang maps detect_script to ar/zh/ru (pins the multilingual checkpoint, T457); latin/other stay None (laya's auto stays the documented route); all seven call sites wired
-- [ ] T858 strikes: keys namespaced platform:user (a Discord id and a Telegram id share one table today)
+- [x] T858 strikes: keys namespaced platform:user — as_user_id gained a platform argument (telegram/matrix/zulip/mattermost/discord/twitch/slack at all seven sites; CLI keys stay raw and remain addressable); also fixed the decision cache (T221) swallowing per-user data: cached/coalesced payloads never carry strikes, and new _accrue re-runs on every exit path so a cached repeat still accrues
 - [ ] T859 adp: discord notices become threaded replies (message_reference)
 - [ ] T860 adp: telegram notices reply in-thread (reply_to_message_id)
 - [ ] T861 adp: matrix notices carry the reply relation

@@ -67,7 +67,7 @@ def _watch_once(sock, rules, health=None) -> None:  # T855: health parity
             user, text = parsed
             try:
                 res = moderate(text, rules,  # T856+T857: strikes + lang hint
-                               user_id=as_user_id(user),
+                               user_id=as_user_id("twitch", user),
                                lang=detect_lang(text))
             except Exception as e:  # noqa: BLE001 — one bad line, one print
                 print("mod error", redact(str(e)), file=sys.stderr)

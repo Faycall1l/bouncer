@@ -74,7 +74,7 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
     from gatekeeper import moderate
     from gatekeeper.adapters.common import as_user_id, detect_lang, dry_run
     res = dict(moderate(body, rules,  # T856+T857: strikes + detected lang
-                        user_id=as_user_id(event.get("sender")),
+                        user_id=as_user_id("matrix", event.get("sender")),
                         lang=detect_lang(body)))
     res["redacted"] = False
     if res["action"] == "delete" and can_redact and token and homeserver:

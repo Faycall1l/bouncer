@@ -363,6 +363,21 @@ def coalesce_stats() -> dict:  # T754: joined/total effectiveness for /stats
             "ratio": round(joined / total, 3) if total else 0.0}
 
 
+def _accrue(res, user_id):  # T340+T858
+    """Per-user strikes belong to the CALLER, never to a shared payload.
+
+    The decision cache (T221) and coalescing (T180) key on the message,
+    not the user, so every path handing back a decision re-runs this with
+    its own user_id: a repeat accrues again (a flood of identical
+    messages is exactly what the cache serves), and since the cached and
+    coalesced payloads never carry `strikes` (stripped at both storage
+    points), no caller ever sees another user's record.
+    """
+    if user_id and res.get("action") in ("flag", "delete"):
+        res["strikes"] = add_strike(user_id, weight_for_action(res["action"]))
+    return res
+
+
 def moderate(message: str, rules: dict[str, str] | None = None,
              context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
@@ -399,7 +414,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                                          cfg.questions))  # T755: 3q/5q never share
     hit = CACHE.get(key)
     if hit is not None:
-        return dict(hit, cached=True)
+        return _accrue(dict(hit, cached=True), user_id)  # T858: own strikes
     fp = _fastpath_allow(msg, rules)  # T017
     if fp is not None:
         fp["latency_ms"] = 0.0
@@ -420,7 +435,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     if joined:
         ev.wait(timeout=cfg.timeout_s + 5)
         if box:
-            return dict(box["res"], coalesced=True)
+            return _accrue(dict(box["res"], coalesced=True), user_id)  # T858
     r = router or get_router()
     import time as _t
     t0 = _t.time()
@@ -489,8 +504,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     res["context"] = {"items": len(hist),  # T756: what actually reached the model
                       "tokens_est": sum(_est_tokens(h) for h in hist),
                       "cap": cfg.max_context_tokens, "dropped": ctx_dropped}
-    if user_id and res["action"] in ("flag", "delete"):  # T340: per-user strikes
-        res["strikes"] = add_strike(user_id, weight_for_action(res["action"]))
+    _accrue(res, user_id)  # T340+T858: this caller's own strikes, every path
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
     res["raw"] = a
     record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"))
@@ -503,10 +517,12 @@ def moderate(message: str, rules: dict[str, str] | None = None,
             pass
     res["reason"] = _explain(res, rules)  # T213: reason ships in every result
     res["cached"] = False  # T247: explicit miss marker (hits override to True)
-    CACHE.set(key, {k: v for k, v in res.items() if k != "raw"})
+    CACHE.set(key, {k: v for k, v in res.items()
+                    if k not in ("raw", "strikes")})  # T858: per-user, never cached
     with _FLY_LOCK:  # T180: publish to joiners
         if key in _INFLIGHT:
-            _INFLIGHT[key][1]["res"] = {k: v for k, v in res.items() if k != "raw"}
+            _INFLIGHT[key][1]["res"] = {k: v for k, v in res.items()
+                                        if k not in ("raw", "strikes")}  # T858
             _INFLIGHT[key][0].set()
             del _INFLIGHT[key]
     return res

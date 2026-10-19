@@ -15,9 +15,10 @@
 The matrix's SDK column is the T703 truth: `common.py` (T691–T709) is the
 whole shared surface — `require_env`/`load_rules`/`load_config` at startup,
 `run_loop` + `Health` + `RateCap` + `install_shutdown` around the loop,
-`redact` + `dry_run` on every outbound line, `as_user_id` (T856) handing
-each platform's user to `moderate(user_id=...)` so per-user strikes accrue
-from chat traffic, not just the CLI, and `detect_lang` (T857) deriving
+`redact` + `dry_run` on every outbound line, `as_user_id` (T856+T858) handing
+each platform's user to `moderate(user_id=...)` namespaced `platform:user`
+so per-user strikes accrue per platform from chat traffic, not just the
+CLI, and `detect_lang` (T857) deriving
 `lang=` from the message script so non-latin platform traffic pins the
 multilingual checkpoint instead of routing as auto. A new adapter gets all
 of it by importing from `common`; nothing in the column may name a helper

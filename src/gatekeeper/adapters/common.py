@@ -106,15 +106,19 @@ def redact(s: str) -> str:
     return s
 
 
-def as_user_id(value):  # T856
+def as_user_id(platform, value):  # T856+T858
     """Platform user id as `moderate(user_id=...)` must see it (T340's
-    per-user strike table): `str`, because the table round-trips through
-    JSON and an int key would split today's live count from its reloaded
-    string key — and None stays None, so a payload without a sender never
-    becomes the literal strike target "None". Ids from different platforms
-    still share one table until T858 namespaces them.
+    per-user strike table): `platform:user` (T858) — a Discord id 42 and a
+    Telegram id 42 are two people, not one table entry. Keys round-trip
+    through JSON, so the f-string's str is exactly right; None stays None,
+    so a payload without a sender never becomes the literal strike target
+    "None". Only platforms namespace: the CLI takes the key verbatim, and
+    `--user discord:77` addresses that same table by hand — raw keys stay
+    interoperable with every namespaced one.
     """
-    return None if value is None else str(value)
+    if value is None:
+        return None
+    return f"{platform}:{value}"
 
 
 def detect_lang(text):  # T857

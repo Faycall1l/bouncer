@@ -548,19 +548,23 @@ def test_twitch_watch_once_counts_decisions_and_errors(monkeypatch, capsys):  # 
     assert health.logged == 4, "every message keeps the health line on time"
 
 
-def test_as_user_id_normalizes_for_the_strike_table():  # T856
-    """Strikes keys round-trip through JSON: ints become str or today's
-    live count would split from its reloaded key — and a payload without
-    a sender stays None, never the literal strike target "None"."""
+def test_as_user_id_namespaces_keys_per_platform():  # T856+T858
+    """Strike keys are `platform:user` (T858): a Discord id 42 and a
+    Telegram id 42 are two people, not one table entry; the f-string
+    round-trips through JSON as str; a payload without a sender stays
+    None, never the literal strike target "None"."""
     from gatekeeper.adapters.common import as_user_id
-    assert as_user_id(42) == "42" and as_user_id("u1") == "u1"
-    assert as_user_id(None) is None and as_user_id(0) == "0"
+    assert as_user_id("discord", 42) == "discord:42"
+    assert as_user_id("telegram", "u1") == "telegram:u1"
+    assert as_user_id("slack", "U123") == "slack:U123"
+    assert as_user_id("telegram", None) is None
+    assert as_user_id("telegram", 0) == "telegram:0"
 
 
-def test_every_adapter_passes_the_platform_user_to_moderate(monkeypatch):  # T856
+def test_every_adapter_passes_the_platform_user_to_moderate(monkeypatch):  # T856+T858
     """Per-user strikes accrue from platform traffic (CLI-only before):
-    all seven moderate() call sites hand the platform's user over, already
-    normalized as moderate()'s str | None signature demands."""
+    all seven moderate() call sites hand the platform's user over,
+    namespaced `platform:user` since T858 — no cross-platform collisions."""
     import gatekeeper
     from gatekeeper.adapters import discord_bot as db
     from gatekeeper.adapters import matrix_bot, mattermost, webhooks
@@ -626,32 +630,65 @@ def test_every_adapter_passes_the_platform_user_to_moderate(monkeypatch):  # T85
     # 7) slack: event.user
     webhooks.receive_slack_event({"text": "hi", "user": "U123"}, rules)
 
-    assert seen == ["99", "@user:example.org", "42", "mm-user", "4242",
-                    "u", "U123"], seen
-    assert all(isinstance(u, str) for u in seen), "str keys, always (T340)"
+    assert seen == ["telegram:99", "matrix:@user:example.org", "zulip:42",
+                    "mattermost:mm-user", "discord:4242", "twitch:u",
+                    "slack:U123"], seen
+    assert all(isinstance(u, str) and ":" in u for u in seen), "T858: namespaced"
 
 
 def test_platform_traffic_accrues_real_strikes(monkeypatch):  # T856
     """The point of the box: a delete issued for a platform user lands in
-    the same strike table the CLI writes — and res tells the operator."""
+    that platform's namespaced table (T858) — telegram:77 accrues, a bare
+    key "77" (what `--user 77` writes) is a different entry entirely."""
     from test_cli import Stub  # the deterministic router shape (T134)
 
     import gatekeeper
     from gatekeeper import strikes
+    from gatekeeper.adapters import discord_bot as db
     from gatekeeper.adapters.telegram_bot import handle_update
 
     monkeypatch.setattr(gatekeeper, "_router", Stub(choice="no-cheat",
                                                     conf=0.99))
     strikes.reset()
     try:
+        rules = gatekeeper.get_preset("gaming")
         res = handle_update(
             {"message": {"text": "aimbot for sale", "message_id": 7,
                          "chat": {"id": 1}, "from": {"id": 77}}},
-            gatekeeper.get_preset("gaming"))
+            rules)
         assert res["action"] == "delete", res
-        assert res["strikes"]["user"] == "77", res["strikes"]
-        assert res["strikes"]["strikes"] == strikes.standing("77")["strikes"] >= 1
-        assert strikes.standing(77)["strikes"] == 0, "int key would split the table"
+        assert res["strikes"]["user"] == "telegram:77", res["strikes"]
+        assert res["strikes"]["strikes"] == \
+            strikes.standing("telegram:77")["strikes"] >= 1
+
+        # the box itself: id 77 on Discord is a different table entirely
+        class _H:
+            def decision(self):
+                pass
+
+            def maybe_log(self):
+                pass
+
+            def error(self, e):
+                pass
+
+        res2 = db.moderate_message("aimbot for sale", 77, rules,
+                                   health=_H(), cap=None)
+        assert res2["cached"] is True, "same message: this rode the cache"
+        assert res2["strikes"]["user"] == "discord:77", res2["strikes"]
+        assert strikes.standing("discord:77")["strikes"] == \
+            strikes.standing("telegram:77")["strikes"], "parallel, not merged"
+        assert strikes.standing("77")["strikes"] == 0, "raw key, other table"
+        # T858 also: the cache (T221) no longer swallows accrual — a repeat
+        # of the same message is served from cache but still accrues its own
+        # strike (a flood of identical messages is what the cache serves)
+        res3 = handle_update(
+            {"message": {"text": "aimbot for sale", "message_id": 8,
+                         "chat": {"id": 1}, "from": {"id": 77}}}, rules)
+        assert res3["cached"] is True, res3
+        assert res3["strikes"]["user"] == "telegram:77", res3["strikes"]
+        assert res3["strikes"]["strikes"] == 4, "delete weighs 2 (test_p19), twice"
+        assert strikes.standing("discord:77")["strikes"] == 2, "still isolated"
     finally:
         strikes.reset()  # T249: test isolation
 

@@ -60,7 +60,7 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
     else:
         try:
             res = dict(moderate(text, rules,  # T856+T857: strikes + lang hint
-                                user_id=as_user_id(user_id),
+                                user_id=as_user_id("discord", user_id),
                                 lang=detect_lang(text)))
             if res["action"] not in ("ignored", "command"):  # T699
                 health.decision()
