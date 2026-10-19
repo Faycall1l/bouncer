@@ -377,3 +377,89 @@ def test_batch_lang_parity_with_single():  # T836
         assert r.status_code == 422 and "E_LANG" in r.text
     finally:
         gatekeeper._router = None
+
+
+def test_batch_shares_one_deadline():  # T837
+    """timeout_s used to restart per message (32 x 60s worst case for one
+    request). Now the whole batch shares one deadline: the slow first row
+    burns the budget, rows after it get escalate fallbacks (cause
+    batch-deadline) WITHOUT waking the model, and the call count proves it.
+    """
+    import time as _time
+
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+    from gatekeeper.stats import get_stats
+
+    calls = {"n": 0}
+
+    class Slow:
+        def predict(self, state, questions=None, model=None):
+            calls["n"] += 1
+            _time.sleep(2.0)  # far past the 0.5s floor timeout_s allows
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.9,
+                         "probabilities": {"ok": 0.9}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Slow()
+    gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+    try:
+        from fastapi.testclient import TestClient
+        client = TestClient(serve.app, raise_server_exceptions=False)
+        serve._BUCKETS.clear()
+        causes_before = get_stats()["causes"].get("batch-deadline", 0)
+
+        t0 = _time.monotonic()
+        r = client.post("/predict/batch",
+                        json={"messages": [f"t837 row {i}" for i in range(6)],
+                              "rules": {"r": "t"}, "timeout_s": 0.5})
+        elapsed = _time.monotonic() - t0
+
+        assert r.status_code == 200, r.text  # bounded rows, not a 500
+        rows = r.json()
+        assert len(rows) == 6  # order + count kept even when rows fall back
+
+        # the first row burned the budget on the model (attempt + one retry
+        # is _predict_safe's contract) — and no later row wakes it again
+        assert calls["n"] <= 2, "later rows must not wake a deadlined model"
+        # ...so the rest are escalate fallbacks naming the deadline
+        assert all(row["cause"] == "batch-deadline" for row in rows[1:]), rows
+        assert all(row["action"] == "escalate" for row in rows[1:])
+        assert "deadline" in rows[-1]["reason"]
+
+        # one bounded request: two 0.5s timeout attempts + retry sleep,
+        # then instant fallbacks — nowhere near 6 x 2s of sleep
+        assert elapsed < 3.0, elapsed
+        assert get_stats()["causes"]["batch-deadline"] >= causes_before + 5
+
+        # plenty of budget: every row runs normally (deadline is no-op)
+        fast = gatekeeper._router
+
+        class Quick:
+            def predict(self, state, questions=None, model=None):
+                calls["n"] += 1
+                return {"answers": {
+                    "rule": {"choice": "ok", "confidence": 0.9,
+                             "probabilities": {"ok": 0.9}},
+                    "harm": {"score": "safe", "probabilities": []},
+                    "hype": {"score": "chill", "probabilities": []},
+                    "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+        assert fast is not None
+        gatekeeper._router = Quick()
+        serve._BUCKETS.clear()
+        before = calls["n"]
+        r = client.post("/predict/batch",
+                        json={"messages": ["t837 fine a", "t837 fine b"],
+                              "rules": {"r": "t"}, "timeout_s": 60})
+        assert r.status_code == 200
+        assert all(row["cause"] != "batch-deadline" for row in r.json()), r.json()
+        assert calls["n"] == before + 2
+    finally:
+        gatekeeper._router = None
+        gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)

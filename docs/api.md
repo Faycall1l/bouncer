@@ -13,9 +13,12 @@ _(Last checked against v0.4.0.)_
   All POST bodies whose `Content-Length` exceeds 1 MB are 413 **before**
   they're parsed (T775).
 * `POST /predict/batch` `{messages[], rules, threshold?, allow_threshold?,
-  delete_threshold?, lang?}` → array, order kept. 1–32 messages (else 422/413), each
-  ≤ 8000 chars. `lang` validates and routes like `/predict`'s (T836) — a preset
-  autofills its pack's language when `lang` is omitted (T502 parity). Shares
+  delete_threshold?, lang?, timeout_s?}` → array, order kept. 1–32 messages
+  (else 422/413), each ≤ 8000 chars. `lang` validates and routes like
+  `/predict`'s (T836) — a preset autofills its pack's language when `lang` is
+  omitted (T502 parity). `timeout_s`/`BOUNCER_TIMEOUT` bounds the **whole
+  batch** (T837): rows that don't start before the deadline return escalate
+  fallbacks (cause `batch-deadline`) instead of touching the model. Shares
   rate/auth guards with `/predict`.
 * `POST /v1/systemone` `{state, questions}` → raw router passthrough (Jev SDKs work) — contents untyped, but the call shares `/predict`'s timeout/retry/breaker path (T833): a dead model is a coded `503 E_MODEL`, never a hung socket.
   Same rate/auth guards apply. `state.history` is bounded server-side (T774+T775):

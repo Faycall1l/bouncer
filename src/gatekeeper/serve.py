@@ -515,8 +515,13 @@ def predict_batch(req: BatchReq, request: Request):
     cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t,
                      timeout_s=_request_timeout(req.timeout_s),  # T525
                      questions=questions_knob())  # T755: BOUNCER_QUESTIONS
+    # T837: timeout_s was applied PER MESSAGE (32 msgs x 60s = 1920s worst
+    # case for one request). It's the per-REQUEST budget T515 documents —
+    # the whole batch shares one deadline; stragglers get escalate fallbacks.
+    deadline = time.monotonic() + cfg.timeout_s
     return [_clean(r) for r in moderate_batch(req.messages, rules, config=cfg,
-                                              model=req.model, lang=lang)]
+                                              model=req.model, lang=lang,
+                                              deadline=deadline)]
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
 class SystemoneReq(BaseModel):  # T832: typed SHAPE, passthrough CONTENTS

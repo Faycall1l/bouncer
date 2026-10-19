@@ -923,7 +923,7 @@
 - [x] T834 serve: /v1/systemone records decisions + audit like /predict (currently invisible to stats/audit)
 - [x] T835 serve: ModReq extra=forbid — unknown request fields are 422, not silently dropped
 - [x] T836 serve: BatchReq gains lang + preset autofill (parity with ModReq — batch has no lang today)
-- [ ] T837 serve: batch overall deadline (worst case today: 32 messages x 60s each)
+- [x] T837 serve: batch overall deadline (worst case today: 32 messages x 60s each)
 - [ ] T838 serve: uvicorn gets timeout_keep_alive + limit_concurrency (CLI flags, wired through cli serve)
 - [ ] T839 serve: graceful shutdown drains in-flight predicts + flushes audit (today the lifespan note is cosmetic)
 - [ ] T840 serve: access log gains method/status, decision log gains rid — X-Request-ID correlates both

@@ -493,18 +493,50 @@ def moderate(message: str, rules: dict[str, str] | None = None,
 
 def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfig | None = None,
                    router: Router | None = None, chunk: int = 8,
-                   model: str | None = None, lang: str | None = None) -> list[dict]:  # T836
-    """T020+T021: shared Router, chunked to bound padding; order preserved."""
+                   model: str | None = None, lang: str | None = None,  # T836
+                   deadline: float | None = None) -> list[dict]:  # T837
+    """T020+T021: shared Router, chunked to bound padding; order preserved.
+
+    T837: `deadline` (time.monotonic timestamp) bounds the WHOLE batch —
+    the budget used to restart per message (32 msgs x 60s worst case).
+    Messages that don't start before it return an escalate fallback
+    (cause "batch-deadline") instead of touching the model; in-flight
+    messages get only their remaining time. None keeps the legacy
+    per-message budget (direct callers, eval benches).
+    """
+    import time as _t
+    from dataclasses import replace as _dc_replace
     cfg = config or GateConfig(questions=questions_knob())  # T755: env default
     validate_rules(rules, cfg.max_rules, cfg.max_rule_chars,  # T196: once, not per message
                    cfg.severity)
     r = router or get_router()
     out = []
     for i in range(0, len(messages), chunk):
-        out.extend(moderate(m, rules, config=config, router=r, model=model,
-                            lang=lang,  # T836: batch rows route like single ones
-                            _prevalidated=True)
-                   for m in messages[i:i + chunk])
+        for m in messages[i:i + chunk]:
+            row_cfg = cfg
+            if deadline is not None:
+                remaining = deadline - _t.monotonic()
+                if remaining <= 0:  # T837: budget gone — don't wake the model
+                    fb = _fallback(f"E_MODEL: batch deadline hit after "
+                                   f"{len(out)} of {len(messages)} messages")
+                    fb["cause"] = "batch-deadline"
+                    fb["reason"] = ("escalate: batch deadline hit "
+                                    "(raise timeout_s or BOUNCER_TIMEOUT)")
+                    record("escalate", "ok", 0.0, cause="batch-deadline")  # T260
+                    log_decision(m, "ok", 0.0, "escalate", 0.0)
+                    try:
+                        _qadd(m, {"action": "escalate", "rule": "ok",
+                                  "confidence": 0.0, "latency_ms": 0.0})
+                    except OSError:
+                        pass
+                    out.append(fb)
+                    continue
+                # in-flight rows get only what's left, not a fresh budget
+                row_cfg = _dc_replace(cfg, timeout_s=min(cfg.timeout_s, remaining))
+            out.append(moderate(m, rules, config=row_cfg, router=r, model=model,
+                                lang=lang,  # T836: batch rows route like single ones
+                                _prevalidated=True))
+    return out
     return out
 
 
