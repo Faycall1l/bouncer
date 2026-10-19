@@ -3,7 +3,7 @@
 | Platform | File | Setup | SDK features (T691–T702) |
 |---|---|---|---|
 | Discord | `adapters/discord_bot.py` | `pip install -e .[discord]`, `DISCORD_TOKEN=... python -m gatekeeper.adapters.discord_bot` | Health, RateCap (T854), require_env, load_rules, dry-run, redact, SIGTERM (hard — discord.py owns cleanup) |
-| Twitch | `adapters/twitch_irc.py` | stdlib only. `TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc` (flag-only, never bans) | require_env, load_rules, redact (delegates to shared pass), dry-run (no-op — print-only), SIGTERM (between reconnects) |
+| Twitch | `adapters/twitch_irc.py` | stdlib only. `TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc` (flag-only, never bans) | Health (T855), require_env, load_rules, redact (delegates to shared pass), dry-run (no-op — print-only), SIGTERM (between reconnects) |
 | Telegram | `adapters/telegram_bot.py` | stdlib only. `TELEGRAM_TOKEN=... python -m gatekeeper.adapters.telegram_bot` (long-poll, `/rules` `/stats` `/help`, flag-only default; `BOUNCER_TG_DELETE=1` opts into deleteMessage) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Matrix | `adapters/matrix_bot.py` | stdlib only. `MATRIX_TOKEN=... MATRIX_HOMESERVER=... python -m gatekeeper.adapters.matrix_bot` (sync timeline, `!bouncer rules` `!bouncer stats`, flag-only default; `BOUNCER_MX_REDACT=1` opts into redactions) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Mattermost | `adapters/mattermost.py` | `pip install -e .[mattermost]`. `MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.mattermost` (websocket `posted` events + `/bouncer` slash webhook, `MATTERMOST_SLASH_TOKEN` compared constant-time; `BOUNCER_MM_DELETE=1` opts into deletePost) | areconnect + `_session` (T852: dropped socket redials with capped jittered backoff), Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
@@ -87,7 +87,8 @@ points at a JSON file of rules; `BOUNCER_RULES_<ADAPTER>` (e.g.
 unreadable rules file fails at startup with `E_ADAPTER`, before any loop
 starts.
 
-Every loop adapter also logs a health line (T699) every 5 minutes:
+Every adapter's loop also logs a health line (T699, all six since T855)
+every 5 minutes:
 `<name> health: N decisions/min, last error: <age> — <msg>` (or `none`).
 Ignored traffic and command replies aren't counted as decisions; fetch and
 event errors are recorded as the last error with its age.

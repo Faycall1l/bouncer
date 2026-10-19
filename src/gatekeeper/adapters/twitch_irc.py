@@ -1,6 +1,8 @@
 """Twitch IRC stub, stdlib only (T076-T077). Read-only: flags, never bans.
 Usage: TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc
-Print-only by design, so BOUNCER_DRY_RUN (T697) is a no-op here.
+Print-only by design, so BOUNCER_DRY_RUN (T697) is a no-op here — but
+Health (T699) reports anyway (T855): flag-only still means decisions are
+being made, and an operator should see the rate and the last error.
 
 Mentions (T706): "@bouncer ..." arrives as ordinary PRIVMSG text and is
 moderated like any other message — the @-prefix is just text to the rules
@@ -44,7 +46,11 @@ def _parse_privmsg(line: str) -> tuple | None:
     return user, text
 
 
-def _watch_once(sock, rules) -> None:
+def _watch_once(sock, rules, health=None) -> None:  # T855: health parity
+    """T299: one IRC session — PING/PONG keepalive, moderate every PRIVMSG.
+    Health (T699, if given): decisions counted like run_loop's, the model
+    guard records one redacted error instead of dying, and maybe_log()
+    runs per message so the line stays on time."""
     from gatekeeper import moderate
     buf = ""
     while True:
@@ -60,16 +66,23 @@ def _watch_once(sock, rules) -> None:
             user, text = parsed
             try:
                 res = moderate(text, rules)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001 — one bad line, one print
                 print("mod error", redact(str(e)), file=sys.stderr)
-                continue
+                res = {"action": "ignored", "reason": "moderate-error"}
+                if health is not None:
+                    health.error(redact(str(e)))  # T699+T855: recorded, not just printed
             if res["action"] in ("delete", "flag", "escalate"):
                 print(f"[{res['action']}] <{user}> {text[:120]} ({res['rule']}@{res['confidence']:.2f})",
                       flush=True)
+            if health is not None:
+                if res.get("action") not in ("ignored", "command"):  # T699
+                    health.decision()
+                health.maybe_log()  # T855: chat traffic keeps the line on time
 
 
 def run(retries: int = 3):
     from gatekeeper.adapters.common import (
+        Health,
         cfg_get,
         install_shutdown,
         load_config,
@@ -78,6 +91,7 @@ def run(retries: int = 3):
     )
     cfg = load_config()  # T709: bouncer.toml defaults; env still wins
     rules = load_rules("twitch", "stream", cfg=cfg)  # T698+T709
+    health = Health("twitch")  # T699+T855: reports even though it never bans
     host, port = "irc.chat.twitch.tv", 6667
     # T691: all three checked up-front — fail before the first connect attempt
     nick = require_env("TWITCH_NICK", cfg_get(cfg, "adapter", "twitch", "nick"))
@@ -93,7 +107,7 @@ def run(retries: int = 3):
             sock = socket.create_connection((host, port), timeout=15)
             sock.sendall(f"PASS {tok}\r\nNICK {nick}\r\nJOIN {chan}\r\n".encode())
             print(f"watching {redact(chan)} (flag-only)", flush=True)  # T300
-            _watch_once(sock, rules)
+            _watch_once(sock, rules, health=health)
             return
         except OSError as e:
             print(f"irc error (attempt {attempt + 1}): {redact(str(e))}", file=sys.stderr,

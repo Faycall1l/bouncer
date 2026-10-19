@@ -470,3 +470,79 @@ def test_discord_moderate_message_survives_model_failure(monkeypatch, capsys):  
     err = capsys.readouterr().err
     assert "discord event error: model down" in err
     assert health.errors == ["model down"] and health.logged == 1
+
+
+def test_twitch_wires_health_reporting():  # T855
+    """Never bans, but reports: run() builds Health and hands it to the
+    session, which counts, records and logs like every other adapter."""
+    src = (ADAPTERS / "twitch_irc.py").read_text()
+    assert 'Health("twitch")' in src
+    assert "_watch_once(sock, rules, health=health)" in src
+    assert "health.decision()" in src and "health.error(" in src
+    assert "health.maybe_log()" in src
+
+
+def test_twitch_watch_once_counts_decisions_and_errors(monkeypatch, capsys):  # T855
+    """A full IRC transcript through _watch_once: delete and allows are
+    decisions, a model crash is one printed line plus one recorded error,
+    maybe_log() sees every message, and the PONG keepalive still fires."""
+    import gatekeeper
+    from gatekeeper.adapters import twitch_irc as tw
+
+    def fake_moderate(text, rules):
+        if "buy followers" in text:
+            return {"action": "delete", "rule": "no-spam", "confidence": 0.99}
+        if text == "boom":
+            raise RuntimeError("model down")
+        return {"action": "allow", "rule": "ok", "confidence": 1.0}
+
+    monkeypatch.setattr(gatekeeper, "moderate", fake_moderate)
+
+    class _Sock:  # test_p37 T708's scripted transcript, then "closes"
+        def __init__(self, lines):
+            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._pos = 0
+            self.sent = []
+
+        def recv(self, n):
+            if self._pos >= len(self._data):
+                raise OSError("transcript over")
+            chunk = self._data[self._pos:self._pos + n]
+            self._pos += len(chunk)
+            return chunk
+
+        def sendall(self, b):
+            self.sent.append(b)
+
+    class _Health:
+        def __init__(self):
+            self.decisions = 0
+            self.errors = []
+            self.logged = 0
+
+        def decision(self):
+            self.decisions += 1
+
+        def error(self, e):
+            self.errors.append(str(e))
+
+        def maybe_log(self):
+            self.logged += 1
+
+    sock = _Sock(["PING :tmi.twitch.tv",
+                  ":u!u@h PRIVMSG #c :buy followers now",
+                  ":u!u@h PRIVMSG #c :hello chat",
+                  ":u!u@h PRIVMSG #c :boom",
+                  ":u!u@h PRIVMSG #c :one more"])
+    health = _Health()
+    try:
+        tw._watch_once(sock, {"no-spam": "t"}, health=health)
+    except OSError:
+        pass  # the transcript ends; run()'s retry loop owns reconnects
+    out = capsys.readouterr()
+    assert sock.sent == [b"PONG :tmi.twitch.tv\r\n"]
+    assert "[delete] <u> buy followers now" in out.out
+    assert "mod error" in out.err and "model down" in out.err
+    assert health.decisions == 3, "delete + two allows are decisions"
+    assert health.errors == ["model down"], "the crash is recorded once"
+    assert health.logged == 4, "every message keeps the health line on time"
