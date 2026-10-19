@@ -703,3 +703,18 @@ def test_stats_gated_behind_key_like_metrics():  # T842
     finally:
         serve._KEY = orig
         serve._BUCKETS.clear()
+
+
+def test_413_before_auth_is_documented():  # T843
+    """The byte-level and Content-Length 413s fire before the key check —
+    an intentional cheap-reject, not an oversight. Both docs name it as a
+    decision with its tradeoff (an unauthenticated prober learns only the
+    documented cap), so nobody 'fixes' the ordering by reading bodies
+    from unauthenticated clients first."""
+    from pathlib import Path
+
+    api = Path("docs/api.md").read_text()
+    assert "before auth" in api and "T831" in api  # the ordering + the cap
+
+    tm = Path("docs/threat-model.md").read_text()
+    assert "before auth by design" in tm and "T843" in tm

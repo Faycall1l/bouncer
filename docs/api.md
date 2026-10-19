@@ -11,7 +11,12 @@ _(Last checked against v0.4.0.)_
   Unknown request fields are **422, not silently dropped** (`extra="forbid"`,
   T835) — a typo like `thresold` can't quietly fall back to defaults.
   All POST bodies whose `Content-Length` exceeds 1 MB are 413 **before**
-  they're parsed (T775).
+  they're parsed (T775) — and bodies that blow the cap mid-stream (chunked
+  or a lying header) are cut off at the byte level before the handler runs
+  (T831). Both 413s fire **before auth** on purpose: an oversized body is
+  rejected for what it *is*, so the key check (and the constant-time compare
+  behind it) is never spent on a body the server would refuse anyway. The
+  only thing an unauthenticated prober learns is the documented 1 MB cap.
 * `POST /predict/batch` `{messages[], rules, threshold?, allow_threshold?,
   delete_threshold?, lang?, timeout_s?}` → array, order kept. 1–32 messages
   (else 422/413), each ≤ 8000 chars. `lang` validates and routes like
