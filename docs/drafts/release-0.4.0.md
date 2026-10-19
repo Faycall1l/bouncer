@@ -78,6 +78,9 @@ Tag: `v0.4.0`.
 
 * `pytest -q`: **412 passed, 1 warning** (2026-10-18, weightless env,
   macOS arm64) — T812.
+* `python scripts/check_tag.py v0.4.0`: **ok: v0.4.0 == 0.4.0** — T825
+  (guard wired into publish.yml at T737; suite runs it against the live
+  pyproject version on every leg).
 * `ruff check .`: **clean** (repo-wide, line-length 100) — T813.
 * `ci workflow` (release commit): **green** — red for 30+ runs on five
   root causes, all fixed in this release tree: `tomllib` is stdlib only

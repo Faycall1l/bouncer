@@ -909,7 +909,7 @@
 - [x] T822 test: packaging smoke (wheel builds + installs + --version)
 - [x] T823 test: env-var docs coverage still enforced (extends T609)
 - [x] T824 test: golden note for 0.4.0 behavior deltas
-- [ ] T825 pkg: tag-vs-version CI guard passes for v0.4.0
+- [x] T825 pkg: tag-vs-version CI guard passes for v0.4.0
 - [ ] T826 sec: SECURITY.md updated for 0.4.0 surface
 - [ ] T827 docs: BENCHMARKS honest-limits refreshed for this release
 - [ ] T828 suite: final full green + stats line
