@@ -934,7 +934,7 @@
 - [x] T845 test: CLI serve flags actually reach uvicorn.run kwargs (covered by test_serve_flags_reach_uvicorn, added with T838)
 - [x] T846 test: oversized chunked body rejected without reading it to the end
 - [x] T847 test: systemone parity — same caps/breaker/audit as /predict
-- [ ] T848 test: shutdown drain — in-flight request completes, audit flushed
+- [x] T848 test: shutdown drain — in-flight request completes, audit flushed (covered by test_graceful_shutdown_drains_and_flushes, added with T839)
 - [ ] T849 fix: P44 reds — any failure the sweep finds, fixed here
 - [ ] T850 test: P44 server-hardening sweep (every box ticked, receipts outside TODO.md)
 
