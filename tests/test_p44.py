@@ -325,3 +325,55 @@ def test_unknown_request_fields_are_rejected():  # T835
         assert r.status_code == 200, r.text  # extras ignored, no 422
     finally:
         gatekeeper._router = None
+
+
+def test_batch_lang_parity_with_single():  # T836
+    """Batch rows used to route as auto no matter what the client said.
+    Now BatchReq takes lang (validated like /predict's), a preset autofills
+    its pack's language (T502 parity), and both reach the router state as
+    lang_hint on every message in the batch."""
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen: list[dict] = []
+
+    class Rec:
+        def predict(self, state, questions=None, model=None):
+            seen.append(dict(state))
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.9,
+                         "probabilities": {"ok": 0.9}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Rec()
+    try:
+        client = TestClient(serve.app, raise_server_exceptions=False)
+
+        # explicit lang lands in every row's state
+        serve._BUCKETS.clear()
+        r = client.post("/predict/batch",
+                        json={"messages": ["a", "b"], "rules": {"r": "t"},
+                              "lang": "es"})
+        assert r.status_code == 200, r.text
+        assert [s.get("lang_hint") for s in seen] == ["es", "es"]
+
+        # a preset autofills its pack's language (gaming -> en)
+        seen.clear()
+        serve._BUCKETS.clear()
+        r = client.post("/predict/batch",
+                        json={"messages": ["a"], "preset": "gaming"})
+        assert r.status_code == 200, r.text
+        assert seen[0].get("lang_hint") == "en", seen[0]
+
+        # bad hint: same 422 as /predict (T496 shape)
+        serve._BUCKETS.clear()
+        r = client.post("/predict/batch",
+                        json={"messages": ["a"], "rules": {"r": "t"},
+                              "lang": "not a slug"})
+        assert r.status_code == 422 and "E_LANG" in r.text
+    finally:
+        gatekeeper._router = None

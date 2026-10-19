@@ -480,6 +480,7 @@ class BatchReq(BaseModel):
     threshold: float = 0.85
     allow_threshold: float | None = None  # T223
     delete_threshold: float | None = None
+    lang: str | None = None  # T836: batch rows route like single ones
     model: str | None = None  # T459
     timeout_s: float | None = None  # T515
 
@@ -505,12 +506,17 @@ def predict_batch(req: BatchReq, request: Request):
     from .config import GateConfig, questions_knob
     allow_t, delete_t = _thresholds(req.threshold, req.allow_threshold, req.delete_threshold)
     _check_model(req.model)  # T459
-    rules, _ = _resolve_rules(req.rules, req.preset)  # T473+T485: one pack, all msgs
+    _check_lang(req.lang)  # T836: same hint validation as /predict (T496)
+    rules, preset_name = _resolve_rules(req.rules, req.preset)  # T473+T485: one pack, all msgs
+    lang = req.lang
+    if lang is None and preset_name is not None:  # T836: T502 parity — pack knows its language
+        from .presets import preset_lang
+        lang = preset_lang(preset_name)
     cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t,
                      timeout_s=_request_timeout(req.timeout_s),  # T525
                      questions=questions_knob())  # T755: BOUNCER_QUESTIONS
     return [_clean(r) for r in moderate_batch(req.messages, rules, config=cfg,
-                                              model=req.model)]
+                                              model=req.model, lang=lang)]
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
 class SystemoneReq(BaseModel):  # T832: typed SHAPE, passthrough CONTENTS

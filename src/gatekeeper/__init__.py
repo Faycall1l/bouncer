@@ -493,7 +493,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
 
 def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfig | None = None,
                    router: Router | None = None, chunk: int = 8,
-                   model: str | None = None) -> list[dict]:
+                   model: str | None = None, lang: str | None = None) -> list[dict]:  # T836
     """T020+T021: shared Router, chunked to bound padding; order preserved."""
     cfg = config or GateConfig(questions=questions_knob())  # T755: env default
     validate_rules(rules, cfg.max_rules, cfg.max_rule_chars,  # T196: once, not per message
@@ -502,6 +502,7 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
     out = []
     for i in range(0, len(messages), chunk):
         out.extend(moderate(m, rules, config=config, router=r, model=model,
+                            lang=lang,  # T836: batch rows route like single ones
                             _prevalidated=True)
                    for m in messages[i:i + chunk])
     return out
