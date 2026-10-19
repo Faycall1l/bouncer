@@ -69,7 +69,7 @@ Upgrade notes:
 * Destructive chat actions in the new adapters are off unless you set
   their opt-in flags; `BOUNCER_DRY_RUN=1` previews instead of posting.
 * `__version__` / package version: `0.4.0`.
-* 413 tests green without weights; `ruff check .` green; CI green on all
+* 419 tests green without weights; `ruff check .` green; CI green on all
   four matrix legs.
 
 Tag: `v0.4.0`.
@@ -77,7 +77,11 @@ Tag: `v0.4.0`.
 ## Verification
 
 * `pytest -q`: **412 passed, 1 warning** (2026-10-18, weightless env,
-  macOS arm64) — T812.
+  macOS arm64) — T812. Final release-tree re-run: **419 passed, 1
+  warning** (2026-10-19) — T828 (+7 tests: T819 version-consistency
+  sweep, T820 adapters-matrix vs runnable stubs, T821 root-file link
+  checker, T822 packaging smoke on the release tree, T823 env-var
+  ops-surface sweep, T826 adapter-surface security pins).
 * `python scripts/check_tag.py v0.4.0`: **ok: v0.4.0 == 0.4.0** — T825
   (guard wired into publish.yml at T737; suite runs it against the live
   pyproject version on every leg).
@@ -112,5 +116,3 @@ Tag: `v0.4.0`.
   12k dataset — unrefreshable in a weightless env; last measured on the
   T108 CPU kernel), the threshold rows name the flag enforcing them —
   T815.
-
-(Highlights / bugs / upgrade notes land with T817.)
