@@ -718,3 +718,18 @@ def test_413_before_auth_is_documented():  # T843
 
     tm = Path("docs/threat-model.md").read_text()
     assert "before auth by design" in tm and "T843" in tm
+
+
+def test_request_limits_section_exists():  # T844
+    """The caps that shape every POST used to live scattered across the
+    endpoint bullets. api.md now has one Request limits section naming all
+    four semantics — body-cap double check, extra-field policy, the batch
+    deadline, and that rate buckets are per worker process."""
+    from pathlib import Path
+
+    doc = Path("docs/api.md").read_text()
+    assert "## Request limits (T844)" in doc
+    section = doc.split("## Request limits (T844)")[1].split("\n## ")[0]
+    for needle in ("byte level", "T831", "extra=\"forbid\"", "T835",
+                   "batch-deadline", "T837", "per worker process", "T777"):
+        assert needle in section, needle

@@ -8,15 +8,8 @@ _(Last checked against v0.4.0.)_
   `rules` caps (T773): 1–12 keys, each a
   ≤24-char slug (`a-z0-9-`) with value ≤ 280 chars — bombs get 422
   `E_RULES_COUNT`/`E_RULES_ID`/`E_RULES_TEXT`. Rule errors → 422 `{code, message}`.
-  Unknown request fields are **422, not silently dropped** (`extra="forbid"`,
-  T835) — a typo like `thresold` can't quietly fall back to defaults.
-  All POST bodies whose `Content-Length` exceeds 1 MB are 413 **before**
-  they're parsed (T775) — and bodies that blow the cap mid-stream (chunked
-  or a lying header) are cut off at the byte level before the handler runs
-  (T831). Both 413s fire **before auth** on purpose: an oversized body is
-  rejected for what it *is*, so the key check (and the constant-time compare
-  behind it) is never spent on a body the server would refuse anyway. The
-  only thing an unauthenticated prober learns is the documented 1 MB cap.
+  See [Request limits](#request-limits-t844) for body caps, extra fields
+  and deadline semantics.
 * `POST /predict/batch` `{messages[], rules, threshold?, allow_threshold?,
   delete_threshold?, lang?, timeout_s?}` → array, order kept. 1–32 messages
   (else 422/413), each ≤ 8000 chars. `lang` validates and routes like
@@ -48,6 +41,38 @@ _(Last checked against v0.4.0.)_
   `timeout_keep_alive` (proxies that drop idle sockets sooner than uvicorn's 5s
   default), `--limit-concurrency N` caps simultaneous connections (default
   unlimited; T838).
+
+## Request limits (T844)
+
+One place for the caps that shape every POST, so the endpoint bullets above
+don't have to repeat them:
+
+* **Body cap is 1 MB, checked twice.** A `Content-Length` over 1 MB is 413
+  **before** the body is read or parsed (T775). The header is client-trust,
+  so a chunked body or a lying one is counted at the **byte level** by the
+  stream cap and cut off mid-stream at the same 1 MB (T831) — the handler
+  never runs and the unread tail is never buffered. Both 413s fire
+  **before auth** on purpose (T843): an oversized body is rejected for what
+  it *is*, so the key check (and the constant-time compare behind it) is
+  never spent on a body the server would refuse anyway. The only thing an
+  unauthenticated prober learns is the documented 1 MB cap.
+* **Unknown request fields are 422, not silently dropped** (`extra="forbid"`,
+  T835) on `/predict` and `/predict/batch` — a typo like `thresold` can't
+  quietly fall back to defaults. The Jev passthrough (`/v1/systemone`) stays
+  permissive on purpose: SDK metadata rides along without a 422 (T832 wire
+  contract).
+* **`timeout_s` is a per-request budget.** On `/predict` it bounds one
+  decision (0.5–60 s, T515). On `/predict/batch` it bounds the **whole
+  batch** (T837): rows that don't start before the deadline return escalate
+  fallbacks (cause `batch-deadline`) instead of waking the model, and
+  in-flight rows get only their remaining time. Worst case for one request
+  is one budget plus one retry window, not `messages × 60 s`.
+* **Rate limits are per worker process.** 60 req/min/IP lives in each
+  worker's memory (no shared store) — `bouncer serve --workers N` multiplies
+  the *effective* ceiling by N. Behind a load balancer, either keep workers
+  at 1 for a strict limit or enforce the real limit at the LB; the
+  per-IP bucket keying (and its trusted-proxy rule, T777) is identical in
+  every worker.
 
 ## Presets + language (T595)
 

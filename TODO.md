@@ -930,7 +930,7 @@
 - [x] T841 serve: rate-limit buckets thread-safe (check-then-append from the threadpool, no lock)
 - [x] T842 serve: /stats gated behind the key when BOUNCER_KEY set (parity with /metrics — /stats is open today)
 - [x] T843 docs: 413-before-auth documented as the intentional cheap-reject (api.md + threat model)
-- [ ] T844 docs: api.md request-limits section — body-cap semantics, batch deadline, extra fields, per-worker rate amplification
+- [x] T844 docs: api.md request-limits section — body-cap semantics, batch deadline, extra fields, per-worker rate amplification
 - [ ] T845 test: CLI serve flags actually reach uvicorn.run kwargs
 - [ ] T846 test: oversized chunked body rejected without reading it to the end
 - [ ] T847 test: systemone parity — same caps/breaker/audit as /predict
