@@ -99,7 +99,9 @@ def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,
     from gatekeeper.adapters.common import dry_run
     if token and server and form.get("channel_id") and not dry_run():
         api_fn(token, server, "POST", "/posts",
-               channel_id=form["channel_id"], message=reply)
+               channel_id=form["channel_id"], message=reply,
+               **({"root_id": form["post_id"]}  # T862: thread under trigger
+                  if form.get("post_id") else {}))
     else:
         out(("[dry-run] would post: " if token else "") + reply)
     return {"action": "command", "command": cmd, "reply": reply}

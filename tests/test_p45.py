@@ -852,3 +852,25 @@ def test_matrix_notice_carries_the_reply_relation():  # T861
     _command("!bouncer rules", {"r": "t"}, {"room_id": "!r"}, "tok",
              "https://mx.example", lambda *a, **k: bare.append((a, k)), print)
     assert "m.relates_to" not in bare[0][0][4], "no event_id, no relation"
+
+
+def test_mattermost_slash_reply_threads_under_its_post():  # T862
+    """The slash-command reply posts with root_id of its trigger post — the
+    notice lands in that post's thread, not as a bare channel line; a form
+    without post_id still posts flat, as before."""
+    from gatekeeper.adapters.mattermost import handle_slash
+
+    calls = []
+    handle_slash({"token": "s", "text": "rules", "channel_id": "c1",
+                  "post_id": "p9"}, {"r": "t"}, token="tok",
+                 server="https://mm.example",
+                 api_fn=lambda *a, **k: calls.append((a, k)))
+    args, kwargs = calls[0]
+    assert args[2] == "POST" and args[3] == "/posts"
+    assert kwargs["channel_id"] == "c1" and kwargs["root_id"] == "p9"
+    assert kwargs["message"].startswith("active:")
+    bare = []
+    handle_slash({"token": "s", "text": "rules", "channel_id": "c1"},
+                 {"r": "t"}, token="tok", server="https://mm.example",
+                 api_fn=lambda *a, **k: bare.append((a, k)))
+    assert "root_id" not in bare[0][1], "no trigger post, no thread"

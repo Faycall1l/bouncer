@@ -950,7 +950,7 @@
 - [x] T859 adp: discord notices become threaded replies (message_reference) — send_removed_notice extracted as a module coroutine: reference=msg anchors the notice to the message it removed, in a thread msg.channel is the thread
 - [x] T860 adp: telegram notices reply in-thread (reply_to_message_id) — command replies carry the trigger's message_id; reply_to=None callers still send bare
 - [x] T861 adp: matrix notices carry the reply relation — m.relates_to.m.in_reply_to.event_id on the notice content; event_id-less events still send bare
-- [ ] T862 adp: mattermost notices thread under the offending post (root_id)
+- [x] T862 adp: mattermost notices thread under the offending post (root_id) — slash replies carry the trigger post's root_id; post_id-less forms still post flat
 - [ ] T863 adp: zulip stream replies keep the topic (today only PMs answer)
 - [ ] T864 adp: appeal flow — APPEAL command answered with appeal_text + review-queue row linkage
 - [ ] T865 review: adjudicate command — operator approves/rejects from the queue, strike amnesty path
