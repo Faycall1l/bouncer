@@ -84,7 +84,8 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
     res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
                         user_id=as_user_id("telegram",
                                            (msg.get("from") or {}).get("id")),
-                        lang=detect_lang(text)))
+                        lang=detect_lang(text),
+                        adapter="telegram"))  # T867: per-adapter counters
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token:
         if dry_run():  # T697: print the intent, never the act

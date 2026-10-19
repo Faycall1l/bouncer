@@ -65,7 +65,8 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
         try:
             res = dict(moderate(text, rules,  # T856+T857: strikes + lang hint
                                 user_id=as_user_id("discord", user_id),
-                                lang=detect_lang(text)))
+                                lang=detect_lang(text),
+                                adapter="discord"))  # T867: per-adapter counters
             if res["action"] not in ("ignored", "command"):  # T699
                 health.decision()
         except Exception as e:  # noqa: BLE001 — one bad event, one line

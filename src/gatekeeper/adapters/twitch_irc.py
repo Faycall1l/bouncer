@@ -68,7 +68,8 @@ def _watch_once(sock, rules, health=None) -> None:  # T855: health parity
             try:
                 res = moderate(text, rules,  # T856+T857: strikes + lang hint
                                user_id=as_user_id("twitch", user),
-                               lang=detect_lang(text))
+                               lang=detect_lang(text),
+                               adapter="twitch")  # T867: per-adapter counters
             except Exception as e:  # noqa: BLE001 — one bad line, one print
                 print("mod error", redact(str(e)), file=sys.stderr)
                 res = {"action": "ignored", "reason": "moderate-error"}

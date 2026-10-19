@@ -16,6 +16,7 @@ _joint: dict = {}  # T231: (action, rule) -> n
 _lat: list = []  # T232: ring buffer of recent latency_ms (cap 200)
 _cheap = 0  # T233: decisions served without a model call (empty/fastpath)
 _causes: dict = {}  # T234: cause -> n (margin, needs-human, quiet, low-conf, ...)
+_adapt: dict = {}  # T867: (adapter, action) -> n — which platform is loud
 
 
 def _pct(xs: list, q: float) -> float:
@@ -26,13 +27,17 @@ def _pct(xs: list, q: float) -> float:
 
 
 def record(action: str, rule: str, latency_ms: float | None = None,
-           cheap: bool = False, cause: str | None = None) -> None:
-    """T027: count every decision + per-rule hits."""
+           cheap: bool = False, cause: str | None = None,
+           adapter: str | None = None) -> None:
+    """T027: count every decision + per-rule hits; T867: optionally tag
+    which platform adapter asked (None = HTTP/CLI/batch: not an adapter)."""
     global _cheap
     with _lock:
         _counts[action] = _counts.get(action, 0) + 1
         _by_rule[rule] = _by_rule.get(rule, 0) + 1
         _joint[(action, rule)] = _joint.get((action, rule), 0) + 1
+        if adapter:  # T867
+            _adapt[(adapter, action)] = _adapt.get((adapter, action), 0) + 1
         if cause:  # T234
             _causes[cause] = _causes.get(cause, 0) + 1
         if cheap:  # T233
@@ -48,8 +53,12 @@ def get_stats() -> dict:
         nested: dict = {}
         for (a, r), n in sorted(_joint.items()):
             nested.setdefault(r, {})[a] = n
+        by_adp: dict = {}
+        for (a, act), n in sorted(_adapt.items()):  # T867
+            by_adp.setdefault(a, {})[act] = n
         return {"actions": dict(_counts), "rules": dict(sorted(_by_rule.items())),  # T283
                 "actions_by_rule": nested,  # T231
+                "adapters": by_adp,  # T867
                 "latency": {"n": len(_lat), "p50_ms": _pct(_lat, 0.5),  # T232
                             "p95_ms": _pct(_lat, 0.95)},
                 "cheap_paths": _cheap,  # T233
@@ -64,6 +73,7 @@ def reset_stats() -> None:
         _counts.update({"allow": 0, "flag": 0, "delete": 0, "escalate": 0})
         _by_rule.clear()
         _joint.clear()  # T231
+        _adapt.clear()  # T867
         del _lat[:]  # T232
         _cheap = 0  # T233
         _causes.clear()  # T234
@@ -76,6 +86,7 @@ def snapshot() -> dict:  # T434
         return {"v": 1, "t": int(_t.time()), "counts": dict(_counts),
                 "by_rule": dict(_by_rule),
                 "joint": [list(k) + [v] for k, v in _joint.items()],
+                "adapters": [list(k) + [v] for k, v in _adapt.items()],  # T867
                 "causes": dict(_causes), "cheap": _cheap}
 
 
@@ -97,6 +108,9 @@ def restore(snap: dict) -> None:  # T434
         _joint.clear()
         for a, r, n in snap.get("joint", []):
             _joint[(a, r)] = int(n)
+        _adapt.clear()  # T867: absent in pre-0.5.0 snapshots -> empty
+        for a, act, n in snap.get("adapters", []):
+            _adapt[(a, act)] = int(n)
         _causes.clear()
         _causes.update(snap.get("causes", {}))
         _cheap = int(snap.get("cheap", 0))

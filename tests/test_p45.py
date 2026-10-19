@@ -1042,3 +1042,43 @@ def test_run_loop_forwards_platform_traffic(monkeypatch):  # T866
     assert sent == [], "no URL: nothing fires, nothing raises"
     for name in ("telegram_bot", "matrix_bot", "zulip_bot"):  # all three wired
         assert "message_of=lambda" in (ADAPTERS / f"{name}.py").read_text(), name
+
+
+def test_per_adapter_decision_counters():  # T867
+    """stats gains an adapter tag: record() counts (adapter, action) pairs,
+    get_stats() renders them per adapter, snapshot/restore round-trip them
+    (absent in pre-0.5.0 snapshots), moderate threads its adapter kwarg into
+    every exit path, and all seven call sites pass one."""
+    from gatekeeper import moderate
+    from gatekeeper.stats import get_stats, record, reset_stats, restore, snapshot
+
+    reset_stats()
+    record("allow", "ok", 1.0, adapter="telegram")
+    record("delete", "spam", 2.0, adapter="telegram")
+    record("flag", "spam", 2.0, adapter="matrix")
+    record("allow", "ok", 1.0)  # HTTP/CLI/batch: no tag, not in the table
+    s = get_stats()
+    assert s["adapters"] == {"telegram": {"allow": 1, "delete": 1},
+                             "matrix": {"flag": 1}}, s["adapters"]
+    assert s["actions"]["allow"] == 2, "totals untouched"
+    snap = snapshot()
+    reset_stats()
+    assert get_stats()["adapters"] == {}, "cleared"
+    restore(snap)
+    assert get_stats()["adapters"] == {"telegram": {"allow": 1, "delete": 1},
+                                       "matrix": {"flag": 1}}, "round-trip"
+    restore({"v": 1, "counts": {"allow": 1, "flag": 0, "delete": 0,
+                                "escalate": 0}})  # pre-0.5.0: no adapters key
+    assert get_stats()["adapters"] == {}, "old snapshots load clean"
+    # the kwarg reaches the recorder (empty path: no model needed)
+    reset_stats()
+    moderate("", {"spam": "no spam"}, adapter="telegram")
+    assert get_stats()["adapters"] == {"telegram": {"allow": 1}}, \
+        "moderate threads adapter= into record"
+    reset_stats()
+    tags = {"telegram_bot": 'adapter="telegram"', "matrix_bot": 'adapter="matrix"',
+            "zulip_bot": 'adapter="zulip"', "mattermost": 'adapter="mattermost"',
+            "discord_bot": 'adapter="discord"', "twitch_irc": 'adapter="twitch"',
+            "webhooks": 'adapter="slack"'}
+    for f, tag in tags.items():
+        assert tag in (ADAPTERS / f"{f}.py").read_text(), f

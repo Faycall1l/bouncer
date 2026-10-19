@@ -77,7 +77,8 @@ def receive_slack_event(body, rules, *, secret=None, raw=None, ts=None,  # T704
                 "reason": "slack: bot message ignored"}
     return moderate(text, rules,  # T856+T857: strikes + detected lang
                     user_id=as_user_id("slack", body.get("user")),
-                    lang=detect_lang(text))
+                    lang=detect_lang(text),
+                    adapter="slack")  # T867: per-adapter counters
 
 
 def forward(url: str, event: dict) -> None:  # T079

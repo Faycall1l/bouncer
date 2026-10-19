@@ -99,7 +99,8 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
     from gatekeeper.adapters.common import as_user_id, detect_lang, dry_run
     res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
                         user_id=as_user_id("zulip", msg.get("sender_id")),
-                        lang=detect_lang(text)))
+                        lang=detect_lang(text),
+                        adapter="zulip"))  # T867: per-adapter counters
     res["deleted"] = False
     if (res["action"] == "delete" and can_delete and creds
             and msg.get("id") is not None):

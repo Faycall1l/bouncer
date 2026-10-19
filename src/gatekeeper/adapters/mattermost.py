@@ -57,7 +57,8 @@ def handle_post(post: dict, rules: dict, *, token=None, server=None,
     res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
                         user_id=as_user_id("mattermost",
                                            post.get("user_id")),
-                        lang=detect_lang(text)))
+                        lang=detect_lang(text),
+                        adapter="mattermost"))  # T867: per-adapter counters
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token and server:
         if dry_run():  # T697: print the intent, never the act

@@ -184,9 +184,11 @@ def _quiet_active(cfg: GateConfig) -> bool:
     return (lo <= h < hi) if lo < hi else (h >= lo or h < hi)
 
 
-def _observe(msg: str, action: str, rule: str, conf: float, cause: str) -> None:
+def _observe(msg: str, action: str, rule: str, conf: float, cause: str,
+             adapter: str | None = None) -> None:
     """T222: cheap paths (empty/fastpath) still count in stats + audit."""
-    record(action, rule, 0.0, cheap=True, cause=cause)  # T232+T233+T234
+    record(action, rule, 0.0, cheap=True, cause=cause,
+           adapter=adapter)  # T232+T233+T234+T867
     log_decision(msg, rule, conf, action, 0.0)
 
 
@@ -382,7 +384,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
              context: list[str] | None = None,
              config: GateConfig | None = None, threshold: float | None = None,
              lang: str | None = None, router: Router | None = None,
-             user_id: str | None = None,
+             user_id: str | None = None, adapter: str | None = None,  # T867
              model: str | None = None, preset: str | None = None,  # T455+T479
              _prevalidated: bool = False) -> dict:
     cfg = config or GateConfig(questions=questions_knob())  # T755: env default
@@ -404,7 +406,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
                "escalate_p": 0.0, "abstained": False, "reason": "empty message",
                "latency_ms": 0.0}
-        _observe(msg, "allow", "ok", 1.0, "empty")  # T222
+        _observe(msg, "allow", "ok", 1.0, "empty",
+                 adapter=adapter)  # T222+T867
         return res
     key = CACHE.key(msg, rules, cfg.allow_threshold, cfg.delete_threshold,  # T221
                     cfg.severity, lang, context or (), cfg.history_n,
@@ -419,7 +422,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     if fp is not None:
         fp["latency_ms"] = 0.0
         fp["cached"] = False
-        _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath")  # T222
+        _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath",
+                 adapter=adapter)  # T222+T867
         CACHE.set(key, dict(fp))  # T287: repeats serve from cache
         return fp
     with _FLY_LOCK:  # T180: join identical in-flight call instead of doubling work
@@ -472,7 +476,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         if tripped:  # T513
             fb["cause"] = "breaker-open"
             fb["reason"] = "escalate: breaker open (model failing, cooling down)"
-        record("escalate", "ok", 0.0, cause=fb["cause"])  # T260: failures are visible
+        record("escalate", "ok", 0.0, cause=fb["cause"],
+               adapter=adapter)  # T260: failures are visible, T867: tag
         log_decision(msg, "ok", 0.0, "escalate", 0.0)
         try:
             _qadd(msg, {"action": "escalate", "rule": "ok", "confidence": 0.0,
@@ -507,7 +512,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     _accrue(res, user_id)  # T340+T858: this caller's own strikes, every path
     res["latency_ms"] = round((_t.time() - t0) * 1000, 1)
     res["raw"] = a
-    record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"))
+    record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"),
+           adapter=adapter)  # T867: which platform asked
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"],
                  lang, len(hist), (cfg.allow_threshold, cfg.delete_threshold))
     if res["action"] in ("flag", "escalate"):  # T207: humans work the queue

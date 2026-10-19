@@ -20,7 +20,9 @@ each platform's user to `moderate(user_id=...)` namespaced `platform:user`
 so per-user strikes accrue per platform from chat traffic, not just the
 CLI, and `detect_lang` (T857) deriving
 `lang=` from the message script so non-latin platform traffic pins the
-multilingual checkpoint instead of routing as auto. A new adapter gets all
+multilingual checkpoint instead of routing as auto. Every `moderate(...)`
+call also carries `adapter=` (T867) — its platform name — so `stats`
+counts decisions per adapter. A new adapter gets all
 of it by importing from `common`; nothing in the column may name a helper
 that doesn't exist.
 
@@ -142,11 +144,13 @@ raises `E_SLACK` instead of letting an unsigned event through.
 
 ## Model routing (T604)
 
-Adapters call `moderate(msg, rules)` with **no `model=`/`lang=`** — that means
-auto-routing: with no `lang` hint, `model_for_lang()` returns nothing and laya
-routes by the `script` the engine computed for the state (non-latin text tends
-to land on the multilingual checkpoint). Every checkpoint touched lands in the
-shared pool (`BOUNCER_POOL_MAX`, default 2), so a multilingual community can
+Adapters call `moderate(msg, rules)` with **no `model=`** and only the
+script-derived `lang=` (T857): latin traffic stays hintless, so
+`model_for_lang()` returns nothing and laya routes by the `script` the
+engine computed for the state; arabic/cjk/cyrillic carry `lang=` and pin
+the multilingual checkpoint directly (either way it lands there).
+Every checkpoint touched lands in the shared pool (`BOUNCER_POOL_MAX`,
+default 2), so a multilingual community can
 hold both english + multilingual routers in memory. Two operational consequences:
 
 * A mixed-language server can exceed the pool's slots and thrash (each request
