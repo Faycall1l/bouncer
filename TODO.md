@@ -926,7 +926,7 @@
 - [x] T837 serve: batch overall deadline (worst case today: 32 messages x 60s each)
 - [x] T838 serve: uvicorn gets timeout_keep_alive + limit_concurrency (CLI flags, wired through cli serve)
 - [x] T839 serve: graceful shutdown drains in-flight predicts + flushes audit (today the lifespan note is cosmetic)
-- [ ] T840 serve: access log gains method/status, decision log gains rid — X-Request-ID correlates both
+- [x] T840 serve: access log gains method/status, decision log gains rid — X-Request-ID correlates both
 - [ ] T841 serve: rate-limit buckets thread-safe (check-then-append from the threadpool, no lock)
 - [ ] T842 serve: /stats gated behind the key when BOUNCER_KEY set (parity with /metrics — /stats is open today)
 - [ ] T843 docs: 413-before-auth documented as the intentional cheap-reject (api.md + threat model)

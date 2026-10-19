@@ -545,8 +545,9 @@ def test_log_injection_guard(capfd, monkeypatch):  # T779
     assert r.headers["X-Request-ID"] == 'evil","forged":true'
     line = [ln for ln in capfd.readouterr().out.splitlines() if '"rid"' in ln][-1]
     obj = _json.loads(line)  # the old f-string made this unparseable/forged
-    assert set(obj) == {"rid", "path", "ms"}
-    assert obj["rid"] == 'evil","forged":true'
+    assert set(obj) == {"rid", "method", "path", "status", "ms"}  # T840
+    assert obj["rid"] == 'evil","forged":true' and obj["method"] == "GET"
+    assert obj["status"] == 404
 
     # the model-error line is dumped too (T833: the passthrough logs its
     # own coded failure; the raw text stays in the log, not the response)

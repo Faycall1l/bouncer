@@ -556,3 +556,52 @@ def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  #
     finally:
         gatekeeper._EXEC = None
         importlib.reload(_au)  # restore the default audit path/mode
+
+
+def test_access_log_method_status_and_rid_correlation(capsys):  # T840
+    """The access log had rid+path+ms but no method/status, and the decision
+    event line had no rid — an operator couldn't tell a 422 from a 200 by
+    the access line, nor join a decision to its request. Now the access log
+    carries method+status and the decision line carries the same rid."""
+    import json as _json
+
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    class Rec:
+        def predict(self, state, questions=None, model=None):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.9,
+                         "probabilities": {"ok": 0.9}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Rec()
+    try:
+        client = TestClient(serve.app, raise_server_exceptions=False)
+        capsys.readouterr()  # drop noise from earlier lines
+
+        serve._BUCKETS.clear()
+        r = client.post("/predict", json={"message": "hello", "rules": {"r": "t"}},
+                        headers={"X-Request-ID": "rid-t840"})
+        assert r.status_code == 200
+
+        out = capsys.readouterr().out.splitlines()
+        access = _json.loads([l for l in out if '"rid"' in l and '"method"' in l][-1])
+        assert (access["rid"], access["method"], access["status"]) == ("rid-t840", "POST", 200)
+        decision = _json.loads([l for l in out if '"decision"' in l][-1])
+        assert decision["rid"] == "rid-t840"  # the two lines join on rid
+
+        # a non-200 is visible in the access log too (was unlogged before)
+        serve._BUCKETS.clear()
+        r = client.post("/predict", json={"message": "hello", "rules": {"r": "t"},
+                                          "thresold": 1})  # T835: 422
+        assert r.status_code == 422
+        access = _json.loads([l for l in capsys.readouterr().out.splitlines()
+                              if '"method"' in l][-1])
+        assert access["status"] == 422 and access["method"] == "POST"
+    finally:
+        gatekeeper._router = None

@@ -183,6 +183,7 @@ async def _mw(request, call_next):
 
     from .normalize import strip_controls  # T779: rid scrubbed before echo+log
     rid = strip_controls(request.headers.get("X-Request-ID", "")) or uuid.uuid4().hex[:12]
+    request.state.rid = rid  # T840: BEFORE call_next — handlers log against it
     t0 = time.time()
     if request.method == "POST" and _body_too_big(request):  # T775: 413 BEFORE
         from fastapi.responses import JSONResponse  # the body is ever read/parsed
@@ -193,7 +194,9 @@ async def _mw(request, call_next):
     resp.headers["X-Request-ID"] = rid
     resp.headers["X-Bouncer-ms"] = f"{ms:.1f}"
     resp.headers["X-Content-Type-Options"] = "nosniff"  # T304
-    print(_json.dumps({"rid": rid, "path": request.url.path,
+    print(_json.dumps({"rid": rid, "method": request.method,  # T840: method+status
+                       "path": request.url.path,  # were missing from the access log
+                       "status": resp.status_code,
                        "ms": round(ms, 1)}), flush=True)
     return resp
 
@@ -473,7 +476,8 @@ def predict(req: ModReq, request: Request):
                                     "message": str(e)})
     res["reason"] = explain(res, rules)
     import json as _json  # T246: decision line for operators (no message text)
-    print(_json.dumps({"event": "decision", "action": res["action"], "rule": res["rule"],
+    print(_json.dumps({"event": "decision", "rid": getattr(request.state, "rid", ""),  # T840
+                       "action": res["action"], "rule": res["rule"],
                        "conf": round(res["confidence"], 3),
                        "preset": preset_name}), flush=True)  # T474
     return _clean(res)

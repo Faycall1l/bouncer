@@ -36,7 +36,9 @@ _(Last checked against v0.4.0.)_
   set (constant-time compare; <16 chars warns at boot). 60 req/min/IP with
   `Retry-After: 60` on 429. Gzip above 1000 bytes. CORS origins: comma-separated
   `BOUNCER_CORS` env (default `*`, demo-friendly) or `bouncer serve --cors`;
-  applied at process start. `bouncer serve --keep-alive SECONDS` sets uvicorn's
+  applied at process start. The stdout access log line carries
+  `{rid, method, path, status, ms}` (T840) and `/predict`'s decision event
+  line carries the same `rid`, so a request joins to its decision by id. `bouncer serve --keep-alive SECONDS` sets uvicorn's
   `timeout_keep_alive` (proxies that drop idle sockets sooner than uvicorn's 5s
   default), `--limit-concurrency N` caps simultaneous connections (default
   unlimited; T838).
