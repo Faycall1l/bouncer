@@ -73,7 +73,11 @@ def test_serve_key_file(tmp_path, monkeypatch):  # T547
     fake = _types.ModuleType("uvicorn")
     fake.run = lambda *x, **k: None
     monkeypatch.setitem(_sys.modules, "uvicorn", fake)
-    monkeypatch.delenv("BOUNCER_KEY", raising=False)
+    # setenv (not delenv) so monkeypatch records an undo even when the var
+    # is absent — _cmd_serve writes os.environ directly, and without an undo
+    # entry the key leaks into every later test in the session (it poisons
+    # serve's import-time _KEY cache for subset runs).
+    monkeypatch.setenv("BOUNCER_KEY", "")
     a = Args()
     a.key_file = str(tmp_path / "missing")
     assert _cmd_serve(a) == 4  # unreadable file, refuses to serve
@@ -108,7 +112,7 @@ def test_serve_cors_flag(monkeypatch):  # T549
     fake = _types.ModuleType("uvicorn")
     fake.run = lambda *x, **k: None
     monkeypatch.setitem(_sys.modules, "uvicorn", fake)
-    monkeypatch.delenv("BOUNCER_CORS", raising=False)
+    monkeypatch.setenv("BOUNCER_CORS", "")  # undo entry even if absent (see T547 test note)
 
     class Args:
         host, port, workers, key_file = "127.0.0.1", 8000, 1, None

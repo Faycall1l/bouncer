@@ -463,3 +463,33 @@ def test_batch_shares_one_deadline():  # T837
     finally:
         gatekeeper._router = None
         gatekeeper._BREAKER.update(fails=0, open_until=0.0, half_open=False)
+
+
+def test_serve_flags_reach_uvicorn(monkeypatch):  # T838
+    """timeout_keep_alive and limit_concurrency were unconfigurable —
+    proxies drop idle connections at 5s and there's no backpressure valve.
+    The serve subcommand now wires both through to uvicorn.run, and when
+    the flags are absent uvicorn's own defaults stay untouched."""
+    import uvicorn
+
+    from gatekeeper import cli
+
+    seen: dict = {}
+
+    def fake_run(app, **kw):
+        seen.clear()
+        seen.update(kw)
+
+    monkeypatch.setattr(uvicorn, "run", fake_run)
+
+    rc = cli.main(["serve", "--keep-alive", "30",
+                   "--limit-concurrency", "64"])
+    assert rc == 0
+    assert seen["timeout_keep_alive"] == 30.0
+    assert seen["limit_concurrency"] == 64
+    assert seen["workers"] == 1  # existing flag still wired
+
+    rc = cli.main(["serve"])  # defaults: uvicorn's own, not ours
+    assert rc == 0
+    assert "timeout_keep_alive" not in seen
+    assert "limit_concurrency" not in seen

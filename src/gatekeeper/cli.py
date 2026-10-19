@@ -369,8 +369,14 @@ def _cmd_serve(args) -> int:  # T547+T549: secrets/flags applied before uvicorn 
     if getattr(args, "cors", None):  # T549: flag beats env
         os.environ["BOUNCER_CORS"] = args.cors
     import uvicorn
-    uvicorn.run("gatekeeper.serve:app", host=args.host, port=args.port,
-                workers=args.workers)
+    kw: dict = {"workers": args.workers}
+    keep_alive = getattr(args, "keep_alive", None)  # T838: getattr — callers
+    limit = getattr(args, "limit_concurrency", None)  # may build args by hand
+    if keep_alive is not None:  # None keeps uvicorn's own default
+        kw["timeout_keep_alive"] = keep_alive
+    if limit is not None:
+        kw["limit_concurrency"] = limit
+    uvicorn.run("gatekeeper.serve:app", host=args.host, port=args.port, **kw)
     return 0
 
 
@@ -488,6 +494,10 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     s.add_argument("--workers", type=int, default=1)  # T322
     s.add_argument("--key-file", default=None)  # T547: read API key from a file
     s.add_argument("--cors", default=None)  # T549: comma origins, overrides env
+    s.add_argument("--keep-alive", type=float, default=None,  # T838
+                   help="uvicorn timeout_keep_alive seconds (default 5)")
+    s.add_argument("--limit-concurrency", type=int, default=None,  # T838
+                   help="max simultaneous connections (default unlimited)")
     s.set_defaults(fn=_cmd_serve)
     d = sub.add_parser("demo")  # T069
     d.add_argument("--port", type=int, default=7860)  # T323
