@@ -145,6 +145,66 @@ def test_backoff_wait_doubles_caps_and_jitters():  # T852 (T853 reuses it)
         assert 8.0 <= w <= 16.0, w
 
 
+def test_retry_honors_retry_after_cap_and_backoff_jitter():  # T869
+    """Retry-After drives the wait from a stub 429 — but a broken server
+    can't park us for hours: the numeric header caps at retry_after_cap_s,
+    HTTP-date/garbage falls back to the jittered exponential, and http_json's
+    own backoff runs the same [half, full] ladder under backoff_cap_s."""
+    calls = {"n": 0}
+    slept = []
+
+    def stub_429_twice(req, timeout=None):  # the header wins, twice
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise _http_error(429, {"Retry-After": "1.5"})
+        return _Resp(json.dumps({"ok": True}).encode())
+
+    out = common.http_json(urllib.request.Request("http://stub/x"),
+                           opener=stub_429_twice, sleep=slept.append, attempts=3)
+    assert out == {"ok": True} and slept == [1.5, 1.5], slept
+
+    def stub_429_huge(req, timeout=None):  # 8 hours asked, cap served
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _http_error(429, {"Retry-After": "28800"})
+        return _Resp(json.dumps({"ok": True}).encode())
+
+    calls["n"] = 0
+    slept.clear()
+    common.http_json(urllib.request.Request("http://stub/x"),
+                     opener=stub_429_huge, sleep=slept.append, attempts=2,
+                     retry_after_cap_s=2.5)
+    assert slept == [2.5], f"the cap is ours, not the server's: {slept}"
+
+    def stub_429_date(req, timeout=None):  # HTTP-date: not seconds
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _http_error(429, {"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"})
+        return _Resp(json.dumps({"ok": True}).encode())
+
+    calls["n"] = 0
+    slept.clear()
+    common.http_json(urllib.request.Request("http://stub/x"),
+                     opener=stub_429_date, sleep=slept.append, attempts=2,
+                     backoff_s=4.0, backoff_cap_s=8.0, rand=lambda: 1.0)
+    assert slept == [4.0], f"unparseable header -> attempt-0 backoff: {slept}"
+
+    def always_503(req, timeout=None):  # no header: the pure ladder
+        raise _http_error(503)
+
+    for rnd, want in ((lambda: 0.0, [0.5, 1.0, 2.0]),   # half-jitter ladder
+                      (lambda: 1.0, [1.0, 2.0, 4.0])):  # full, cap is ceiling
+        slept.clear()
+        try:
+            common.http_json(urllib.request.Request("http://stub/x"),
+                             opener=always_503, sleep=slept.append, attempts=4,
+                             backoff_s=1.0, backoff_cap_s=4.0, rand=rnd)
+            raise AssertionError("budget must be spent, then raise")
+        except urllib.error.HTTPError as e:
+            assert e.code == 503
+        assert slept == want, f"jittered ladder under the cap: {slept}"
+
+
 def test_areconnect_redials_with_escalating_capped_backoff(capsys):  # T852
     """A dropped socket used to end the process; now it costs one redacted
     line, one health error, and a jittered wait — escalating while sessions

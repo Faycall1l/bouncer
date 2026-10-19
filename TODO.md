@@ -957,7 +957,7 @@
 - [x] T866 adp: run_loop gained message_of and fires forward_if_interesting(res, text) per event — BOUNCER_FORWARD_URL now leaves platform traffic (telegram matrix zulip wired with their text extractors; allow/ignored/command skipped by the forwarder's own filter; no URL = no fire no raise)
 - [x] T867 adp: per-adapter decision counters — record gained adapter=, get_stats exposes adapters as {adapter: {action: n}}, snapshot/restore round-trip the tag (absent in old snapshots), moderate threads adapter= through every record path (empty, fastpath, breaker, model) and all seven call sites pass their platform name
 - [x] T868 docs: adapters README gained a Capabilities (T868) table — reply anchor / threading / health / rate cap / forward / lang per platform, every cell grounded by test_readme_capability_matrix_matches_sources against the sources (run_loop three forward, own loops do not, twitch has no cap, webhooks has no loop)
-- [ ] T869 test: retry honors Retry-After from a stub 429; backoff has jitter + cap
+- [x] T869 test: retry honored from a stub 429 in every form — header twice, absurd header capped at retry_after_cap_s, HTTP-date falling back to backoff — plus http_json's own ladder proven jittered into [half, full] under backoff_cap_s with the budget spent then raised
 - [ ] T870 test: P45 adapter-depth sweep (every box ticked, receipts outside TODO.md)
 
 ## P46 CLI, rules, storage (T871–T890)
