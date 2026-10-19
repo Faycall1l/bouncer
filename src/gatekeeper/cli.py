@@ -188,7 +188,27 @@ def cmd_review(args) -> int:
     for row in list_queue(args.limit, action=args.action,
                           since=getattr(args, "since", 0) or 0,  # T537
                           rule=getattr(args, "rule", None)):  # T543
-        print(f"{row['action']:8} {row['rule']}@{row['conf']:.2f} {row['message'][:100]}")
+        tag = f" [{row['verdict']}]" if row.get("verdict") else ""  # T865
+        print(f"{row.get('id', '-'):8} {row['action']:8} "
+              f"{row['rule']}@{row['conf']:.2f}{tag} {row['message'][:100]}")
+    return 0
+
+
+def cmd_adjudicate(args) -> int:  # T865: operator verdict on one queued row
+    from gatekeeper.review import adjudicate
+    try:
+        row = adjudicate(args.row_id, args.verdict)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    if row is None:
+        print(f"bouncer: no queue row {args.row_id}", file=sys.stderr)
+        return 1
+    line = f"{row.get('id', args.row_id)} {args.verdict} " \
+           f"{row['action']}@{row['conf']:.2f}"
+    if row.get("after") is not None:  # reject: amnesty recorded the result
+        line += f" user={row['user']} strikes {row['after']['strikes']}"
+    print(line)
     return 0
 
 
@@ -524,6 +544,10 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     r.add_argument("--clear", action="store_true")  # T318
     r.add_argument("--yes", action="store_true")  # T318
     r.set_defaults(fn=cmd_review)
+    aj = sub.add_parser("adjudicate")  # T865: approve/reject, strike amnesty
+    aj.add_argument("row_id")
+    aj.add_argument("verdict", choices=("approve", "reject"))
+    aj.set_defaults(fn=cmd_adjudicate)
     md = sub.add_parser("models")  # T538
     md.set_defaults(fn=cmd_models)
     ps = sub.add_parser("presets")  # T539

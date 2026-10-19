@@ -69,6 +69,37 @@ def appeal_reply(user: str | None, rules: dict) -> str:  # T864
     return f"{appeal_text(res, rules)} (queue row {row['id']})"
 
 
+def adjudicate(row_id: str, verdict: str) -> dict | None:  # T865
+    """Operator approve/reject of one queue row, rewritten in place (the
+    prune pattern): the row gains `verdict` + `vt`. Reject runs the strike
+    amnesty path — the row's user loses exactly the weight that verdict
+    accrued (T341), recorded back on the row as `after`. Unknown id ->
+    None; a verdict that is not approve/reject -> ValueError (E_VERDICT)."""
+    if verdict not in ("approve", "reject"):
+        raise ValueError(f"E_VERDICT: {verdict!r} is not approve/reject")
+    if not os.path.exists(_PATH):
+        return None
+    with open(_PATH) as f:
+        rows = [json.loads(line) for line in f if line.strip()]
+    hit = None
+    for r in rows:
+        if r.get("id") == row_id:
+            r["verdict"] = verdict
+            r["vt"] = int(time.time())
+            hit = r
+            break
+    if hit is None:
+        return None
+    with open(_PATH, "w") as f:
+        f.writelines(json.dumps(r) + "\n" for r in rows)
+    if verdict == "reject" and hit.get("user"):  # T865: strike amnesty path
+        from gatekeeper import strikes
+        from gatekeeper.strikes import weight_for_action
+        hit["after"] = strikes.amnesty(
+            hit["user"], weight_for_action(hit.get("action", "")))
+    return hit
+
+
 def clear_queue() -> int:  # T318: truncate; returns rows dropped
     if not os.path.exists(_PATH):
         return 0

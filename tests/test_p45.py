@@ -947,3 +947,61 @@ def test_appeal_command_answers_with_the_users_queue_row(monkeypatch,
                   api_fn=lambda *a, **k: calls.append((a, k)))
     assert calls[0][1]["reply_to_message_id"] == 9, "threads under ask (T860)"
     assert f"(queue row {row['id']})" in calls[0][1]["text"], "row-linked"
+
+
+def test_adjudicate_approve_reject_and_strike_amnesty(monkeypatch,
+                                                      tmp_path):  # T865
+    """Operator verdicts: the row is rewritten in place (verdict + vt);
+    reject runs the strike amnesty path — exactly the weight that verdict
+    accrued comes off (delete=2, flag=1, escalate=0); unknown ids answer
+    None, a bad verdict raises E_VERDICT."""
+    import importlib
+
+    import pytest
+
+    import gatekeeper.review as rv
+    import gatekeeper.strikes as st
+    monkeypatch.setenv("BOUNCER_REVIEW", str(tmp_path / "review.jsonl"))
+    importlib.reload(rv)
+    st.reset()
+    try:
+        rv.add("spam delete", {"action": "delete", "rule": "no-spam",
+                               "confidence": 0.9, "latency_ms": 1.0},
+               user="telegram:77")
+        rv.add("mild flag", {"action": "flag", "rule": "no-spam",
+                             "confidence": 0.5, "latency_ms": 1.0},
+               user="telegram:77")
+        dele, flag = rv.list_queue()
+        st.add_strike("telegram:77", st.weight_for_action("delete"))
+        st.add_strike("telegram:77", st.weight_for_action("flag"))
+        assert st.standing("telegram:77")["strikes"] == 3
+        # approve keeps the record: strikes untouched, row stamped
+        row = rv.adjudicate(dele["id"], "approve")
+        assert row["verdict"] == "approve" and row["vt"] > 0
+        assert "after" not in row and st.standing("telegram:77")["strikes"] == 3
+        # reject forgives exactly that row's weight (flag = 1)
+        row = rv.adjudicate(flag["id"], "reject")
+        assert row["after"] == {"user": "telegram:77", "strikes": 2,
+                                "suggest_ban": False}, row["after"]
+        assert rv.list_queue()[1]["verdict"] == "reject", "verdict on disk"
+        assert rv.adjudicate("nope42", "reject") is None, "unknown id"
+        with pytest.raises(ValueError, match="E_VERDICT"):
+            rv.adjudicate(flag["id"], "sideways")
+        # an escalate row forgives nothing: escalates accrue no strikes
+        rv.add("needs eyes", {"action": "escalate", "rule": "ok",
+                              "confidence": 0.0, "latency_ms": 1.0},
+               user="telegram:77")
+        esc = rv.list_queue()[-1]
+        assert rv.adjudicate(esc["id"], "reject")["after"]["strikes"] == 2, \
+            "weight 0: nothing to forgive"
+        # the CLI surface: exit 0 with the amnesty line; 1 on unknown id
+        rv.add("fresh flag", {"action": "flag", "rule": "no-spam",
+                              "confidence": 0.5, "latency_ms": 1.0},
+               user="discord:42")
+        fresh = rv.list_queue()[-1]
+        from gatekeeper.cli import main
+        assert main(["adjudicate", fresh["id"], "approve"]) == 0
+        assert main(["adjudicate", "bogus99", "approve"]) == 1
+        assert rv.list_queue()[-1]["verdict"] == "approve"
+    finally:
+        st.reset()  # T249: test isolation

@@ -82,6 +82,7 @@ bouncer demo   # Gradio UI
 bouncer demo --share  # public gradio link: rulebook + messages go public (you get a loud warn)
 bouncer watch --preset gaming < chat.log        # live tail, colored verdicts
 bouncer review                                  # queued flags/escalations
+bouncer adjudicate ROW_ID reject                # operator verdict; reject = strike amnesty
 bouncer snapshot save snap.json                 # counters + strikes (T606)
 bouncer snapshot load snap.json
 bouncer export --out audit.csv                  # audit log -> CSV

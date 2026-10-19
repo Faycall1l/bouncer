@@ -53,6 +53,20 @@ def standing(user: str) -> dict:
     return {"user": user, "strikes": n, "suggest_ban": n >= BAN_AT}
 
 
+def amnesty(user: str, weight: int) -> dict:  # T865
+    """Operator forgiveness: subtract exactly `weight` (the row's T341
+    weight — a rejected delete gives back 2, a rejected flag 1, a rejected
+    escalate 0 since escalates accrue none), floored at 0; the entry drops
+    when it reaches zero. Returns the same standing shape as add_strike."""
+    _decay()
+    n = max(0, _strikes.get(user, 0) - max(0, weight))
+    if n:
+        _strikes[user] = n
+    else:
+        _strikes.pop(user, None)
+    return standing(user)
+
+
 def reset() -> None:  # T249: test isolation
     _strikes.clear()
     _last_decay[0] = time.time()
