@@ -98,7 +98,9 @@ bouncer presets                               # es, fr, ar + the English packs
   keys, and `E_RULES_ID` enforces it). `bouncer pack diff OLD NEW` lists
   what changed between two packs (`+` added, `-` removed, `~` changed,
   one rule per line) and exits 2 on drift, so a CI job can gate on it
-  (T872).
+  (T872). `bouncer pack sign FILE` writes `FILE.sig`, a sha256 manifest
+  over the sorted ids+texts, and `bouncer pack verify FILE` recomputes it —
+  a changed byte fails with `E_PACK_SIG` (T873).
 
 ## 5. Back up (and restore) state
 

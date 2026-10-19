@@ -370,6 +370,16 @@ def cmd_export(args) -> int:
     return 0
 
 
+def _pack_digest(rules: dict) -> str:  # T873
+    """sha256 over sorted `id \\0 text \\n` lines — canonical, so re-saving
+    a pack with another key order never changes the signature."""
+    import hashlib
+    h = hashlib.sha256()
+    for rid in sorted(rules):
+        h.update(f"{rid}\0{rules[rid]}\n".encode())
+    return h.hexdigest()
+
+
 def _read_pack(path: str):
     """T786+T872: one hardened read for every pack file — missing/unreadable/
     hostile nesting die with a machine code line, never a traceback; a
@@ -436,6 +446,53 @@ def cmd_pack(args) -> int:
             return 0
         print(f"pack drift: +{len(added)} -{len(removed)} ~{len(changed)}")
         return 2
+    if args.action in ("sign", "verify"):  # T873: tamper-evident packs
+        verb = args.action
+        if not args.file:
+            print(f"bouncer: pack {verb} needs a file: "
+                  f"bouncer pack {verb} FILE", file=sys.stderr)
+            return 4
+        rules = _read_pack(args.file)
+        if rules is None:
+            return 4
+        sig_path = args.file + ".sig"
+        if verb == "sign":
+            import time as _t
+
+            from gatekeeper.persist import atomic_write
+            manifest = {"v": 1, "algo": "sha256", "digest": _pack_digest(rules),
+                        "rules": len(rules), "t": int(_t.time())}
+            atomic_write(sig_path, json.dumps(manifest, indent=2))
+            print(f"signed {args.file} -> {sig_path} "
+                  f"({len(rules)} rules, sha256 {manifest['digest']})")
+            return 0
+        # verify: no manifest / unreadable manifest are file problems (4);
+        # a content mismatch is drift against the manifest (2) — both coded
+        import os
+        if not os.path.exists(sig_path):
+            print(f"bouncer: E_PACK_SIG: no manifest {sig_path!r} "
+                  "(run bouncer pack sign)", file=sys.stderr)
+            return 4
+        try:
+            with open(sig_path) as f:
+                manifest = json.load(f)
+        except (OSError, ValueError, RecursionError) as e:
+            print(f"bouncer: E_PACK_SIG: cannot read manifest "
+                  f"{sig_path!r} ({e})", file=sys.stderr)
+            return 4
+        want = manifest.get("digest") if isinstance(manifest, dict) else None
+        if (not isinstance(manifest, dict) or manifest.get("algo") != "sha256"
+                or not isinstance(want, str)):
+            print(f"bouncer: E_PACK_SIG: {sig_path!r} is not a sha256 manifest",
+                  file=sys.stderr)
+            return 4
+        got = _pack_digest(rules)
+        if got != want.lower():
+            print(f"bouncer: E_PACK_SIG: {args.file} does not match its manifest "
+                  f"(pack {got} vs manifest {want.lower()})", file=sys.stderr)
+            return 2
+        print(f"verified {args.file}: {len(rules)} rules, sha256 {got}")
+        return 0
     if args.rules:
         rules = _read_pack(args.rules)  # T786+T872: the shared hardened read
         if rules is None:
@@ -673,7 +730,8 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     sn.add_argument("file")
     sn.set_defaults(fn=cmd_snapshot)
     pk = sub.add_parser("pack")  # T173+T174
-    pk.add_argument("action", choices=["show", "lint", "init", "diff"])  # T545+T872
+    pk.add_argument("action", choices=["show", "lint", "init", "diff",
+                                       "sign", "verify"])  # T545+T872+T873
     pk.add_argument("file", nargs="?", default=None)  # T545: init target path
     pk.add_argument("file2", nargs="?", default=None)  # T872: diff NEW
     pk.add_argument("--force", action="store_true")  # T545: overwrite on init

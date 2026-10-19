@@ -1,6 +1,7 @@
 """P46 tests (T871-T890): CLI, rules, storage. All network is stubbed."""
 import json
 import sys
+from pathlib import Path
 
 sys.path.insert(0, "src")
 
@@ -112,3 +113,45 @@ def test_pack_diff_reports_added_removed_changed(tmp_path, capsys):  # T872
     # the same hardened read drives pack lint's --rules path
     assert main(["pack", "lint", "--rules", str(arr)]) == 4
     assert "is not a rules object" in capsys.readouterr().err
+
+
+def test_pack_sign_and_verify_roundtrip(tmp_path, capsys):  # T873
+    """sign writes a sha256 manifest over sorted ids+text — key order never
+    changes the digest — verify recomputes and matches; a missing or
+    unreadable manifest fails coded (E_PACK_SIG, exit 4). Content tamper
+    itself is T888's byte-flip test."""
+    p = tmp_path / "rules.json"
+    p.write_text(json.dumps({"spam": "no spam", "hate": "no hate"}))
+
+    assert main(["pack", "sign", str(p)]) == 0
+    out = capsys.readouterr().out
+    assert f"{p}.sig" in out and "sha256" in out, out
+    sig = json.loads(Path(f"{p}.sig").read_text())
+    assert sig["v"] == 1 and sig["algo"] == "sha256"
+    assert sig["rules"] == 2 and len(sig["digest"]) == 64
+
+    assert main(["pack", "verify", str(p)]) == 0
+    assert f"verified {p}: 2 rules" in capsys.readouterr().out
+
+    # canonical: re-serializing in another key order still verifies
+    p.write_text(json.dumps({"hate": "no hate", "spam": "no spam"}))
+    assert main(["pack", "verify", str(p)]) == 0
+    capsys.readouterr()
+
+    # no manifest: E_PACK_SIG, the fix suggested, exit 4 (file class)
+    bare = tmp_path / "bare.json"
+    bare.write_text(json.dumps({"spam": "no spam"}))
+    assert main(["pack", "verify", str(bare)]) == 4
+    err = capsys.readouterr().err
+    assert "E_PACK_SIG" in err and "pack sign" in err, err
+    # corrupt manifest: same code, same class
+    Path(f"{p}.sig").write_text("{broken")
+    assert main(["pack", "verify", str(p)]) == 4
+    assert "E_PACK_SIG" in capsys.readouterr().err
+    # sign keeps the hardened read, and both verbs need a file
+    assert main(["pack", "sign", str(tmp_path / "nope.json")]) == 4
+    assert "no pack file" in capsys.readouterr().err
+    assert main(["pack", "sign"]) == 4
+    assert "sign needs a file" in capsys.readouterr().err
+    assert main(["pack", "verify"]) == 4
+    assert "verify needs a file" in capsys.readouterr().err

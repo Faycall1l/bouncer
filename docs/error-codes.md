@@ -48,6 +48,7 @@ Codes are stable; messages may gain detail between releases.
 |---|---|---|---|
 | `E_SNAPSHOT` | `bouncer snapshot load` → exit 4 | snapshot corrupt or written by an incompatible schema (T431) | restore a known-good snapshot or accept a counter reset |
 | `E_VERDICT` | `bouncer adjudicate` → exit 2 | verdict isn't approve or reject (T865) | pass approve or reject exactly |
+| `E_PACK_SIG` | `bouncer pack verify` → exit 4, exit 2 on mismatch (T873) | manifest missing/unreadable/not sha256 — or the pack no longer matches it | `bouncer pack sign FILE` to (re)write the manifest, or restore the original pack |
 
 ## Adapters
 
