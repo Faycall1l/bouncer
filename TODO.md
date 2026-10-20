@@ -1011,7 +1011,7 @@
 - [x] T914 ft: resume-from-checkpoint support
 - [x] T915 ft: ship gate runs the full gate.py thresholds (train.py push gate is narrower: no ECE/per-rule/abstention)
 - [x] T916 ft: provenance in log_rec — dataset hash + git sha + train config
-- [ ] T917 ft: model card generated for the HF upload (upload_folder today ships no README)
+- [x] T917 ft: model card generated for the HF upload (upload_folder today ships no README)
 - [ ] T918 ft: eval_i18n accepts the fine-tuned model dir (i18n eval of the run itself)
 - [ ] T919 test: train.py parses + dry-run config-validates on CPU (no weights needed)
 - [ ] T920 test: ship-gate thresholds match gate.py defaults — single source, no drift

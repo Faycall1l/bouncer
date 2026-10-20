@@ -278,3 +278,58 @@ def test_provenance_stamps_the_train_trail_source():  # T916: source wiring
     assert "for k, v in PROVENANCE.items()" in src
     # provenance is recorded before the first record can possibly be written
     assert "log_rec(kind=" in src
+
+
+# --- T917: the HF upload folder ships a model card ---------------------------
+
+def test_model_card_generated_source_true(tmp_path):  # T917
+    """write_model_card() produces the README the upload_folder was missing:
+    run metrics from THIS run's numbers (not documentation defaults), the
+    T916 provenance record, the gate verdict, and the synthetic-distribution
+    caveat — the card never claims more than the run measured. And main()
+    writes it BEFORE upload_folder, so the weights can't ship cardless."""
+    mod = _import_train()
+
+    data = tmp_path / "rows.jsonl"
+    data.write_text('{"state": {}, "labels": {}}\n')
+    mod.fill_provenance(str(data))
+
+    # a passing run's card
+    card_path = mod.write_model_card(str(tmp_path), 0.517, 0.46, True)
+    card = Path(card_path).read_text()
+    assert card_path.endswith("README.md")
+    assert "dev rule_acc: 0.517" in card, "THIS run's number, printed as measured"
+    assert "held-out test rule_acc: 0.460" in card
+    assert "PASS" in card and "not pushed" not in card
+    assert "ship floor 0.35" in card and "regex floor 0.403" in card
+    # provenance lands in the card too (T916 record, reused not re-invented)
+    assert data.name in card and mod.PROVENANCE["dataset_sha256"] in card
+    assert "seed=7" in card
+    # honesty stays in: the distribution caveat and the null-git explanation
+    assert "same synthetic distribution" in card and "unmeasured" in card
+    assert "not hand-edited" in card
+    assert "Intended use" in card and "bouncer-421m" in card
+
+    # a refused/failed run's card says so — it does not print PASS
+    fail_path = mod.write_model_card(str(tmp_path), 0.30, 0.25, False)
+    fail_card = Path(fail_path).read_text()
+    assert "not pushed" in fail_card, "the verdict travels with the artifact"
+    assert "FAIL or not run" in fail_card
+
+    # a gate that never ran (None) reads as not-pushed, not as PASS
+    none_path = mod.write_model_card(str(tmp_path), 0.5, 0.5, None)
+    none_card = Path(none_path).read_text()
+    assert "FAIL or not run" in none_card and "PASS" not in none_card.split("thresholds")[1]
+
+
+def test_model_card_written_before_push_and_logged():  # T917: source wiring
+    src = TRAIN.read_text()
+    # generated after the gate verdict (so the card carries it), before upload
+    assert src.index("write_model_card(OUT, best_dev, test_acc, gate_pass)") < \
+        src.index("api.upload_folder(folder_path=OUT")
+    assert src.index("gate_pass = g.returncode == 0") < \
+        src.index("write_model_card(OUT, best_dev, test_acc, gate_pass)")
+    # the card generation is in the trail (T654) with its gate verdict
+    assert 'log_rec(kind="model_card"' in src
+    # upload_folder ships the whole folder — README.md rides along
+    assert 'api.upload_folder(folder_path=OUT' in src
