@@ -21,7 +21,7 @@ def validate_rule_ids(rules: dict) -> None:
 
 
 def validate_rule_text(rules: dict, max_chars: int = 280) -> None:
-    """T005: rule text non-empty, bounded."""
+    """T005: rule text non-empty, visible, bounded."""
     for rid, text in rules.items():
         if not isinstance(text, str):  # T266: name the type, not just "empty"
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} text is {type(text).__name__}, "
@@ -31,8 +31,12 @@ def validate_rule_text(rules: dict, max_chars: int = 280) -> None:
         except UnicodeEncodeError as e:  # they crash the hash/model encode path
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} has invalid unicode "
                             "(lone surrogates)") from e
-        if not text.strip():
+        if not text.strip():  # whitespace-only (T113); ZWSP survives strip()
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} has empty text")
+        if not any(c.isprintable() for c in text):  # T879: zero-width-only
+            raise RuleError(  # slips past strip() but renders as nothing
+                f"E_RULES_TEXT: rule {rid!r} is invisible-only text "
+                "(zero-width or control characters)")
         if len(text) > max_chars:
             raise RuleError(f"E_RULES_TEXT: rule {rid!r} exceeds {max_chars} chars")
 

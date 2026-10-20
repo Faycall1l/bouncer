@@ -432,3 +432,36 @@ def test_pack_init_writes_typed_metadata(tmp_path, monkeypatch, capsys):  # T878
     assert main(["pack", "sign", str(f)]) == 0
     assert main(["pack", "verify", str(f)]) == 0
     assert "verified" in capsys.readouterr().out
+
+
+def test_pack_lint_catches_duplicate_ids_and_invisible_text(tmp_path, capsys):  # T879
+    """Two rules with the same id are a parse-time problem, not a lint one:
+    the JSON scanner silently keeps the last duplicate, so _read_pack
+    rejects the pack outright, naming the id (exit 4). Text made only of
+    zero-width/control characters slips past strip() but renders as nothing,
+    so validate_rule_text rejects it as invisible-only — while a good pack
+    still lints clean."""
+    dup = tmp_path / "dup.json"
+    dup.write_text('{"spam": "no spam", "hate": "no hate", "spam": "other"}')
+    assert main(["pack", "lint", "--rules", str(dup)]) == 4
+    err = capsys.readouterr().err
+    assert "duplicate key 'spam'" in err, err
+
+    zwsp = tmp_path / "zwsp.json"
+    zwsp.write_text(json.dumps({"ghost": "\u200b"}))
+    assert main(["pack", "lint", "--rules", str(zwsp)]) == 4
+    err = capsys.readouterr().err
+    assert "E_RULES_TEXT" in err and "invisible-only" in err, err
+
+    # NBSP-only is whitespace-only: caught by the T113 empty check still
+    nbsp = tmp_path / "nbsp.json"
+    nbsp.write_text(json.dumps({"ghost": "\u00a0"}))
+    assert main(["pack", "lint", "--rules", str(nbsp)]) == 4
+    assert "has empty text" in capsys.readouterr().err
+
+    # positive control: a pack of plain printable text lints clean
+    good = tmp_path / "good.json"
+    good.write_text(json.dumps({"spam": "no spam here",
+                                "hate": "no hate here"}))
+    assert main(["pack", "lint", "--rules", str(good)]) == 0
+    assert "pack ok: 2 rules" in capsys.readouterr().out

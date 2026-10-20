@@ -494,12 +494,24 @@ def _read_pack(path: str):
     rules dict (unwrapping a typed pack, T878), or None (message already
     printed; caller exits)."""
     import os as _os
+
+    def _no_dup_keys(pairs):
+        # T879: the JSON scanner keeps the LAST of duplicate keys, so two
+        # rules with the same id silently collapse before validate_rules
+        # ever runs — reject at parse time instead.
+        seen = set()
+        for key, _value in pairs:
+            if key in seen:
+                raise ValueError(f"duplicate key {key!r} (rule id used twice)")
+            seen.add(key)
+        return dict(pairs)
+
     if not _os.path.exists(path):
         print(f"bouncer: no pack file {path!r}", file=sys.stderr)
         return None
     try:
         with open(path) as f:
-            data = json.load(f)
+            data = json.load(f, object_pairs_hook=_no_dup_keys)
     except (OSError, ValueError, RecursionError) as e:
         # ValueError == JSONDecodeError; the C scanner raises
         # RecursionError (not ValueError) on hostile deep nesting on

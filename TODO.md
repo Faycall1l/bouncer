@@ -969,7 +969,7 @@
 - [x] T876 persist: snapshot schema v2 at both levels — doc save stamps v, stats.snapshot declares the adapters section, load migrates v1 in memory (noted on stdout) and refuses unknown versions plus non-object strikes before applying anything; export --stats stamps a loadable v2 doc; runbook restore section rewritten
 - [x] T877 persist: cache snapshot wired into snapshot save/load (TTLCache.save/load are dead code today)
 - [x] T878 cli: pack init writes pack metadata (version, created, lang) — typed packs, not bare dicts
-- [ ] T879 rules: pack lint detects exact-duplicate ids + whitespace-only text (beyond validate_rules)
+- [x] T879 rules: pack lint detects exact-duplicate ids (the JSON scanner silently keeps the last one, so _read_pack rejects at parse) + invisible-only text — zero-width/control passes strip() but renders as nothing; plain whitespace stays validate_rules' job
 - [ ] T880 rules: pack lint warns when a rule's text duplicates another preset's rule verbatim
 - [ ] T881 strikes: amnesty command — operator clears a user's strikes after an appeal
 - [ ] T882 review: queue rows gain cause/model/preset fields (adjudication context, not just text+rule)

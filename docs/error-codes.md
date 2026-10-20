@@ -22,7 +22,7 @@ Codes are stable; messages may gain detail between releases.
 | `E_RULES` | 422 | rule-set error without a more specific code | read the message; the specific `E_RULES_*` below usually applies |
 | `E_RULES_EMPTY` | 422 | rules dict has no entries | ship at least one rule |
 | `E_RULES_ID` | 422 | rule id isn't a ≤24-char `a-z0-9-` slug | slugify the id (T773 caps) |
-| `E_RULES_TEXT` | 422 | rule text over 280 chars | shorten the text; the cap is the prompt budget |
+| `E_RULES_TEXT` | 422 | rule text over 280 chars, whitespace-only, invisible-only (zero-width/control, T879), wrong type, or a lone surrogate | shorten the text; the cap is the prompt budget |
 | `E_RULES_COUNT` | 422 | more than 12 rule keys | cut the set to ≤12 or split packs |
 | `E_RULES_RESERVED` | 422 | id collides with a reserved name (e.g. the `ok` bucket) | rename the rule |
 | `E_RULES_SEVERITY` | 422 | severity isn't `low`/`high`, or names an unknown rule | fix the severity map keys |
