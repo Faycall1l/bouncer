@@ -992,7 +992,7 @@
 - [x] T897 adp: BOUNCER_ADAPTER_LANG per-platform override (explicit beats detected)
 - [x] T898 eval: eval_i18n measures routing (script picks the right checkpoint) with honest skip-with-receipt when weights absent
 - [x] T899 docs: cookbook multilingual recipe (lang hint, script detect, pack tags, pool behavior)
-- [ ] T900 docs: adapters README language section updated (passthrough now exists)
+- [x] T900 docs: adapters README language section updated (passthrough now exists)
 - [ ] T901 test: script-detection routing sweep — ar/cyrillic/cjk/latin/mixed cases pinned
 - [ ] T902 test: batch lang autofill matches single /predict behavior
 - [ ] T903 test: adapter lang passthrough captured by a stub transport

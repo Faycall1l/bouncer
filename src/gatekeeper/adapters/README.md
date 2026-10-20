@@ -10,7 +10,7 @@
 | Zulip | `adapters/zulip_bot.py` | stdlib only. `ZULIP_EMAIL=... ZULIP_API_KEY=... ZULIP_SITE=... python -m gatekeeper.adapters.zulip_bot` (event-queue poll, stream messages moderated, PMs/mentions are `bouncer` commands; `BOUNCER_ZL_DELETE=1` opts into delete) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver; pass `secret`+`raw`+`ts`+`signature` to enforce Slack v0 signature verification (fail-closed) | dry-run, redact, verify_signature |
 | Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events; fires from the HTTP receivers and from every `run_loop` poll loop now too (T866: each adapter passes `message_of` for the event text); breaker-open results fire too and carry `cause`; http(s) only, and `BOUNCER_FORWARD_ALLOW` (comma-separated hosts) pins exact destinations (T785) | dry-run, redact |
-| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, http_json, backoff_wait, areconnect, Health, RateCap, redact, as_user_id, detect_lang, dry_run, install_shutdown, verify_signature, load_config |
+| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, http_json, backoff_wait, areconnect, Health, RateCap, redact, as_user_id, detect_lang, adapter_lang, dry_run, install_shutdown, verify_signature, load_config |
 
 The matrix's SDK column is the T703 truth: `common.py` (T691–T709) is the
 whole shared surface — `require_env`/`load_rules`/`load_config` at startup,
@@ -18,9 +18,12 @@ whole shared surface — `require_env`/`load_rules`/`load_config` at startup,
 `redact` + `dry_run` on every outbound line, `as_user_id` (T856+T858) handing
 each platform's user to `moderate(user_id=...)` namespaced `platform:user`
 so per-user strikes accrue per platform from chat traffic, not just the
-CLI, and `detect_lang` (T857) deriving
-`lang=` from the message script so non-latin platform traffic pins the
-multilingual checkpoint instead of routing as auto. Every `moderate(...)`
+CLI, and `adapter_lang` (T897) deriving
+`lang=` from the message script (via `detect_lang`, T857) so non-latin
+platform traffic pins the
+multilingual checkpoint instead of routing as auto — unless
+`BOUNCER_ADAPTER_LANG` pins that platform explicitly (explicit beats
+detected). Every `moderate(...)`
 call also carries `adapter=` (T867) — its platform name — so `stats`
 counts decisions per adapter. A new adapter gets all
 of it by importing from `common`; nothing in the column may name a helper
@@ -35,13 +38,13 @@ or the adapter never posts.
 
 | Platform | reply anchor | answer / notice threading | health line | rate cap | forward | lang hint |
 |---|---|---|---|---|---|---|
-| Telegram | commands → `reply_to_message_id` (T860) | answers nest under the ask; moderation prints (flag-only default) | T699 | T701 | T866 `message_of` | T857 |
-| Matrix | command notices → `m.relates_to.m.in_reply_to` (T861) | threaded under the trigger; moderation redacts + prints | T699 | T701 | T866 `message_of` | T857 |
-| Zulip | PM/mention answers | stream replies keep the `subject` topic (T863) | T699 | T701 | T866 `message_of` | T857 |
-| Mattermost | slash → `root_id` (T862) | slash answer threads under the command; ws moderation prints | T699 | T701 | — own websocket loop | T857 |
-| Discord | prefix + slash answers, unanchored | delete tombstone → `reference=msg` (T859) | T699 | T701 + T854 | — own event loop | T857 |
-| Twitch | — no command surface | moderation prints, never bans | T855 | — no cap wired | — own loop | T857 |
-| Slack/events | — never posts | — never posts | — library, no loop | — | the forwarder itself (T707) | T857 |
+| Telegram | commands → `reply_to_message_id` (T860) | answers nest under the ask; moderation prints (flag-only default) | T699 | T701 | T866 `message_of` | T857 + T897 pin |
+| Matrix | command notices → `m.relates_to.m.in_reply_to` (T861) | threaded under the trigger; moderation redacts + prints | T699 | T701 | T866 `message_of` | T857 + T897 pin |
+| Zulip | PM/mention answers | stream replies keep the `subject` topic (T863) | T699 | T701 | T866 `message_of` | T857 + T897 pin |
+| Mattermost | slash → `root_id` (T862) | slash answer threads under the command; ws moderation prints | T699 | T701 | — own websocket loop | T857 + T897 pin |
+| Discord | prefix + slash answers, unanchored | delete tombstone → `reference=msg` (T859) | T699 | T701 + T854 | — own event loop | T857 + T897 pin |
+| Twitch | — no command surface | moderation prints, never bans | T855 | — no cap wired | — own loop | T857 + T897 pin |
+| Slack/events | — never posts | — never posts | — library, no loop | — | the forwarder itself (T707) | T857 + T897 pin |
 
 ## Config file (T709)
 
