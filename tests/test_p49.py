@@ -149,7 +149,8 @@ def test_t941_adapter_counters_reach_the_scrape():
     reset_stats()
     try:
         body = TestClient(serve.app).get("/metrics").text
-        assert "bouncer_adapter_decisions_total" not in body, body
+        assert not any(l.startswith("bouncer_adapter_decisions_total{")
+                       for l in body.splitlines()), body  # family declared (T943), no samples
         record("delete", "no-spam", 3.0, adapter="telegram")
         record("delete", "no-spam", 3.0, adapter="telegram")
         record("flag", "be-kind", 4.0, adapter="discord")
@@ -197,3 +198,67 @@ def test_t942_rule_label_cardinality_stays_capped():
         assert stats.get_stats()["rules"][stats._OTHER] == 10
     finally:
         reset_stats()
+
+
+def test_t943_every_scrape_line_parses_and_families_are_complete():
+    """T943: the scrape was samples-only — valid text, but Prometheus typed
+    every series `untyped`, so rate() over the counters was a silent wrong
+    graph. Now every family carries exactly one HELP + one TYPE, and this
+    parser (regex, no deps) refuses anything the exposition format forbids:
+    unknown directives, bad label syntax, non-numeric or NaN/Inf values,
+    a family without metadata, or a TYPE that disagrees with the samples."""
+    import re
+
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    record("delete", "no-spam", 5.0, cause="violation", adapter="telegram")
+    try:
+        body = TestClient(serve.app).get("/metrics").text
+    finally:
+        reset_stats()
+
+    name_re = r"[a-zA-Z_:][a-zA-Z0-9_:]*"
+    label_re = r'[a-zA-Z_][a-zA-Z0-9_]*="(?:[^"\\]|\\.)*"'
+    sample_re = re.compile(rf"^({name_re})(?:{{{label_re}(?:,{label_re})*}})? "
+                           r"(-?[0-9.eE+]+|NaN|[+-]?Inf)$")
+    helps: dict[str, str] = {}
+    types: dict[str, str] = {}
+    samples: dict[str, int] = {}
+    for line in body.splitlines():
+        if not line.strip():
+            continue
+        if line.startswith("# HELP "):
+            name, _, text = line[len("# HELP "):].partition(" ")
+            assert name and text, line
+            assert name not in helps, f"duplicate HELP: {line}"
+            helps[name] = text
+        elif line.startswith("# TYPE "):
+            parts = line[len("# TYPE "):].split(" ")
+            assert len(parts) == 2 and parts[1] in ("counter", "gauge",
+                                                    "histogram", "summary"), line
+            assert parts[0] not in types, f"duplicate TYPE: {line}"
+            types[parts[0]] = parts[1]
+        elif line.startswith("#"):
+            raise AssertionError(f"unknown directive: {line}")
+        else:
+            m = sample_re.match(line)
+            assert m, f"unparsable sample line: {line}"
+            samples[m.group(1)] = samples.get(m.group(1), 0) + 1
+    # every sampled family is fully declared; HELP and TYPE sets agree 1:1
+    assert set(samples) <= set(helps) == set(types), (set(samples) - set(helps),
+                                                      set(helps) - set(types))
+    # a declaration without samples is legitimate only for families that are
+    # conditionally empty (no adapter has recorded yet, T941)
+    assert set(types) - set(samples) <= {"bouncer_adapter_decisions_total"}
+    # counters only ever grow: the type must match the metric's own name contract
+    for name, mtype in types.items():
+        if name.endswith("_total"):
+            assert mtype == "counter", (name, mtype)
+    # and the families this batch added are among the declared
+    for name in ("bouncer_rule_total", "bouncer_adapter_decisions_total",
+                 "bouncer_review_queue_depth", "bouncer_requests_total",
+                 "bouncer_breaker_open", "bouncer_coalesce_joined"):
+        assert types.get(name) in ("counter", "gauge"), name

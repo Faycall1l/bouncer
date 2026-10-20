@@ -320,50 +320,94 @@ def metrics(request: Request):  # T778: exposure gate before any counters leave
     from .cache import CACHE
     from .stats import get_stats
     g = get_stats()
-    lines = [f'bouncer_decisions_total{{action="{k}"}} {v}' for k, v in g["actions"].items()]
+
+    def family(name: str, help_text: str, mtype: str, rows: list) -> list:
+        # T943: one HELP + one TYPE per family, before its samples — a
+        # scrape without them parses but Prometheus types every series as
+        # untyped, and rate() over an untyped counter is a silent wrong graph
+        out = [f"# HELP {name} {help_text}", f"# TYPE {name} {mtype}"]
+        for labels, val in rows:
+            out.append(f"{name}{{{labels}}} {val}" if labels else f"{name} {val}")
+        return out
+
+    lines = family("bouncer_decisions_total", "Decisions by action.", "counter",
+                   [(f'action="{k}"', v) for k, v in g["actions"].items()])
     c = CACHE.stats()  # T235
     tot = c["hits"] + c["misses"]
-    lines += [f"bouncer_cache_hits {c['hits']}", f"bouncer_cache_misses {c['misses']}",
-              f"bouncer_cache_hit_rate {round(c['hits'] / tot, 3) if tot else 0.0}",
-              f"bouncer_latency_p50_ms {g['latency']['p50_ms']}",
-              f"bouncer_latency_p95_ms {g['latency']['p95_ms']}",  # T884
-              f'bouncer_info{{version="{__version__}"}} 1',  # T236
-              f"bouncer_uptime_seconds {round(time.time() - _START, 1)}"]  # T236
-    lines += [f'bouncer_rule_total{{rule="{k}"}} {v}'  # T884: per-rule counters,
-              for k, v in g["rules"].items()]  #  like /stats' rules block
-    lines += [f'bouncer_cause_total{{cause="{k}"}} {v}'  # T884: why, not just what
-              for k, v in g["causes"].items()]
-    lines += [f'bouncer_adapter_decisions_total{{adapter="{a}",action="{act}"}} {n}'  # T941
-              for a, by_act in g["adapters"].items()  # T867's recording, exported:
-              for act, n in by_act.items()]  #  which platform is loud, per action
+    lines += family("bouncer_cache_hits", "Decision-cache hits.", "counter",
+                    [("", c["hits"])])
+    lines += family("bouncer_cache_misses", "Decision-cache misses.", "counter",
+                    [("", c["misses"])])
+    lines += family("bouncer_cache_hit_rate",
+                    "Decision-cache hit ratio over hits+misses.", "gauge",
+                    [("", round(c["hits"] / tot, 3) if tot else 0.0)])
+    lines += family("bouncer_latency_p50_ms", "Rolling median latency (ms).", "gauge",
+                    [("", g["latency"]["p50_ms"])])
+    lines += family("bouncer_latency_p95_ms", "Rolling p95 latency (ms).", "gauge",
+                    [("", g["latency"]["p95_ms"])])  # T884
+    lines += family("bouncer_info", "Build metadata; always 1.", "gauge",
+                    [(f'version="{__version__}"', 1)])  # T236
+    lines += family("bouncer_uptime_seconds", "Process uptime.", "gauge",
+                    [("", round(time.time() - _START, 1))])  # T236
+    lines += family("bouncer_rule_total",  # T884: like /stats' rules block;
+                    "Decisions per rule id (fresh ids past the label cap "
+                    "fold into _other, T942).", "counter",  # T942 the cap keeps
+                    [(f'rule="{k}"', v) for k, v in g["rules"].items()])  # it bounded
+    lines += family("bouncer_cause_total", "Decisions by cause (why, not just what).",
+                    "counter", [(f'cause="{k}"', v) for k, v in g["causes"].items()])
+    lines += family("bouncer_adapter_decisions_total",  # T941
+                    "Decisions per platform adapter and action.", "counter",
+                    [(f'adapter="{a}",action="{act}"', n)  # T867's recording:
+                     for a, by_act in g["adapters"].items()  # which platform
+                     for act, n in by_act.items()])  # is loud, per action
     from . import strikes as _strikes  # T884: counts only, like /stats (T439)
     _table = _strikes._strikes
     ban_sug = sum(1 for n in _table.values() if n >= _strikes.BAN_AT)
-    lines += [f"bouncer_strikes_users {len(_table)}",
-              f"bouncer_strikes_total {sum(_table.values())}",
-              f"bouncer_strikes_ban_suggested {ban_sug}"]
-    lines += [f'bouncer_requests_total{{status="{s}"}} {n}'  # T885: by-status
-              for s, n in sorted(_STATUS.items())]  # counts, so 4xx/5xx show
-    lines += [f"bouncer_auth_failures_total {_AUTH_FAILS}",  # T885: key probing
-              f"bouncer_rate_limited_total {_RATE_429}"]  # T885: the 429 line
+    lines += family("bouncer_strikes_users", "Distinct users with strikes.", "gauge",
+                    [("", len(_table))])
+    lines += family("bouncer_strikes_total", "Strikes accrued across users.", "counter",
+                    [("", sum(_table.values()))])
+    lines += family("bouncer_strikes_ban_suggested",
+                    "Users at or past the ban-suggestion threshold.", "gauge",
+                    [("", ban_sug)])
+    lines += family("bouncer_requests_total", "HTTP responses by status code.", "counter",
+                    [(f'status="{s}"', n)  # T885: by-status counts,
+                     for s, n in sorted(_STATUS.items())])  # so 4xx/5xx show
+    lines += family("bouncer_auth_failures_total", "Rejected API-key attempts.", "counter",
+                    [("", _AUTH_FAILS)])  # T885: key probing
+    lines += family("bouncer_rate_limited_total", "Requests answered 429.", "counter",
+                    [("", _RATE_429)])  # T885: the 429 line
     from . import _BREAKER, _BREAKER_LOCK  # T520
     with _BREAKER_LOCK:
         is_open = time.time() < _BREAKER["open_until"]
         b_fails, b_half = _BREAKER["fails"], _BREAKER["half_open"]  # T935
-    lines += [f"bouncer_breaker_open {int(is_open)}",
-              f"bouncer_breaker_fails {b_fails}",  # T935: /stats had these (T522)
-              f"bouncer_breaker_half_open {int(b_half)}"]  # T935: scrape sees the probe
+    lines += family("bouncer_breaker_open", "1 while the failure breaker is open.",
+                    "gauge", [("", int(is_open))])
+    lines += family("bouncer_breaker_fails", "Consecutive breaker-eligible failures.",
+                    "counter", [("", b_fails)])  # T935: /stats had these (T522)
+    lines += family("bouncer_breaker_half_open",
+                    "1 while one trial probe owns the call.", "gauge",
+                    [("", int(b_half))])  # T935: scrape sees the probe
     from . import coalesce_stats  # T935: coalesce effectiveness in the scrape (T754)
     _coal = coalesce_stats()  # ratio stays a /stats query — joined/total are the counts
-    lines += [f"bouncer_coalesce_joined {_coal['joined']}",
-              f"bouncer_coalesce_total {_coal['total']}"]
+    lines += family("bouncer_coalesce_joined", "Requests joined onto an identical "
+                    "in-flight one.", "counter", [("", _coal["joined"])])
+    lines += family("bouncer_coalesce_total", "Requests eligible for coalescing.",
+                    "counter", [("", _coal["total"])])
     from . import review as _review  # T940: escalations waiting on a human
-    lines.append(f"bouncer_review_queue_depth {_review.depth()}")
+    lines += family("bouncer_review_queue_depth", "Rows awaiting a human.", "gauge",
+                    [("", _review.depth())])
     from .pool import POOL  # T628: pool health in the same scrape
     ps = POOL.stats()
-    lines += [f"bouncer_pool_size {ps['size']}", f"bouncer_pool_max {ps['max_n']}",
-              f"bouncer_pool_hits {ps['hits']}", f"bouncer_pool_creates {ps['creates']}",
-              f"bouncer_pool_evictions {ps['evictions']}"]
+    lines += family("bouncer_pool_size", "Models resident in the pool.", "gauge",
+                    [("", ps["size"])])
+    lines += family("bouncer_pool_max", "Pool capacity.", "gauge", [("", ps["max_n"])])
+    lines += family("bouncer_pool_hits", "Pool lookups served from cache.", "counter",
+                    [("", ps["hits"])])
+    lines += family("bouncer_pool_creates", "Model loads (cold misses).", "counter",
+                    [("", ps["creates"])])
+    lines += family("bouncer_pool_evictions", "Models evicted from the pool.", "counter",
+                    [("", ps["evictions"])])
     return PlainTextResponse("\n".join(lines) + "\n")
 
 
