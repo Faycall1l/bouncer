@@ -346,7 +346,14 @@ def metrics(request: Request):  # T778: exposure gate before any counters leave
     from . import _BREAKER, _BREAKER_LOCK  # T520
     with _BREAKER_LOCK:
         is_open = time.time() < _BREAKER["open_until"]
-    lines.append(f"bouncer_breaker_open {int(is_open)}")
+        b_fails, b_half = _BREAKER["fails"], _BREAKER["half_open"]  # T935
+    lines += [f"bouncer_breaker_open {int(is_open)}",
+              f"bouncer_breaker_fails {b_fails}",  # T935: /stats had these (T522)
+              f"bouncer_breaker_half_open {int(b_half)}"]  # T935: scrape sees the probe
+    from . import coalesce_stats  # T935: coalesce effectiveness in the scrape (T754)
+    _coal = coalesce_stats()  # ratio stays a /stats query — joined/total are the counts
+    lines += [f"bouncer_coalesce_joined {_coal['joined']}",
+              f"bouncer_coalesce_total {_coal['total']}"]
     from .pool import POOL  # T628: pool health in the same scrape
     ps = POOL.stats()
     lines += [f"bouncer_pool_size {ps['size']}", f"bouncer_pool_max {ps['max_n']}",

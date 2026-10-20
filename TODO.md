@@ -1031,7 +1031,7 @@
 - [x] T932 stats: /metrics cause counters (stale at birth — T884 already exports `bouncer_cause_total{cause=...}`; pinned by tests/test_p46.py:648)
 - [x] T933 stats: /metrics p95 latency export (stale at birth — T884 exports `bouncer_latency_p95_ms` from the rolling window; pinned by tests/test_p46.py:649)
 - [x] T934 stats: /metrics strikes summary export (stale at birth — T884 exports `bouncer_strikes_users/total/ban_suggested`, counts only like /stats T439; pinned by tests/test_p46.py:650-652)
-- [ ] T935 stats: /metrics coalesce + breaker fails/half_open export
+- [x] T935 stats: /metrics coalesce + breaker fails/half_open export (T935: bouncer_coalesce_joined/total + bouncer_breaker_fails/half_open; receipts in tests/test_p49.py)
 - [ ] T936 serve: request counter by status class in /metrics (incl 401/413/429)
 - [ ] T937 serve: auth-failure counter in /metrics
 - [ ] T938 audit: rid in decision log + audit rows (one id across access/decision/audit)
