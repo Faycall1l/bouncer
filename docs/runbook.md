@@ -71,7 +71,8 @@ version — the two-key window means no client deadline:
    the last log line reports both: `{"event": "shutdown",
    "inference_drained_s": ..., "audit": "closed"}` (T839).
 3. `bouncer snapshot save` before the process exits, then stop it.
-4. The review queue drains by hand: `bouncer review` to list, adjudicate
+4. The review queue drains by hand: `bouncer review` to list (rows carry
+   cause/model/preset adjudication context, T882), adjudicate
    out-of-band, then `bouncer review --clear --yes` (T318) — `--clear`
    without `--yes` refuses, because it drops the whole queue. A rejected
    row amnesties that user's strikes by the row's weight (T865); for an

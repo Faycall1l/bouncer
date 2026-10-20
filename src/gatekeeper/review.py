@@ -11,7 +11,8 @@ from collections import deque
 _PATH = os.environ.get("BOUNCER_REVIEW", "review-queue.jsonl")
 
 
-def add(message: str, res: dict, user: str | None = None) -> None:  # T170+T864
+def add(message: str, res: dict, user: str | None = None,  # T170+T864+T882
+        model: str | None = None, preset: str | None = None) -> None:
     parent = os.path.dirname(os.path.abspath(_PATH))  # T281
     os.makedirs(parent, exist_ok=True)
     # T784: the queue is the ONE artifact that holds raw message text (by
@@ -26,6 +27,8 @@ def add(message: str, res: dict, user: str | None = None) -> None:  # T170+T864
                             "message": message[:500], "action": res["action"],
                             "rule": res["rule"], "conf": round(res["confidence"], 3),
                             "cause": res.get("cause", ""),  # T448
+                            "model": model or res.get("model") or "",  # T882
+                            "preset": preset or res.get("preset") or "",
                             "ms": res.get("latency_ms", 0.0)}) + "\n")  # T244
 
 

@@ -526,3 +526,46 @@ def test_amnesty_command_clears_or_reduces_strikes(tmp_path, monkeypatch,
     # a user with no strikes is refused, loudly
     assert main(["amnesty", "nobody"]) == 1
     assert "no strikes for nobody" in capsys.readouterr().err
+
+
+def test_review_rows_carry_cause_model_preset(tmp_path, monkeypatch,
+                                              capsys):  # T882
+    """Queued rows are adjudication context, not just text+rule: every row
+    the queue accepts now stamps cause, model and preset (the flags that
+    shaped the verdict), `bouncer review` shows them, and old rows without
+    the fields still list fine."""
+    import importlib
+
+    import gatekeeper
+    import gatekeeper.review as rv
+    monkeypatch.setenv("BOUNCER_REVIEW", str(tmp_path / "review.jsonl"))
+    importlib.reload(rv)
+
+    class FlagStub:  # 0.75 sits between the flag margin and the delete
+        def predict(self, state, questions):  # bar: flagged, so it queues
+            return {"answers": {
+                "rule": {"choice": "no-cheat", "confidence": 0.75,
+                         "probabilities": {"no-cheat": 0.75}},
+                "harm": {"score": "safe"}, "hype": {"score": "chill"},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    monkeypatch.setattr(gatekeeper, "_router", FlagStub())
+    res = gatekeeper.moderate("aimbot for sale right now", preset="gaming",
+                              router=FlagStub(), user_id="telegram:55")
+    assert res["action"] == "flag", res
+    row = rv.list_queue()[-1]
+    assert row["cause"], "the verdict's cause rides the row"
+    assert "model" in row and "preset" in row, "T882 fields exist"
+    assert row["preset"] == "gaming", row
+    capsys.readouterr()
+
+    # bouncer review renders the context, and old rows (no fields) still list
+    assert main(["review"]) == 0
+    assert "preset=gaming" in capsys.readouterr().out
+    with open(rv._PATH, "a") as f:
+        f.write(json.dumps({"t": 1, "id": "legacy01", "user": None,
+                            "message": "old row", "action": "flag",
+                            "rule": "r", "conf": 0.5, "cause": "suspected",
+                            "ms": 1.0}) + "\n")
+    assert main(["review"]) == 0
+    assert "legacy01" in capsys.readouterr().out

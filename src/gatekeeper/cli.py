@@ -225,8 +225,10 @@ def cmd_review(args) -> int:
                           since=getattr(args, "since", 0) or 0,  # T537
                           rule=getattr(args, "rule", None)):  # T543
         tag = f" [{row['verdict']}]" if row.get("verdict") else ""  # T865
+        ctx = "".join(f" {k}={row[k]}" for k in ("cause", "model", "preset")  # T882
+                      if row.get(k))  # old rows predate the fields: stay quiet
         print(f"{row.get('id', '-'):8} {row['action']:8} "
-              f"{row['rule']}@{row['conf']:.2f}{tag} {row['message'][:100]}")
+              f"{row['rule']}@{row['conf']:.2f}{tag}{ctx} {row['message'][:100]}")
     return 0
 
 
