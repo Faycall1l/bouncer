@@ -294,3 +294,44 @@ def test_t944_scrape_cardinality_bounded_under_adversarial_input():
         assert len(stats.get_stats()["rules"]) <= stats.MAX_RULE_LABELS + 1
     finally:
         reset_stats()
+
+
+def test_t945_api_md_metrics_table_matches_the_scrape():
+    """T945: api.md's route bullet listed a handful of metric names; the
+    docs now carry a full export table with types. The table is checked
+    against the live scrape both ways: every family the server declares is
+    documented, and every `bouncer_*` name the docs promise is one the
+    server actually serves (a stale doc row fails, a new series without a
+    row fails)."""
+    import re
+    from pathlib import Path
+
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    record("delete", "no-spam", 5.0, cause="violation", adapter="telegram")
+    try:
+        body = TestClient(serve.app).get("/metrics").text
+    finally:
+        reset_stats()
+    served = set(re.findall(r"^# TYPE (\S+)", body, re.MULTILINE))
+    assert served, "the scrape must declare families"
+    doc = Path("docs/api.md").read_text()
+    section = doc.split("## Metrics export (T945)")[1].split("## ")[0]
+    # only table rows name families; the prose below mentions label values
+    table = "\n".join(l for l in section.splitlines() if l.startswith("|"))
+    # a row can carry a chain of names: "`bouncer_pool_size` / `_max` / …" —
+    # each `_`-prefixed continuation joins the previous name's stem
+    expanded: set[str] = set()
+    stem = ""
+    for token in re.findall(r"`(bouncer_[a-z0-9_]+|_[a-z0-9_]+)`", table):
+        if token.startswith("bouncer_"):
+            stem = token.rsplit("_", 1)[0]
+            expanded.add(token)
+        else:
+            assert stem, token  # a continuation can only follow a full name
+            expanded.add(stem + "_" + token.lstrip("_"))
+    assert served <= expanded, f"undocumented families: {served - expanded}"
+    assert expanded <= served, f"docs promise absent families: {expanded - served}"

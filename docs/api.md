@@ -27,12 +27,9 @@ _(Last checked against v0.4.0.)_
 * `GET /health` loaded/unavailable + uptime · `GET /version` · `GET /models` ·
   `GET /stats` (decisions + cache + version + uptime; gated like `/metrics`
   when `BOUNCER_KEY` is set — T842) · `GET /presets` ·
-  `GET /metrics` (per-action counters, per-rule counters, cause counts,
-  latency p50/p95, strike totals (counts only), `bouncer_requests_total
-  {status}`, `bouncer_auth_failures_total`, `bouncer_rate_limited_total`,
-  cache hits/misses/rate,
-  `bouncer_info{version}`, uptime, `bouncer_breaker_open`, `bouncer_pool_*`)
-  — exposed to loopback or with `X-API-Key` once `BOUNCER_KEY` is set (T778;
+  `GET /metrics` (Prometheus text — full export table under "Metrics
+  export", T945) — exposed to loopback or with `X-API-Key` once
+  `BOUNCER_KEY` is set (T778;
   keyless servers are open everywhere anyway).
 * Headers: `X-Request-ID` echo, `X-Bouncer-ms` latency,
   `X-Content-Type-Options: nosniff`. Optional `X-API-Key` when `BOUNCER_KEY`
@@ -113,6 +110,42 @@ don't have to repeat them:
   language, the script protects the model choice. Detection never invents a
   language claim for latin text (T857). Adapters derive their hint the same
   way, unless `BOUNCER_ADAPTER_LANG` pins the platform (T897).
+
+## Metrics export (T945)
+
+`GET /metrics` serves Prometheus text — loopback, or `X-API-Key` once
+`BOUNCER_KEY` is set (same gate as `/stats`, T778). Every family carries
+one `# HELP` + one `# TYPE` line (T943), so the types below are the
+scrape's own claims, not this table's:
+
+| family | type | labels | meaning |
+| --- | --- | --- | --- |
+| `bouncer_decisions_total` | counter | `action` | decisions by action (allow/flag/delete/escalate) |
+| `bouncer_rule_total` | counter | `rule` | decisions per rule id; fresh ids past the 200-label cap (T942) fold into `rule="_other"` |
+| `bouncer_cause_total` | counter | `cause` | why, not just what (margin, needs-human, quiet, low-conf, …) |
+| `bouncer_adapter_decisions_total` | counter | `adapter`, `action` | which platform is loud (T867 recording; no samples until an adapter decides) |
+| `bouncer_requests_total` | counter | `status` | HTTP responses by code, incl. 401/413/429 (T885) |
+| `bouncer_auth_failures_total` | counter | — | rejected API-key attempts (T885) |
+| `bouncer_rate_limited_total` | counter | — | requests answered 429 (T885) |
+| `bouncer_cache_hits` / `_misses` | counter | — | decision-cache outcomes (T235) |
+| `bouncer_cache_hit_rate` | gauge | — | hits ÷ (hits+misses), 3 decimals |
+| `bouncer_latency_p50_ms` / `bouncer_latency_p95_ms` | gauge | — | rolling window of the last 200 requests (T232/T884) |
+| `bouncer_strikes_users` / `_total` / `_ban_suggested` | gauge/counter/gauge | — | strike summary, counts only, never user ids (T439/T884) |
+| `bouncer_breaker_open` | gauge | — | 1 while the model-failure breaker is open (T520) |
+| `bouncer_breaker_fails` | counter | — | consecutive breaker-eligible failures (T935) |
+| `bouncer_breaker_half_open` | gauge | — | 1 while one trial probe owns the call (T935) |
+| `bouncer_coalesce_joined` / `_total` | counter | — | identical in-flight requests joined (T754/T935) |
+| `bouncer_review_queue_depth` | gauge | — | rows awaiting a human (T940; counted byte-wise, never parsed) |
+| `bouncer_pool_size` / `_max` / `_hits` / `_creates` / `_evictions` | gauge/counter | — | model-pool health (T628) |
+| `bouncer_info` | gauge | `version` | build metadata; always 1 (T236) |
+| `bouncer_uptime_seconds` | gauge | — | process uptime (T236) |
+
+Cardinality stays a constant, not a function of traffic (T942+T944): the
+only client-influenced label is `rule`, capped with the `_other` fold;
+`status` is the finite HTTP set; `cause`, `adapter` and `action` come from
+this codebase's own vocabularies. Counters are per worker process — a
+multi-worker serve under-reports every scrape (T939; the startup warning
+says so).
 
 ## Snapshots + stats export (T608)
 
