@@ -1033,7 +1033,7 @@
 - [x] T934 stats: /metrics strikes summary export (stale at birth — T884 exports `bouncer_strikes_users/total/ban_suggested`, counts only like /stats T439; pinned by tests/test_p46.py:650-652)
 - [x] T935 stats: /metrics coalesce + breaker fails/half_open export (T935: bouncer_coalesce_joined/total + bouncer_breaker_fails/half_open; receipts in tests/test_p49.py)
 - [x] T936 serve: request counter by status class in /metrics (incl 401/413/429) (T885's `bouncer_requests_total{status=}` counts them all; this box's receipt test pins the 413/429 legs too — tests/test_p49.py)
-- [ ] T937 serve: auth-failure counter in /metrics
+- [x] T937 serve: auth-failure counter in /metrics (stale at birth — T885 exports `bouncer_auth_failures_total`; pinned by tests/test_p46.py:697 and listed in docs/api.md)
 - [ ] T938 audit: rid in decision log + audit rows (one id across access/decision/audit)
 - [ ] T939 stats: worker-scoping documented + doctor warns with --workers >1 (per-worker counters, /stats under-reports)
 - [ ] T940 review: review-queue depth in /metrics
