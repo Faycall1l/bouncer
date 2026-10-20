@@ -52,7 +52,7 @@ def _watch_once(sock, rules, health=None) -> None:  # T855: health parity
     guard records one redacted error instead of dying, and maybe_log()
     runs per message so the line stays on time."""
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import as_user_id, detect_lang
+    from gatekeeper.adapters.common import adapter_lang, as_user_id
     buf = ""
     while True:
         buf += sock.recv(4096).decode("utf-8", "replace")
@@ -68,7 +68,7 @@ def _watch_once(sock, rules, health=None) -> None:  # T855: health parity
             try:
                 res = moderate(text, rules,  # T856+T857: strikes + lang hint
                                user_id=as_user_id("twitch", user),
-                               lang=detect_lang(text),
+                               lang=adapter_lang("twitch", text),  # T897: env pin, else detect
                                adapter="twitch")  # T867: per-adapter counters
             except Exception as e:  # noqa: BLE001 — one bad line, one print
                 print("mod error", redact(str(e)), file=sys.stderr)

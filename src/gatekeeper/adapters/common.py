@@ -137,6 +137,29 @@ def detect_lang(text):  # T857
         detect_script(text))
 
 
+def adapter_lang(adapter: str, text):  # T897
+    """T897: the operator's per-platform language override, then detection.
+
+    `BOUNCER_ADAPTER_LANG=telegram=ar,zulip=en` pins the lang hint for the
+    named platforms; anything not named (or a blank/unset env) falls to
+    `detect_lang` as before. Explicit beats detected — a deployment whose
+    whole Telegram traffic is one language shouldn't pay a per-message
+    script guess that can only guess the same thing, and a latin-script
+    transliteration stream can be pinned to the multilingual checkpoint
+    detection would never pick. Values pass through the same slug shape
+    the API accepts (T496 `_check_lang`); `auto` opts a platform back into
+    detection (a per-platform un-pin without clearing the whole env)."""
+    spec = os.environ.get("BOUNCER_ADAPTER_LANG", "")
+    for pair in spec.split(","):
+        key, _, val = pair.strip().partition("=")
+        if key.strip().lower() == adapter.lower() and val.strip():
+            v = val.strip().lower()
+            if v == "auto":  # T893: auto means detect — per-platform un-pin
+                return detect_lang(text)
+            return v
+    return detect_lang(text)
+
+
 def verify_signature(secret: str, header: str, body, *, prefix: str = "",
                      digestmod: str = "sha256") -> bool:
     """T704: constant-time HMAC signature check for webhook receivers.

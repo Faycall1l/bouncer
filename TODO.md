@@ -989,7 +989,7 @@
 - [x] T894 presets: PRESET_LANG coverage — every routed language has a pack or is listed packless in docs
 - [x] T895 pool: lang-tagged checkout stats — per-checkpoint hits visible in /stats pool block
 - [x] T896 explain: lang_note wired into check output or removed — no more dead code either way
-- [ ] T897 adp: BOUNCER_ADAPTER_LANG per-platform override (explicit beats detected)
+- [x] T897 adp: BOUNCER_ADAPTER_LANG per-platform override (explicit beats detected)
 - [ ] T898 eval: eval_i18n measures routing (script picks the right checkpoint) with honest skip-with-receipt when weights absent
 - [ ] T899 docs: cookbook multilingual recipe (lang hint, script detect, pack tags, pool behavior)
 - [ ] T900 docs: adapters README language section updated (passthrough now exists)

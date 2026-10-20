@@ -166,6 +166,10 @@ script-derived `lang=` (T857): latin traffic stays hintless, so
 `model_for_lang()` returns nothing and laya routes by the `script` the
 engine computed for the state; arabic/cjk/cyrillic carry `lang=` and pin
 the multilingual checkpoint directly (either way it lands there).
+`BOUNCER_ADAPTER_LANG` (T897) beats that detection per platform —
+`BOUNCER_ADAPTER_LANG=telegram=ar,zulip=en` pins the hint for the named
+adapters regardless of the message's script, and `telegram=auto` puts one
+platform back on detection without clearing the rest of the map.
 Every checkpoint touched lands in the shared pool (`BOUNCER_POOL_MAX`,
 default 2), so a multilingual community can
 hold both english + multilingual routers in memory. Two operational consequences:

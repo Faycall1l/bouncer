@@ -80,10 +80,10 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
             "per-user cap; message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import as_user_id, detect_lang, dry_run
+    from gatekeeper.adapters.common import adapter_lang, as_user_id, dry_run
     res = dict(moderate(body, rules,  # T856+T857: strikes + detected lang
                         user_id=as_user_id("matrix", event.get("sender")),
-                        lang=detect_lang(body),
+                        lang=adapter_lang("matrix", body),  # T897: env pin, else detect
                         adapter="matrix"))  # T867: per-adapter counters
     res["redacted"] = False
     if res["action"] == "delete" and can_redact and token and homeserver:

@@ -53,11 +53,11 @@ def handle_post(post: dict, rules: dict, *, token=None, server=None,
             "per-user cap; message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import as_user_id, detect_lang, dry_run
+    from gatekeeper.adapters.common import adapter_lang, as_user_id, dry_run
     res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
                         user_id=as_user_id("mattermost",
                                            post.get("user_id")),
-                        lang=detect_lang(text),
+                        lang=adapter_lang("mattermost", text),  # T897: env pin, else detect
                         adapter="mattermost"))  # T867: per-adapter counters
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token and server:

@@ -54,7 +54,7 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
     areconnect give their traffic).
     """
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import as_user_id, detect_lang
+    from gatekeeper.adapters.common import adapter_lang, as_user_id
 
     if cap is not None and not cap.allow(user_id):  # T701+T854
         from gatekeeper.adapters.common import redact
@@ -65,7 +65,7 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
         try:
             res = dict(moderate(text, rules,  # T856+T857: strikes + lang hint
                                 user_id=as_user_id("discord", user_id),
-                                lang=detect_lang(text),
+                                lang=adapter_lang("discord", text),  # T897: env pin, else detect
                                 adapter="discord"))  # T867: per-adapter counters
             if res["action"] not in ("ignored", "command"):  # T699
                 health.decision()

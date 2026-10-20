@@ -305,3 +305,44 @@ def test_explain_has_no_dead_lang_twin():  # T896
 
     assert detect_script("مرحبا بالجميع") == "arabic"
     assert detect_script("hello there") == "latin"
+
+
+def test_adapter_lang_env_pin_beats_detection(monkeypatch):  # T897
+    """BOUNCER_ADAPTER_LANG pins the lang hint per platform — explicit
+    beats the per-message script detection. Unnamed platforms keep
+    detection, `auto` puts one platform back on detection, the pin is
+    case-insensitive on the platform name, and malformed pairs are
+    ignored rather than crashing a poll loop."""
+    from gatekeeper.adapters.common import adapter_lang, detect_lang
+
+    arabic = "هذا الرسالة تحتوي على رسائل مزعجة"
+    latin = "just a normal friendly message"
+
+    # unset: detection, exactly as before T897
+    monkeypatch.delenv("BOUNCER_ADAPTER_LANG", raising=False)
+    assert adapter_lang("telegram", arabic) == "ar"
+    assert adapter_lang("telegram", latin) is None
+    assert adapter_lang("telegram", arabic) == detect_lang(arabic)
+
+    # pinned platform wins over what the script says
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "telegram=ar,zulip=en")
+    assert adapter_lang("telegram", latin) == "ar", "pin beats latin script"
+    assert adapter_lang("zulip", arabic) == "en", "pin beats arabic script"
+    # unnamed platforms still detect
+    assert adapter_lang("matrix", arabic) == "ar"
+
+    # case-insensitive platform name, value lowercased
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "MATRIX=ZH")
+    assert adapter_lang("matrix", latin) == "zh"
+
+    # auto = per-platform un-pin: back to detection without clearing env
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "telegram=auto,matrix=zh")
+    assert adapter_lang("telegram", arabic) == "ar"
+    assert adapter_lang("matrix", latin) == "zh"
+
+    # malformed pairs and blank values are ignored, never a crash
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "=ar,telegram=,junk,zulip=en")
+    assert adapter_lang("telegram", arabic) == "ar", "empty value: no pin"
+    assert adapter_lang("zulip", latin) == "en", "the good pair still reads"
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "   ")
+    assert adapter_lang("telegram", arabic) == "ar", "blank env: detect"

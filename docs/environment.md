@@ -50,6 +50,7 @@ are what the code falls back to at read time.
 |---|---|---|
 | `BOUNCER_DRY_RUN` | unset | `1` = adapters print actions, never post (T697) |
 | `BOUNCER_RATE_CAP` | `bouncer.toml` `[tuning] rate_cap`, then `10` | per-user model calls/min in pollers; `0` disables (T701) |
+| `BOUNCER_ADAPTER_LANG` | unset (detect per message) | comma-separated `platform=lang` pins (e.g. `telegram=ar,zulip=en`) — explicit beats the per-message script detection (T897); `platform=auto` puts one platform back on detection |
 | `BOUNCER_TG_DELETE` | unset (flag-only) | `1` = Telegram may use deleteMessage |
 | `BOUNCER_MX_REDACT` | unset (flag-only) | `1` = Matrix may redact messages |
 | `BOUNCER_MM_DELETE` | unset (flag-only) | `1` = Mattermost may delete posts |

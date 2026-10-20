@@ -80,11 +80,11 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
             "message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import as_user_id, detect_lang, dry_run
+    from gatekeeper.adapters.common import adapter_lang, as_user_id, dry_run
     res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
                         user_id=as_user_id("telegram",
                                            (msg.get("from") or {}).get("id")),
-                        lang=detect_lang(text),
+                        lang=adapter_lang("telegram", text),  # T897: env pin, else detect
                         adapter="telegram"))  # T867: per-adapter counters
     res["deleted"] = False
     if res["action"] == "delete" and can_delete and token:
