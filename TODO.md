@@ -997,7 +997,7 @@
 - [x] T902 test: batch lang autofill matches single /predict behavior
 - [x] T903 test: adapter lang passthrough captured by a stub transport
 - [x] T904 test: BOUNCER_ADAPTER_LANG beats detection, per platform
-- [ ] T905 test: pool stats carry lang tags without unbounded cardinality
+- [x] T905 test: pool stats carry lang tags without unbounded cardinality
 - [ ] T906 fix: P47 reds — any failure the sweep finds, fixed here
 - [ ] T907 docs: api.md lang section refreshed (autofill, batch parity, script-vs-lang table)
 - [ ] T908 eval: i18n routing report kind added to gate.py dispatch

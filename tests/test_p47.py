@@ -661,3 +661,42 @@ def test_adapter_lang_pin_is_per_platform(monkeypatch):  # T904
     res = real_moderate("hello normal latin spam text", rules2,
                         router=_RouteProbe())
     assert res["lang"] is None, "CLI/API moderate unaffected by the env pin"
+
+
+def test_pool_lang_tags_stay_bounded_under_cardinality_stress():  # T905
+    """The pool's per-checkpoint stats can't be cardinality-bombed: a
+    deployment cycling hundreds of distinct model pins (finetuned dirs,
+    per-tenant checkpoints) still reports at most _POOL_TAGS rows — known
+    checkpoints by name, one default, one other — so GET /stats and a
+    Prometheus scrape stay a fixed size however creative the config."""
+    from gatekeeper.pool import _POOL_TAGS, RouterPool
+
+    p = RouterPool(max_n=4, factory=lambda **kw: kw)
+    # 100 distinct model pins, interleaved with the known checkpoints
+    for i in range(100):
+        p.get(model=f"/models/tenant-{i}/ckpt")
+        if i % 10 == 0:
+            p.get(model="multilingual")
+        if i % 15 == 0:
+            p.get()  # no kwargs at all: default bucket
+        if i % 25 == 0:
+            p.get(model="english")
+
+    s = p.stats()
+    assert set(s["by_model"]) <= set(_POOL_TAGS), sorted(s["by_model"])
+    assert set(s["by_model"]) == {"other", "multilingual", "default",
+                                  "english"}, s["by_model"]
+    # the 100 tenant pins all landed in ONE other row
+    assert s["by_model"]["other"]["creates"] == 100, s["by_model"]["other"]
+    assert len(s["by_model"]) <= len(_POOL_TAGS), "hard bound, not a hope"
+    # totals still reconcile with the tagged rows
+    assert sum(r["creates"] for r in s["by_model"].values()) == s["creates"]
+    assert sum(r["hits"] for r in s["by_model"].values()) == s["hits"]
+
+    # the bound is structural: clear() keeps tags, a fresh pool starts empty
+    # with the same fixed ceiling (no tag grows a second dict somewhere)
+    assert set(p.stats()["by_model"]) == set(p.by_model)
+    p2 = RouterPool(max_n=2, factory=lambda **kw: kw)
+    for i in range(50):
+        p2.get(model=f"/x/{i}")
+    assert set(p2.stats()["by_model"]) == {"other"}
