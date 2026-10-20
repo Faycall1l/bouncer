@@ -854,3 +854,61 @@ def test_pack_verify_fails_on_flipped_byte(tmp_path, capsys):  # T888
     sig.write_text(sig.read_text().replace("sha256", "sha999"))
     assert main(["pack", "verify", str(p)]) == 4
     assert "E_PACK_SIG" in capsys.readouterr().err
+
+
+def test_snapshot_v1_end_to_end_gains_namespaced_strikes(tmp_path,
+                                                         capsys):  # T889
+    """A real v1 snapshot file from an older bouncer (no cache, no
+    adapters, raw user keys) loads whole through the migration: counters
+    restored, the migration said out loud, raw keys kept — and the loaded
+    table then gains namespaced strikes (T858) living alongside, so the
+    next save round-trips the merged table as a v2 doc. The upgrade path
+    never costs the operator their history."""
+    from gatekeeper import strikes as _st
+    from gatekeeper.stats import get_stats, reset_stats
+
+    reset_stats()
+    _st.reset()
+    v1 = tmp_path / "old-bouncer.json"
+    v1.write_text(json.dumps({
+        "v": 1, "t": 1700000000, "bouncer": "0.3.0",
+        "stats": {"v": 1, "t": 1700000000,
+                  "counts": {"allow": 5, "flag": 2, "delete": 1, "escalate": 0},
+                  "by_rule": {"no-spam": 2}, "joint": [["delete", "no-spam", 1]],
+                  "causes": {"suspected": 2}, "cheap": 6},
+        "strikes": {"spamguy": 2}}))
+
+    assert main(["snapshot", "load", str(v1)]) == 0
+    out = capsys.readouterr().out
+    assert "migrated v1 -> v2" in out, out
+    stats = get_stats()
+    assert stats["actions"]["allow"] == 5 and stats["actions"]["delete"] == 1
+    assert stats["rules"]["no-spam"] == 2, "v1 sections ride through unchanged"
+    assert stats["causes"]["suspected"] == 2, "causes survive the trip too"
+    assert _st.standing("spamguy")["strikes"] == 2, "raw key kept as-is"
+
+    # the migrated table gains namespaced strikes alongside the raw one
+    _st.add_strike("telegram:42", 3)
+    assert _st.standing("telegram:42")["suggest_ban"], "namespaced, full weight"
+    assert _st.standing("spamguy")["strikes"] == 2, "raw row untouched"
+
+    # round-trip: next save is a v2 doc carrying BOTH key styles
+    out2 = tmp_path / "again.json"
+    assert main(["snapshot", "save", str(out2)]) == 0
+    capsys.readouterr()
+    doc = json.loads(out2.read_text())
+    assert doc["v"] == 2 and doc["stats"]["v"] == 2, "no v1 ever writes back"
+    assert doc["strikes"]["spamguy"] == 2
+    assert doc["strikes"]["telegram:42"] == 3, "both key styles in one table"
+    assert doc["stats"]["causes"] == {"suspected": 2}
+    assert doc["stats"]["counts"]["allow"] == 5
+
+    # reloading the round-tripped file is native: no migration note
+    reset_stats()
+    _st.reset()
+    assert main(["snapshot", "load", str(out2)]) == 0
+    assert "migrated" not in capsys.readouterr().out
+    assert _st.standing("spamguy")["strikes"] == 2
+    assert _st.standing("telegram:42")["strikes"] == 3
+    _st.reset()
+    reset_stats()

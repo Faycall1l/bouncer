@@ -979,7 +979,7 @@
 - [x] T886 cli: export gains review-queue format (appeal audit trail)
 - [x] T887 test: config validate accepts good config, names the exact problem in bad
 - [x] T888 test: pack sign/verify — a flipped byte fails verification with a coded error
-- [ ] T889 test: snapshot v1 loads through migration, gains namespaced strikes
+- [x] T889 test: snapshot v1 loads through migration, gains namespaced strikes
 - [ ] T890 test: P46 CLI/rules/storage sweep (every box ticked, receipts outside TODO.md)
 
 ## P47 Multilingual routing (T891–T910)
