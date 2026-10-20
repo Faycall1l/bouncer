@@ -1021,7 +1021,7 @@
 - [x] T924 data: validate_data gate runs before training start — hash mismatch refuses
 - [x] T925 ft: eval report naming matches gate.py report-kind dispatch
 - [x] T926 test: CPU smoke path scripted (bouncer-ft smoke) without CUDA
-- [ ] T927 ci: nightly runs the train.py CPU smoke (config parse + data validate, no weights)
+- [x] T927 ci: nightly runs the train.py CPU smoke (config parse + data validate, no weights)
 - [ ] T928 docs: ROADMAP fine-tune section updated with pipeline receipts (status stays NOT RUN — honest)
 - [ ] T929 fix: P48 reds — any failure the sweep finds, fixed here
 - [ ] T930 test: P48 fine-tune-pipeline sweep (every box ticked, receipts outside TODO.md)

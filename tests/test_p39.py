@@ -440,12 +440,13 @@ def test_p39_workflow_yaml_parses_and_key_jobs_exist():  # T750
     nightly = jobs_of(str(WORKFLOWS / "nightly.yml"))
     # ...and the key jobs of each P39 stage exist: T731-T734/T738/T740,
     # T739, T746, T747, T781 (dependency audit) in ci.yml; T735+T749 build
-    # and T736 release here; T748's one scheduled job
+    # and T736 release here; T748's scheduled suite + T927's ft smoke
     for job in ("lint", "test", "weightless", "bench", "smoke",
                 "eval-gate", "secret-scan", "coverage", "audit"):
         assert job in ci, f"ci.yml lost job {job}"
     assert "build" in pub and "release" in pub
-    assert nightly == ["stub-suite"], nightly
+    # T748's scheduled suite + T927's fine-tune CPU smoke — order included
+    assert nightly == ["stub-suite", "ft-smoke"], nightly
     # the whole set is stable enough to pin — order included (readability
     # of the pipeline: lint/test first, reporting at the tail)
     assert ci == ["lint", "test", "weightless", "bench", "smoke",

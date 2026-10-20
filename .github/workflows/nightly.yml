@@ -16,3 +16,14 @@ jobs:
       # within them, exactly like a fresh user install would
       - run: pip install -e ".[dev]"
       - run: pytest -q
+  ft-smoke:  # T927: the fine-tune pre-flight, on CPU — config parse +
+    # data validate, no weights, no CUDA. A red here means the Kaggle
+    # pipeline would burn quota for nothing, caught the night after the
+    # change instead of the morning of a run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: "pip" }
+      - run: pip install -e ".[dev]"
+      - run: python scripts/ft_smoke.py

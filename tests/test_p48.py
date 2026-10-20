@@ -990,3 +990,31 @@ def test_ft_smoke_drives_the_pinned_pre_flight_surfaces():  # T926: wiring
     # the default dataset is the one shipped in the repo, so a fresh clone
     # can run the smoke before building the 12k set
     assert "data/examples.jsonl" in src
+
+
+# --- T927: nightly runs the fine-tune CPU smoke ------------------------------
+
+def test_nightly_runs_the_ft_cpu_smoke():  # T927
+    """The nightly workflow gained an ft-smoke job: the same one-command
+    pre-flight a human runs locally (T926), on the night's dependency
+    resolution — config parse + data validate, no weights, no CUDA. The job
+    invokes the SCRIPT (single source, not a copy of its steps), installs
+    the same open-floor dev extras as the suite, and the workflow keeps
+    its no-push-trigger contract (ci.yml owns pushes, T748)."""
+    import re as _re
+
+    text = Path(".github/workflows/nightly.yml").read_text()
+    header, _, body = text.partition("jobs:")
+    assert "push" not in header, "nightly must not double ci.yml"
+    m = _re.search(r"^  ft-smoke:(.*?)(?=^  \w|\Z)", body,
+                   _re.MULTILINE | _re.DOTALL)
+    assert m, "no ft-smoke job in nightly.yml"
+    job = m.group(1)
+    assert "python scripts/ft_smoke.py" in job, "the job runs the T926 script"
+    assert ".[dev]" in job, "same open-floor install as the suite job"
+    # no GPU runner: this job must stay CPU-only
+    assert "runs-on: ubuntu-latest" in job, "CPU runner only"
+    assert "gpu" not in job.lower() and "nvidia" not in job.lower()
+    # and the smoke's own contract still holds — the job is only useful
+    # because the script refuses (exit 1) on a failed step
+    assert FT_SMOKE.exists(), "the nightly job's script was removed"
