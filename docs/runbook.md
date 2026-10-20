@@ -61,8 +61,64 @@ version — the two-key window means no client deadline:
 3. Migrate clients at your own pace; both keys validate meanwhile.
 4. Unset `BOUNCER_KEY_OLD`, restart — window closed in one step.
 
-## Drain
+## Scrape + alerts (T946)
 
+`/metrics` is Prometheus text (exposed to loopback, or with `X-API-Key`
+once `BOUNCER_KEY` is set — T778 gates the route; send the key as the
+`X-API-Key` header, and T945 documents every family):
+
+```yaml
+scrape_configs:
+  - job_name: bouncer
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:8000"]
+    # with BOUNCER_KEY set (loopback still exempts a local Prometheus):
+    # headers:
+    #   X-API-Key: <key>
+```
+
+Three alerts cover the failure modes this runbook's other procedures
+exist for:
+
+```yaml
+groups:
+  - name: bouncer
+    rules:
+      - alert: BouncerBreakerOpen
+        expr: bouncer_breaker_open == 1
+        for: 2m
+        labels: {severity: page}
+        annotations:
+          summary: "model failures tripped the breaker — decisions are escalating"
+      - alert: BouncerModelFails
+        expr: increase(bouncer_breaker_fails[10m]) > 5
+        labels: {severity: ticket}
+        annotations:
+          summary: "breaker-eligible failures climbing before it opens"
+      - alert: BouncerReviewBacklog
+        expr: bouncer_review_queue_depth > 100
+        for: 30m
+        labels: {severity: ticket}
+        annotations:
+          summary: "escalations piling up unseen — the queue is not a discard bin"
+```
+
+Notes that keep these honest:
+
+* **Per worker, not per fleet** (T939): with `--workers N` each process
+  holds its own counters and each scrape lands on one of them, so a
+  dashboard sums across targets; the startup warning says this out loud.
+* **`_other` is a fold, not a rule** (T942): past 200 distinct rule ids
+  new ones count under `rule="_other"` — an alert on a *specific* rule id
+  misses that traffic by design, so alert on families, not on rule labels.
+* **A reset is a counter reset**, not a crash: `rate()`/`increase()`
+  handle restarts; `bouncer_uptime_seconds` dropping is the restart tell.
+* The queue-depth alert fires on *depth*, never on message text — the
+  queue holds raw text by design (T784); the metric counts bytes, not
+  content (T940).
+
+## Drain
 1. Pull the instance out of the load balancer. `/ready` reports
    `{"ready": false, ...}` when the router can't load (T518) — check the
    body, not the status code.

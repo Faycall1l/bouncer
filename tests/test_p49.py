@@ -335,3 +335,41 @@ def test_t945_api_md_metrics_table_matches_the_scrape():
             expanded.add(stem + "_" + token.lstrip("_"))
     assert served <= expanded, f"undocumented families: {served - expanded}"
     assert expanded <= served, f"docs promise absent families: {expanded - served}"
+
+
+def test_t946_runbook_scrape_recipe_references_live_families():
+    """T946: the runbook had backup/restore/rotate/drain but no scrape
+    recipe — an operator wiring Prometheus had to guess both the config
+    and what to alert on. The new section ships a scrape_configs snippet
+    and three alerts (breaker-open, fails climbing, review backlog). This
+    test parses every `bouncer_*` name out of the alerts+scrape portion
+    and asserts each one is a family the server actually declares — a
+    rename in serve.py cannot silently orphan the recipe."""
+    import re
+    from pathlib import Path
+
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    record("delete", "no-spam", 5.0, cause="violation")
+    try:
+        body = TestClient(serve.app).get("/metrics").text
+    finally:
+        reset_stats()
+    served = set(re.findall(r"^# TYPE (\S+)", body, re.MULTILINE))
+    doc = Path("docs/runbook.md").read_text()
+    section = doc.split("## Scrape + alerts (T946)")[1].split("## ")[0]
+    used = set(re.findall(r"\b(bouncer_[a-z0-9_]+)", section))
+    # every bouncer_* token in the recipe is a family reference (label values
+    # like rule="_other" don't carry the prefix)
+    assert used <= served, f"recipe names absent families: {used - served}"
+    assert {"bouncer_breaker_open", "bouncer_breaker_fails",
+            "bouncer_review_queue_depth"} <= used, used
+    # the three alerts exist and watch what the runbook's procedures act on
+    for alert in ("BouncerBreakerOpen", "BouncerModelFails",
+                  "BouncerReviewBacklog"):
+        assert f"alert: {alert}" in section, alert
+    assert "X-API-Key" in section, "the gated-scrape key header must be shown"
+    assert "Per worker" in section, "T939's per-worker scope must be restated"
