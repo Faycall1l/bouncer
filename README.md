@@ -90,6 +90,7 @@ bouncer completion bash                         # shell completion, generated fr
 bouncer snapshot save snap.json                 # counters + strikes (T606)
 bouncer snapshot load snap.json
 bouncer export --out audit.csv                  # audit log -> CSV
+bouncer export --queue --out appeals.csv        # review queue -> appeal audit trail
 bouncer models; bouncer presets                 # checkpoints, rule-packs
 ```
 

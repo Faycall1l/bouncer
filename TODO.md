@@ -976,7 +976,7 @@
 - [x] T883 audit: rows gain cause/preset/model/rid/version fields
 - [x] T884 stats: /metrics exports per-rule counters + causes + p95 + strikes (all exist in /stats, none in /metrics)
 - [x] T885 metrics: request-count-by-status + auth-failure + 429 counters
-- [ ] T886 cli: export gains review-queue format (appeal audit trail)
+- [x] T886 cli: export gains review-queue format (appeal audit trail)
 - [ ] T887 test: config validate accepts good config, names the exact problem in bad
 - [ ] T888 test: pack sign/verify — a flipped byte fails verification with a coded error
 - [ ] T889 test: snapshot v1 loads through migration, gains namespaced strikes

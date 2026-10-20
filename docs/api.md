@@ -101,6 +101,11 @@ don't have to repeat them:
   * `bouncer export --out audit.csv [--format json] [--since TS] [--action
     delete,flag] [--limit N]` — audit log as CSV or raw JSON array; `--limit`
     uses a bounded tail read.
+  * `bouncer export --queue --out appeals.csv [--format json] [--since TS]
+    [--action flag] [--limit N]` — the review queue as an appeal audit trail:
+    who was flagged, with cause/model/preset context, and how it was
+    adjudicated (verdict, verdict time, post-amnesty strike count). Queue
+    text is raw (that file is the queue's 0600 contract, T784).
   * `bouncer export --stats stats.json` — counters + strikes snapshot as JSON
     (same data `GET /stats` serves, plus strikes; path is the argument, not
     `--out`).

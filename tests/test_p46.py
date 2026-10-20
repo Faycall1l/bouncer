@@ -704,3 +704,46 @@ def test_metrics_counts_requests_auth_failures_and_429():  # T885
         serve._AUTH_FAILS, serve._RATE_429 = orig
         serve._STATUS.clear()
         serve._BUCKETS.clear()
+
+
+def test_export_queue_is_the_appeal_audit_trail(tmp_path, monkeypatch,
+                                                capsys):  # T886
+    """`bouncer export --queue` reads the review queue instead of the audit
+    log: who was flagged, with which cause/model/preset context, and how it
+    was adjudicated (verdict + post-amnesty strike count) — the appeal trail
+    an operator attaches to a decision. JSON keeps the exact rows; the
+    normal audit export is untouched."""
+    import importlib
+
+    import gatekeeper.review as rv
+    monkeypatch.setenv("BOUNCER_REVIEW", str(tmp_path / "q.jsonl"))
+    importlib.reload(rv)
+    rv.add("buy followers now", {"action": "flag", "rule": "no-spam",
+                                 "confidence": 0.9, "latency_ms": 5.0,
+                                 "cause": "suspected"}, user="telegram:9",
+           model="english", preset="gaming")
+    capsys.readouterr()
+
+    out = tmp_path / "appeals.csv"
+    assert main(["export", "--queue", "--out", str(out)]) == 0
+    lines = out.read_text().splitlines()
+    assert lines[0] == ("t,id,user,action,rule,conf,cause,model,preset,"
+                        "verdict,vt,after_strikes,message")
+    assert "telegram:9" in lines[1] and "suspected" in lines[1]
+    assert "english" in lines[1] and "gaming" in lines[1]
+    assert "buy followers now" in lines[1]  # queue text is the point of it
+    assert "appeal trail" in capsys.readouterr().out
+
+    # JSON format: exact queue rows, nothing dropped
+    js = tmp_path / "appeals.json"
+    assert main(["export", "--queue", "--out", str(js), "--format", "json"]) == 0
+    rows = json.loads(js.read_text())
+    assert rows[-1]["user"] == "telegram:9" and rows[-1]["model"] == "english"
+
+    # adjudication columns come from a verdict row too
+    rv.list_queue()  # ensure loaded
+    row_id = rv.list_queue(limit=1000)[-1]["id"]
+    from gatekeeper.review import adjudicate
+    assert adjudicate(row_id, "reject") is not None
+    assert main(["export", "--queue", "--out", str(out)]) == 0
+    assert ",reject," in out.read_text().splitlines()[1]

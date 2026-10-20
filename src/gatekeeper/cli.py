@@ -466,9 +466,36 @@ def cmd_export(args) -> int:
         return 0
     since = getattr(args, "since", 0) or 0  # T327: epoch filter on audit "t"
     limit = getattr(args, "limit", 0) or 0  # T449: bounded tail read
-    as_json = getattr(args, "format", "csv") == "json"  # T536: raw JSON array out
     only = {a.strip() for a in (getattr(args, "action", None) or "").split(",")
             if a.strip()}  # T544: comma list of actions to keep
+    if getattr(args, "queue", False):  # T886: the review queue as an appeal
+        # audit trail — who was flagged, why, and how it was adjudicated
+        from gatekeeper.review import list_queue
+        rows = list_queue(limit=limit or 1000,  # no --limit = the whole queue
+                          action=only.pop() if len(only) == 1 else None,
+                          since=since)
+        if len(only) > 1:  # multi-action filter: list_queue takes one action
+            rows = [r for r in rows if r.get("action") in only]
+        if getattr(args, "format", "csv") == "json":
+            from gatekeeper.persist import atomic_write
+            atomic_write(args.out, json.dumps(rows, ensure_ascii=False, indent=2))
+        else:
+            with open(args.out, "w", newline="") as f:
+                w = csv.writer(f)
+                w.writerow(["t", "id", "user", "action", "rule", "conf",
+                            "cause", "model", "preset", "verdict", "vt",
+                            "after_strikes", "message"])  # T886: appeal context
+                w.writerows([d.get("t", 0), d.get("id", ""), d.get("user") or "",
+                             d.get("action", ""), d.get("rule", ""),
+                             d.get("conf", ""), d.get("cause", ""),
+                             d.get("model", ""), d.get("preset", ""),
+                             d.get("verdict", ""), d.get("vt", ""),
+                             (d.get("after") or {}).get("strikes", ""),
+                             d.get("message", "")]  # raw text: queue-only file
+                            for d in rows)
+        print(f"exported {len(rows)} queue rows -> {args.out} (appeal trail)")
+        return 0
+    as_json = getattr(args, "format", "csv") == "json"  # T536: raw JSON array out
     rows, mss = [], []
     if limit:
         from gatekeeper.audit import tail as _tail
@@ -908,6 +935,8 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     ex.add_argument("--limit", type=int, default=0)  # T449: bounded tail export
     ex.add_argument("--format", choices=["csv", "json"], default="csv")  # T536
     ex.add_argument("--action", default=None)  # T544: comma list, e.g. delete
+    ex.add_argument("--queue", action="store_true",  # T886: appeal audit trail
+                    help="export the review queue (who/why/verdict) instead")
     ex.set_defaults(fn=cmd_export)
     sn = sub.add_parser("snapshot")  # T437+T438
     sn.add_argument("action", choices=["save", "load"])
