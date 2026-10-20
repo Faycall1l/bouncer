@@ -423,3 +423,44 @@ def test_eval_i18n_model_flag_source_wiring():  # T918: the CLI surface
     assert 'sys.exit(1)' in src and 'status"] == "fail"' in src
     # scoring runs on CPU: no GPU needed to evaluate a run's i18n quality
     assert 'device="cpu"' in src
+
+
+# --- T919: parse + dry-run config-validate on CPU, end to end ----------------
+
+def test_train_parses_and_dry_run_config_validates_end_to_end():  # T919
+    """The whole T919 contract through the CLI, no torch/weights/GPU touched:
+    the module PARSES on CPU (import runs argparse + constants only), a good
+    config exits 0 with DRY_RUN_OK printing the knobs it read, and a broken
+    config exits 2 with DRY_RUN_FAIL naming the flag — config-validation
+    refuses bad values BEFORE quota is spent, not after."""
+    # 1. parses: import is pure argparse + constants (hostile proof — any
+    # subprocess during import would be the pip install, already forbidden)
+    mod = _import_train()
+    assert mod.MAX_SAMPLES == 0 and mod.EPOCHS_FLAG == 0
+    assert mod.DRY_RUN is False
+
+    # 2. good config: exit 0, knobs echoed back
+    good = subprocess.run([sys.executable, str(TRAIN), "--dry-run", "--seed", "42"],
+                          check=False, capture_output=True, text=True, timeout=60)
+    assert good.returncode == 0, good.stderr
+    assert "DRY_RUN_OK" in good.stdout and "seed=42" in good.stdout
+
+    # 3. broken config: exit 2, DRY_RUN_FAIL names the offending flag —
+    # end-to-end through the CLI, not just the in-process validator
+    bad = subprocess.run([sys.executable, str(TRAIN), "--dry-run", "--epochs", "-1"],
+                         check=False, capture_output=True, text=True, timeout=60)
+    assert bad.returncode == 2, (bad.returncode, bad.stdout, bad.stderr)
+    assert "DRY_RUN_FAIL" in bad.stderr and "--epochs" in bad.stderr, \
+        "the refusal names the flag a human can fix"
+    assert "DRY_RUN_OK" not in bad.stdout, "a failed validation never prints OK"
+
+    # 4. and it never imported the heavy deps: no torch needed for any of it
+    probe = subprocess.run(
+        [sys.executable, "-c",
+         ("import importlib.util as u; "
+          f"spec = u.spec_from_file_location('t', {str(TRAIN)!r}); "
+          "m = u.module_from_spec(spec); spec.loader.exec_module(m); "
+          "import sys; print('TORCH' if 'torch' in sys.modules else 'CLEAN')")],
+        check=False, capture_output=True, text=True, timeout=60)
+    assert probe.returncode == 0, probe.stderr
+    assert probe.stdout.strip() == "CLEAN", "import pulls no torch on a CPU box"
