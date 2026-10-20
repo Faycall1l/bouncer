@@ -994,7 +994,7 @@
 - [x] T899 docs: cookbook multilingual recipe (lang hint, script detect, pack tags, pool behavior)
 - [x] T900 docs: adapters README language section updated (passthrough now exists)
 - [x] T901 test: script-detection routing sweep — ar/cyrillic/cjk/latin/mixed cases pinned
-- [ ] T902 test: batch lang autofill matches single /predict behavior
+- [x] T902 test: batch lang autofill matches single /predict behavior
 - [ ] T903 test: adapter lang passthrough captured by a stub transport
 - [ ] T904 test: BOUNCER_ADAPTER_LANG beats detection, per platform
 - [ ] T905 test: pool stats carry lang tags without unbounded cardinality

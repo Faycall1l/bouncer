@@ -431,3 +431,83 @@ def test_script_detection_routing_sweep():  # T901
             continue  # empty messages short-circuit before routing (T043)
         _, probe = _mod(msg)
         assert probe.seen[-1]["model"] == want_model, (msg[:20], probe.seen[-1])
+
+
+def test_batch_lang_autofill_matches_single():  # T902
+    """Batch rows autofill exactly like single /predict (T892 parity):
+    a mixed-script batch tags each message from its OWN script — the Arabic
+    line rides multilingual, its latin neighbors stay unhinted — and an
+    explicit lang or preset tag still covers every row as before."""
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen: list[dict] = []
+
+    class Rec:
+        def predict(self, state, questions, model=None):
+            seen.append({"lang": state.get("lang_hint"),
+                         "model": model, "script": state.get("script")})
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.9,
+                         "probabilities": {"ok": 0.9}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Rec()
+    try:
+        client = TestClient(serve.app, raise_server_exceptions=False)
+        rules = {"no-spam": "spam"}
+
+        # mixed-script batch, no lang: per-message autofill, batch order
+        serve._BUCKETS.clear()
+        r = client.post("/predict/batch", json={
+            "messages": ["normal latin spam line",
+                         "هذا كلام عادي spam",
+                         "привет всем spam"],
+            "rules": rules})
+        assert r.status_code == 200, r.text
+        rows = r.json()
+        assert len(rows) == 3 and len(seen) == 3
+        assert [s["lang"] for s in seen] == [None, "ar", "ru"], seen
+        assert [s["model"] for s in seen] == [None, "multilingual",
+                                              "multilingual"], seen
+        assert [row["lang"] for row in rows] == [None, "ar", "ru"], \
+            "the response echoes the same tags the router saw"
+        assert [row["script"] for row in rows] == ["latin", "arabic",
+                                                   "cyrillic"], rows
+
+        # single /predict on the same middle message: identical behavior
+        seen.clear()
+        serve._BUCKETS.clear()
+        from gatekeeper.cache import CACHE
+        CACHE.clear()  # the batch cached this exact message (T221)
+        r = client.post("/predict", json={
+            "message": "هذا كلام عادي spam", "rules": rules})
+        assert r.status_code == 200, r.text
+        assert seen[-1]["lang"] == "ar" and seen[-1]["model"] == "multilingual"
+        assert r.json()["lang"] == "ar", "single and batch agree (T892 parity)"
+
+        # explicit lang still tags every row, detection stays out of it;
+        # but an es hint has no checkpoint opinion, so T891's script
+        # fallback still routes the Arabic line to multilingual
+        seen.clear()
+        serve._BUCKETS.clear()
+        r = client.post("/predict/batch", json={
+            "messages": ["هذا كلام عادي spam", "normal latin spam line"],
+            "rules": rules, "lang": "es"})
+        assert r.status_code == 200, r.text
+        assert [s["lang"] for s in seen] == ["es", "es"], seen
+        assert [s["model"] for s in seen] == ["multilingual", None], seen
+
+        # a preset's pack language covers every row too (T836 parity)
+        seen.clear()
+        serve._BUCKETS.clear()
+        r = client.post("/predict/batch", json={
+            "messages": ["هذا كلام عادي spam"], "preset": "es"})
+        assert r.status_code == 200, r.text
+        assert seen[-1]["lang"] == "es", seen
+    finally:
+        gatekeeper._router = None
