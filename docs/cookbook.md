@@ -93,8 +93,11 @@ bouncer presets                               # es, fr, ar + the English packs
   pin the `multilingual` checkpoint, latin rides laya's own auto-routing.
   Pin a checkpoint per request with `model=...` when you want to overrule.
 * `bouncer pack init FILE --preset gaming` exports any pack as editable
-  JSON — translate the rule *texts*, keep the ids slugs, ship it back with
-  `--rules FILE`. Ids stay language-neutral on purpose (they're machine
+  JSON — a `meta` block (schema version, bouncer version, creation time,
+  preset, lang — T878) over the `rules` section. Translate the rule
+  *texts*, keep the ids slugs, ship it back with
+  `--rules FILE`; every reader also still accepts a bare `{id: text}`
+  pack. Ids stay language-neutral on purpose (they're machine
   keys, and `E_RULES_ID` enforces it). `bouncer pack diff OLD NEW` lists
   what changed between two packs (`+` added, `-` removed, `~` changed,
   one rule per line) and exits 2 on drift, so a CI job can gate on it

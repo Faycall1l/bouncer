@@ -385,3 +385,50 @@ def test_snapshot_carries_the_decision_cache(tmp_path, capsys):  # T877
     assert get_stats()["actions"]["allow"] == 1, "still nothing applied"
     reset_stats()
     CACHE.clear()
+
+
+def test_pack_init_writes_typed_metadata(tmp_path, monkeypatch, capsys):  # T878
+    """pack init writes a typed pack — meta (schema version, bouncer,
+    created, preset, lang, count) over the rules section — and every
+    reader (lint, check --rules, diff, sign) unwraps it, while a bare
+    {id: text} pack from before T878 keeps working everywhere."""
+    import gatekeeper
+
+    class PackStub:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.95,
+                         "probabilities": {"ok": 0.95}},
+                "harm": {"score": "safe"}, "hype": {"score": "chill"},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    monkeypatch.setattr(gatekeeper, "_router", PackStub())
+    f = tmp_path / "typed.json"
+    assert main(["pack", "init", str(f), "--preset", "study"]) == 0
+    doc = json.loads(f.read_text())
+    meta = doc["meta"]
+    assert meta["v"] == 1 and meta["preset"] == "study", "typed, not bare"
+    assert meta["lang"] == "en" and meta["rules"] == len(doc["rules"])
+    assert isinstance(meta["created"], int) and meta["bouncer"], "provenance"
+    capsys.readouterr()
+
+    # lint + check unwrap the typed pack
+    assert main(["pack", "lint", "--rules", str(f)]) == 0
+    assert main(["check", "good game", "--rules", str(f)]) == 0
+    capsys.readouterr()
+
+    # a bare {id: text} pack (pre-T878) still works everywhere
+    bare = tmp_path / "bare.json"
+    bare.write_text(json.dumps(doc["rules"]))
+    assert main(["pack", "lint", "--rules", str(bare)]) == 0
+    assert main(["check", "good game", "--rules", str(bare)]) == 0
+    capsys.readouterr()
+
+    # diff sees through the wrapping: same rules = identical
+    assert main(["pack", "diff", str(f), str(bare)]) == 0
+    assert "identical" in capsys.readouterr().out
+
+    # sign/verify digest the rules section, wrapping aside
+    assert main(["pack", "sign", str(f)]) == 0
+    assert main(["pack", "verify", str(f)]) == 0
+    assert "verified" in capsys.readouterr().out

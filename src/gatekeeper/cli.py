@@ -21,6 +21,7 @@ def _load_rules(args) -> dict:
         sys.exit(4)
     with open(path) as f:
         rules = json.load(f)
+    rules = _pack_rules(rules)  # T878: a typed pack runs like a bare one
     from gatekeeper.rules import RuleError, validate_rules  # T314: fail fast, not per-line
     try:
         validate_rules(rules)
@@ -475,11 +476,23 @@ def _pack_digest(rules: dict) -> str:  # T873
     return h.hexdigest()
 
 
+def _pack_rules(data: dict):
+    """T878: a typed pack is {meta: {...}, rules: {id: text}}; a bare pack
+    is {id: text} itself. Bare packs can't have dict-valued ids (texts are
+    strings), so the shape is unambiguous — old packs keep working.
+    Anything else (a list, a string) passes through to fail validation."""
+    if (isinstance(data, dict) and isinstance(data.get("meta"), dict)
+            and isinstance(data.get("rules"), dict)):
+        return data["rules"]
+    return data
+
+
 def _read_pack(path: str):
     """T786+T872: one hardened read for every pack file — missing/unreadable/
     hostile nesting die with a machine code line, never a traceback; a
     parsed non-object isn't a rules pack ({id: text}) either. Returns the
-    rules dict, or None (message already printed; caller exits)."""
+    rules dict (unwrapping a typed pack, T878), or None (message already
+    printed; caller exits)."""
     import os as _os
     if not _os.path.exists(path):
         print(f"bouncer: no pack file {path!r}", file=sys.stderr)
@@ -498,21 +511,31 @@ def _read_pack(path: str):
         print(f"bouncer: {path!r} is not a rules object ({{id: text}})",
               file=sys.stderr)
         return None
-    return data
+    return _pack_rules(data)
 
 
 def cmd_pack(args) -> int:
     from gatekeeper import get_preset
     from gatekeeper.rules import RuleError, validate_rules, warn_overlapping
-    if args.action == "init":  # T545: template pack to edit, based on a preset
+    if args.action == "init":  # T545+T878: template pack to edit, based on a preset
         import os
         if os.path.exists(args.file) and not getattr(args, "force", False):
             print(f"bouncer: {args.file!r} exists (pass --force to overwrite)",
                   file=sys.stderr)
             return 4
+        import time as _t
+
+        from gatekeeper import __version__
         from gatekeeper.persist import atomic_write
+        from gatekeeper.presets import preset_lang
         template = get_preset(args.preset)
-        atomic_write(args.file, json.dumps(template, indent=2, ensure_ascii=False))
+        doc = {"meta": {"v": 1, "bouncer": __version__,  # T878: typed pack
+                        "created": int(_t.time()),
+                        "preset": args.preset,
+                        "lang": preset_lang(args.preset),
+                        "rules": len(template)},
+               "rules": template}
+        atomic_write(args.file, json.dumps(doc, indent=2, ensure_ascii=False))
         print(f"pack -> {args.file} ({len(template)} template rules from "
               f"{args.preset!r}); edit ids/text then `bouncer pack lint --rules {args.file}`")
         return 0
