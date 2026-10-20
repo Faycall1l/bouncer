@@ -567,6 +567,10 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
     validate_rules(rules, cfg.max_rules, cfg.max_rule_chars,  # T196: once, not per message
                    cfg.severity)
     r = router or get_router()
+    if lang is None:  # T892/T902: batch rows autofill per message, exactly
+        # like single /predict — a mixed-script batch routes each message on
+        # its own script, so parity means per-row, not one tag for the batch
+        from .adapters.common import detect_lang as _dl
     out = []
     for i in range(0, len(messages), chunk):
         for m in messages[i:i + chunk]:
@@ -595,7 +599,8 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
                 row_cfg = _dc_replace(cfg, timeout_s=min(cfg.timeout_s, remaining))
             out.append(moderate(m, None if preset else rules,  # T883: preset
                                 config=row_cfg, router=r, model=model,  # resolves
-                                lang=lang,  # T836: batch rows route like single ones
+                                lang=(lang if lang is not None
+                                      else _dl(m)),  # T892: per-message tag
                                 preset=preset,  # inside; the row names the pack
                                 _prevalidated=True))
     return out

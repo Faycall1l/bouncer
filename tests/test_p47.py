@@ -89,3 +89,64 @@ def test_model_for_script_checkpoint_table():  # T891 unit
     from gatekeeper.pool import model_for_lang
 
     assert model_for_lang("ar") == "multilingual" and model_for_lang("en") is None
+
+
+def test_predict_autofills_lang_from_script():  # T892
+    """With neither lang nor a preset, /predict autofills the hint from the
+    message's own script: arabic/cyrillic/cjk messages route and echo like
+    ones that were told, latin messages stay None (no language claim from a
+    script), and explicit lang and preset fills still beat detection."""
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen: list[dict] = []
+
+    class Rec:
+        def predict(self, state, questions, model=None):
+            seen.append(dict(state))
+            return {"answers": {
+                "rule": {"choice": "ok", "confidence": 0.9,
+                         "probabilities": {"ok": 0.9}},
+                "harm": {"score": "safe", "probabilities": []},
+                "hype": {"score": "chill", "probabilities": []},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    gatekeeper._router = Rec()
+    try:
+        client = TestClient(serve.app, raise_server_exceptions=False)
+        rules = {"no-spam": "spam"}  # rule word in every msg -> model path
+
+        serve._BUCKETS.clear()
+        r = client.post("/predict", json={
+            "message": "هذا الرسالة تحتوي على رسائل مزعجة كثيرة",
+            "rules": rules})
+        assert r.status_code == 200, r.text
+        assert r.json()["lang"] == "ar", "autofill echoes the detected tag"
+        assert seen[-1].get("lang_hint") == "ar", "and reaches the router"
+        assert r.json()["script"] == "arabic", "script stays the honest label"
+
+        # latin: no hint invented, no checkpoint claim
+        serve._BUCKETS.clear()
+        r = client.post("/predict", json={
+            "message": "gardening spam advice nobody asked for",
+            "rules": rules})
+        assert r.status_code == 200, r.text
+        assert r.json()["lang"] is None
+        assert "lang_hint" not in seen[-1]
+
+        # explicit lang beats detection
+        serve._BUCKETS.clear()
+        r = client.post("/predict", json={
+            "message": "هذا الرسالة تحتوي على رسائل مزعجة كثيرة",
+            "rules": rules, "lang": "fr"})
+        assert r.status_code == 200 and r.json()["lang"] == "fr"
+
+        # a preset's pack language (T502) beats detection too
+        serve._BUCKETS.clear()
+        r = client.post("/predict", json={
+            "message": "مباراة حماسية اليوم في الدوري", "preset": "es"})
+        assert r.status_code == 200 and r.json()["lang"] == "es"
+    finally:
+        gatekeeper._router = None

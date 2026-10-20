@@ -984,7 +984,7 @@
 
 ## P47 Multilingual routing (T891–T910)
 - [x] T891 multilingual: checkpoint routing keys off detected script, not only the caller's lang
-- [ ] T892 serve: /predict autofills lang from script detection when lang omitted
+- [x] T892 serve: /predict autofills lang from script detection when lang omitted
 - [ ] T893 cli: check/watch accept --lang auto explicitly (script detection, documented)
 - [ ] T894 presets: PRESET_LANG coverage — every routed language has a pack or is listed packless in docs
 - [ ] T895 pool: lang-tagged checkout stats — per-checkpoint hits visible in /stats pool block

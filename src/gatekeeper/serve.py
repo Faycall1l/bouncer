@@ -501,6 +501,11 @@ def predict(req: ModReq, request: Request):
     if lang is None and preset_name is not None:  # T502: pack knows its language
         from .presets import preset_lang
         lang = preset_lang(preset_name)
+    if lang is None:  # T892: no hint and no pack — the message's own script
+        # says ar/zh/ru, so the row routes and echoes like one that was told;
+        # latin/other stay None (no language claim from a script, T857)
+        from .adapters.common import detect_lang
+        lang = detect_lang(req.message)
     cfg = GateConfig(allow_threshold=allow_t, delete_threshold=delete_t,
                      timeout_s=_request_timeout(req.timeout_s),  # T515
                      questions=questions_knob())  # T755: BOUNCER_QUESTIONS
