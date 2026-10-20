@@ -1002,7 +1002,7 @@
 - [x] T907 docs: api.md lang section refreshed (autofill, batch parity, script-vs-lang table)
 - [x] T908 eval: i18n routing report kind added to gate.py dispatch
 - [x] T909 bench: mixed-language pool bench — thrash risk measured, not folklore
-- [ ] T910 test: P47 multilingual sweep (every box ticked, receipts outside TODO.md)
+- [x] T910 test: P47 multilingual sweep (every box ticked, receipts outside TODO.md)
 
 ## P48 Fine-tune pipeline (T911–T930)
 - [ ] T911 ft: train.py import-safe on CPU (cuda assert at import blocks even parsing today)

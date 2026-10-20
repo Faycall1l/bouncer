@@ -77,7 +77,7 @@ run the repo's `eval/gate.py` harness before shipping numbers you'd have
 to defend. Full reference: [gates.md](gates.md) and
 [thresholds.md](thresholds.md).
 
-## 4. Run a multilingual community
+## 4. Run a multilingual community (recipe T899)
 
 ```bash
 bouncer check "eso es trampa" --preset es     # Spanish pack, language-tagged

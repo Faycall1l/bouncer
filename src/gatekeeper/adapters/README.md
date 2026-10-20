@@ -162,7 +162,7 @@ raises `E_SLACK` instead of letting an unsigned event through.
   `cause`, and the payload carries `cause` so the receiver can tell a model
   escalation from a breaker-driven default.
 
-## Model routing (T604)
+## Model routing (T604, language section refreshed T900)
 
 Adapters call `moderate(msg, rules)` with **no `model=`** and only the
 script-derived `lang=` (T857): latin traffic stays hintless, so

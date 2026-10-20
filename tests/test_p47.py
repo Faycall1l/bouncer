@@ -371,7 +371,8 @@ def test_eval_i18n_measures_routing_with_honest_skip(tmp_path):  # T898
     assert routing["n"] == report["n"] and routing["wrong"] == [], routing
     assert routing["ok"] == routing["n"], "every row routed to its checkpoint"
     # quality is skipped-with-receipt (no laya in the test env), not scored
-    # quality is environment-dependent: skipped-with-receipt where laya is
+    # quality is environment-dependent (T906: both branches honest):
+    # skipped-with-receipt where laya is
     # absent (this machine), or an honest pointer where weights exist (CI).
     # Either way the status never claims a fabricated per-language score.
     q = report["quality"]
@@ -811,3 +812,56 @@ def test_bench_pool_measures_mixed_language_thrash():  # T909
     args = type("Args", (), {"min_speedup": 2.0})()
     checks = {c["name"]: c for c in gate.COLLECTORS["pool"](report, args)}
     assert checks["pool_speedup"]["ok"] is True, checks
+
+
+def test_p47_multilingual_sweep():  # T910: P47 closer — every box ticked,
+    # every box has a receipt outside TODO.md, no invented citations
+    import re
+    from pathlib import Path
+
+    todo = Path("TODO.md").read_text()
+    p47 = [b for b in re.findall(r"- \[[ x]\] (T\d{3,4})\b", todo)
+           if 891 <= int(b[1:]) <= 910]
+    assert sorted(p47) == [f"T{n}" for n in range(891, 911)], p47
+    for b in p47:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+    assert "## P47 Multilingual routing (T891–T910)" in todo
+
+    # receipts live OUTSIDE TODO.md — across this batch's own surfaces
+    corpus = (Path("README.md").read_text()
+              + Path("CONTRIBUTING.md").read_text()
+              + Path("verify.sh").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if (p.is_file()
+                    and p.suffix in (".md", ".py", ".yml", ".yaml", ".sh")):
+                corpus += p.read_text()
+    for b in p47:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity: every T-number the surfaces this batch touched
+    # cite is a box TODO.md actually knows — invented receipts fail here
+    for name in ("api.md", "cookbook.md", "presets.md", "environment.md",
+                 "architecture.md", "gates.md"):
+        f = Path("docs") / name
+        for t in set(re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
+    for f in (Path("src/gatekeeper/adapters/README.md"),
+              Path("eval/eval_i18n.py"), Path("eval/gate.py"),
+              Path("eval/bench_pool.py")):
+        for t in set(re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
+
+    # this batch's own surfaces carry their docs, not just the tests
+    api = Path("docs/api.md").read_text()
+    assert "autofills it from the" in api, "T892 contract documented"
+    assert "Script-vs-lang" in api, "T907 table present"
+    assert "BOUNCER_ADAPTER_LANG" in Path("docs/environment.md").read_text()
+    assert "Routed-but-packless" in Path("docs/presets.md").read_text()
+    assert "--lang auto" in Path("README.md").read_text(), "T893 documented"
+    # the eval family both runs and gates routing (T898+T908)
+    assert '"routing"' in Path("eval/eval_i18n.py").read_text()
+    assert '"routing" in report' in Path("eval/gate.py").read_text()
+    # pool language thrash is measured (T909), pool tags bounded (T895)
+    assert '"languages"' in Path("eval/bench_pool.py").read_text()
+    assert "by_model" in Path("docs/api.md").read_text()
