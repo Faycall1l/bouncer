@@ -47,6 +47,16 @@ def list_queue(limit: int = 20, action: str | None = None,
     return rows[-max(limit, 1):]
 
 
+def depth() -> int:  # T940: queue depth for the /metrics scrape
+    """Rows waiting for a human right now — counted without parsing (a
+    scrape runs every 15s; the queue is the one artifact holding raw
+    message text, so this reads bytes only)."""
+    if not os.path.exists(_PATH):
+        return 0
+    with open(_PATH, "rb") as f:
+        return sum(1 for line in f if line.strip())
+
+
 def latest_for(user: str | None) -> dict | None:  # T864
     """Newest queue row for this namespaced user (T858 keys); rows without
     a user (CLI escalations) are nobody's appeal target."""

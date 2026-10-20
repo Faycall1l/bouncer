@@ -104,3 +104,33 @@ def test_t939_serve_warns_per_worker_state(capsys):
     from pathlib import Path
 
     assert "under-report" in Path("docs/runbook.md").read_text()
+
+
+def test_t940_review_queue_depth_in_metrics(tmp_path, monkeypatch):
+    """T940: escalations piling up in the review queue were invisible to a
+    scrape — the queue depth existed only in `bouncer review` listings.
+    `/metrics` now exports `bouncer_review_queue_depth`, counted without
+    parsing the rows (they hold raw message text)."""
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import review
+
+    qpath = tmp_path / "queue.jsonl"
+    monkeypatch.setattr(review, "_PATH", str(qpath))
+
+    def scrape() -> float:
+        body = TestClient(serve.app).get("/metrics").text
+        line = next(l for l in body.splitlines()
+                    if l.startswith("bouncer_review_queue_depth "))
+        return float(line.split()[1])
+
+    assert scrape() == 0, "absent file is depth 0, not an error"
+    res = {"action": "escalate", "rule": "r", "confidence": 0.4, "cause": "quiet"}
+    review.add("msg1", res)
+    review.add("msg2", res)
+    assert scrape() == 2
+    with open(qpath, "a") as f:
+        f.write("\n")  # a blank tail line is not a row
+    assert scrape() == 2
+    review.clear_queue()
+    assert scrape() == 0

@@ -354,6 +354,8 @@ def metrics(request: Request):  # T778: exposure gate before any counters leave
     _coal = coalesce_stats()  # ratio stays a /stats query — joined/total are the counts
     lines += [f"bouncer_coalesce_joined {_coal['joined']}",
               f"bouncer_coalesce_total {_coal['total']}"]
+    from . import review as _review  # T940: escalations waiting on a human
+    lines.append(f"bouncer_review_queue_depth {_review.depth()}")
     from .pool import POOL  # T628: pool health in the same scrape
     ps = POOL.stats()
     lines += [f"bouncer_pool_size {ps['size']}", f"bouncer_pool_max {ps['max_n']}",
