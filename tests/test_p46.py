@@ -624,3 +624,30 @@ def test_audit_rows_carry_cause_preset_model_rid_version(tmp_path, monkeypatch,
     assert main(["export", "--out", str(out), "--limit", "5"]) == 0
     body = out.read_text()
     assert "gaming" in body and "req-abc123" in body, body
+
+
+def test_metrics_exports_rules_causes_p95_and_strikes(tmp_path, monkeypatch):
+    """T884: /metrics used to answer only actions/cache/p50 — everything
+    else lived in /stats only. It now also exports per-rule counters,
+    cause counts, latency p95 and the strike totals (counts only, never
+    user ids — same contract as /stats)."""
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import serve
+    from gatekeeper import strikes as _st
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    _st.reset()
+    record("delete", "no-spam", 5.0, cause="violation")
+    record("flag", "be-kind", 8.0, cause="suspected")
+    _st.add_strike("u1", 3)
+    serve._BUCKETS.clear()
+    body = TestClient(serve.app).get("/metrics").text
+    assert 'bouncer_rule_total{rule="no-spam"} 1' in body, body
+    assert 'bouncer_cause_total{cause="violation"} 1' in body, body
+    assert "bouncer_latency_p95_ms 8.0" in body, body
+    assert "bouncer_strikes_users 1" in body, body
+    assert "bouncer_strikes_total 3" in body, body
+    assert "bouncer_strikes_ban_suggested 1" in body, body
+    _st.reset()

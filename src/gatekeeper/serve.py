@@ -311,8 +311,19 @@ def metrics(request: Request):  # T778: exposure gate before any counters leave
     lines += [f"bouncer_cache_hits {c['hits']}", f"bouncer_cache_misses {c['misses']}",
               f"bouncer_cache_hit_rate {round(c['hits'] / tot, 3) if tot else 0.0}",
               f"bouncer_latency_p50_ms {g['latency']['p50_ms']}",
+              f"bouncer_latency_p95_ms {g['latency']['p95_ms']}",  # T884
               f'bouncer_info{{version="{__version__}"}} 1',  # T236
               f"bouncer_uptime_seconds {round(time.time() - _START, 1)}"]  # T236
+    lines += [f'bouncer_rule_total{{rule="{k}"}} {v}'  # T884: per-rule counters,
+              for k, v in g["rules"].items()]  #  like /stats' rules block
+    lines += [f'bouncer_cause_total{{cause="{k}"}} {v}'  # T884: why, not just what
+              for k, v in g["causes"].items()]
+    from . import strikes as _strikes  # T884: counts only, like /stats (T439)
+    _table = _strikes._strikes
+    ban_sug = sum(1 for n in _table.values() if n >= _strikes.BAN_AT)
+    lines += [f"bouncer_strikes_users {len(_table)}",
+              f"bouncer_strikes_total {sum(_table.values())}",
+              f"bouncer_strikes_ban_suggested {ban_sug}"]
     from . import _BREAKER, _BREAKER_LOCK  # T520
     with _BREAKER_LOCK:
         is_open = time.time() < _BREAKER["open_until"]
