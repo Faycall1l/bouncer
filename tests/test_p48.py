@@ -566,3 +566,64 @@ def test_provenance_fields_present_in_log_rec_output(tmp_path):  # T921
     second = _json.loads(lines[-1])
     assert second["dataset_sha256"] == line["dataset_sha256"], "every line carries it"
     assert second["kind"] == "epoch"
+
+
+# --- T922: kaggle/README documents flags, resume, and the gate order --------
+
+def test_kaggle_readme_documents_flags_resume_gate_order():  # T922
+    """kaggle/README.md must document every flag the script actually parses,
+    the resume semantics, and the gate order an upload must survive —
+    cross-checked against BOTH sources (train.py's argparse and gate.py's
+    invocation), so a flag added without docs, or a documented flag that
+    doesn't exist, fails here."""
+    readme = Path("kaggle/README.md").read_text()
+    src = TRAIN.read_text()
+
+    # every flag train.py parses is in the README table
+    import re as _re
+    script_flags = set(_re.findall(r'add_argument\("(--[a-z-]+)"', src))
+    assert script_flags, "train.py has flags"
+    for flag in script_flags:
+        assert flag in readme, f"{flag} not documented in kaggle/README.md"
+
+    # and no documented flag is fictional
+    for flag in set(_re.findall(r"`(--[a-z-]+)`", readme)):
+        assert flag in script_flags, f"README documents {flag} which train.py lacks"
+
+    # resume semantics: the three artifacts and the honest limitation
+    for word in ("checkpoint_latest", "train_state.json", "optim.pt"):
+        assert word in readme, word
+    assert "not the best" in readme, "the resume limitation stays honest"
+
+    # gate order: eval -> gate.py -> model card -> push, in that order
+    order = ["3. **eval_gatekeeper", "4. **gate.py", "5. **model card",
+             "6. **push**"]
+    positions = [readme.index(s) for s in order]
+    assert positions == sorted(positions), "the gate order reads in real order"
+    assert "single source" in readme and "T920" in readme
+    assert "gate_pass=None" in readme, "a gate that never ran refuses (T915)"
+
+    # no-push row names the new full-gate reason, not just the old two floors
+    assert "full_gate" in readme and "ECE" in readme
+
+    # honest status — nothing here pretends the run happened
+    assert "NOT RUN" in readme
+
+
+def test_kaggle_readme_matches_reality_surfaces():  # T922: receipts cross-file
+    """The README's claims point at things that exist: the smoke path, the
+    dry-run, the i18n eval of a run, the tests that pin it, and the T-numbers
+    it cites are all real boxes."""
+    import re as _re
+
+    readme = Path("kaggle/README.md").read_text()
+    assert Path("kaggle/train/train.py").exists()
+    assert Path("scripts/check_kaggle_env.py").exists()
+    assert "tests/test_p48.py" in readme
+    assert "eval/eval_i18n.py --model" in readme.replace("`", "")
+    assert "test_train_parses_and_dry_run_config_validates_end_to_end" in readme
+
+    # citation integrity: every box the README cites exists in TODO.md
+    todo = Path("TODO.md").read_text()
+    for t in set(_re.findall(r"\bT\d{3,4}\b", readme)):
+        assert t in todo, f"kaggle/README cites unknown box {t}"

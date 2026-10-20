@@ -1016,7 +1016,7 @@
 - [x] T919 test: train.py parses + dry-run config-validates on CPU (no weights needed)
 - [x] T920 test: ship-gate thresholds match gate.py defaults — single source, no drift
 - [x] T921 test: provenance fields present in log_rec output
-- [ ] T922 docs: kaggle/README refresh — flags, resume, gate order
+- [x] T922 docs: kaggle/README refresh — flags, resume, gate order
 - [ ] T923 notebooks: finetune_kaggle.py signature drift check vs train.py (test-enforced, the fallback warning becomes a failure)
 - [ ] T924 data: validate_data gate runs before training start — hash mismatch refuses
 - [ ] T925 ft: eval report naming matches gate.py report-kind dispatch
