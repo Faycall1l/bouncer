@@ -15,6 +15,14 @@ _(Last checked against v0.4.0.)_
 `bouncer presets` prints this table with tags; `PRESET_LANG` in
 `gatekeeper/presets.py` is the source of truth.
 
+Routed-but-packless languages (T894): routing pins `zh`, `ru`, `fa`, `ur`
+and `he` to the multilingual checkpoint (T457 `model_for_lang`), but no
+pack ships in those languages — `lang_coverage()` in `presets.py` names
+each one with a `None` pack instead of hiding the gap. Those deployments
+supply their own rules (`--rules` / a signed pack); the checkpoint
+handles the text, your pack handles the policy. `ar` is the one routed
+language with a pack.
+
 Example: `bouncer check "GG all" --preset gaming` → allow.
 
 Non-English packs (T399): same 3-rule shape (spam/kindness/spoilers) in the

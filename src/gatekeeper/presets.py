@@ -63,6 +63,24 @@ def preset_lang(name: str) -> str:
     except KeyError:
         raise KeyError(f"unknown preset {name!r}; pick from {sorted(PRESET_LANG)}")
 
+
+ROUTED_LANGS = ("ar", "zh", "ru", "fa", "ur", "he")  # T457: multilingual route
+
+PACKLESS = ("zh", "ru", "fa", "ur", "he")  # T894: routed, but no pack ships yet
+
+
+def lang_coverage() -> dict:
+    """T894: every routed language -> the pack that carries it, or None.
+    None means packless by NAME, not by omission: those languages ride the
+    multilingual checkpoint with whatever rules the deployment supplies
+    (docs/presets.md lists them). The audit trail is the map itself — an
+    unrouted-and-unlisted language fails the P47 sweep test."""
+    packs: dict = {}
+    for name, lang in PRESET_LANG.items():
+        packs.setdefault(lang, []).append(name)
+    return {lang: sorted(packs[lang]) if lang in packs else None
+            for lang in ROUTED_LANGS}
+
 DESCRIPTIONS = {
     "gaming": "clan / lobby chat: cheats, kindness, spam, spoilers",
     "study": "homework group: on-topic, hints-not-answers, kindness",

@@ -986,7 +986,7 @@
 - [x] T891 multilingual: checkpoint routing keys off detected script, not only the caller's lang
 - [x] T892 serve: /predict autofills lang from script detection when lang omitted
 - [x] T893 cli: check/watch accept --lang auto explicitly (script detection, documented)
-- [ ] T894 presets: PRESET_LANG coverage — every routed language has a pack or is listed packless in docs
+- [x] T894 presets: PRESET_LANG coverage — every routed language has a pack or is listed packless in docs
 - [ ] T895 pool: lang-tagged checkout stats — per-checkpoint hits visible in /stats pool block
 - [ ] T896 explain: lang_note wired into check output or removed — no more dead code either way
 - [ ] T897 adp: BOUNCER_ADAPTER_LANG per-platform override (explicit beats detected)

@@ -211,3 +211,37 @@ def test_cli_lang_auto_detects_per_message(tmp_path, monkeypatch,
     assert main(["watch", "--rules", rules, "--lang", "auto",
                  "--json-in"]) == 0
     capsys.readouterr()
+
+
+def test_preset_lang_covers_every_routed_language():  # T894
+    """Every language routing can act on either has a pack or is listed
+    packless — the gap is named, not hidden: lang_coverage() maps each
+    routed language to its packs (or None), docs/presets.md names each
+    packless one, and no routed language falls off both lists."""
+    from pathlib import Path
+
+    from gatekeeper.pool import model_for_lang
+    from gatekeeper.presets import PACKLESS, PRESET_LANG, ROUTED_LANGS, lang_coverage, list_presets
+
+    cov = lang_coverage()
+    assert set(cov) == set(ROUTED_LANGS), "one entry per routed language"
+
+    # every routed language has a pack or is explicitly packless
+    for lang in ROUTED_LANGS:
+        assert cov[lang] or lang in PACKLESS, f"{lang} neither packed nor listed"
+    # packless is not a quiet synonym for "missing": every name is routed
+    assert set(PACKLESS) <= set(ROUTED_LANGS)
+    # and the map agrees with PRESET_LANG on the languages that DO ship
+    assert cov["ar"] == ["ar"]
+    assert all(model_for_lang(l) == "multilingual" for l in ROUTED_LANGS)
+
+    # docs own the packless list: each name appears in presets.md
+    doc = Path("docs/presets.md").read_text()
+    for lang in PACKLESS:
+        assert f"`{lang}`" in doc, f"{lang} not listed packless in presets.md"
+    assert "Routed-but-packless" in doc, "the gap has a named section"
+
+    # packless languages are exactly the routed ones WITHOUT a preset pack
+    packed_langs = set(PRESET_LANG.values())
+    assert {l for l in ROUTED_LANGS if l not in packed_langs} == set(PACKLESS)
+    assert len(list_presets()) == len(PRESET_LANG), "catalogue is the tag table"
