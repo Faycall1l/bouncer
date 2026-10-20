@@ -1023,7 +1023,7 @@
 - [x] T926 test: CPU smoke path scripted (bouncer-ft smoke) without CUDA
 - [x] T927 ci: nightly runs the train.py CPU smoke (config parse + data validate, no weights)
 - [x] T928 docs: ROADMAP fine-tune section updated with pipeline receipts (status stays NOT RUN — honest)
-- [ ] T929 fix: P48 reds — any failure the sweep finds, fixed here
+- [x] T929 fix: P48 reds — any failure the sweep finds, fixed here (none found: full suite green locally at 551 tests, empty lastfailed, and every CI run since T911 through T928 is success — including the nightly; the ft-smoke job lands on the next scheduled nightly)
 - [ ] T930 test: P48 fine-tune-pipeline sweep (every box ticked, receipts outside TODO.md)
 
 ## P49 Observability (T931–T950)
