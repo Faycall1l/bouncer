@@ -415,3 +415,59 @@ def test_t947_metrics_under_threaded_load_measured_not_asserted(capsys):
     print(f"T947 /metrics threaded load: n={n} p50={p50:.1f}ms "
           f"p95={p95:.1f}ms max={ms[-1]:.1f}ms")  # receipt, not an assertion
     assert len(ms) == n  # every scrape answered — the structural budget only
+
+
+def test_t948_gate_dispatches_the_metrics_report_kind(tmp_path):
+    """T948: gate.py gated every bench_*.py report through the generic perf
+    collector, which knows only the T765 envelope — a metrics report's
+    exposition-format fields would have been skipped silently. bench_metrics
+    now exists, gate.py dispatches its shape to a metrics collector, and
+    the two axes gate independently: format failures fail even when the
+    scrape is fast (no machine-speed dependency), budget skips when the
+    producer never measured."""
+    import argparse
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, "eval")
+    import gate
+
+    args = argparse.Namespace(max_metrics_p50_ms=100.0)
+    # dispatch: the metrics shape must not leak into the generic perf family
+    rep = {"bench": "bench_metrics", "schema": 1, "mode": "n/a",
+           "p50_ms": 1.0, "format_ok": True, "help_complete": True}
+    assert gate.detect_kind(rep) == "metrics"
+    checks = {c["name"]: c for c in gate.COLLECTORS["metrics"](rep, args)}
+    assert checks["metrics_format"]["ok"] is True
+    assert checks["metrics_p50_ms"]["ok"] is True
+    # a broken exposition fails even inside the budget
+    broken = dict(rep, format_ok=False, help_complete=False)
+    bad = {c["name"]: c for c in gate.COLLECTORS["metrics"](broken, args)}
+    assert bad["metrics_format"]["ok"] is False
+    assert bad["metrics_help_type"]["ok"] is False
+    assert bad["metrics_p50_ms"]["ok"] is True  # speed never excuses format
+    # an over-budget scrape fails even when the format is perfect
+    slow = dict(rep, p50_ms=500.0)
+    over = {c["name"]: c for c in gate.COLLECTORS["metrics"](slow, args)}
+    assert over["metrics_format"]["ok"] is True
+    assert over["metrics_p50_ms"]["ok"] is False
+    # absent measurement -> SKIP, never a silent pass (T672's rule)
+    nomeasure = {k: v for k, v in rep.items() if k != "p50_ms"}
+    skip = {c["name"]: c for c in gate.COLLECTORS["metrics"](nomeasure, args)}
+    assert skip["metrics_p50_ms"]["ok"] is None
+    # the real producer round-trips through the real gate
+    out = tmp_path / "metrics.json"
+    run = subprocess.run(
+        [sys.executable, "eval/bench_metrics.py", "--out", str(out), "--json"],
+        capture_output=True, text=True, check=False)
+    assert run.returncode == 0, run.stderr
+    verdict = subprocess.run(
+        [sys.executable, "eval/gate.py", str(out), "--ci"],
+        capture_output=True, text=True, check=False)
+    assert verdict.returncode == 0, verdict.stdout + verdict.stderr
+    assert json.loads(verdict.stdout)["ok"] is True
+    # and --all's known list includes it (the drift rule: every producer
+    # report is gateable by the one command)
+    assert '"metrics.json"' in Path("eval/gate.py").read_text()

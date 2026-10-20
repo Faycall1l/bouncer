@@ -1044,7 +1044,7 @@
 - [x] T945 docs: api.md metrics section — full export list with types ("Metrics export" table: every family with type/labels/meaning; receipt test checks the table both ways against the live scrape — tests/test_p49.py)
 - [x] T946 docs: runbook scrape recipe (Prometheus snippet, alert on breaker-open) ("Scrape + alerts" section: scrape_configs with the X-API-Key header, three alerts — breaker-open, fails climbing, review backlog; per-worker + _other caveats restated; receipt test checks every named family against the live scrape — tests/test_p49.py)
 - [x] T947 perf: /metrics under threaded load — p95 budget measured + reported (40 scrapes × 8 workers; p50/p95/max printed as a receipt; assertions stay structural — 200 + valid exposition format, never a latency value; tests/test_p49.py)
-- [ ] T948 gate: metrics report kind added to gate.py dispatch (budget + format)
+- [x] T948 gate: metrics report kind added to gate.py dispatch (budget + format) (bench_metrics.py producer: scrape p50 + exposition-format verdict; gate.py `metrics` collector gates format/help-type structurally and p50 against --max-metrics-p50-ms=100; --all knows metrics.json; test_p36 COLLECTORS pin extended; receipts tests/test_p49.py + tests/test_p36.py)
 - [ ] T949 fix: P49 reds — any failure the sweep finds, fixed here
 - [ ] T950 test: P49 observability sweep (every box ticked, receipts outside TODO.md)
 

@@ -208,6 +208,35 @@ def collect_perf(report: dict, args) -> list:
     return checks
 
 
+def collect_metrics(report: dict, args) -> list:
+    """T948: the /metrics scrape report gates on TWO axes.
+
+    Format is structural and machine-independent (T943's contract): every
+    family needs exactly one HELP + one TYPE and every sample must parse —
+    a broken exposition fails loudly even on slow CI. Budget is the
+    p95-of-one-scrape cost (T766's ~10x rule), SKIPped when the producer
+    never measured it, like every other budget.
+    """
+    checks = []
+    bench = _get(report, "bench")
+    _add(checks, "bench_id", "== bench_metrics", bench,
+         None if bench is MISSING else bench == "bench_metrics")
+    schema = _num(report, "schema")
+    _add(checks, "bench_schema", "== 1", schema,
+         schema == 1 if schema is not None else False)
+    fmt = _get(report, "format_ok")
+    _add(checks, "metrics_format", "every sample parses", fmt,
+         None if fmt is MISSING else bool(fmt))
+    complete = _get(report, "help_complete")
+    _add(checks, "metrics_help_type", "one HELP+TYPE per family", complete,
+         None if complete is MISSING else bool(complete))
+    p50 = _num(report, "p50_ms")
+    thr = getattr(args, "max_metrics_p50_ms", None)
+    _add(checks, "metrics_p50_ms", f"<= {thr}", p50,
+         None if p50 is None else p50 <= thr)
+    return checks
+
+
 def known_numbers(path: str) -> dict:
     """T684: the Known-numbers table in BENCHMARKS.md, as data."""
     import re
@@ -258,6 +287,11 @@ def detect_kind(report: dict) -> str:
     if "speedup" in report or "thrash" in report:
         return "pool"  # bench_pool has both pool keys AND the T765 envelope —
         # pool wins so T683's speedup floor never silently stops applying
+    if report.get("bench") == "bench_metrics":
+        # T948: the metrics report carries the T765 envelope AND exposition
+        # format fields — it gates on format + scrape cost, so it must not
+        # fall through to the generic perf collector (which would skip both)
+        return "metrics"
     if "bench" in report:
         return "perf"  # T765 envelope: every other bench_*.py report
     return "eval"
@@ -266,7 +300,8 @@ def detect_kind(report: dict) -> str:
 COLLECTORS = {"eval": collect, "i18n": collect_i18n,  # T681
               "breaker": collect_breaker,  # T682
               "pool": collect_pool,  # T683: dispatch table
-              "perf": collect_perf}  # T766
+              "perf": collect_perf,  # T766
+              "metrics": collect_metrics}  # T948
 
 
 def gate_report(report: dict, args) -> dict:
@@ -329,7 +364,7 @@ def run_all(args) -> int:
     known = ["latest.json", "i18n.json", "breaker.json", "pool.json",
              "stub-latency.json", "warm.json", "stats-load.json",  # T766
              "import.json", "import-version.json", "questions.json",
-             "batch-sweep.json"]
+             "batch-sweep.json", "metrics.json"]  # T948
     paths = [os.path.join(args.reports_dir, n) for n in known]
     found = [(n, p) for n, p in zip(known, paths) if os.path.exists(p)]
     if not found:
@@ -431,6 +466,9 @@ def main(argv=None) -> int:
     ap.add_argument("--max-batch-row-ms", type=float, default=50.0,  # T766
                     help="worst single cell of the batch/chunk sweep in ms "
                          "(local max ~3ms stub; T753)")
+    ap.add_argument("--max-metrics-p50-ms", type=float, default=100.0,  # T948
+                    help="one /metrics scrape in ms (in-process; local ~5ms, "
+                         "budget ~10x per T766)")
     a = ap.parse_args(argv)
     if a.all:  # T689: single command over the whole reports dir
         if a.against or a.changelog:

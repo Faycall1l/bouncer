@@ -534,11 +534,14 @@ def test_p36_sweep_gate_invariants():  # T690: cross-cutting consistency
     import gate
     samples = [{"rule_acc": 0.5}, {"per_lang": {}}, {"tripped": True},
                {"closed": False}, {"speedup": 3.0}, {"thrash": {}},
-               {"bench": "bench_stub", "p50_ms": 0.1}]  # T766: perf family
+               {"bench": "bench_stub", "p50_ms": 0.1},  # T766: perf family
+               {"bench": "bench_metrics", "p50_ms": 1.0,  # T948: metrics family
+                "format_ok": True, "help_complete": True}]
     # every detectable report shape maps to a registered collector...
     for rep in samples:
         assert gate.detect_kind(rep) in gate.COLLECTORS, rep
-    assert set(gate.COLLECTORS) == {"eval", "i18n", "breaker", "pool", "perf"}
+    assert set(gate.COLLECTORS) == {"eval", "i18n", "breaker", "pool", "perf",
+                                    "metrics"}
     # ...and every collector emits >= 1 check with the shared {name, expected,
     # value, ok} shape — a family that emits nothing could never fail.
     args = argparse.Namespace(min_n=1, min_rule_acc=0.403, max_ece=0.15,
@@ -547,7 +550,8 @@ def test_p36_sweep_gate_invariants():  # T690: cross-cutting consistency
                               per_rule_min_n=5, min_speedup=2.0,
                               max_stub_p50_ms=5.0, max_import_p50_ms=200.0,  # T766
                               max_stats_p95_ms=250.0, max_warm_p50_ms=50.0,
-                              max_questions_p50_ms=20.0, max_batch_row_ms=50.0)
+                              max_questions_p50_ms=20.0, max_batch_row_ms=50.0,
+                              max_metrics_p50_ms=100.0)  # T948
     for rep in samples:
         checks = gate.COLLECTORS[gate.detect_kind(rep)](rep, args)
         assert checks, rep
