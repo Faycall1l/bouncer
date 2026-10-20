@@ -1014,7 +1014,7 @@
 - [x] T917 ft: model card generated for the HF upload (upload_folder today ships no README)
 - [x] T918 ft: eval_i18n accepts the fine-tuned model dir (i18n eval of the run itself)
 - [x] T919 test: train.py parses + dry-run config-validates on CPU (no weights needed)
-- [ ] T920 test: ship-gate thresholds match gate.py defaults — single source, no drift
+- [x] T920 test: ship-gate thresholds match gate.py defaults — single source, no drift
 - [ ] T921 test: provenance fields present in log_rec output
 - [ ] T922 docs: kaggle/README refresh — flags, resume, gate order
 - [ ] T923 notebooks: finetune_kaggle.py signature drift check vs train.py (test-enforced, the fallback warning becomes a failure)

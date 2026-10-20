@@ -464,3 +464,51 @@ def test_train_parses_and_dry_run_config_validates_end_to_end():  # T919
         check=False, capture_output=True, text=True, timeout=60)
     assert probe.returncode == 0, probe.stderr
     assert probe.stdout.strip() == "CLEAN", "import pulls no torch on a CPU box"
+
+
+# --- T920: ship-gate thresholds == gate.py defaults, one source --------------
+
+def test_ship_gate_thresholds_single_sourced_from_gate_py():  # T920
+    """No drift copy: train.py's REGEX_FLOOR must be gate.py's --min-rule-acc
+    default (the same 0.403 both call the regex baseline), and the ship gate
+    passes NO threshold flags to gate.py — so a threshold moved in gate.py
+    moves the ship gate too, and a threshold moved in ONLY one place fails
+    this test instead of a future push."""
+    import re as _re
+
+    mod = _import_train()
+    gate_src = Path("eval/gate.py").read_text()
+    train_src = TRAIN.read_text()
+
+    def _default(flag):
+        m = _re.search(
+            rf'add_argument\("{flag}",\s*type=float,\s*default=([0-9.]+)', gate_src)
+        assert m, f"gate.py no longer declares {flag} with a plain default"
+        return float(m.group(1))
+
+    # the accuracy floor is one number in two names — pinned equal
+    assert mod.REGEX_FLOOR == _default("--min-rule-acc"), \
+        "train.py's regex floor drifted from gate.py's rule_acc threshold"
+
+    # the ship gate invokes gate.py with no threshold overrides: defaults ARE
+    # the thresholds (T915's design, re-asserted here as the no-drift clause)
+    assert "--min-rule-acc" not in train_src and "--max-ece" not in train_src
+    assert "--min-abstention" not in train_src and "--min-per-rule-acc" not in train_src
+    gate_call = _re.search(
+        r'subprocess\.run\(\[sys\.executable, gt, [^\]]*\]', train_src)
+    assert gate_call, "the ship gate's gate.py call exists"
+    assert "--" not in gate_call.group(0).split("gt,")[1], \
+        "no flags ride along — gate.py defaults are the single source"
+
+
+def test_gate_py_threshold_defaults_unchanged_shape():  # T920: the flags exist
+    """T920's regexes pin real flags: if gate.py renames a threshold or moves
+    its default off a plain literal (say, a computed baseline), this test
+    fails first — so the single-source assertion above can never silently
+    stop matching."""
+    gate_src = Path("eval/gate.py").read_text()
+    for flag in ("--min-rule-acc", "--max-ece", "--min-abstention",
+                 "--max-abstention", "--min-per-rule-acc"):
+        assert f'add_argument("{flag}"' in gate_src, flag
+    # the docs-drift gate (T684) also knows these numbers — same source chain
+    assert "regex_floor" in gate_src and "max_ece" in gate_src

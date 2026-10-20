@@ -68,6 +68,10 @@ LORA = {"enabled": False, "r": 8, "alpha": 16, "dropout": 0.05,
 
 DEV_FLOOR = 0.35  # T655: below this, the checkpoint is not worth shipping
 REGEX_FLOOR = 0.403  # T661: regex baseline on examples.jsonl (post-T637; was 0.480)
+                     # T920: must equal gate.py's rule-acc threshold default — the
+                     # ship gate invokes gate.py with NO threshold flags, so
+                     # this number and gate.py's floor are one source, pinned
+                     # equal by test_p48 (drift fails the suite, not a push)
 HARM = ["safe", "suspicious", "harmful"]
 HYPE = ["dead", "chill", "hyped"]
 OUT = "/kaggle/working/bouncer-421m"
