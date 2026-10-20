@@ -80,7 +80,11 @@ moderate(model=, lang=)
 * **Pool** (`pool.py`): LRU keyed by constructor kwargs (`model`, `device`, …),
   `BOUNCER_POOL_MAX` slots (default 2), per-pool hit/create/evict counters in
   `/stats`, `/ready`, `bouncer models`. Size it ≥ hot checkpoints or every
-  request pays a reload (`eval/bench_pool.py` shows the thrash case).
+  request pays a reload (`eval/bench_pool.py` shows the thrash case, and its
+  `languages` section measures it — T909: english+multilingual alternating
+  with 2 slots builds each checkpoint once with 0 evictions; with 1 slot
+  every language switch evicts the other, 0 hits across the run. The
+  `pool.by_model` tags in `/stats` show the same ping-pong live).
 * **Breaker** (`__init__.py`): `breaker_n` consecutive failures open it;
   after `breaker_cool_s` one half-open trial decides close vs. re-trip. While
   open, requests short-circuit to `escalate` (`cause=breaker-open`) — never

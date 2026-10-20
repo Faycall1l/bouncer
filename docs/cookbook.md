@@ -110,7 +110,10 @@ The full recipe, in the order bouncer applies it:
   (`BOUNCER_POOL_MAX`, default 2), so a mixed community holds english +
   multilingual routers side by side. `GET /stats` → `pool.by_model` (T895)
   counts checkouts per checkpoint: if `evictions` climbs while a language
-  is active, that language is thrashing the pool — raise the cap. A
+  is active, that language is thrashing the pool — raise the cap. The
+  risk is measured, not folklore: `eval/bench_pool.py`'s `languages`
+  section runs english+multilingual alternating (T909) — two slots, zero
+  evictions; one slot, a rebuild on every switch. A
   mixed-language batch scores per message (T902), so one Arabic line in an
   English batch doesn't misroute its neighbors.
 * **Verify routing** — `python eval/eval_i18n.py` (T898) measures that

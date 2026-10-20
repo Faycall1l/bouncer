@@ -751,3 +751,63 @@ def test_gate_dispatches_routing_reports_to_i18n_family():  # T908
     assert r.returncode == 0, r.stderr
     report = _json.loads(r.stdout)
     assert gate.detect_kind(report) == "i18n"
+
+
+def test_bench_pool_measures_mixed_language_thrash():  # T909
+    """bench_pool now runs the multilingual deployment itself: english +
+    multilingual alternating through the pool. With two slots both
+    checkpoints are resident (creates == languages, evictions == 0, real
+    hits); with one slot every switch evicts the other language (zero
+    hits, evictions == requests-1) — the thrash risk the README warns
+    about is now a measured verdict, not folklore. Only countable facts
+    are asserted: bench tests never pin latency values."""
+    import json as _json
+    import subprocess
+    import sys as _sys
+
+    r = subprocess.run([_sys.executable, "eval/bench_pool.py", "--json"],
+                       check=False, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stderr
+    report = _json.loads(r.stdout)
+
+    # the T765 envelope and the original keys still gate as "pool" family
+    sys.path.insert(0, "eval")
+    import gate
+
+    assert report["bench"] == "bench_pool" and report["mode"] == "stub"
+    assert gate.detect_kind(report) == "pool"
+    assert "speedup" in report and "thrash" in report, "old keys untouched"
+
+    langs = report["languages"]
+    assert set(langs) == {"fits", "thrash", "verdict"}, langs
+
+    # two slots: the whole point — build each checkpoint once, then hits
+    fits = langs["fits"]
+    assert fits["max_n"] == 2
+    assert fits["creates"] == 2, "one english + one multilingual build"
+    assert fits["evictions"] == 0, "both languages resident: no thrash"
+    assert fits["hits"] > 0, "alternating traffic hits the resident pool"
+    assert set(fits["by_model"]) == {"english", "multilingual"}, fits["by_model"]
+    # T895 tags: each language built exactly once, hits split across both
+    assert {k: v["creates"] for k, v in fits["by_model"].items()} == {
+        "english": 1, "multilingual": 1}, fits["by_model"]
+
+    # one slot: the measured thrash — every language switch is an eviction
+    thrash = langs["thrash"]
+    assert thrash["max_n"] == 1
+    assert thrash["hits"] == 0, "no hit can survive a full pool swap"
+    assert thrash["evictions"] >= thrash["creates"] - 1, thrash
+    assert thrash["evictions"] > fits["evictions"], "thrash is measurable"
+    # the tags show the ping-pong: both languages rebuilt on every switch
+    assert {k: v["creates"] for k, v in thrash["by_model"].items()} == {
+        "english": 5, "multilingual": 5}, thrash["by_model"]
+
+    # the verdict names both claims — true here, and computed, not asserted
+    v = langs["verdict"]
+    assert v["two_slots_no_thrash"] is True, v
+    assert v["one_slot_full_thrash"] is True, v
+
+    # gate family still passes on the report (speedup floor unchanged)
+    args = type("Args", (), {"min_speedup": 2.0})()
+    checks = {c["name"]: c for c in gate.COLLECTORS["pool"](report, args)}
+    assert checks["pool_speedup"]["ok"] is True, checks
