@@ -24,7 +24,8 @@ def test_train_script_asserts_before_training():  # T651: every stage gated
     src = _src("kaggle/train/train.py")
     assert src.count("assert ") >= 8  # one assert per stage boundary
     loop = src.index("for epoch in range(EPOCHS)")
-    for m in re.finditer(r"^assert ", src, re.MULTILINE):
+    # indented since T911's main() wrap — the guarantee is positional, not column-0
+    for m in re.finditer(r"^\s*assert ", src, re.MULTILINE):
         assert m.start() < loop, "an assert sits after training started"
     for kw in ("no /kaggle/input", "row schema", "zero items",
                "empty train or calibration split", "micro-batch", "no encoder params"):

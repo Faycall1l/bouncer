@@ -1005,7 +1005,7 @@
 - [x] T910 test: P47 multilingual sweep (every box ticked, receipts outside TODO.md)
 
 ## P48 Fine-tune pipeline (T911–T930)
-- [ ] T911 ft: train.py import-safe on CPU (cuda assert at import blocks even parsing today)
+- [x] T911 ft: train.py import-safe on CPU (cuda assert at import blocks even parsing today)
 - [ ] T912 ft: LoRA target_modules fixed for bert-style encoders (query/value) or dropped — wrong-and-disabled is worse than absent
 - [ ] T913 ft: hyperparameter flags --epochs/--lr/--seed (hardcoded constants today)
 - [ ] T914 ft: resume-from-checkpoint support
