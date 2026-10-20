@@ -121,9 +121,14 @@ don't have to repeat them:
 * `timeout_s` (request field, 0.5–60s, else `BOUNCER_TIMEOUT` env, else 10s)
   bounds each model call; overruns count toward the breaker's failure streak.
 * `GET /ready` — load-balancer readiness: `{"ready": bool, "model":
-  "loaded"|"unavailable", "pool": {size, max_n, hits, creates, evictions}}`.
-  Unlike `/health` (process liveness), `/ready` goes false when the model can't
-  answer, so LBs stop routing before requests pile up.
+  "loaded"|"unavailable", "pool": {size, max_n, hits, creates, evictions,
+  by_model}}`. Unlike `/health` (process liveness), `/ready` goes false when
+  the model can't answer, so LBs stop routing before requests pile up.
+  `pool.by_model` (T895) counts checkouts per checkpoint — english /
+  multilingual / typed-decisions by name, a bare `default` for device-only
+  checkouts and one `other` bucket for any unknown model pin, so the tag
+  set stays bounded no matter how many finetuned paths a deployment
+  invents. The same block appears in `GET /stats`.
 
 ## Auth + rate limits (T409)
 

@@ -321,7 +321,9 @@ def test_pool_eviction_under_max():  # T616
     p.get(model="english")
     p.get(model="multilingual")
     assert p.stats() == {"size": 2, "max_n": 2, "hits": 0, "creates": 2,
-                         "evictions": 0}
+                         "evictions": 0,  # T895: tags per checkpoint
+                         "by_model": {"english": {"hits": 0, "creates": 1},
+                                      "multilingual": {"hits": 0, "creates": 1}}}
     p.get(model="typed-decisions")  # third key, no free slot -> evict LRU
     s = p.stats()
     assert s["size"] == 2 and s["evictions"] == 1 and s["creates"] == 3

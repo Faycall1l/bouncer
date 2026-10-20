@@ -245,3 +245,47 @@ def test_preset_lang_covers_every_routed_language():  # T894
     packed_langs = set(PRESET_LANG.values())
     assert {l for l in ROUTED_LANGS if l not in packed_langs} == set(PACKLESS)
     assert len(list_presets()) == len(PRESET_LANG), "catalogue is the tag table"
+
+
+def test_pool_stats_carry_checkpoint_tags_bounded():  # T895
+    """Pool checkouts are counted per checkpoint (english/multilingual/
+    typed-decisions) in the /stats pool block, so thrash between two
+    languages is visible as two rows, not one blur. Tag cardinality is
+    bounded: a device-only checkout counts as default, any unknown model
+    (a finetuned dir, an arbitrary pin) folds into other — the stats
+    dict cannot grow with however many paths a deployment invents."""
+    from gatekeeper.pool import _POOL_TAGS, RouterPool
+
+    built = []
+    p = RouterPool(max_n=2, factory=lambda **kw: built.append(kw) or kw)
+
+    p.get(model="english")
+    p.get(model="english")  # hit
+    p.get(model="multilingual")
+    p.get(model="multilingual")  # hit
+    p.get(device="cpu")  # no model kwarg: default bucket
+    p.get(model="english")  # third distinct sig -> evicts LRU
+    p.get(model="/models/finetuned-2026-09")  # unknown pin: other bucket
+    p.get(model="/models/another-one")  # still other — no new tag
+
+    s = p.stats()
+    assert s["by_model"] == {
+        "english": {"hits": 1, "creates": 2},  # evicted and rebuilt once
+        "multilingual": {"hits": 1, "creates": 1},
+        "default": {"hits": 0, "creates": 1},
+        "other": {"hits": 0, "creates": 2},
+    }, s["by_model"]
+    assert set(s["by_model"]) <= set(_POOL_TAGS), "tags stay bounded"
+    # totals still agree with the tagged rows (nothing double-counted)
+    assert sum(r["hits"] for r in s["by_model"].values()) == s["hits"]
+    assert sum(r["creates"] for r in s["by_model"].values()) == s["creates"]
+
+    # the singleton the server reports from carries the same shape
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import serve
+
+    client = TestClient(serve.app)
+    body = client.get("/stats").json()
+    assert set(body["pool"]) == {"size", "max_n", "hits", "creates",
+                                 "evictions", "by_model"}, body["pool"]

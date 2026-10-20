@@ -44,7 +44,8 @@ def test_pool_eviction_lru():  # T456
     p.get(device="a")  # a is now MRU
     p.get(device="c")  # evicts b
     s = p.stats()
-    assert s == {"size": 2, "max_n": 2, "hits": 1, "creates": 3, "evictions": 1}
+    assert s == {"size": 2, "max_n": 2, "hits": 1, "creates": 3, "evictions": 1,
+                 "by_model": {"default": {"hits": 1, "creates": 3}}}  # T895
     assert p.get(device="a")["device"] == "a"  # still resident
 
 
@@ -126,7 +127,8 @@ def test_invalid_model_422():  # T467
 def test_pool_stats_shape():  # T468
     import gatekeeper.pool as _pool
     s = _pool.POOL.stats()
-    assert set(s) == {"size", "max_n", "hits", "creates", "evictions"}
+    assert set(s) == {"size", "max_n", "hits", "creates", "evictions",
+                      "by_model"}  # T895: per-checkpoint tags
 
 
 def test_device_env(monkeypatch):  # T469

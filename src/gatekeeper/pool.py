@@ -14,6 +14,10 @@ def _pool_max() -> int:
         return 2
 
 
+_KNOWN_MODELS = ("english", "multilingual", "typed-decisions")  # T895
+_POOL_TAGS = (*_KNOWN_MODELS, "default", "other")  # T905: bounded cardinality —
+
+
 class RouterPool:
     """T451: one Router per distinct constructor kwargs; LRU-evicts past max_n."""
 
@@ -23,6 +27,23 @@ class RouterPool:
         self._d: OrderedDict = OrderedDict()
         self._lock = threading.Lock()
         self.hits = self.creates = self.evictions = 0
+        self.by_model: dict = {}  # T895: per-checkpoint checkouts (hits/creates)
+
+    @staticmethod
+    def _tag(kw: dict) -> str:
+        """T895: which checkpoint this checkout asked for. Known names ride
+        by name; anything else (a finetuned dir, device-only kwargs) folds
+        into one bucket each — the tag set is bounded by _POOL_TAGS, so a
+        deployment looping model= over arbitrary paths can't grow the
+        stats dict without bound (T905)."""
+        m = kw.get("model")
+        if m in _KNOWN_MODELS:
+            return m
+        return "other" if m else "default"
+
+    def _count(self, tag: str, field: str) -> None:  # caller holds the lock
+        row = self.by_model.setdefault(tag, {"hits": 0, "creates": 0})
+        row[field] += 1
 
     def _build(self, kw: dict):
         if self._factory is not None:
@@ -37,14 +58,17 @@ class RouterPool:
     def get(self, **kw):
         """Return the pooled Router for these kwargs, building on first use."""
         sig = self._sig(kw)
+        tag = self._tag(kw)  # T895: checkout bookkeeping, lock held below
         with self._lock:
             if sig in self._d:
                 self._d.move_to_end(sig)
                 self.hits += 1
+                self._count(tag, "hits")
                 return self._d[sig]
             router = self._build(dict(kw))
             self._d[sig] = router
             self.creates += 1
+            self._count(tag, "creates")
             while len(self._d) > self.max_n:
                 self._d.popitem(last=False)
                 self.evictions += 1
@@ -54,10 +78,11 @@ class RouterPool:
         with self._lock:
             self._d.clear()
 
-    def stats(self) -> dict:  # T453
+    def stats(self) -> dict:  # T453+T895
         with self._lock:
             return {"size": len(self._d), "max_n": self.max_n, "hits": self.hits,
-                    "creates": self.creates, "evictions": self.evictions}
+                    "creates": self.creates, "evictions": self.evictions,
+                    "by_model": {k: dict(v) for k, v in self.by_model.items()}}
 
 
 POOL = RouterPool()

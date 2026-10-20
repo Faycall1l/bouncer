@@ -146,7 +146,8 @@ def test_timeout_caps_and_ready():  # T515+T518+T519+T528
     r = client.get("/ready")
     body = r.json()
     assert r.status_code == 200 and body["ready"] is True
-    assert set(body["pool"]) == {"size", "max_n", "hits", "creates", "evictions"}
+    assert set(body["pool"]) == {"size", "max_n", "hits", "creates",
+                                 "evictions", "by_model"}  # T895: tags ride along
 
 
 def test_breaker_metric_and_stats():  # T520+T522+T529

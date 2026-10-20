@@ -400,11 +400,13 @@ def test_release_memory_pool_hook(monkeypatch):  # T761
     stats = release_memory()
     # every resident is gone — and the lifetime record survives for logging
     assert stats == {"size": 0, "max_n": 2, "hits": 0, "creates": 2,
-                     "evictions": 0}
+                     "evictions": 0,  # T895: tags survive the drop (lifetime)
+                     "by_model": {"default": {"hits": 0, "creates": 2}}}
     # the pool still works after the drop: the next get rebuilds (COLD again)
     assert fake.get(device="cpu") is not None
     assert fake.stats() == {"size": 1, "max_n": 2, "hits": 0, "creates": 3,
-                            "evictions": 0}
+                            "evictions": 0,
+                            "by_model": {"default": {"hits": 0, "creates": 3}}}
     # the hook ships documented: README tells embedders when to call it
     readme = Path("README.md").read_text()
     for needle in ("release_memory()", "memory-pressure hook", "pays COLD"):
