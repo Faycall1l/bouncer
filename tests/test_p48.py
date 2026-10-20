@@ -824,3 +824,84 @@ def test_log_rec_safe_before_clock_and_creates_log_dir(tmp_path):  # T924 plumbi
     mod.log_rec(kind="step", epoch=1, step=1, loss=1.0)
     line = json.loads(Path(mod.LOG).read_text().splitlines()[-1])
     assert isinstance(line["t"], float)
+
+
+# --- T925: eval report naming/shape matches gate.py's kind dispatch ---------
+
+_STUB_LAYA = '''
+class Router:
+    def __init__(self, **kw):
+        pass
+
+    def predict(self, state, questions, model=None, **kw):
+        return {"answers": {
+            "rule": {"choice": "ok", "confidence": 0.9, "probabilities": {"ok": 0.9}},
+            "harm": {"score": "safe", "probabilities": []},
+            "hype": {"score": "chill", "probabilities": []},
+            "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+'''
+
+
+def test_eval_report_shape_dispatches_to_full_eval_collector(tmp_path):  # T925
+    """gate.py picks a collector by report SHAPE (detect_kind), and the
+    fine-tune pipeline writes eval_gatekeeper's output (eval_test.json) into
+    the full "eval" collector — the one carrying every ship threshold. The
+    proof runs the real producer (stub laya, like T583) and the real gate on
+    its file: dispatch == eval, and the verdict's check names are the whole
+    threshold set. The hazard is one borrowed key: a single per_lang/routing/
+    tripped/speedup/bench in that report reroutes the verdict to a narrower
+    collector while gate.py still exits 0 — so the sentinel keys are pinned
+    absent from what the producer actually writes."""
+    import os as _os
+
+    (tmp_path / "laya.py").write_text(_STUB_LAYA)
+    data = tmp_path / "rows.jsonl"
+    row = {"state": {"message": "hello there", "history": [],
+                     "rules": {"be-kind": "be nice"}},
+           "labels": {"rule": "ok", "harm": "safe", "hype": "chill",
+                      "jailbreak": False, "escalate": False}}
+    data.write_text(json.dumps(row) + "\n")
+    env = {**_os.environ, "PATH": "/usr/bin:/bin",
+           "PYTHONPATH": f"src:{tmp_path}"}
+    out = tmp_path / "eval_test.json"  # the exact name train.py writes
+    r = subprocess.run([sys.executable, "eval/eval_gatekeeper.py", str(data),
+                        "--limit", "1", "--out", str(out)],
+                       check=False, capture_output=True, text=True, env=env,
+                       timeout=60)
+    assert r.returncode == 0, r.stderr
+    rep = json.loads(out.read_text())
+
+    sys.path.insert(0, "eval")
+    import gate
+
+    # the producer's shape routes to the FULL eval collector
+    assert gate.detect_kind(rep) == "eval"
+    sentinels = {"per_lang", "routing", "tripped", "closed",
+                 "speedup", "thrash", "bench"}
+    assert not (set(rep) & sentinels), "a sentinel key would reroute the gate"
+    # the hazard is real: ONE borrowed key changes the family
+    assert gate.detect_kind(dict(rep, per_lang={})) == "i18n"
+    assert gate.detect_kind(dict(rep, speedup=1.0)) == "pool"
+
+    # the exact subprocess train.py runs: gate.py -- <report>, defaults only
+    r2 = subprocess.run([sys.executable, "eval/gate.py", "--json", str(out)],
+                        check=False, capture_output=True, text=True, timeout=60)
+    verdict = json.loads(r2.stdout)
+    names = {c["name"] for c in verdict["checks"]}
+    assert {"report_n", "report_rule_acc", "rule_acc", "ece", "p95_ms",
+            "abstention_rate", "per_rule_worst"} <= names, names
+
+
+def test_eval_out_name_is_the_gated_report_name():  # T925: naming wiring
+    """One name on both sides of the ship gate: eval_gatekeeper's --out and
+    gate.py's report argument are the same os.path.join(OUT, "eval_test.json"),
+    eval runs before the gate, and gate_pass starts as None — so the gate can
+    only ever judge the file the eval just wrote, never a stale leftover from
+    an earlier run."""
+    src = TRAIN.read_text()
+    ev_out = src.index('"--out", os.path.join(OUT, "eval_test.json")')
+    gate_arg = src.index("gt, os.path.join(OUT, \"eval_test.json\")")
+    assert ev_out < gate_arg, "eval writes the name gate.py later reads"
+    # exactly two uses: the producer's --out and the gate's argument
+    assert src.count('os.path.join(OUT, "eval_test.json")') == 2
+    assert "gate_pass = None" in src, "not-run starts as refuse, not pass"
