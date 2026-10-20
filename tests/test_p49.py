@@ -373,3 +373,45 @@ def test_t946_runbook_scrape_recipe_references_live_families():
         assert f"alert: {alert}" in section, alert
     assert "X-API-Key" in section, "the gated-scrape key header must be shown"
     assert "Per worker" in section, "T939's per-worker scope must be restated"
+
+
+def test_t947_metrics_under_threaded_load_measured_not_asserted(capsys):
+    """T947: every family added in P49 does work inside the scrape —
+    review depth opens a file, the breaker takes a lock, pool/stats take
+    their own. A scrape must stay cheap enough for a 15s interval from a
+    threaded server, so this runs N concurrent scrapes and REPORTS the
+    p50/p95/max to stdout as a receipt. The budget here is structural,
+    never a latency value (the standing bench rule): every response must
+    be 200 and parse as the exposition format — a slow scrape is a
+    dashboard problem, a broken scrape is a regression."""
+    import statistics
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    record("delete", "no-spam", 5.0, cause="violation", adapter="telegram")
+    client = TestClient(serve.app)  # TestClient is thread-safe for GETs
+    n = 40
+
+    def one_scrape() -> float:
+        t0 = time.perf_counter()
+        resp = client.get("/metrics")
+        assert resp.status_code == 200
+        assert resp.text.endswith("\n") and "# TYPE" in resp.text
+        return (time.perf_counter() - t0) * 1000
+
+    try:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            ms = list(pool.map(lambda _: one_scrape(), range(n)))
+    finally:
+        reset_stats()
+    ms.sort()
+    p50 = statistics.median(ms)
+    p95 = ms[int(0.95 * (len(ms) - 1))]
+    print(f"T947 /metrics threaded load: n={n} p50={p50:.1f}ms "
+          f"p95={p95:.1f}ms max={ms[-1]:.1f}ms")  # receipt, not an assertion
+    assert len(ms) == n  # every scrape answered — the structural budget only
