@@ -24,4 +24,9 @@ merging the rules or by giving each a distinctive verb (`post` vs `share` won't
 cut it; `post links` vs `harass players` will). `pack lint --strict` fails CI
 on any warning.
 
+Two more lint catches: a rule id used twice is rejected at parse (the JSON
+scanner would silently keep the last duplicate, T879), and rule text copied
+word-for-word out of a built-in preset gets a `verbatim preset <name> rule
+<id>` warning (T880) — a template you forgot to tune, not a custom rule.
+
 Terms used here are defined in the [Glossary](glossary.md).

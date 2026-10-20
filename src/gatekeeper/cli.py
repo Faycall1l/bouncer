@@ -528,7 +528,12 @@ def _read_pack(path: str):
 
 def cmd_pack(args) -> int:
     from gatekeeper import get_preset
-    from gatekeeper.rules import RuleError, validate_rules, warn_overlapping
+    from gatekeeper.rules import (
+        RuleError,
+        validate_rules,
+        warn_overlapping,
+        warn_preset_verbatim,  # T880: preset copy-paste
+    )
     if args.action == "init":  # T545+T878: template pack to edit, based on a preset
         import os
         if os.path.exists(args.file) and not getattr(args, "force", False):
@@ -642,6 +647,11 @@ def cmd_pack(args) -> int:
             print(f"bouncer: bad rules: {e}", file=sys.stderr)
             return 4
         warns = warn_overlapping(rules)
+        # T880: by-name lint excludes the preset itself; a file pack warns
+        # against every preset — verbatim preset text means an unedited
+        # template, which is exactly what init told the operator to edit
+        warns += warn_preset_verbatim(rules, exclude=None if args.rules
+                                      else args.preset)
         for w in warns:
             print("warn:", w)
         print(f"pack ok: {len(rules)} rules")

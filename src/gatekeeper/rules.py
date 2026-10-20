@@ -79,6 +79,28 @@ def warn_overlapping(rules: dict) -> list:
     return warns
 
 
+def warn_preset_verbatim(rules: dict, exclude: str | None = None) -> list:
+    """T880: rule text copied word-for-word from a built-in preset is a
+    template someone forgot to tune — warn naming the preset + rule it came
+    from. exclude names the preset being linted by name (pack lint --preset
+    gaming would otherwise flag every one of its own rules)."""
+    from gatekeeper.presets import PRESETS
+    index = {}
+    for pname, preset in PRESETS.items():
+        if pname == exclude:
+            continue
+        for prid, ptext in preset.items():
+            index.setdefault(ptext, (pname, prid))
+    warns = []
+    for rid, text in rules.items():
+        hit = index.get(text)
+        if hit:
+            warns.append(f"{rid} text is verbatim preset {hit[0]} rule {hit[1]}")
+        if len(warns) >= 10:  # T267-style cap: noise never outranks the pack
+            return warns
+    return warns
+
+
 def validate_rules(rules: dict, max_rules: int = 12, max_chars: int = 280,
                    severity: dict | None = None) -> dict:
     """Full pass; returns the rules unchanged for chaining."""

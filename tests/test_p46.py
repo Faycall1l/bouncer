@@ -465,3 +465,30 @@ def test_pack_lint_catches_duplicate_ids_and_invisible_text(tmp_path, capsys):  
                                 "hate": "no hate here"}))
     assert main(["pack", "lint", "--rules", str(good)]) == 0
     assert "pack ok: 2 rules" in capsys.readouterr().out
+
+
+def test_pack_lint_warns_on_verbatim_preset_text(tmp_path, capsys):  # T880
+    """Rule text copied word-for-word out of a built-in preset is a template
+    someone forgot to tune: pack lint warns, naming the preset and rule it
+    came from. Linting a preset by name never warns about its own rules;
+    warnings alone don't change the exit code."""
+    # a pack whose rule is gaming's no-spam text verbatim (new id)
+    copy = tmp_path / "copy.json"
+    copy.write_text(json.dumps({
+        "my-spam": "no ads, links, self-promo, or crypto giveaways",
+        "custom": "stick to raid planning and logistics"}))
+    assert main(["pack", "lint", "--rules", str(copy)]) == 0
+    out = capsys.readouterr().out
+    assert "warn:" in out and "verbatim preset gaming rule no-spam" in out, out
+    assert "custom" not in out, "unrelated rules stay quiet"
+    assert "pack ok: 2 rules" in out
+
+    # linting gaming by name excludes gaming: no self-warnings, exit 0
+    assert main(["pack", "lint", "--preset", "gaming"]) == 0
+    assert "verbatim" not in capsys.readouterr().out
+
+    # a fully custom pack stays silent
+    solo = tmp_path / "solo.json"
+    solo.write_text(json.dumps({"one": "stick to raid planning and logistics"}))
+    assert main(["pack", "lint", "--rules", str(solo)]) == 0
+    assert "verbatim" not in capsys.readouterr().out
