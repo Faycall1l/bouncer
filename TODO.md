@@ -1006,7 +1006,7 @@
 
 ## P48 Fine-tune pipeline (T911–T930)
 - [x] T911 ft: train.py import-safe on CPU (cuda assert at import blocks even parsing today)
-- [ ] T912 ft: LoRA target_modules fixed for bert-style encoders (query/value) or dropped — wrong-and-disabled is worse than absent
+- [x] T912 ft: LoRA target_modules fixed for bert-style encoders (query/value) or dropped — wrong-and-disabled is worse than absent
 - [ ] T913 ft: hyperparameter flags --epochs/--lr/--seed (hardcoded constants today)
 - [ ] T914 ft: resume-from-checkpoint support
 - [ ] T915 ft: ship gate runs the full gate.py thresholds (train.py push gate is narrower: no ECE/per-rule/abstention)

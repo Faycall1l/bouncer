@@ -80,3 +80,22 @@ def test_train_validate_config_rejects_bad_knobs():  # T911
     # floors outside the range are refused
     mod.REGEX_FLOOR = 1.5
     assert any("REGEX_FLOOR" in p for p in mod.validate_config())
+
+
+def test_lora_target_modules_match_the_encoder():  # T912
+    """The shipped LoRA target_modules must match the encoder that actually
+    ships: laya's checkpoint is ModernBERT-large (a bert-style encoder whose
+    projections are query/value). The llama-style q_proj/v_proj that shipped
+    here before would match ZERO modules — peft wraps nothing and an adapter
+    run trains no adapter — so the default block must carry the bert names,
+    and the comment must name the encoder so the next editor can't guess."""
+    mod = _import_train()
+    assert mod.LORA["target_modules"] == ["query", "value"], mod.LORA
+    assert "q_proj" not in mod.LORA["target_modules"], "llama names don't exist here"
+    src = TRAIN.read_text()
+    assert "ModernBERT" in src, "the comment names the real encoder, not a guess"
+    # wrong-and-enabled must stay as loud as absent: an empty module list is
+    # refused by the dry-run validator, never shipped silently
+    mod.LORA["enabled"] = True
+    mod.LORA["target_modules"] = []
+    assert any("target_modules" in p for p in mod.validate_config())

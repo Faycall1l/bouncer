@@ -34,10 +34,16 @@ MAX_SAMPLES = _known.max_samples
 DRY_RUN = _known.dry_run
 
 # --- T652: the only block you edit for adapter runs ---
-# target_modules must match YOUR encoder's attention projections
-# (bert-style: query/value; llama-style: q_proj/v_proj — check before enabling).
+# target_modules must match YOUR encoder's attention projections.
+# This model's encoder is ModernBERT-large (answerdotai/ModernBERT-large per
+# rl_agent_config.json — a bert-style encoder, so train.py builds `encoder.`
+# params), whose attention projections are query/value (T912). The llama-style
+# q_proj/v_proj that shipped here before would match ZERO modules — peft would
+# wrap nothing and an "adapter run" would train no adapter at all; a wrong
+# value sitting disabled is worse than an absent one (someone WILL enable it),
+# so the shipped names now match the shipped encoder.
 LORA = {"enabled": False, "r": 8, "alpha": 16, "dropout": 0.05,
-        "target_modules": ["q_proj", "v_proj"]}
+        "target_modules": ["query", "value"]}
 
 DEV_FLOOR = 0.35  # T655: below this, the checkpoint is not worth shipping
 REGEX_FLOOR = 0.403  # T661: regex baseline on examples.jsonl (post-T637; was 0.480)
