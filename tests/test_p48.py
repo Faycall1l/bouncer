@@ -512,3 +512,57 @@ def test_gate_py_threshold_defaults_unchanged_shape():  # T920: the flags exist
         assert f'add_argument("{flag}"' in gate_src, flag
     # the docs-drift gate (T684) also knows these numbers — same source chain
     assert "regex_floor" in gate_src and "max_ece" in gate_src
+
+
+# --- T921: provenance fields present in log_rec OUTPUT -----------------------
+
+def test_provenance_fields_present_in_log_rec_output(tmp_path):  # T921
+    """log_rec stamps dataset_sha256 + git_sha + config into every record, so
+    any number in train_log.jsonl can be traced back to the exact file hashed,
+    the commit that ran, and the knobs used. Fill it against a real file, call
+    log_rec, read the line back — the fields are IN the output, not just in a
+    source comment."""
+    import json as _json
+
+    mod = _import_train()
+    data = tmp_path / "rows.jsonl"
+    data.write_text('{"state": {}, "labels": {}}\n')
+
+    mod.fill_provenance(str(data))
+    assert set(mod.PROVENANCE) >= {"dataset_path", "dataset_sha256", "git_sha", "config"}
+
+    # dataset hash: sha256 of the bytes actually read, not a placeholder
+    import hashlib as _hashlib
+    assert mod.PROVENANCE["dataset_sha256"] == _hashlib.sha256(
+        data.read_bytes()).hexdigest()
+    assert mod.PROVENANCE["dataset_path"] == "rows.jsonl"
+
+    # config carries the knobs verbatim (T913/T914/T912 surface)
+    cfg = mod.PROVENANCE["config"]
+    assert cfg["seed"] == 7 and cfg["max_samples"] == 0 and cfg["resume"] is False
+    assert cfg["lora"]["target_modules"] == ["query", "value"]
+    assert cfg["dev_floor"] == 0.35 and cfg["regex_floor"] == 0.403
+
+    # git sha: real sha in a checkout, None (not a fake) when git is absent
+    if mod.PROVENANCE["git_sha"] is not None:
+        assert len(mod.PROVENANCE["git_sha"]) >= 7
+
+    # the fields land in the WRITTEN line — this is T921's assertion
+    mod.t0 = 0.0  # log_rec computes t from the clock; any value works
+    real_log = tmp_path / "train_log.jsonl"
+    mod.LOG = str(real_log)
+    mod.log_rec(kind="step", epoch=1, step=1, loss=1.0)
+    line = _json.loads(real_log.read_text().splitlines()[-1])
+    assert line["kind"] == "step"
+    assert line["dataset_sha256"] == mod.PROVENANCE["dataset_sha256"]
+    assert line["git_sha"] == mod.PROVENANCE["git_sha"]
+    assert line["config"]["seed"] == 7
+    assert "t" in line, "the T654 timestamp survives"
+
+    # a second record keeps provenance AND stays append-only (T654 contract)
+    mod.log_rec(kind="epoch", epoch=1, avg_loss=0.5)
+    lines = real_log.read_text().splitlines()
+    assert len(lines) == 2
+    second = _json.loads(lines[-1])
+    assert second["dataset_sha256"] == line["dataset_sha256"], "every line carries it"
+    assert second["kind"] == "epoch"
