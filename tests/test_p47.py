@@ -3,6 +3,8 @@ import sys
 
 sys.path.insert(0, "src")
 
+from gatekeeper.cli import main
+
 
 class _RouteProbe:
     """Router stub that records which checkpoint moderate() asked for."""
@@ -150,3 +152,62 @@ def test_predict_autofills_lang_from_script():  # T892
         assert r.status_code == 200 and r.json()["lang"] == "es"
     finally:
         gatekeeper._router = None
+
+
+def test_cli_lang_auto_detects_per_message(tmp_path, monkeypatch,
+                                           capsys):  # T893
+    """`--lang auto` on check/watch is script detection said out loud: an
+    Arabic message gets the ar hint (so the row echoes and routes like a
+    told one), a latin message stays unhinted, an explicit tag still wins,
+    and a preset + auto no longer prints the mismatch note (auto has no
+    opinion to disagree with)."""
+    import json as _json
+
+    monkeypatch.setattr("gatekeeper.get_router", lambda **kw: _RouteProbe())
+    rules = str(tmp_path / "r.json")
+    tmp_path.joinpath("r.json").write_text(
+        _json.dumps({"no-spam": "spam"}))
+
+    # single message: auto detects arabic -> lang ar in the JSON row
+    assert main(["check", "مباراة حماسية اليوم في الدوري spam",
+                 "--rules", rules, "--lang", "auto", "--json"]) == 0
+    row = _json.loads(capsys.readouterr().out)
+    assert row["lang"] == "ar" and row["script"] == "arabic", row
+
+    # latin message: auto stays unhinted (no language claim from a script)
+    assert main(["check", "gardening spam advice nobody asked for",
+                 "--rules", rules, "--lang", "auto", "--json"]) == 0
+    row = _json.loads(capsys.readouterr().out)
+    assert row["lang"] is None and row["script"] == "latin", row
+
+    # an explicit tag is still the explicit tag
+    assert main(["check", "مباراة حماسية اليوم في الدوري spam",
+                 "--rules", rules, "--lang", "fr", "--json"]) == 0
+    row = _json.loads(capsys.readouterr().out)
+    assert row["lang"] == "fr", row
+
+    # preset + auto: no mismatch note (auto never disagrees, T504 guard)
+    assert main(["check", "spam spam", "--preset", "es",
+                 "--lang", "auto"]) == 0
+    out = capsys.readouterr()
+    assert "mismatch" not in out.err and "but --lang" not in out.err, out.err
+    # preset + an explicit mismatching tag still notes it (T504 regression)
+    assert main(["check", "spam spam", "--preset", "es",
+                 "--lang", "fr"]) == 0
+    assert "but --lang" in capsys.readouterr().err
+
+    # check --file: auto tags per LINE, not once for the batch
+    f = tmp_path / "msgs.txt"
+    f.write_text("هذا كلام عادي spam\nnormal latin spam line\n")
+    assert main(["check", "--file", str(f), "--rules", rules,
+                 "--lang", "auto"]) == 0
+    rows = [_json.loads(l) for l in capsys.readouterr().out.splitlines()]
+    assert [r["lang"] for r in rows] == ["ar", None], rows
+
+    # watch: same detection per piped line
+    import io
+    monkeypatch.setattr("sys.stdin", io.StringIO(
+        "هذا كلام عادي spam\nnormal latin spam line\n"))
+    assert main(["watch", "--rules", rules, "--lang", "auto",
+                 "--json-in"]) == 0
+    capsys.readouterr()

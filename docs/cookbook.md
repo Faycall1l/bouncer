@@ -88,7 +88,9 @@ bouncer presets                               # es, fr, ar + the English packs
 * Presets carry a language tag (`PRESET_LANG`): picking `es`/`fr`/`ar`
   also hints the downstream language (reason language, model routing).
 * `--lang TAG` overrides or sets the hint explicitly (the CLI notes a
-  preset/hint mismatch instead of silently disagreeing).
+  preset/hint mismatch instead of silently disagreeing). `--lang auto`
+  fills the hint per message from its detected script (T893): arabic,
+  cyrillic and cjk text become `ar`/`ru`/`zh`; latin text stays unhinted.
 * Routing is automatic from there: non-latin scripts (ar/zh/ru/fa/ur/he)
   pin the `multilingual` checkpoint, latin rides laya's own auto-routing.
   Pin a checkpoint per request with `model=...` when you want to overrule.

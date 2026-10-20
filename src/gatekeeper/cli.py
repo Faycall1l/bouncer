@@ -61,6 +61,16 @@ def _cfg_from_args(args):
     return cfg
 
 
+def _cli_lang(hint: str | None, msg: str) -> str | None:  # T893
+    """`--lang auto` = detect from the message's own script (ar/zh/ru, else
+    None — the same refusal to claim a language from latin text, T857).
+    Every other value passes through as the explicit hint it is."""
+    if hint != "auto":
+        return hint
+    from gatekeeper.adapters.common import detect_lang
+    return detect_lang(msg)
+
+
 def cmd_check(args) -> int:  # T066+T067+T071+T072+T874
     from gatekeeper import moderate
     from gatekeeper.explain import explain
@@ -90,8 +100,8 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072+T874
     if getattr(args, "timeout", None) is not None:  # T516
         cfg.timeout_s = args.timeout
         cfg.validate()
-    if args.preset and getattr(args, "lang", None):  # T504: pack/language mismatch note
-        from gatekeeper.presets import preset_lang
+    if args.preset and getattr(args, "lang", None) not in (None, "auto"):  # T504:
+        from gatekeeper.presets import preset_lang  # T893: auto has no opinion
         want = preset_lang(args.preset)
         if want != args.lang:
             print(f"bouncer: note: preset {args.preset!r} is {want!r} "
@@ -110,8 +120,8 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072+T874
             if not msg.strip():  # blank separators aren't messages
                 continue
             res = moderate(msg, None if args.preset else rules,  # T883:
-                           config=cfg, lang=args.lang,  # preset resolves inside
-                           context=args.context or [], model=model,
+                           config=cfg, lang=_cli_lang(args.lang, msg),  # T893
+                           context=args.context or [], model=model,  # preset resolves inside
                            user_id=getattr(args, "user", None),
                            preset=args.preset)  # the audit row names the pack
             res["line"] = i
@@ -120,8 +130,8 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072+T874
             worst = max(worst, code[res["action"]])
         return worst  # the worst action in the batch, like the single shot
     res = moderate(args.message, None if args.preset else rules,  # T311+T312
-                   config=cfg, lang=args.lang,  # T883: preset resolves inside,
-                   context=args.context or [], model=model,  # so the audit row
+                   config=cfg, lang=_cli_lang(args.lang, args.message),  # T883+
+                   context=args.context or [], model=model,  # T893: auto detects
                    user_id=getattr(args, "user", None),  # T533 names the pack
                    preset=args.preset)
     res["reason"] = explain(res, rules)
@@ -167,7 +177,7 @@ def cmd_watch(args) -> int:
             res = moderate(msg, None if getattr(args, "preset", None)
                            else rules,  # T883: preset resolves inside
                            config=cfg, user_id=user,  # T534
-                           lang=lang,  # T541
+                           lang=_cli_lang(lang, msg),  # T541+T893: auto detects
                            preset=getattr(args, "preset", None))
         except Exception as e:  # noqa: BLE001
             print(f"bouncer: watch error: {strip_controls(str(e))}", file=sys.stderr)  # T328
@@ -853,7 +863,8 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     c.add_argument("--rules", default=None)  # T483: None = not passed (conflict check)
     c.add_argument("--preset")
     _add_threshold_flags(c)
-    c.add_argument("--lang", default=None)  # T311
+    c.add_argument("--lang", default=None,  # T311
+                   help="language hint, or 'auto' to detect from script (T893)")
     c.add_argument("--context", action="append", default=None)  # T312: repeatable
     c.add_argument("--severity", action="append", default=None)  # T313: RULE=low|high
     c.add_argument("--quiet", action="store_true")  # T320: action word only
@@ -886,7 +897,8 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     w.add_argument("--config", default=None)  # T532
     w.add_argument("--user", default=None)  # T534: attribute piped lines to one user
     w.add_argument("--action", default=None)  # T535: comma list, e.g. flag,escalate
-    w.add_argument("--lang", default=None)  # T541: language hint for the whole pipe
+    w.add_argument("--lang", default=None,  # T541: hint for the whole pipe,
+                   help="or 'auto' to detect per line from script (T893)")
     w.add_argument("--json-in", action="store_true")  # T542: per-line {"message","user_id"}
     _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)

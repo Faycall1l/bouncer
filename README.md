@@ -186,6 +186,9 @@ Anywhere bouncer takes `rules`, it also takes `preset` — **never both**:
 adapters derive theirs from the message script since T857) hints both the
 reason language and the model route; omitted (the default) it
 infers from the message script (`detect_script()`: latin vs arabic at minimum).
+`--lang auto` (check/watch, T893) says that same detection out loud: the hint
+is filled per message from its script — arabic/cyrillic/cjk become
+`ar`/`ru`/`zh`, latin stays unhinted (a script never claims a language).
 Presets tagged `es`/`fr`/`ar` autofill the hint. Bad hints (not a short lowercase
 slug) are rejected with `422 E_LANG`.
 Fixtures + wiring check: `data/examples_i18n.jsonl` and `eval/eval_i18n.py`.
