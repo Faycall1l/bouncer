@@ -56,15 +56,6 @@ def announce_line(res: dict) -> str:
     return f"[{res['action'].upper()}] {res['rule']} @ {res['confidence']:.0%}"
 
 
-def lang_note(state: dict) -> str:
-    """T186: script guess for the audit trail (heuristic, not a claim)."""
-    t = state.get("message", "")
-    if any("\u0600" <= c <= "\u06ff" for c in t):
-        return "ar"
-    if any("\u0400" <= c <= "\u04ff" for c in t):
-        return "ru"
-    if any("\u4e00" <= c <= "\u9fff" for c in t):
-        return "zh"
-    if any(ord(c) > 127 for c in t):
-        return "non-latin"
-    return "latin"
+# T896: lang_note (T186) is gone — detect_script (T492) / detect_lang (T857)
+# do the same job with a dominant-script tally instead of any-char hits, and
+# everything that wanted the note already calls those. No dead twins.

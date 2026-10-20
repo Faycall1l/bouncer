@@ -289,3 +289,19 @@ def test_pool_stats_carry_checkpoint_tags_bounded():  # T895
     body = client.get("/stats").json()
     assert set(body["pool"]) == {"size", "max_n", "hits", "creates",
                                  "evictions", "by_model"}, body["pool"]
+
+
+def test_explain_has_no_dead_lang_twin():  # T896
+    """lang_note (T186) was an any-character script guess nothing called —
+    detect_script (T492) and detect_lang (T857) do the job with a dominant
+    tally. The box is a fork: wire it in or delete it; we deleted it, and
+    this test keeps the third option (leave dead code around) off the table."""
+
+    from gatekeeper import explain
+
+    assert not hasattr(explain, "lang_note"), "dead twin is gone, not dormant"
+    # the live detectors still carry the T186/T492 territory
+    from gatekeeper.normalize import detect_script
+
+    assert detect_script("مرحبا بالجميع") == "arabic"
+    assert detect_script("hello there") == "latin"
