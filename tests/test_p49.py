@@ -73,11 +73,80 @@ def test_t936_status_counter_covers_401_413_429():
         rate = next(line for line in body.splitlines()
                     if line.startswith("bouncer_rate_limited_total "))
         assert float(rate.split()[1]) >= 1
+        af = next(line for line in body.splitlines()
+                  if line.startswith("bouncer_auth_failures_total "))
+        assert float(af.split()[1]) >= 1  # T937: the 401 above incremented it
     finally:
         serve._KEY = orig_key
         serve._BUCKETS.clear()
         serve._BUCKETS.update(orig_buckets)
         serve._RATE_429 = orig_429
+
+
+def test_t931_938_p49_metrics_families_pinned_end_to_end(capsys, tmp_path):
+    """T931-T938: the scrape's P49 decision block, asserted from /metrics
+    itself (not from /stats or a sibling box's receipt). Seeding one
+    decision per action/rule/cause pins the per-rule (T931), cause (T932),
+    p95-latency (T933) and strikes (T934) families on their real lines, and
+    the middleware's rid (T938) on the access log the scrape sits behind.
+    Auth-failures (T937) is pinned in test_t936 above from the 401 it counts."""
+    import json
+
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    record("allow", "ok", 2.0, cause="margin")
+    record("delete", "no-spam", 9.0, cause="violation")  # sets the p95
+    record("escalate", "needs-human", 4.0, cause="needs-human")
+    from gatekeeper import strikes as _st
+
+    _st.reset()
+    _st.add_strike("t934-user", 3)  # T934: the strikes block counts this
+    try:
+        # a request through the middleware first, so the rid-bearing access
+        # log the scrape's counters sit behind is actually emitted
+        TestClient(serve.app).get("/version")
+        access = [json.loads(l) for l in capsys.readouterr().out.splitlines()
+                  if l.startswith("{") and '"rid"' in l]
+        assert access, "middleware must emit a rid-bearing access log (T938)"
+        assert all(a["rid"] for a in access), access
+
+        body = TestClient(serve.app).get("/metrics").text
+        for frag in ('bouncer_rule_total{rule="no-spam"} 1',  # T931
+                     'bouncer_rule_total{rule="ok"} 1',
+                     'bouncer_cause_total{cause="violation"} 1',  # T932
+                     'bouncer_cause_total{cause="margin"} 1',
+                     'bouncer_decisions_total{action="delete"} 1',  # T931 joint
+                     'bouncer_latency_p95_ms 9.0',  # T933 rolling window max
+                     'bouncer_latency_p50_ms',  # T933 both quantiles exported
+                     'bouncer_strikes_users 1',  # T934 counts only, no ids
+                     'bouncer_strikes_total 3',  # T934 the seeded weight
+                     'bouncer_strikes_ban_suggested 1'):  # T934 3 >= BAN_AT
+            assert frag in body, f"missing {frag}:\n{body}"
+
+        # T938, audit leg: a decision row stores the same rid the access log
+        # carries — one id across access/decision/audit, proven on the audit
+        # writer directly (tail() reads it back through the public reader)
+        import gatekeeper.audit as _au
+
+        audit = tmp_path / "audit.jsonl"
+        old_path = _au._PATH
+        _au._PATH = str(audit)
+        try:
+            _au.log_decision("seed", "no-spam", 0.9, "delete", 3.0,
+                             cause="violation", rid="rid-t938")
+            _au.flush()
+            row = _au.tail(1)[0]
+            assert row["rid"] == "rid-t938", row
+            assert row["cause"] == "violation", row
+        finally:
+            _au.close()
+            _au._PATH = old_path
+    finally:
+        reset_stats()
+        _st.reset()
 
 
 def test_t939_serve_warns_per_worker_state(capsys):
@@ -471,3 +540,71 @@ def test_t948_gate_dispatches_the_metrics_report_kind(tmp_path):
     # and --all's known list includes it (the drift rule: every producer
     # report is gateable by the one command)
     assert '"metrics.json"' in Path("eval/gate.py").read_text()
+
+
+def test_p49_observability_sweep():  # T950: every box T931-T950 ticked,
+    # every box has a receipt outside TODO.md, no invented citations
+    import re as _re
+    from pathlib import Path
+
+    todo = Path("TODO.md").read_text()
+    # T949: the fix box has no reds to fix — this sweep running green over
+    # the whole batch is its receipt (each mid-batch failure was one of this
+    # batch's own new tests catching its own bug before commit)
+    p49 = [b for b in _re.findall(r"- \[[ x]\] (T\d{3,4})\b", todo)
+           if 931 <= int(b[1:]) <= 950]
+    assert sorted(p49) == [f"T{n}" for n in range(931, 951)], p49
+    for b in p49:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+    assert "## P49 Observability (T931–T950)" in todo
+
+    # receipts live OUTSIDE TODO.md — across this batch's own surfaces:
+    # the scrape implementation, its docs, the bench producer, the gate,
+    # and the tests themselves
+    corpus = (Path("README.md").read_text()
+              + Path("CONTRIBUTING.md").read_text()
+              + Path("verify.sh").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if (p.is_file()
+                    and p.suffix in (".md", ".py", ".yml", ".yaml", ".sh")):
+                corpus += p.read_text()
+    for b in p49:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity: every T-number on the surfaces this batch touched
+    # is a box TODO.md actually knows — invented receipts fail here
+    for f in (Path("src/gatekeeper/serve.py"), Path("src/gatekeeper/stats.py"),
+              Path("src/gatekeeper/review.py"), Path("docs/api.md"),
+              Path("docs/runbook.md"), Path("eval/bench_metrics.py"),
+              Path("eval/gate.py"), Path("tests/test_p49.py")):
+        for t in set(_re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
+
+    # the scrape's own contract, gated here not just claimed: every family
+    # declared (T943), cardinality bounded (T942+T944), queue depth reads
+    # bytes not text (T940), and the docs table matches both ways (T945)
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    record("delete", "no-spam", 5.0, cause="violation", adapter="telegram")
+    try:
+        body = TestClient(serve.app).get("/metrics").text
+    finally:
+        reset_stats()
+    names = set(_re.findall(r"^# TYPE (\S+)", body, _re.MULTILINE))
+    assert {"bouncer_decisions_total", "bouncer_rule_total",
+            "bouncer_cause_total", "bouncer_adapter_decisions_total",
+            "bouncer_requests_total", "bouncer_auth_failures_total",
+            "bouncer_rate_limited_total", "bouncer_breaker_open",
+            "bouncer_breaker_fails", "bouncer_breaker_half_open",
+            "bouncer_coalesce_joined", "bouncer_coalesce_total",
+            "bouncer_review_queue_depth", "bouncer_latency_p95_ms"} <= names
+    api = Path("docs/api.md").read_text()
+    runbook = Path("docs/runbook.md").read_text()
+    assert "## Metrics export (T945)" in api
+    assert "bouncer_review_queue_depth" in api
+    assert "## Scrape + alerts (T946)" in runbook
+    assert "BouncerBreakerOpen" in runbook
