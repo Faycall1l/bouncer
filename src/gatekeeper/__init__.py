@@ -32,7 +32,7 @@ from .cache import CACHE  # T023/T024 decision cache
 from .config import GateConfig, questions_knob
 from .explain import explain as _explain  # T273
 from .normalize import clean_text, detect_script, extract_links
-from .pool import model_for_lang, release_memory  # T458+T761: json/os, no cycle
+from .pool import model_for_lang, model_for_script, release_memory  # T458+T891+T761
 from .presets import get_preset, list_presets
 from .review import add as _qadd  # T273
 from .rules import RuleError, validate_rules
@@ -460,7 +460,11 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         state["lang_hint"] = lang  # T041: nudge multilingual routing
     if model is None:  # T458: ar/zh/ru ride multilingual unless pinned
         model = __import__("os").environ.get("BOUNCER_MODEL_DIR", "").strip() \
-            or model_for_lang(lang)  # T663: a finetuned dir beats lang routing
+            or model_for_lang(lang) or model_for_script(state["script"])  # T891:
+    # ^ T663: finetuned dir beats lang routing; T891: a hint with a
+    # checkpoint opinion (ar/zh/ru...) routes first, otherwise the message's
+    # own script picks — a stale "en" default never strands Arabic on the
+    # auto route (T897's per-adapter lang override is the escape hatch)
     if model is not None and not _supports_model(r):  # T458: legacy 2-arg routers
         model = None  # (lang_hint in state still applies)
     tripped = _breaker_tripped()  # T512: short-circuit, no model call while open

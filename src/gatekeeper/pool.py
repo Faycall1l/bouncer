@@ -88,3 +88,16 @@ def model_for_lang(lang: str | None) -> str | None:
     if lang in ("ar", "zh", "ru", "fa", "ur", "he"):
         return "multilingual"
     return None
+
+
+def model_for_script(script: str | None) -> str | None:  # T891
+    """The same multilingual route, keyed off the message's detected script
+    (T492) instead of the caller's lang hint. The checkpoint choice is
+    script-level — arabic/cyrillic/cjk all ride one multilingual model —
+    so the detection only has to be script-honest, exactly what
+    detect_script claims. Latin/other return None: auto-route stays the
+    documented default (README), and we never claim a language from a
+    script (T857's identity-claim refusal, one layer up)."""
+    if script in ("arabic", "cyrillic", "cjk"):
+        return "multilingual"
+    return None

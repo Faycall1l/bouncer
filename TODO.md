@@ -983,7 +983,7 @@
 - [x] T890 test: P46 CLI/rules/storage sweep (every box ticked, receipts outside TODO.md)
 
 ## P47 Multilingual routing (T891–T910)
-- [ ] T891 multilingual: checkpoint routing keys off detected script, not only the caller's lang
+- [x] T891 multilingual: checkpoint routing keys off detected script, not only the caller's lang
 - [ ] T892 serve: /predict autofills lang from script detection when lang omitted
 - [ ] T893 cli: check/watch accept --lang auto explicitly (script detection, documented)
 - [ ] T894 presets: PRESET_LANG coverage — every routed language has a pack or is listed packless in docs
