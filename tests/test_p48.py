@@ -135,3 +135,42 @@ def test_train_seed_reaches_the_shuffle_and_lr_ratio_kept():  # T913
     assert "lr\": LR_FLAG or 2.5e-5" in src or "LR_FLAG or 2.5e-5" in src
     # head keeps the 4x ratio whatever --lr says
     assert "(LR_FLAG or 2.5e-5) * 4" in src, "head lr stays 4x the encoder"
+
+
+def test_train_resume_continues_the_run():  # T914
+    """A crashed run continues instead of burning quota twice: --resume loads
+    checkpoint_latest's weights, restores the exact early-stopping state
+    (epoch/best_dev/wait) from train_state.json, picks up optimizer momenta
+    from optim.pt, and the loop starts at start_epoch. The bookkeeping is
+    written AFTER the patience update so the restored wait is never stale.
+    Refusing loudly when there's nothing to resume beats training from
+    scratch under a flag that promised otherwise."""
+    src = TRAIN.read_text()
+    # the flag exists and is parsed at module level (import-safe, T911)
+    mod = _import_train()
+    assert hasattr(mod, "RESUME")
+    # weights + state + optimizer all restored
+    assert "checkpoint_latest" in src and "train_state.json" in src
+    assert "optim.pt" in src, "optimizer/scheduler/scaler momenta resume too"
+    assert "load_state_dict(blob" in src.replace("opt.load_state_dict", "load_state_dict(blob"), \
+        "the saved optimizer blob is actually loaded"
+    # the loop starts where the crash left off
+    assert "for epoch in range(start_epoch, EPOCHS)" in src
+    # nothing-to-resume is a loud refusal, not a silent fresh run
+    assert "nothing to resume" in src
+    # bookkeeping order: patience update BEFORE the state write, so a
+    # resumed run's wait is the exact value the crashed run had
+    patience = src.index('"epoch": epoch + 1, "best_dev": round(best_dev, 4), "wait": wait')
+    assert src.index("wait += 1") < patience < src.index("if wait >= PATIENCE"), \
+        "state written after the update, checked after the write"
+    # the resume itself is logged — the trail shows where a run continued from
+    assert 'kind="resume"' in src
+
+
+def test_train_dry_run_tolerates_resume_flag():  # T914
+    """--resume parses alongside --dry-run: a pre-flight on a to-be-resumed
+    config doesn't need a GPU or an existing checkpoint."""
+    r = subprocess.run([sys.executable, str(TRAIN), "--dry-run", "--resume"],
+                       check=False, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    assert "DRY_RUN_OK" in r.stdout

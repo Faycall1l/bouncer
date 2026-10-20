@@ -39,12 +39,19 @@ FLAGS.add_argument("--lr", type=float, default=0.0,
                         "learns 4x the encoder rate, as in the 2xT4 recipe")
 FLAGS.add_argument("--seed", type=int, default=7,
                    help="row-shuffle seed (default 7); same seed, same split order")
+FLAGS.add_argument("--resume", action="store_true",  # T914
+                   help="continue an interrupted run from OUT/checkpoint_latest + "
+                        "train_state.json + optim.pt (written every epoch). NOTE: "
+                        "in-memory best weights don't survive a crash — if the "
+                        "resumed run never beats the restored best_dev, the "
+                        "shipped checkpoint is the last epoch, not the best")
 _known, _rest = FLAGS.parse_known_args()  # tolerate Kaggle's own argv noise
 MAX_SAMPLES = _known.max_samples
 DRY_RUN = _known.dry_run
 EPOCHS_FLAG = _known.epochs
 LR_FLAG = _known.lr
 SEED = _known.seed
+RESUME = _known.resume
 
 # --- T652: the only block you edit for adapter runs ---
 # target_modules must match YOUR encoder's attention projections.
@@ -233,10 +240,29 @@ def main():  # T911: every GPU/network/data step lives behind this guard
     total = (len(train_items) // (MICRO * ACCUM)) * EPOCHS
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, total), eta_min=1e-6)
     scaler = torch.amp.GradScaler("cuda", enabled=True)
-    best_state, best_dev, wait = None, 0.0, 0  # T653: early-stopping state
+    best_state, best_dev, wait, start_epoch = None, 0.0, 0, 0  # T653: early-stopping state
+    if RESUME:  # T914: pick up where the crash left off — no quota burned twice
+        resume_dir = os.path.join(OUT, "checkpoint_latest")
+        st_path = os.path.join(OUT, "train_state.json")
+        assert os.path.isdir(resume_dir) and os.path.exists(st_path), \
+            "--resume needs checkpoint_latest + train_state.json in OUT (nothing to resume)"
+        model.load_state_dict(load_file(os.path.join(resume_dir, "model.safetensors")),
+                              strict=True)
+        with open(st_path) as f:
+            st = json.load(f)
+        start_epoch, best_dev, wait = st["epoch"], st["best_dev"], st["wait"]
+        opt_path = os.path.join(OUT, "optim.pt")
+        if os.path.exists(opt_path):  # optimizer/scheduler/scaler pick up their momentum
+            blob = torch.load(opt_path, map_location="cpu", weights_only=True)
+            opt.load_state_dict(blob["opt"])
+            sched.load_state_dict(blob["sched"])
+            scaler.load_state_dict(blob["scaler"])
+        print(f"RESUME from epoch {start_epoch} best_dev={best_dev:.3f} wait={wait}",
+              flush=True)
+        log_rec(kind="resume", epoch=start_epoch, best_dev=round(best_dev, 4), wait=wait)
     t0 = time.time()
 
-    for epoch in range(EPOCHS):
+    for epoch in range(start_epoch, EPOCHS):
         random.seed(42 + epoch); random.shuffle(train_items)
         sigma, eloss, nb = sigma_at(epoch, EPOCHS, 0.4, 0.1), 0.0, 0
         opt.zero_grad(set_to_none=True)
@@ -271,11 +297,18 @@ def main():  # T911: every GPU/network/data step lives behind this guard
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
         else:
             wait += 1
-            if wait >= PATIENCE:
-                print(f"EARLY_STOP at epoch {epoch+1}: no dev improvement in "
-                      f"{PATIENCE} epoch(s); best dev={best_dev:.3f}", flush=True)
-                log_rec(kind="early_stop", epoch=epoch + 1, best_dev=round(best_dev, 4))
-                break
+        # T914: resume bookkeeping — written AFTER the patience update so a
+        # resumed run continues with the exact early-stopping state; the
+        # optimizer momenta land in optim.pt beside it
+        with open(os.path.join(OUT, "train_state.json"), "w") as f:
+            json.dump({"epoch": epoch + 1, "best_dev": round(best_dev, 4), "wait": wait}, f)
+        torch.save({"opt": opt.state_dict(), "sched": sched.state_dict(),
+                    "scaler": scaler.state_dict()}, os.path.join(OUT, "optim.pt"))
+        if wait >= PATIENCE:
+            print(f"EARLY_STOP at epoch {epoch+1}: no dev improvement in "
+                  f"{PATIENCE} epoch(s); best dev={best_dev:.3f}", flush=True)
+            log_rec(kind="early_stop", epoch=epoch + 1, best_dev=round(best_dev, 4))
+            break
 
     # --- calibrate + save ---
     if best_state is not None:  # T653: ship the best epoch, not the last

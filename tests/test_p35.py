@@ -23,7 +23,7 @@ def _src(path):
 def test_train_script_asserts_before_training():  # T651: every stage gated
     src = _src("kaggle/train/train.py")
     assert src.count("assert ") >= 8  # one assert per stage boundary
-    loop = src.index("for epoch in range(EPOCHS)")
+    loop = src.index("for epoch in range(start_epoch, EPOCHS)")
     # indented since T911's main() wrap — the guarantee is positional, not column-0
     for m in re.finditer(r"^\s*assert ", src, re.MULTILINE):
         assert m.start() < loop, "an assert sits after training started"
@@ -69,7 +69,7 @@ def test_lora_single_block_at_top():  # T652: knobs live in one editable block
     src = _src("kaggle/train/train.py")
     block = src.index("LORA = {")
     build = src.index("build_model(")
-    assert block < build < src.index("for epoch in range(EPOCHS)")
+    assert block < build < src.index("for epoch in range(start_epoch, EPOCHS)")
     for key in ('"enabled": False', '"r":', '"alpha":', '"dropout":', '"target_modules":'):
         assert key in src
     # optimizer only touches trainable params (full FT no-op, LoRA-correct)
@@ -81,7 +81,7 @@ def test_early_stopping_wiring():  # T653: dev carve + patience + best restore
     assert "PATIENCE = 1" in src
     assert "train_rows[:-200], train_rows[-200:]" in src  # dev carved, test held out
     assert "dev_rule_acc(" in src and "EARLY_STOP" in src
-    loop, calib = src.index("for epoch in range(EPOCHS)"), src.index("model.eval()")
+    loop, calib = src.index("for epoch in range(start_epoch, EPOCHS)"), src.index("model.eval()")
     dev_call = src.index("dev_rule_acc(os.path.join")
     assert loop < dev_call < calib  # dev eval inside the loop
     restore = src.index("ship the best epoch")
