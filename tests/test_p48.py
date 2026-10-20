@@ -678,3 +678,149 @@ def test_finetune_pastein_fallback_removed():  # T923: the warning is now a fail
     assert "test_finetune_pastein_matches_train_signature" in src, \
         "the comment names the test that enforces it"
     assert "FAILURE" in src and "T923" in src
+
+
+# --- T924: data gate runs BEFORE training start — hash mismatch refuses -------
+
+def _good_row(rule="spam"):
+    return {"state": {"message": "BUY NOW!!!", "history": ["hi"],
+                      "rules": {"caps": "no caps", "spam": "no spam"}},
+            "labels": {"rule": rule, "harm": "suspicious", "hype": "hyped",
+                       "jailbreak": False, "escalate": True}}
+
+
+def test_data_gate_clean_dataset_passes(tmp_path):  # T924
+    """validate_data reports zero problems on a well-formed file and the
+    receipt distinguishes 'no pin to check' from 'pin matched' — an absent
+    sidecar must never read as a pass."""
+    mod = _import_train()
+    data = tmp_path / "rows.jsonl"
+    data.write_text(json.dumps(_good_row()) + "\n")
+
+    out = mod.data_gate(str(data))
+    assert out["problems"] == [], out
+    assert out["pin"] == "absent", "no sidecar: recorded as absent, not as match"
+
+    # with the publisher's pin present and matching, the pin reads as a match
+    import hashlib
+
+    digest = hashlib.sha256(data.read_bytes()).hexdigest()
+    (tmp_path / "rows.jsonl.sha256").write_text(f"{digest}  rows.jsonl\n")
+    out = mod.data_gate(str(data))
+    assert out["problems"] == [] and out["pin"] == "match", out
+
+
+def test_data_gate_hash_mismatch_refuses(tmp_path):  # T924
+    """A sidecar that doesn't hash to the bytes on disk means this is not the
+    dataset that was published — the gate refuses with BOTH digests named, and
+    refusing here means refusing BEFORE training, not before push."""
+    mod = _import_train()
+    data = tmp_path / "rows.jsonl"
+    data.write_text(json.dumps(_good_row()) + "\n")
+    (tmp_path / "rows.jsonl.sha256").write_text(
+        f"{'0' * 64}  rows.jsonl\n")  # some other dataset's digest
+
+    out = mod.data_gate(str(data))
+    assert out["pin"] == "mismatch"
+    assert out["problems"], "a hash mismatch must refuse"
+    msg = out["problems"][0]
+    assert "hash mismatch" in msg and "0" * 12 in msg, msg
+    assert "upload_dataset_kaggle" in msg, "the refusal names the fix"
+
+
+def test_data_gate_bad_rows_refuse(tmp_path):  # T924
+    """Schema problems from eval/validate_data.py refuse too — including bad
+    JSON, which raw json.loads would only reveal as a traceback mid-read."""
+    mod = _import_train()
+    data = tmp_path / "rows.jsonl"
+    data.write_text(json.dumps(_good_row()) + "\n"
+                    + '{"state": "not-an-object"}\n'
+                    + "{not json at all\n")
+
+    out = mod.data_gate(str(data))
+    assert len(out["problems"]) >= 2, out
+    assert any("schema" in p for p in out["problems"]), out
+    assert any("bad JSON" in p for p in out["problems"]), out
+
+
+def test_data_gate_unreachable_checker_refuses(monkeypatch, tmp_path):  # T924
+    """A checker that can't be found is a problem, never a green light — the
+    same rule the ship gate applies (T915)."""
+    mod = _import_train()
+    monkeypatch.setattr(mod, "find_validate_data", lambda: None)
+    data = tmp_path / "rows.jsonl"
+    data.write_text(json.dumps(_good_row()) + "\n")
+
+    out = mod.data_gate(str(data))
+    assert out["problems"], "no checker -> refuse, not pass"
+    assert "validate_data.py not reachable" in out["problems"][0]
+    assert "kernel input" in out["problems"][0]
+    assert out["pin"] == "not checked"
+
+
+def test_data_gate_wired_before_training_source():  # T924: source wiring
+    """The gate sits in main() before rows are read and before the epoch loop,
+    it logs a receipt, and refusal is a training refusal (return 1), not just
+    a push refusal. Provenance is filled first so the receipt carries the hash."""
+    src = TRAIN.read_text()
+    gate = src.index("gate = data_gate(paths[0])")
+    rows = src.index("rows_raw = [json.loads")
+    loop = src.index("for epoch in range(start_epoch, EPOCHS)")
+    assert src.index("fill_provenance(paths[0])") < gate, \
+        "provenance first: the data_gate receipt must carry dataset_sha256"
+    assert gate < rows < loop, "the gate runs before the data is even parsed"
+    assert 'log_rec(kind="data_gate"' in src, "the refusal/pass is in the trail"
+    assert "return 1" in src[src.index("gate = data_gate"):loop], \
+        "a refused dataset must stop the run, not just the push"
+    # pin side: the uploader stages a .sha256 per file (the gate's counterpart)
+    up = Path("scripts/upload_dataset_kaggle.py").read_text()
+    assert ".sha256" in up and "sha256_file" in up
+    assert "stage(" in up, "staging writes the pins alongside the dataset"
+
+
+def test_upload_dataset_stage_writes_matching_pins(tmp_path):  # T924: producer side
+    """The pins upload writes are exactly what train.py's gate checks — a
+    round-trip: stage the files, hand the staged copy to data_gate, match.
+    Tamper with one byte and the same call refuses."""
+    import importlib.util as _ilu
+
+    spec = _ilu.spec_from_file_location(
+        "upload_dataset_kaggle", Path("scripts/upload_dataset_kaggle.py"))
+    up = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(up)
+
+    src = tmp_path / "gatekeeper-12k.jsonl"
+    src.write_text(json.dumps(_good_row()) + "\n")
+    stage_dir = tmp_path / "stage"
+    staged = up.stage([str(src)], str(stage_dir))
+
+    pin = stage_dir / "gatekeeper-12k.jsonl.sha256"
+    assert pin.exists(), f"staging must write pins: staged={staged}"
+    assert Path(staged[-1]).name == pin.name
+
+    mod = _import_train()
+    out = mod.data_gate(str(stage_dir / "gatekeeper-12k.jsonl"))
+    assert out["problems"] == [] and out["pin"] == "match", out
+
+    # one flipped byte on the way to the kernel -> mismatch, refuse
+    staged_file = stage_dir / "gatekeeper-12k.jsonl"
+    staged_file.write_text(staged_file.read_text().replace("spam", "spzm"))
+    out = mod.data_gate(str(staged_file))
+    assert out["pin"] == "mismatch" and out["problems"], out
+
+
+def test_log_rec_safe_before_clock_and_creates_log_dir(tmp_path):  # T924 plumbing
+    """Records written before the training clock starts (the data-gate receipt,
+    the --resume record) carry t=null instead of crashing on None, and the log
+    directory is created — the trail can open before any checkpoint exists."""
+    mod = _import_train()
+    mod.t0 = None
+    mod.LOG = str(tmp_path / "not_yet" / "train_log.jsonl")
+    mod.log_rec(kind="data_gate", pin="absent", refused=False)
+    line = json.loads(Path(mod.LOG).read_text())
+    assert line["kind"] == "data_gate" and line["t"] is None
+    # once the clock runs, t is a number again
+    mod.t0 = 0.0
+    mod.log_rec(kind="step", epoch=1, step=1, loss=1.0)
+    line = json.loads(Path(mod.LOG).read_text().splitlines()[-1])
+    assert isinstance(line["t"], float)

@@ -21,6 +21,7 @@ and `--dry-run` parses + config-validates on any machine (T919).
 import argparse
 import glob
 import hashlib
+import importlib.util
 import json
 import os
 import random
@@ -76,7 +77,10 @@ HARM = ["safe", "suspicious", "harmful"]
 HYPE = ["dead", "chill", "hyped"]
 OUT = "/kaggle/working/bouncer-421m"
 LOG = os.path.join(OUT, "train_log.jsonl")  # T654: loss trail, no wandb required
-t0 = None  # training clock — set in main() when the run actually starts (T911)
+t0 = None  # training clock — set in main() when the epochs start (T911). Records
+           # written before that (the T924 data-gate receipt, the --resume record)
+           # carry t: null — the clock genuinely has not started yet; log_rec must
+           # not crash on t0=None, which is what it did when t0 was assumed set.
 PROVENANCE = {}  # T916: {dataset_sha256, git_sha, config} — stamped into every
                  # log_rec line once the run knows its inputs, so any number in
                  # the trail can be traced back to data + code + knobs
@@ -142,11 +146,67 @@ def dev_rule_acc(ckpt, rows_dev):  # T653: early-stopping signal, not the final 
     return ok / len(rows_dev)
 
 
+def find_validate_data():  # T924: where the schema checker may live
+    """validate_data.py beside this script, in the repo's eval/, or in a Kaggle
+    kernel input — same reachability question the ship gate asks (T915)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    return next((os.path.join(d, "validate_data.py") for d in
+                 [here, os.path.join(here, "..", "..", "eval")]
+                 + glob.glob("/kaggle/input/**", recursive=True)
+                 if os.path.exists(os.path.join(d, "validate_data.py"))), None)
+
+
+def data_gate(path):  # T924: schema + published hash refuse BEFORE training starts
+    """Receipt for 'may training start?': validate_data's full-file schema check
+    plus the publisher's hash pin. Both must pass — a checker that can't be
+    found is a problem, not a pass (same rule as the ship gate, T915), and a
+    .sha256 sidecar that doesn't match means this is NOT the dataset that was
+    published, so what else drifted? An absent sidecar records 'absent': there
+    was nothing to compare against, and pretending it matched would be a lie.
+
+    Runs BEFORE rows are parsed: check_file reports bad JSON as an error per
+    row, while raw json.loads would just crash with a traceback."""
+    vd = find_validate_data()
+    if vd is None:
+        return {"problems": [("validate_data.py not reachable — add the repo as a "
+                              "kernel input (T924): schema gate cannot run")],
+                "pin": "not checked"}
+    spec = importlib.util.spec_from_file_location("validate_data", vd)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    problems = [f"schema: {e}" for e in mod.check_file(path)]
+
+    pin = "absent"
+    pin_path = path + ".sha256"
+    if os.path.exists(pin_path):
+        try:
+            with open(pin_path) as f:
+                want = f.read().split()[0].lower()
+        except OSError as e:
+            return {"problems": problems + [f"pin unreadable: {e}"],
+                    "pin": "unreadable"}
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        got = h.hexdigest()
+        if got == want:
+            pin = "match"
+        else:
+            pin = "mismatch"
+            problems.append(
+                f"hash mismatch: dataset sha256 {got[:12]} != published {want[:12]} "
+                f"({os.path.basename(pin_path)}) — not the dataset that was "
+                "published; re-run scripts/upload_dataset_kaggle.py --yes")
+    return {"problems": problems, "pin": pin}
+
+
 def log_rec(**kw):  # T654: append-only JSONL — one object per line
-    kw.setdefault("t", round(time.time() - t0, 1))
+    kw.setdefault("t", None if t0 is None else round(time.time() - t0, 1))
     for k, v in PROVENANCE.items():  # T916: every record is traceable to its inputs
         kw.setdefault(k, v)
-    with open(LOG, "a") as f:
+    os.makedirs(os.path.dirname(LOG) or ".", exist_ok=True)  # T924: the trail can
+    with open(LOG, "a") as f:                               # open before any ckpt
         f.write(json.dumps(kw) + "\n")
 
 
@@ -253,9 +313,17 @@ def main():  # T911: every GPU/network/data step lives behind this guard
     # --- rows: gatekeeper jsonl -> {state, questions, expected} (T651: assert each stage) ---
     paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
     assert paths, "no /kaggle/input/**/*.jsonl — upload the dataset first (T657)"
+    fill_provenance(paths[0])  # T916: hash THIS file — the T924 receipt carries it too
+    gate = data_gate(paths[0])  # T924: schema + hash pin BEFORE anything trains
+    for p in gate["problems"]:
+        print("DATA_GATE:", p, file=sys.stderr, flush=True)
+    log_rec(kind="data_gate", pin=gate["pin"], refused=bool(gate["problems"]))  # receipt
+    if gate["problems"]:  # refusal is loud and refuses TRAINING, not just push
+        print(f"DATA_GATE: refusing to train — {len(gate['problems'])} problem(s), "
+              f"hash pin={gate['pin']} (T924)", file=sys.stderr, flush=True)
+        return 1
     with open(paths[0]) as f:
         rows_raw = [json.loads(line) for line in f]
-    fill_provenance(paths[0])  # T916: hash THIS file — every later log line carries it
     assert len(rows_raw) >= 2000, f"need 2000 rows (1500 train + 500 test), got {len(rows_raw)}"
     sample = rows_raw[0]
     assert "state" in sample and "labels" in sample, "row schema mismatch (T386)"

@@ -6,6 +6,7 @@ runs the kaggle CLI (`--version` updates an existing dataset instead of
 creating a new one).
 """
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -16,6 +17,33 @@ import tempfile
 DEFAULT_FILES = ["data/gatekeeper-12k.jsonl", "data/gatekeeper-12k.train.jsonl",
                  "data/gatekeeper-12k.dev.jsonl", "data/gatekeeper-12k.test.jsonl",
                  "data/CARD.md"]
+
+
+def sha256_file(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def stage(files: list, stage_dir: str) -> list:
+    """Copy planned files into stage_dir, plus one `<file>.sha256` pin per file.
+
+    The pins travel WITH the dataset, so train.py's data gate (T924) can refuse
+    a swapped/corrupted download before any training time is spent. Returns the
+    staged paths. Pure filesystem work — no network, testable.
+    """
+    os.makedirs(stage_dir, exist_ok=True)
+    staged = []
+    for path in files:
+        dst = os.path.join(stage_dir, os.path.basename(path))
+        shutil.copy(path, dst)
+        pin_path = dst + ".sha256"
+        with open(pin_path, "w") as f:
+            f.write(f"{sha256_file(path)}  {os.path.basename(path)}\n")
+        staged += [dst, pin_path]
+    return staged
 
 
 def row_count(path: str):
@@ -66,17 +94,15 @@ def main(argv=None) -> int:
         print("upload_dataset_kaggle: kaggle CLI not on PATH", file=sys.stderr)
         return 1
 
-    # stage exactly the planned files (never the whole data/ dir)
+    # stage exactly the planned files (never the whole data/ dir) + T924 hash pins
     with tempfile.TemporaryDirectory() as td:
-        stage = os.path.join(td, a.slug)
-        os.makedirs(stage)
-        for path in files:
-            shutil.copy(path, os.path.join(stage, os.path.basename(path)))
+        stage_dir = os.path.join(td, a.slug)
+        stage(files, stage_dir)
         if a.version:
-            cmd = ["kaggle", "datasets", "version", "-p", stage, "-m",
+            cmd = ["kaggle", "datasets", "version", "-p", stage_dir, "-m",
                    a.message or "gatekeeper dataset update"]
         else:
-            cmd = ["kaggle", "datasets", "create", "-p", stage, "--slug", a.slug]
+            cmd = ["kaggle", "datasets", "create", "-p", stage_dir, "--slug", a.slug]
         print("upload_dataset_kaggle: running:", " ".join(cmd))
         return subprocess.run(cmd, check=False).returncode
 

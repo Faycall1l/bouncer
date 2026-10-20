@@ -54,7 +54,12 @@ fresh start.
 
 ## Gate order (what has to pass before an HF push)
 
-1. **data asserts** — row schema, ≥2000 rows, splits non-empty (T386/T651).
+1. **data gate** — `validate_data.py` over the whole dataset (every row, bad
+   JSON included) plus the publisher's `.sha256` pin from
+   `upload_dataset_kaggle.py`, both run BEFORE training starts (T924). Schema
+   error or hash mismatch → refuse, `return 1`, nothing trains, quota untouched;
+   an absent pin is recorded as `absent`, never as a match. Then the row
+   asserts: schema, ≥2000 rows, splits non-empty (T386/T651).
 2. **train** — dev carve + early stopping; `DEV_FLOOR = 0.35` on dev
    rule_acc (T655).
 3. **eval_gatekeeper** on the held-out 500 → `eval_test.json` (T660).
@@ -91,6 +96,7 @@ a receipt. Never a fabricated per-language score.
 | run dies at hour 4, no push | quota exhaustion / preemption | `--resume` (T914) continues from `checkpoint_latest`; re-run with `--max-samples` sanity first, then full |
 | training fine, no HF push | the gate said no: dev < 0.35, test_acc < 0.403 (T655/T661), or **gate.py failed** (ECE/per-rule/abstention/latency — T915), or no `HF_TOKEN` | read `train_log.jsonl`: `no_push` records carry both floors **and** `full_gate`; a refusal is information, not an error |
 | `full_gate=not run` in `no_push` | eval_gatekeeper or gate.py unreachable (repo not a kernel input) | add the repo as a kernel input so both scripts are found, or run them locally against the written split |
+| `DATA_GATE: refusing to train` at startup | validate_data found bad rows, the `.sha256` pin doesn't match the downloaded dataset, or validate_data.py is unreachable (T924) | re-publish with `upload_dataset_kaggle.py --yes` (the pins travel with the dataset), or add the repo as a kernel input; nothing trained, no quota spent |
 | `temp.json` temps look extreme (>5, <0.5) | calibration slice too small or too easy | check `calib_items` count in `temp.json`; refit with more calibration rows before trusting probabilities |
 
 **Status: NOT RUN.** These kernels are documented and test-pinned; the

@@ -1018,7 +1018,7 @@
 - [x] T921 test: provenance fields present in log_rec output
 - [x] T922 docs: kaggle/README refresh — flags, resume, gate order
 - [x] T923 notebooks: finetune_kaggle.py signature drift check vs train.py (test-enforced, the fallback warning becomes a failure)
-- [ ] T924 data: validate_data gate runs before training start — hash mismatch refuses
+- [x] T924 data: validate_data gate runs before training start — hash mismatch refuses
 - [ ] T925 ft: eval report naming matches gate.py report-kind dispatch
 - [ ] T926 test: CPU smoke path scripted (bouncer-ft smoke) without CUDA
 - [ ] T927 ci: nightly runs the train.py CPU smoke (config parse + data validate, no weights)
