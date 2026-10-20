@@ -26,7 +26,10 @@ bouncer snapshot save snap-$(date +%F).json
 Honest scope: counters, strikes and the cache live in process memory (per
 worker), so `snapshot save` sees what *that* process accumulated — with
 the default `--workers 1` (T322) that's everything; with more workers,
-save from the one that serves the traffic you care about.
+save from the one that serves the traffic you care about. `/stats` and
+`/metrics` have the same scope (T939): each scrape is answered by one
+worker only, so the numbers under-report a multi-worker fleet; `bouncer
+serve --workers >1` prints this warning at startup.
 
 ## Restore
 

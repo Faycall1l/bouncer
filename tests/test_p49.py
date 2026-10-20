@@ -78,3 +78,29 @@ def test_t936_status_counter_covers_401_413_429():
         serve._BUCKETS.clear()
         serve._BUCKETS.update(orig_buckets)
         serve._RATE_429 = orig_429
+
+
+def test_t939_serve_warns_per_worker_state(capsys):
+    """T939: counters/strikes/cache (and therefore /stats + /metrics) are
+    per-worker process state — a multi-worker serve silently under-reports
+    every scrape. `bouncer serve --workers >1` now says so at startup; a
+    warning doctor can never issue (doctor is a separate invocation that
+    cannot see serve's flags), so the box's warn lives at serve start."""
+    import uvicorn
+
+    from gatekeeper import cli
+
+    orig = uvicorn.run
+    uvicorn.run = lambda *a, **k: None  # never actually serve
+    try:
+        for workers, warned in ((1, False), (3, True)):
+            rc = cli.main(["serve", "--workers", str(workers)])
+            err = capsys.readouterr().err
+            assert rc == 0
+            assert ("per-worker" in err) is warned, (workers, err)
+    finally:
+        uvicorn.run = orig
+    # the docs carry the same honest scope
+    from pathlib import Path
+
+    assert "under-report" in Path("docs/runbook.md").read_text()

@@ -754,6 +754,12 @@ def _cmd_serve(args) -> int:  # T547+T549: secrets/flags applied before uvicorn 
     if getattr(args, "cors", None):  # T549: flag beats env
         os.environ["BOUNCER_CORS"] = args.cors
     import uvicorn
+    if args.workers > 1:  # T939: the scrape sees ONE worker's counters
+        print(f"bouncer: --workers {args.workers}: counters, strikes, cache and "
+              "/stats//metrics are per-worker process state (no shared store) — "
+              "each scrape hits one worker only; keep workers at 1 for exact "
+              "numbers, or aggregate per-worker scrapes at the LB (docs/runbook.md)",
+              file=sys.stderr)
     kw: dict = {"workers": args.workers}
     keep_alive = getattr(args, "keep_alive", None)  # T838: getattr — callers
     limit = getattr(args, "limit_concurrency", None)  # may build args by hand
