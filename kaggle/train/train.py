@@ -20,6 +20,7 @@ and `--dry-run` parses + config-validates on any machine (T919).
 """
 import argparse
 import glob
+import hashlib
 import json
 import os
 import random
@@ -72,6 +73,43 @@ HYPE = ["dead", "chill", "hyped"]
 OUT = "/kaggle/working/bouncer-421m"
 LOG = os.path.join(OUT, "train_log.jsonl")  # T654: loss trail, no wandb required
 t0 = None  # training clock — set in main() when the run actually starts (T911)
+PROVENANCE = {}  # T916: {dataset_sha256, git_sha, config} — stamped into every
+                 # log_rec line once the run knows its inputs, so any number in
+                 # the trail can be traced back to data + code + knobs
+
+
+def fill_provenance(data_path):  # T916
+    """Hash the dataset that was actually read + record the code revision and
+    the knobs. Honest fallbacks, never fake values: unreadable file -> no
+    dataset hash (not an empty one), no git -> None (a Kaggle kernel has no
+    .git), config always present (it is knowable anywhere)."""
+    digest = None
+    try:
+        h = hashlib.sha256()
+        with open(data_path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        digest = h.hexdigest()
+    except OSError:
+        pass  # provenance must never crash a training run
+    git_sha = None
+    try:
+        g = subprocess.run(["git", "rev-parse", "HEAD"], check=False,
+                           capture_output=True, text=True, timeout=10)
+        if g.returncode == 0:
+            git_sha = g.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass  # kernel without git — None beats a stale or invented sha
+    PROVENANCE.clear()
+    PROVENANCE.update({
+        "dataset_path": os.path.basename(data_path),
+        "dataset_sha256": digest,
+        "git_sha": git_sha,
+        "config": {"max_samples": MAX_SAMPLES, "epochs": EPOCHS_FLAG,
+                   "lr": LR_FLAG, "seed": SEED, "resume": RESUME,
+                   "lora": dict(LORA), "dev_floor": DEV_FLOOR,
+                   "regex_floor": REGEX_FLOOR},
+    })
 
 
 def to_row(r):
@@ -102,6 +140,8 @@ def dev_rule_acc(ckpt, rows_dev):  # T653: early-stopping signal, not the final 
 
 def log_rec(**kw):  # T654: append-only JSONL — one object per line
     kw.setdefault("t", round(time.time() - t0, 1))
+    for k, v in PROVENANCE.items():  # T916: every record is traceable to its inputs
+        kw.setdefault(k, v)
     with open(LOG, "a") as f:
         f.write(json.dumps(kw) + "\n")
 
@@ -162,6 +202,7 @@ def main():  # T911: every GPU/network/data step lives behind this guard
     assert paths, "no /kaggle/input/**/*.jsonl — upload the dataset first (T657)"
     with open(paths[0]) as f:
         rows_raw = [json.loads(line) for line in f]
+    fill_provenance(paths[0])  # T916: hash THIS file — every later log line carries it
     assert len(rows_raw) >= 2000, f"need 2000 rows (1500 train + 500 test), got {len(rows_raw)}"
     sample = rows_raw[0]
     assert "state" in sample and "labels" in sample, "row schema mismatch (T386)"

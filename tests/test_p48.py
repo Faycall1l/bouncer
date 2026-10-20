@@ -254,3 +254,27 @@ def test_gate_py_thresholds_fail_a_model_the_two_number_gate_would_ship():  # T9
     no_abstain = dict(_GOOD_REPORT, abstention_rate=0.0)
     code, out = _run(no_abstain)
     assert code == 1, (code, out)
+
+
+# --- T916: provenance — every log line traces to data + code + knobs --------
+
+def test_provenance_fallbacks_are_honest():  # T916
+    """Missing inputs degrade to None/absence, never to invented values: an
+    unreadable file leaves no dataset hash (provenance must not crash a run),
+    and the config always records itself — it's knowable on any machine."""
+    mod = _import_train()
+    mod.PROVENANCE.clear()
+    mod.fill_provenance("/nonexistent/definitely-missing.jsonl")
+    assert mod.PROVENANCE["dataset_sha256"] is None, "no file, no hash"
+    assert mod.PROVENANCE["dataset_path"] == "definitely-missing.jsonl"
+    assert mod.PROVENANCE["config"]["seed"] == 7, "config is always knowable"
+
+
+def test_provenance_stamps_the_train_trail_source():  # T916: source wiring
+    src = TRAIN.read_text()
+    # filled right after the data is read — before anything logs
+    assert src.index("fill_provenance(paths[0])") < src.index("for epoch in range(start_epoch")
+    # every log_rec line carries it (stamped in log_rec, not per-call-site)
+    assert "for k, v in PROVENANCE.items()" in src
+    # provenance is recorded before the first record can possibly be written
+    assert "log_rec(kind=" in src
