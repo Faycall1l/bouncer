@@ -346,3 +346,44 @@ def test_adapter_lang_env_pin_beats_detection(monkeypatch):  # T897
     assert adapter_lang("zulip", latin) == "en", "the good pair still reads"
     monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "   ")
     assert adapter_lang("telegram", arabic) == "ar", "blank env: detect"
+
+
+def test_eval_i18n_measures_routing_with_honest_skip(tmp_path):  # T898
+    """eval_i18n no longer just asserts wiring — it measures routing: every
+    fixture row's message+hint goes through the moderate() chain
+    (lang -> script) and the chosen checkpoint is compared to the one the
+    row's language deserves; misfires land in routing.wrong and the gate
+    fails on them. Decision quality needs weights: with laya absent the
+    report carries a skip receipt naming what was and wasn't measured —
+    never a fabricated score."""
+    import json as _json
+    import subprocess
+    import sys as _sys
+
+    r = subprocess.run([_sys.executable, "eval/eval_i18n.py", "--json",
+                        "--out", str(tmp_path / "i18n.json")],
+                       check=False, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    report = _json.loads(r.stdout)
+    assert report["errors"] == [], "precondition: fixtures stay clean"
+    routing = report["routing"]
+    assert routing["n"] == report["n"] and routing["wrong"] == [], routing
+    assert routing["ok"] == routing["n"], "every row routed to its checkpoint"
+    # quality is skipped-with-receipt (no laya in the test env), not scored
+    q = report["quality"]
+    assert q["status"] == "skipped" and "not importable" in q["receipt"], q
+    assert "measured" in q["receipt"] and "not" in q["receipt"], "honest scope"
+
+    # the gate reads routing: a misfire FAILS it by name and count
+    sys.path.insert(0, "eval")
+    import gate
+    args = type("Args", (), {"min_n": 1})()  # gate only needs min_n here
+    bad = dict(report, routing=dict(routing, wrong=[{"lang": "ar"}]))
+    checks = {c["name"]: c for c in gate.collect_i18n(bad, args)}
+    assert checks["i18n_routing_wrong"]["ok"] is False
+    assert checks["i18n_routing_wrong"]["value"] == 1
+    # pre-T898 reports (no routing section) still gate on errors alone
+    old = {"n": 12, "errors": []}
+    checks = {c["name"]: c for c in gate.collect_i18n(old, args)}
+    assert "i18n_routing_wrong" not in checks
+    assert checks["i18n_errors"]["ok"] is True

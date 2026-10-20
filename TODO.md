@@ -990,7 +990,7 @@
 - [x] T895 pool: lang-tagged checkout stats — per-checkpoint hits visible in /stats pool block
 - [x] T896 explain: lang_note wired into check output or removed — no more dead code either way
 - [x] T897 adp: BOUNCER_ADAPTER_LANG per-platform override (explicit beats detected)
-- [ ] T898 eval: eval_i18n measures routing (script picks the right checkpoint) with honest skip-with-receipt when weights absent
+- [x] T898 eval: eval_i18n measures routing (script picks the right checkpoint) with honest skip-with-receipt when weights absent
 - [ ] T899 docs: cookbook multilingual recipe (lang hint, script detect, pack tags, pool behavior)
 - [ ] T900 docs: adapters README language section updated (passthrough now exists)
 - [ ] T901 test: script-detection routing sweep — ar/cyrillic/cjk/latin/mixed cases pinned

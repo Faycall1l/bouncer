@@ -120,7 +120,9 @@ def collect(report: dict, args) -> list:
 
 
 def collect_i18n(report: dict, args) -> list:
-    """T681: the i18n wiring eval must stay 0 errors — that's the whole gate."""
+    """T681: the i18n wiring eval must stay 0 errors — that's the whole gate.
+    T898: routing misfires fail it too (script picked the wrong checkpoint);
+    the quality section is a skip-with-receipt and never gates."""
     checks = []
     n = _num(report, "n")
     _add(checks, "report_n", f">= {args.min_n}", n,
@@ -130,6 +132,12 @@ def collect_i18n(report: dict, args) -> list:
         _add(checks, "i18n_errors", "== 0", len(errors), len(errors) == 0)
     else:
         _add(checks, "i18n_errors", "== 0", None, False)  # absent = bad shape, FAIL
+    routing = _get(report, "routing")  # T898: absent in pre-T898 reports
+    if isinstance(routing, dict):
+        wrong = routing.get("wrong")
+        if isinstance(wrong, list):
+            _add(checks, "i18n_routing_wrong", "== 0", len(wrong),
+                 len(wrong) == 0)
     return checks
 
 
