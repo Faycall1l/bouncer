@@ -107,6 +107,13 @@ _BUCKETS: dict = {}  # T054: >60 req/min per IP -> 429
 _RATE_LOCK = threading.Lock()  # T841: handlers run in the threadpool — the
 # check-then-append in _rate used to race, losing hits and admitting >60/min
 
+# T885: who answers what, plus the two failures worth alerting on —
+# 401 (someone is probing the key) and 429 (someone is over the line).
+_HTTP_LOCK = threading.Lock()
+_STATUS: dict = {}  # status code -> count, tallied by the access-log middleware
+_AUTH_FAILS = 0
+_RATE_429 = 0
+
 
 def _sweep(now: float) -> None:
     """T227: evict idle IPs so the bucket map can't grow without bound."""
@@ -143,6 +150,9 @@ def _rate(request: Request) -> None:
         hits.append(now)
         _BUCKETS[ip] = hits[-60:]
     if len(hits) > 60:
+        global _RATE_429  # T885: the rate-limit line is a counter, not a log
+        with _HTTP_LOCK:
+            _RATE_429 += 1
         from fastapi import HTTPException
         raise HTTPException(status_code=429, detail="rate limited",
                             headers={"Retry-After": "60"})  # T306
@@ -161,6 +171,9 @@ def _auth(request) -> None:
         if _KEY_OLD:
             good |= hmac.compare_digest(got, _KEY_OLD.encode("utf-8", "replace"))
         if not good:
+            global _AUTH_FAILS  # T885: key probing is visible in /metrics
+            with _HTTP_LOCK:
+                _AUTH_FAILS += 1
             from fastapi import HTTPException
             raise HTTPException(status_code=401, detail="bad API key")
 
@@ -195,6 +208,8 @@ async def _mw(request, call_next):
     else:
         resp = await call_next(request)
     ms = (time.time() - t0) * 1000
+    with _HTTP_LOCK:  # T885: request-count-by-status for the metrics scrape
+        _STATUS[str(resp.status_code)] = _STATUS.get(str(resp.status_code), 0) + 1
     resp.headers["X-Request-ID"] = rid
     resp.headers["X-Bouncer-ms"] = f"{ms:.1f}"
     resp.headers["X-Content-Type-Options"] = "nosniff"  # T304
@@ -324,6 +339,10 @@ def metrics(request: Request):  # T778: exposure gate before any counters leave
     lines += [f"bouncer_strikes_users {len(_table)}",
               f"bouncer_strikes_total {sum(_table.values())}",
               f"bouncer_strikes_ban_suggested {ban_sug}"]
+    lines += [f'bouncer_requests_total{{status="{s}"}} {n}'  # T885: by-status
+              for s, n in sorted(_STATUS.items())]  # counts, so 4xx/5xx show
+    lines += [f"bouncer_auth_failures_total {_AUTH_FAILS}",  # T885: key probing
+              f"bouncer_rate_limited_total {_RATE_429}"]  # T885: the 429 line
     from . import _BREAKER, _BREAKER_LOCK  # T520
     with _BREAKER_LOCK:
         is_open = time.time() < _BREAKER["open_until"]

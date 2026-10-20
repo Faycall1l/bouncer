@@ -651,3 +651,56 @@ def test_metrics_exports_rules_causes_p95_and_strikes(tmp_path, monkeypatch):
     assert "bouncer_strikes_total 3" in body, body
     assert "bouncer_strikes_ban_suggested 1" in body, body
     _st.reset()
+
+
+def test_metrics_counts_requests_auth_failures_and_429():  # T885
+    """The middleware sees every response, so /metrics answers who-asks-what:
+    requests counted by status code, plus dedicated counters for auth
+    failures (someone probing the key) and rate-limit rejections — the two
+    failures an operator alerts on without parsing an access log."""
+    from fastapi import HTTPException
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import serve
+
+    serve._STATUS.clear()
+    orig = (serve._AUTH_FAILS, serve._RATE_429)
+    serve._AUTH_FAILS = serve._RATE_429 = 0
+    serve._KEY = serve._KEY_OLD = ""
+    serve._BUCKETS.clear()
+    try:
+        client = TestClient(serve.app, raise_server_exceptions=False)
+        assert client.get("/health").status_code == 200
+        assert client.get("/nope").status_code == 404
+
+        # a wrong key under a configured key is a counted auth failure
+        # (/metrics is gated; /health is exempt by design)
+        serve._KEY = "t885-key-0123456789"
+        assert client.get("/metrics",
+                          headers={"X-API-Key": "wrong"}).status_code == 401
+        serve._KEY = ""
+
+        # hammering past 60/min trips the counter at the source
+        req = type("R", (), {"client": type("C", (), {"host": "9.9.9.9"})(),
+                             "headers": {}})()
+        try:
+            for _ in range(61):
+                serve._rate(req)
+        except HTTPException as e:
+            assert e.status_code == 429
+
+        body = TestClient(serve.app).get("/metrics").text
+        assert 'bouncer_requests_total{status="200"}' in body, body
+        assert 'bouncer_requests_total{status="404"}' in body, body
+        assert 'bouncer_requests_total{status="401"}' in body, body
+        auth = next(l for l in body.splitlines()
+                    if l.startswith("bouncer_auth_failures_total "))
+        rate = next(l for l in body.splitlines()
+                    if l.startswith("bouncer_rate_limited_total "))
+        assert float(auth.split()[1]) >= 1 and float(rate.split()[1]) >= 1
+        assert "9.9.9.9" not in body, "counters never leak a client ip"
+    finally:
+        serve._KEY = serve._KEY_OLD = ""
+        serve._AUTH_FAILS, serve._RATE_429 = orig
+        serve._STATUS.clear()
+        serve._BUCKETS.clear()

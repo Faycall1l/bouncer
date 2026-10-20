@@ -27,7 +27,8 @@ _(Last checked against v0.4.0.)_
   `GET /stats` (decisions + cache + version + uptime; gated like `/metrics`
   when `BOUNCER_KEY` is set — T842) · `GET /presets` ·
   `GET /metrics` (per-action counters, per-rule counters, cause counts,
-  latency p50/p95, strike totals (counts only), cache hits/misses/rate,
+  latency p50/p95, strike totals (counts only), requests by status, auth
+  failures, rate-limit rejections, cache hits/misses/rate,
   `bouncer_info{version}`, uptime, `bouncer_breaker_open`, `bouncer_pool_*`)
   — exposed to loopback or with `X-API-Key` once `BOUNCER_KEY` is set (T778;
   keyless servers are open everywhere anyway).
