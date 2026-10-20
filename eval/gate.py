@@ -247,6 +247,12 @@ def detect_kind(report: dict) -> str:
     """Gate family by report shape (T681-T683+T766; more families may follow)."""
     if "per_lang" in report:
         return "i18n"  # only eval_i18n.py produces per_lang
+    if "routing" in report:
+        # T908: a routing-shaped i18n report (T898's section on its own, e.g.
+        # a trimmed fixture run) is still an i18n family report — it must
+        # gate on routing misfires, not fall through to the generic eval
+        # collector and skip them silently
+        return "i18n"
     if "tripped" in report or "closed" in report:
         return "breaker"  # only breaker_sim.py produces these
     if "speedup" in report or "thrash" in report:

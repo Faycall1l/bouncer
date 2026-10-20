@@ -1000,7 +1000,7 @@
 - [x] T905 test: pool stats carry lang tags without unbounded cardinality
 - [x] T906 fix: P47 reds — any failure the sweep finds, fixed here (CI red since T898: test_eval_i18n_measures_routing_with_honest_skip asserted the skip branch only — CI has huggingface/laya, so the eval honestly reports weights-present and defers to eval_gatekeeper; the test now accepts either honest branch and never a fabricated score)
 - [x] T907 docs: api.md lang section refreshed (autofill, batch parity, script-vs-lang table)
-- [ ] T908 eval: i18n routing report kind added to gate.py dispatch
+- [x] T908 eval: i18n routing report kind added to gate.py dispatch
 - [ ] T909 bench: mixed-language pool bench — thrash risk measured, not folklore
 - [ ] T910 test: P47 multilingual sweep (every box ticked, receipts outside TODO.md)
 

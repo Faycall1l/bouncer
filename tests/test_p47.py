@@ -708,3 +708,46 @@ def test_pool_lang_tags_stay_bounded_under_cardinality_stress():  # T905
     for i in range(50):
         p2.get(model=f"/x/{i}")
     assert set(p2.stats()["by_model"]) == {"other"}
+
+
+def test_gate_dispatches_routing_reports_to_i18n_family():  # T908
+    """A report carrying T898's routing section dispatches to the i18n
+    collector even without per_lang — routing misfires gate as
+    i18n_routing_wrong instead of falling through to the generic eval
+    collector where they'd be skipped silently. Complete i18n reports
+    (per_lang present) are unchanged, and the absent-core-fields contract
+    still fails loudly rather than green-washing a partial report."""
+    import json as _json
+    import subprocess
+    import sys as _sys
+
+    sys.path.insert(0, "eval")
+    import gate
+
+    # routing section present, per_lang absent: i18n family, routing gated
+    trimmed = {"n": 12, "errors": [],
+               "routing": {"n": 12, "ok": 12, "wrong": []}}
+    assert gate.detect_kind(trimmed) == "i18n"
+    args = type("Args", (), {"min_n": 1})()
+    checks = {c["name"]: c for c in gate.COLLECTORS["i18n"](trimmed, args)}
+    assert checks["i18n_errors"]["ok"] is True
+    assert checks["i18n_routing_wrong"]["ok"] is True
+
+    # a routing misfire in that same trimmed report FAILS the gate
+    bad = dict(trimmed, routing={"n": 12, "ok": 11, "wrong": [{"lang": "ar"}]})
+    checks = {c["name"]: c for c in gate.COLLECTORS["i18n"](bad, args)}
+    assert checks["i18n_routing_wrong"]["ok"] is False
+
+    # a routing-only report with no errors/n at all is a BAD SHAPE: the
+    # collector fails it loudly (T673's skip never becomes a pass)
+    naked = {"routing": {"n": 3, "ok": 3, "wrong": []}}
+    assert gate.detect_kind(naked) == "i18n"
+    verdict_checks = gate.COLLECTORS["i18n"](naked, args)
+    assert any(c["ok"] is False for c in verdict_checks), "fails, not skips"
+
+    # and the real end-to-end report still dispatches and passes
+    r = subprocess.run([_sys.executable, "eval/eval_i18n.py", "--json"],
+                       check=False, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    report = _json.loads(r.stdout)
+    assert gate.detect_kind(report) == "i18n"
