@@ -747,3 +747,66 @@ def test_export_queue_is_the_appeal_audit_trail(tmp_path, monkeypatch,
     assert adjudicate(row_id, "reject") is not None
     assert main(["export", "--queue", "--out", str(out)]) == 0
     assert ",reject," in out.read_text().splitlines()[1]
+
+
+def test_config_validate_accepts_good_and_names_exact_problem(tmp_path,
+                                                              monkeypatch,
+                                                              capsys):  # T887
+    """`config validate` on a fully-loaded good config exits 0; every bad
+    config names the EXACT problem — the offending key, the offending field
+    with its value, the file — not just an E_* code. A lint that only says
+    'invalid config' makes the operator guess; this one points."""
+    monkeypatch.delenv("BOUNCER_CONFIG", raising=False)
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.chdir(work)
+
+    # a good config with every knob set passes as-is
+    good = work / "full.json"
+    good.write_text(json.dumps({
+        "allow_threshold": 0.9, "delete_threshold": 0.98,
+        "jailbreak_threshold": 0.95, "escalate_threshold": 0.7,
+        "margin_abstain": 0.1, "timeout_s": 4.0, "questions": 5,
+        "max_context_tokens": 2000, "history_n": 10, "breaker_n": 5,
+        "breaker_cool_s": 30.0, "quiet_hours": [22, 6],
+    }))
+    assert main(["config", "validate", "--json", str(good)]) == 0
+    assert f"ok: {good}" in capsys.readouterr().out
+
+    # unknown key: the key itself is named
+    bad = work / "bad.json"
+    bad.write_text(json.dumps({"warp_speed": 9}))
+    assert main(["config", "validate", "--json", str(bad)]) == 1
+    out = capsys.readouterr().out
+    assert "E_CONFIG" in out and "warp_speed" in out, out
+
+    # out-of-range field: field name AND value AND the allowed range
+    bad.write_text(json.dumps({"delete_threshold": 1.5}))
+    assert main(["config", "validate", "--json", str(bad)]) == 1
+    out = capsys.readouterr().out
+    assert "delete_threshold" in out and "1.5" in out, out
+    assert "must be in [0, 1]" in out, out
+
+    # wrong questions set: names the knob and both legal values
+    bad.write_text(json.dumps({"questions": 4}))
+    assert main(["config", "validate", "--json", str(bad)]) == 1
+    out = capsys.readouterr().out
+    assert "questions" in out and "4" in out and "3" in out and "5" in out, out
+
+    # bad quiet hours: the value shown as given
+    bad.write_text(json.dumps({"quiet_hours": [25, 1]}))
+    assert main(["config", "validate", "--json", str(bad)]) == 1
+    assert "quiet_hours" in capsys.readouterr().out
+
+    # malformed JSON: the decoder names the line/column it choked on
+    bad.write_text('{"allow_threshold": ')
+    assert main(["config", "validate", "--json", str(bad)]) == 1
+    out = capsys.readouterr().out
+    assert "not valid JSON" in out and "line" in out, out
+
+    # broken TOML: the FILE is named in the failure line
+    bt = work / "bt.toml"
+    bt.write_text("nope = [unclosed\n")
+    assert main(["config", "validate", "--toml", str(bt)]) == 1
+    out = capsys.readouterr().out
+    assert "fail:" in out and str(bt) in out and "E_ADAPTER" in out, out
