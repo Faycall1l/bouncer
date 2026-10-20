@@ -206,9 +206,10 @@ def test_max_samples_smoke_flag():  # T658: smoke truncation without breaking sp
     assert flag < src.index("rows_raw = rows_raw[:MAX_SAMPLES]") < src.index("train_items, calib_items")
 
 
-def test_smoke_run_path_documented():  # T659: 50 rows, 1 epoch, documented shape
+def test_smoke_run_path_documented():  # T659+T913: 50 rows, 1 epoch default
     src = _src("kaggle/train/train.py")
-    assert 'EPOCHS = 1 if MAX_SAMPLES else 3' in src
+    # T913: --epochs can override, but the smoke default stays 1 epoch
+    assert "EPOCHS = EPOCHS_FLAG or (1 if MAX_SAMPLES else 3)" in src
     assert "--max-samples 50" in src  # train.py docstring documents the path
     readme = _src("notebooks/README.md")
     assert "--max-samples 50" in readme and "TRAIN_OK" in readme

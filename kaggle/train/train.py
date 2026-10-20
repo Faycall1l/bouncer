@@ -8,9 +8,12 @@ Input schema (T386): JSONL rows from data/synth_rules.py —
             hype: dead|chill|hyped, jailbreak: bool, escalate: bool}}
 Input is read from the first /kaggle/input/**/*.jsonl file; 1500 train / 500 test.
 Smoke path (T659): `--max-samples 50` truncates to 50 rows (40/5/5 split) and
-forces 1 epoch — validates data -> items -> train -> calibrate -> eval for a
+defaults to 1 epoch (T913: `--epochs` overrides) — validates data -> items ->
+train -> calibrate -> eval for a
 fraction of the quota. Run it first, every time; if it can't print TRAIN_OK,
 the full run won't either.
+Hyperparameters (T913): `--epochs`/`--lr`/`--seed` — 0/absent means the
+shipped default, so a plain `python train.py` reproduces the 2xT4 recipe.
 Import-safe on CPU (T911): importing this module does no pip install, no GPU
 assert, no data read — deps install and the CUDA check happen inside main(),
 and `--dry-run` parses + config-validates on any machine (T919).
@@ -29,9 +32,19 @@ FLAGS.add_argument("--max-samples", type=int, default=0,
                    help="truncate total rows for a smoke run (0 = full dataset)")
 FLAGS.add_argument("--dry-run", action="store_true",
                    help="T911: parse + config-validate, then exit (no GPU/data/weights)")
+FLAGS.add_argument("--epochs", type=int, default=0,  # T913: the three knobs
+                   help="epoch count (0 = default: 1 for smoke runs, 3 full)")
+FLAGS.add_argument("--lr", type=float, default=0.0,
+                   help="encoder learning rate (0 = default 2.5e-5); the head "
+                        "learns 4x the encoder rate, as in the 2xT4 recipe")
+FLAGS.add_argument("--seed", type=int, default=7,
+                   help="row-shuffle seed (default 7); same seed, same split order")
 _known, _rest = FLAGS.parse_known_args()  # tolerate Kaggle's own argv noise
 MAX_SAMPLES = _known.max_samples
 DRY_RUN = _known.dry_run
+EPOCHS_FLAG = _known.epochs
+LR_FLAG = _known.lr
+SEED = _known.seed
 
 # --- T652: the only block you edit for adapter runs ---
 # target_modules must match YOUR encoder's attention projections.
@@ -94,6 +107,10 @@ def validate_config():  # T911: what a dry run can honestly check without a GPU
     problems = []
     if MAX_SAMPLES < 0:
         problems.append(f"--max-samples must be >= 0 (got {MAX_SAMPLES})")
+    if EPOCHS_FLAG < 0:  # T913: 0 means "default", negative is nonsense
+        problems.append(f"--epochs must be >= 0 (got {EPOCHS_FLAG})")
+    if LR_FLAG < 0:  # T913: 0 means "default", negative is nonsense
+        problems.append(f"--lr must be >= 0 (got {LR_FLAG})")
     if LORA["enabled"]:  # only validate the adapter knobs when they're live
         if LORA["r"] < 1:
             problems.append(f"LORA.r must be >= 1 (got {LORA['r']})")
@@ -120,7 +137,8 @@ def main():  # T911: every GPU/network/data step lives behind this guard
             print("DRY_RUN_FAIL:", p, file=sys.stderr)
         if not problems:
             print(f"DRY_RUN_OK max_samples={MAX_SAMPLES} lora_enabled={LORA['enabled']} "
-                  f"dev_floor={DEV_FLOOR} regex_floor={REGEX_FLOOR}")
+                  f"epochs={EPOCHS_FLAG or '(default)'} lr={LR_FLAG or '(default)'} "
+                  f"seed={SEED} dev_floor={DEV_FLOOR} regex_floor={REGEX_FLOOR}")
         return 2 if problems else 0
 
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U",
@@ -144,7 +162,7 @@ def main():  # T911: every GPU/network/data step lives behind this guard
         "state.rules must be a non-empty mapping"
     assert set(sample["labels"]) >= {"rule", "harm", "hype", "jailbreak", "escalate"}, \
         "labels missing heads"
-    random.seed(7); random.shuffle(rows_raw)
+    random.seed(SEED); random.shuffle(rows_raw)  # T913: --seed makes the order reproducible
     if MAX_SAMPLES:  # T658: smoke path — data must still be complete on disk (asserts above)
         rows_raw = rows_raw[:MAX_SAMPLES]
     if len(rows_raw) < 2000:  # T658: smoke split ~80/10/10 when truncated
@@ -203,13 +221,15 @@ def main():  # T911: every GPU/network/data step lives behind this guard
 
     train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.1, seed=20260922)
     assert train_items and calib_items, "empty train or calibration split"
-    EPOCHS = 1 if MAX_SAMPLES else 3  # T659: smoke runs are 50 rows, 1 epoch
+    EPOCHS = EPOCHS_FLAG or (1 if MAX_SAMPLES else 3)  # T659+T913: smoke=1 epoch, flag overrides
     MICRO, ACCUM = 8, 8  # eff batch 64, same as 2xT4 recipe
     PATIENCE = 1  # T653: stop after N epochs without dev rule_acc improvement
     assert len(train_items) >= MICRO, "fewer items than one micro-batch"
     enc_p = [p for n, p in model.named_parameters() if "encoder." in n and p.requires_grad]
     head_p = [p for n, p in model.named_parameters() if "encoder." not in n and p.requires_grad]  # T652: LoRA-safe
-    opt = torch.optim.AdamW([{"params": enc_p, "lr": 2.5e-5}, {"params": head_p, "lr": 1e-4}], weight_decay=0.01)
+    opt = torch.optim.AdamW([{"params": enc_p, "lr": LR_FLAG or 2.5e-5},
+                             {"params": head_p, "lr": (LR_FLAG or 2.5e-5) * 4}],  # head4x encoder
+                            weight_decay=0.01)  # T913: --lr scales both, ratio kept
     total = (len(train_items) // (MICRO * ACCUM)) * EPOCHS
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, total), eta_min=1e-6)
     scaler = torch.amp.GradScaler("cuda", enabled=True)

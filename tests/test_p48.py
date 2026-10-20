@@ -99,3 +99,39 @@ def test_lora_target_modules_match_the_encoder():  # T912
     mod.LORA["enabled"] = True
     mod.LORA["target_modules"] = []
     assert any("target_modules" in p for p in mod.validate_config())
+
+
+def test_train_hyperparameter_flags():  # T913
+    """--epochs/--lr/--seed are real knobs, not hardcoded constants: 0/absent
+    reproduces the shipped 2xT4 recipe exactly (1/3 epochs, 2.5e-5 encoder
+    with the head at 4x, shuffle seed 7), and the dry-run prints what it
+    parsed so a quota spend is never a surprise."""
+    mod = _import_train()
+    # defaults: the recipe, unchanged
+    assert mod.EPOCHS_FLAG == 0 and mod.LR_FLAG == 0.0 and mod.SEED == 7
+    assert mod.validate_config() == [], "shipped knobs are valid"
+
+    # negative values are refused by the validator, loudly
+    mod.EPOCHS_FLAG, mod.LR_FLAG = -1, -0.1
+    problems = mod.validate_config()
+    assert any("--epochs" in p for p in problems), problems
+    assert any("--lr" in p for p in problems), problems
+
+    # the dry-run reports the parsed knobs
+    r = subprocess.run(
+        [sys.executable, str(TRAIN), "--dry-run", "--epochs", "2", "--lr", "3e-5",
+         "--seed", "42"],
+        check=False, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    assert "epochs=2" in r.stdout and "lr=3e-05" in r.stdout and "seed=42" in r.stdout
+
+
+def test_train_seed_reaches_the_shuffle_and_lr_ratio_kept():  # T913
+    """The knobs must actually reach the pipeline, not just parse: --seed
+    feeds the row shuffle (reproducible order), and --lr scales BOTH param
+    groups keeping the head:encoder 4x ratio of the 2xT4 recipe."""
+    src = TRAIN.read_text()
+    assert "random.seed(SEED)" in src, "--seed reaches the row shuffle"
+    assert "lr\": LR_FLAG or 2.5e-5" in src or "LR_FLAG or 2.5e-5" in src
+    # head keeps the 4x ratio whatever --lr says
+    assert "(LR_FLAG or 2.5e-5) * 4" in src, "head lr stays 4x the encoder"
