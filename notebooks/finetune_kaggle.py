@@ -32,7 +32,12 @@ def to_laya_records(path):
 #   from laya.finetune import run_rlcd  # API per Laya notebook version — follow notebook cell
 #   recs = to_laya_records("/kaggle/input/gatekeeper-12k/gatekeeper-12k.jsonl")
 #   run_rlcd(recs, base="convaiinnovations/laya", epochs=4, push_to="YOUR_HF/gatekeeper-laya-421m")
-# If function name drifted, open the notebook's train cell and keep its call — only swap `recs`.
+# Signature drift vs train.py is a FAILURE, not a fallback (T923):
+#   tests/test_p48.py::test_finetune_pastein_matches_train_signature pins this
+#   converter's output shape equal to train.py's to_row. If that test fails,
+#   fix the drifting side — do NOT adapt around it by keeping whatever call
+#   the notebook happened to use; a paste-in that half-matches the pipeline
+#   rejects records late, on quota time.
 # Class imbalance (T648): the dataset build report emits inverse-frequency hints —
 #   python data/build_dataset.py --n 12000 --report --seed 42   # -> class_weights
 # Feed those (rule / harm / jailbreak / escalate) to whatever weight knob your

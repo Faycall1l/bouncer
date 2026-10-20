@@ -5,6 +5,7 @@ must hold on ANY machine (import safety, config validation) without a GPU,
 weights, or network.
 """
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -627,3 +628,53 @@ def test_kaggle_readme_matches_reality_surfaces():  # T922: receipts cross-file
     todo = Path("TODO.md").read_text()
     for t in set(_re.findall(r"\bT\d{3,4}\b", readme)):
         assert t in todo, f"kaggle/README cites unknown box {t}"
+
+
+# --- T923: notebook paste-in signature drift vs train.py is a failure --------
+
+def test_finetune_pastein_matches_train_signature(tmp_path):  # T923
+    """finetune_kaggle.to_laya_records (the 3 cells you paste into a notebook)
+    and train.py's to_row must produce the SAME record for the same row —
+    identical question types, instructions, criteria, and expected mapping.
+    Drift used to be a comment saying 'keep the notebook's call'; now it's a
+    test failure: a paste-in that half-matches the pipeline would reject
+    records late, on quota time."""
+    import sys as _sys
+
+    mod = _import_train()
+    _sys.path.insert(0, "notebooks")
+    import finetune_kaggle
+
+    row = {
+        "state": {"message": "BUY NOW!!!", "history": ["hi"],
+                  "rules": {"caps": "no caps", "spam": "no spam"}},
+        "labels": {"rule": "spam", "harm": "suspicious", "hype": "hyped",
+                   "jailbreak": False, "escalate": True},
+    }
+    src_file = tmp_path / "rows.jsonl"
+    src_file.write_text(json.dumps(row) + "\n")
+
+    paste_in = finetune_kaggle.to_laya_records(str(src_file))[0]
+    in_script = mod.to_row(row)
+    assert paste_in == in_script, (
+        "notebook paste-in and train.py disagree on the record shape — "
+        f"paste-in keys {sorted(paste_in)} vs {sorted(in_script)}")
+
+    # the deep claim: question specs and expected mapping are identical
+    assert paste_in["questions"] == in_script["questions"]
+    assert paste_in["expected"] == in_script["expected"]
+    # shared vocab stays shared (the label enums must not fork)
+    assert finetune_kaggle.HARM == mod.HARM
+    assert finetune_kaggle.HYPE == mod.HYPE
+
+
+def test_finetune_pastein_fallback_removed():  # T923: the warning is now a failure
+    """The 'if the function name drifted, keep its call' escape hatch is gone
+    — the comment must point at the enforcing test instead, so nobody follows
+    stale advice into a half-compatible paste-in."""
+    src = Path("notebooks/finetune_kaggle.py").read_text()
+    assert "keep the notebook's call" not in src and "only swap `recs`" not in src, \
+        "the fallback advice was removed, not reworded"
+    assert "test_finetune_pastein_matches_train_signature" in src, \
+        "the comment names the test that enforces it"
+    assert "FAILURE" in src and "T923" in src
