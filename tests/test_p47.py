@@ -511,3 +511,92 @@ def test_batch_lang_autofill_matches_single():  # T902
         assert seen[-1]["lang"] == "es", seen
     finally:
         gatekeeper._router = None
+
+
+def test_adapter_lang_pin_passes_through_every_platform(monkeypatch):  # T903
+    """The BOUNCER_ADAPTER_LANG pin is captured at the far end of each
+    adapter — the stub is the moderate() call, and every platform's entry
+    point delivers the PINNED lang, not the detected one, message after
+    message. Detection still fills the platforms the map doesn't name."""
+    import gatekeeper
+    from gatekeeper.adapters import discord_bot as db
+    from gatekeeper.adapters import matrix_bot, mattermost, webhooks
+    from gatekeeper.adapters import telegram_bot as tg
+    from gatekeeper.adapters import twitch_irc as tw
+    from gatekeeper.adapters import zulip_bot as zl
+
+    seen: list[tuple] = []
+
+    def record(text, rules, **kw):
+        seen.append((kw.get("adapter"), kw.get("lang")))
+        return {"action": "allow", "rule": "ok", "confidence": 1.0}
+
+    monkeypatch.setattr(gatekeeper, "moderate", record)
+    # pin telegram + slack; everyone else keeps detection
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "telegram=ar,slack=en")
+    rules = {"r": "t"}
+
+    # telegram gets LATIN text: the pin says ar anyway (explicit > detected)
+    tg.handle_update({"message": {"text": "totally normal latin text",
+                                  "message_id": 7, "chat": {"id": 1},
+                                  "from": {"id": 99}}}, rules)
+    # slack/webhooks gets CJK text: the pin says en anyway
+    webhooks.receive_slack_event({"text": "你好世界", "user": "U123"}, rules)
+    # an unpinned platform (matrix, cyrillic text) still detects
+    matrix_bot.handle_event(
+        {"type": "m.room.message", "event_id": "$e", "room_id": "!r",
+         "sender": "@user:example.org",
+         "content": {"msgtype": "m.text", "body": "привет всем"}}, rules)
+    # another unpinned one (zulip, latin) stays unhinted
+    zl.handle_event({"type": "message",
+                     "message": {"type": "stream", "content": "hello channel",
+                                 "sender_id": 42, "id": 11}}, rules)
+
+    assert seen == [("telegram", "ar"), ("slack", "en"),
+                    ("matrix", "ru"), ("zulip", None)], seen
+
+    # =auto on a pinned platform puts it back on detection (T897)
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "telegram=auto")
+    seen.clear()
+    tg.handle_update({"message": {"text": "totally normal latin text",
+                                  "message_id": 8, "chat": {"id": 1},
+                                  "from": {"id": 99}}}, rules)
+    assert seen == [("telegram", None)], seen
+
+    # discord/twitch/mattermost carry their platform name and detect
+    seen.clear()
+    class _H:
+        def decision(self):
+            pass
+
+        def maybe_log(self):
+            pass
+
+        def error(self, e):
+            pass
+
+    db.moderate_message("مرحبا بالجميع", 4242, rules, health=_H(), cap=None)
+
+    class _Sock:
+        def __init__(self, lines):
+            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._pos = 0
+
+        def recv(self, n):
+            if self._pos >= len(self._data):
+                raise OSError("transcript over")
+            chunk = self._data[self._pos:self._pos + n]
+            self._pos += len(chunk)
+            return chunk
+
+        def sendall(self, b):
+            pass
+
+    try:
+        tw._watch_once(_Sock([":u!u@h PRIVMSG #c :привет"]), rules)
+    except OSError:
+        pass
+    mattermost.handle_post({"id": "p1", "message": "hello channel",
+                            "user_id": "mm-user"}, rules)
+    assert seen == [("discord", "ar"), ("twitch", "ru"),
+                    ("mattermost", None)], seen

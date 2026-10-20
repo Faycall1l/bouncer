@@ -995,7 +995,7 @@
 - [x] T900 docs: adapters README language section updated (passthrough now exists)
 - [x] T901 test: script-detection routing sweep — ar/cyrillic/cjk/latin/mixed cases pinned
 - [x] T902 test: batch lang autofill matches single /predict behavior
-- [ ] T903 test: adapter lang passthrough captured by a stub transport
+- [x] T903 test: adapter lang passthrough captured by a stub transport
 - [ ] T904 test: BOUNCER_ADAPTER_LANG beats detection, per platform
 - [ ] T905 test: pool stats carry lang tags without unbounded cardinality
 - [ ] T906 fix: P47 reds — any failure the sweep finds, fixed here
