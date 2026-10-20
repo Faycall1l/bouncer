@@ -134,3 +134,31 @@ def test_t940_review_queue_depth_in_metrics(tmp_path, monkeypatch):
     assert scrape() == 2
     review.clear_queue()
     assert scrape() == 0
+
+
+def test_t941_adapter_counters_reach_the_scrape():
+    """T941: T867 records (adapter, action) pairs in stats but only /stats
+    showed them. The scrape now carries `bouncer_adapter_decisions_total`
+    with both labels — and the series disappears entirely when no adapter
+    has recorded (HTTP/CLI decisions are not adapter series, so the label
+    set stays bounded by the platform list, not by traffic)."""
+    from fastapi.testclient import TestClient
+
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    try:
+        body = TestClient(serve.app).get("/metrics").text
+        assert "bouncer_adapter_decisions_total" not in body, body
+        record("delete", "no-spam", 3.0, adapter="telegram")
+        record("delete", "no-spam", 3.0, adapter="telegram")
+        record("flag", "be-kind", 4.0, adapter="discord")
+        record("allow", "be-kind", 1.0)  # no adapter: HTTP/CLI, not a series
+        body = TestClient(serve.app).get("/metrics").text
+        assert ('bouncer_adapter_decisions_total{adapter="telegram",'
+                'action="delete"} 2') in body, body
+        assert ('bouncer_adapter_decisions_total{adapter="discord",'
+                'action="flag"} 1') in body, body
+        assert 'adapter=""' not in body, body
+    finally:
+        reset_stats()

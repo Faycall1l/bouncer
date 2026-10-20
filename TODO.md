@@ -1037,7 +1037,7 @@
 - [x] T938 audit: rid in decision log + audit rows (stale at birth — T840 put the id in the access/decision logs and T883 in `audit.log_decision` rows; the cross-log join is pinned by tests/test_p44.py:600-603 and the audit row by tests/test_p46.py:603)
 - [x] T939 stats: worker-scoping documented + warn with `--workers >1` (corrected: doctor is a separate invocation and cannot see serve's flags, so the warn lives at `bouncer serve` startup; runbook.md honest-scope paragraph extended to /stats+/metrics; receipt tests/test_p49.py)
 - [x] T940 review: review-queue depth in /metrics (bouncer_review_queue_depth; review.depth() counts rows without parsing raw text; receipt tests/test_p49.py)
-- [ ] T941 adp: per-adapter counters exported to /metrics (from T867 recording)
+- [x] T941 adp: per-adapter counters exported to /metrics (bouncer_adapter_decisions_total{adapter,action} from T867's recording; no-series-without-adapter keeps cardinality bounded; receipt tests/test_p49.py)
 - [ ] T942 metrics: cardinality guard — label values capped, no unbounded series
 - [ ] T943 test: every /metrics line parses as Prometheus text; HELP/TYPE pairs complete
 - [ ] T944 test: metrics cardinality stays bounded under adversarial rule ids

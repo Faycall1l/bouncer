@@ -333,6 +333,9 @@ def metrics(request: Request):  # T778: exposure gate before any counters leave
               for k, v in g["rules"].items()]  #  like /stats' rules block
     lines += [f'bouncer_cause_total{{cause="{k}"}} {v}'  # T884: why, not just what
               for k, v in g["causes"].items()]
+    lines += [f'bouncer_adapter_decisions_total{{adapter="{a}",action="{act}"}} {n}'  # T941
+              for a, by_act in g["adapters"].items()  # T867's recording, exported:
+              for act, n in by_act.items()]  #  which platform is loud, per action
     from . import strikes as _strikes  # T884: counts only, like /stats (T439)
     _table = _strikes._strikes
     ban_sug = sum(1 for n in _table.values() if n >= _strikes.BAN_AT)
