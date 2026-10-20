@@ -362,6 +362,7 @@ def main():  # T911: every GPU/network/data step lives behind this guard
     _here = os.path.dirname(os.path.abspath(__file__))
     ev_script = next((p for p in [_here] + glob.glob("/kaggle/input/**", recursive=True)
                       if os.path.exists(os.path.join(p, "eval_gatekeeper.py"))), None)
+    gate_pass = None  # T915: None = not run — never a green light, refuses push
     if ev_script:
         env = dict(os.environ)
         src = os.path.abspath(os.path.join(ev_script, "..", "src"))
@@ -373,9 +374,27 @@ def main():  # T911: every GPU/network/data step lives behind this guard
                             env=env, check=False)
         log_rec(kind="eval_gatekeeper", returncode=ev.returncode)
         print("eval_gatekeeper on test split:", "OK" if ev.returncode == 0 else "FAILED", flush=True)
+        # --- ship gate (T915): the FULL gate.py thresholds over that report ---
+        # Same thresholds CI gates with (rule_acc floor, ECE ceiling, latency
+        # budget, abstention band, per-rule floor) — passed via NO threshold
+        # flags, so gate.py's defaults are the single source: a threshold
+        # change in gate.py moves this gate automatically, no drift copy here.
+        # The old two-number gate (dev + test_acc) could ship a model CI would
+        # refuse. gate.py exit 0 = every applied gate passed (T677).
+        gt = os.path.join(ev_script, "gate.py")
+        if ev.returncode == 0 and os.path.exists(gt):
+            g = subprocess.run([sys.executable, gt, os.path.join(OUT, "eval_test.json")],
+                               env=env, check=False)
+            gate_pass = g.returncode == 0
+            log_rec(kind="gate", returncode=g.returncode, ok=gate_pass)
+            print("ship gate (gate.py):", "PASS" if gate_pass else "FAIL", flush=True)
+        else:
+            print("ship gate (gate.py) NOT run — eval failed or gate.py unreachable; "
+                  "the push below will refuse (T915)", flush=True)
     else:
         print("eval_gatekeeper.py not reachable — run locally:", flush=True)
         print(f"  python eval/eval_gatekeeper.py {test_path} --model {OUT}", flush=True)
+        print("ship gate (gate.py) NOT run — the push below will refuse (T915)", flush=True)
 
     # --- HF push (needs HF_TOKEN in Kaggle Secrets) ---
     try:
@@ -383,19 +402,21 @@ def main():  # T911: every GPU/network/data step lives behind this guard
         token = UserSecretsClient().get_secret("HF_TOKEN")
     except Exception:  # noqa: BLE001 — no secrets in this env
         token = None
-    if token and best_dev >= DEV_FLOOR and test_acc >= REGEX_FLOOR:  # T655+T661: earn the ship
+    if token and best_dev >= DEV_FLOOR and test_acc >= REGEX_FLOOR and gate_pass:  # T655+T661+T915: earn the ship
         from huggingface_hub import HfApi
         api = HfApi(token=token)
         api.create_repo("bouncer-421m", exist_ok=True)
         api.upload_folder(folder_path=OUT, repo_id=api.whoami()["name"] + "/bouncer-421m")
         print("PUSHED to HF", flush=True)
-        log_rec(kind="push", dev_rule_acc=round(best_dev, 4), test_acc=round(test_acc, 4))
+        log_rec(kind="push", dev_rule_acc=round(best_dev, 4), test_acc=round(test_acc, 4),
+                full_gate="pass")
     elif token:
         print(f"gate failed: dev={best_dev:.3f} (floor {DEV_FLOOR}) "
-              f"test_acc={test_acc:.3f} (regex floor {REGEX_FLOOR}) — no push; weights "
+              f"test_acc={test_acc:.3f} (regex floor {REGEX_FLOOR}) "
+              f"full_gate={'pass' if gate_pass else 'fail/not-run'} — no push; weights "
               "stay in /kaggle/working output", flush=True)
         log_rec(kind="no_push", dev_rule_acc=round(best_dev, 4), test_acc=round(test_acc, 4),
-                dev_floor=DEV_FLOOR, regex_floor=REGEX_FLOOR)
+                dev_floor=DEV_FLOOR, regex_floor=REGEX_FLOOR, full_gate=gate_pass)
     else:
         print("no HF_TOKEN — model stays in /kaggle/working output", flush=True)
     print("TRAIN_OK")
