@@ -162,3 +162,38 @@ def test_t941_adapter_counters_reach_the_scrape():
         assert 'adapter=""' not in body, body
     finally:
         reset_stats()
+
+
+def test_t942_rule_label_cardinality_stays_capped():
+    """T942: rule ids come from the request body (`rules: {"id": "text"}`),
+    so /metrics' `bouncer_rule_total{rule=...}` label set was client-sized:
+    a flood of fresh ids grew both the scrape and process memory without
+    bound. New ids past stats.MAX_RULE_LABELS now fold into one `_other`
+    series — every decision still counts, no new label appears."""
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import stats
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    try:
+        cap = stats.MAX_RULE_LABELS
+        record("delete", "spam", 1.0)  # a known id keeps its own series
+        for i in range(cap + 50):
+            record("allow", f"adversarial-{i}", 1.0)
+        body = TestClient(serve.app).get("/metrics").text
+        rule_lines = [l for l in body.splitlines()
+                      if l.startswith("bouncer_rule_total{")]
+        assert len(rule_lines) <= cap + 1, len(rule_lines)  # +1 = _other
+        other = next(l for l in rule_lines
+                     if 'rule="_other"' in l)
+        assert int(other.split()[1]) == 51, other  # 250 fresh - 199 that fit
+        assert 'rule="spam"} 1' in body, body
+        # a snapshot with the same flood restores under the same cap
+        reset_stats()
+        stats.restore({"v": 2,
+                       "by_rule": {f"stale-{i}": 1 for i in range(cap + 10)}})
+        assert len(stats.get_stats()["rules"]) == cap + 1  # folded, not ignored
+        assert stats.get_stats()["rules"][stats._OTHER] == 10
+    finally:
+        reset_stats()

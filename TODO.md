@@ -1038,7 +1038,7 @@
 - [x] T939 stats: worker-scoping documented + warn with `--workers >1` (corrected: doctor is a separate invocation and cannot see serve's flags, so the warn lives at `bouncer serve` startup; runbook.md honest-scope paragraph extended to /stats+/metrics; receipt tests/test_p49.py)
 - [x] T940 review: review-queue depth in /metrics (bouncer_review_queue_depth; review.depth() counts rows without parsing raw text; receipt tests/test_p49.py)
 - [x] T941 adp: per-adapter counters exported to /metrics (bouncer_adapter_decisions_total{adapter,action} from T867's recording; no-series-without-adapter keeps cardinality bounded; receipt tests/test_p49.py)
-- [ ] T942 metrics: cardinality guard — label values capped, no unbounded series
+- [x] T942 metrics: cardinality guard — label values capped, no unbounded series (stats.MAX_RULE_LABELS=200: fresh client rule ids fold into `_other` at record time and on snapshot restore; decisions still count; receipt tests/test_p49.py)
 - [ ] T943 test: every /metrics line parses as Prometheus text; HELP/TYPE pairs complete
 - [ ] T944 test: metrics cardinality stays bounded under adversarial rule ids
 - [ ] T945 docs: api.md metrics section — full export list with types

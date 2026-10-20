@@ -18,6 +18,13 @@ _cheap = 0  # T233: decisions served without a model call (empty/fastpath)
 _causes: dict = {}  # T234: cause -> n (margin, needs-human, quiet, low-conf, ...)
 _adapt: dict = {}  # T867: (adapter, action) -> n — which platform is loud
 
+# T942: rule ids arrive from client request bodies (`rules: {"id": "text"}`),
+# so the label set is client-controlled. Past this many distinct ids the
+# counter folds new ones into one `_other` series — /stats stays honest
+# (it counts decisions, not label sets) while no scrape can grow unbounded.
+MAX_RULE_LABELS = 200
+_OTHER = "_other"
+
 
 def _pct(xs: list, q: float) -> float:
     if not xs:
@@ -34,6 +41,8 @@ def record(action: str, rule: str, latency_ms: float | None = None,
     global _cheap
     with _lock:
         _counts[action] = _counts.get(action, 0) + 1
+        if rule not in _by_rule and len(_by_rule) >= MAX_RULE_LABELS:  # T942
+            rule = _OTHER  # a fresh client id past the cap counts, never labels
         _by_rule[rule] = _by_rule.get(rule, 0) + 1
         _joint[(action, rule)] = _joint.get((action, rule), 0) + 1
         if adapter:  # T867
@@ -107,7 +116,12 @@ def restore(snap: dict) -> None:  # T434
         _counts.clear()
         _counts.update({k: int(snap.get("counts", {}).get(k, 0)) for k in known})
         _by_rule.clear()
-        _by_rule.update(snap.get("by_rule", {}))
+        for r, n in snap.get("by_rule", {}).items():  # T942: snapshots are
+            # operator files, but a stale 50k-rule snapshot must not outlive
+            # the cap either — fold past it exactly like the network path
+            if r != _OTHER and r not in _by_rule and len(_by_rule) >= MAX_RULE_LABELS:
+                r = _OTHER
+            _by_rule[r] = _by_rule.get(r, 0) + int(n)
         _joint.clear()
         for a, r, n in snap.get("joint", []):
             _joint[(a, r)] = int(n)
