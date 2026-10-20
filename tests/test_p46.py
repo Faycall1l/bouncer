@@ -810,3 +810,47 @@ def test_config_validate_accepts_good_and_names_exact_problem(tmp_path,
     assert main(["config", "validate", "--toml", str(bt)]) == 1
     out = capsys.readouterr().out
     assert "fail:" in out and str(bt) in out and "E_ADAPTER" in out, out
+
+
+def test_pack_verify_fails_on_flipped_byte(tmp_path, capsys):  # T888
+    """One flipped byte in a signed pack fails verification with a coded
+    error: E_PACK_SIG on stderr naming both digests, exit 2 (drift class,
+    like pack diff — the file is there, the content moved). Tampering the
+    manifest instead fails the same code at file-class exit 4."""
+    p = tmp_path / "rules.json"
+    p.write_text(json.dumps({"spam": "no spam", "hate": "no hate"}))
+    assert main(["pack", "sign", str(p)]) == 0
+    capsys.readouterr()
+    assert main(["pack", "verify", str(p)]) == 0
+    capsys.readouterr()
+
+    # flip exactly one byte of rule text: 'no spam' -> 'xo spam'
+    raw = p.read_text().replace("no spam", "xo spam")
+    assert raw != p.read_text()
+    p.write_text(raw)
+    assert main(["pack", "verify", str(p)]) == 2
+    err = capsys.readouterr().err
+    assert "E_PACK_SIG" in err, err
+    assert "does not match its manifest" in err, err
+    assert "pack " in err and "manifest " in err, "both digests are named"
+    # the same tampered file fails again the same way — deterministic
+    assert main(["pack", "verify", str(p)]) == 2
+    assert "E_PACK_SIG" in capsys.readouterr().err
+
+    # add a whole rule (a missing byte of provenance): still drift, exit 2
+    p.write_text(json.dumps({"spam": "no spam", "hate": "no hate",
+                             "scam": "no scams"}))
+    assert main(["pack", "verify", str(p)]) == 2
+    assert "E_PACK_SIG" in capsys.readouterr().err
+
+    # re-sign after the edit: verify passes again (the manifest catches up)
+    assert main(["pack", "sign", str(p)]) == 0
+    capsys.readouterr()
+    assert main(["pack", "verify", str(p)]) == 0
+    assert "verified" in capsys.readouterr().out
+
+    # flipping a byte of the MANIFEST is a file problem: E_PACK_SIG, exit 4
+    sig = Path(f"{p}.sig")
+    sig.write_text(sig.read_text().replace("sha256", "sha999"))
+    assert main(["pack", "verify", str(p)]) == 4
+    assert "E_PACK_SIG" in capsys.readouterr().err
