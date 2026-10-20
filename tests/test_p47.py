@@ -353,9 +353,10 @@ def test_eval_i18n_measures_routing_with_honest_skip(tmp_path):  # T898
     fixture row's message+hint goes through the moderate() chain
     (lang -> script) and the chosen checkpoint is compared to the one the
     row's language deserves; misfires land in routing.wrong and the gate
-    fails on them. Decision quality needs weights: with laya absent the
-    report carries a skip receipt naming what was and wasn't measured —
-    never a fabricated score."""
+    fails on them. Decision quality needs weights: where laya is absent the
+    report carries a skip receipt naming what was and wasn't measured, and
+    where weights exist it defers to the real scorer — either way never a
+    fabricated score."""
     import json as _json
     import subprocess
     import sys as _sys
@@ -370,9 +371,16 @@ def test_eval_i18n_measures_routing_with_honest_skip(tmp_path):  # T898
     assert routing["n"] == report["n"] and routing["wrong"] == [], routing
     assert routing["ok"] == routing["n"], "every row routed to its checkpoint"
     # quality is skipped-with-receipt (no laya in the test env), not scored
+    # quality is environment-dependent: skipped-with-receipt where laya is
+    # absent (this machine), or an honest pointer where weights exist (CI).
+    # Either way the status never claims a fabricated per-language score.
     q = report["quality"]
-    assert q["status"] == "skipped" and "not importable" in q["receipt"], q
-    assert "measured" in q["receipt"] and "not" in q["receipt"], "honest scope"
+    if q["status"] == "skipped":
+        assert "not importable" in q["receipt"], q
+        assert "measured" in q["receipt"] and "not" in q["receipt"], "honest scope"
+    else:
+        assert q["status"].startswith("weights present"), q
+        assert "eval_gatekeeper" in q["status"], "points at the real scorer"
 
     # the gate reads routing: a misfire FAILS it by name and count
     sys.path.insert(0, "eval")
