@@ -1029,7 +1029,7 @@
 ## P49 Observability (T931–T950)
 - [x] T931 stats: /metrics per-rule decision counters (stale at birth — T884 already exports `bouncer_rule_total{rule=...}` / stats-style per-rule series; pinned by tests/test_p46.py:647, full suite 552-green)
 - [x] T932 stats: /metrics cause counters (stale at birth — T884 already exports `bouncer_cause_total{cause=...}`; pinned by tests/test_p46.py:648)
-- [ ] T933 stats: /metrics p95 latency export
+- [x] T933 stats: /metrics p95 latency export (stale at birth — T884 exports `bouncer_latency_p95_ms` from the rolling window; pinned by tests/test_p46.py:649)
 - [ ] T934 stats: /metrics strikes summary export
 - [ ] T935 stats: /metrics coalesce + breaker fails/half_open export
 - [ ] T936 serve: request counter by status class in /metrics (incl 401/413/429)
