@@ -83,18 +83,40 @@ to defend. Full reference: [gates.md](gates.md) and
 bouncer check "eso es trampa" --preset es     # Spanish pack, language-tagged
 bouncer check "هذا غش" --preset ar            # non-latin script → multilingual checkpoint
 bouncer presets                               # es, fr, ar + the English packs
+bouncer check "هذا غش" --rules my-rules.json --lang auto   # no pack: detect the hint
 ```
 
-* Presets carry a language tag (`PRESET_LANG`): picking `es`/`fr`/`ar`
-  also hints the downstream language (reason language, model routing).
-* `--lang TAG` overrides or sets the hint explicitly (the CLI notes a
-  preset/hint mismatch instead of silently disagreeing). `--lang auto`
-  fills the hint per message from its detected script (T893): arabic,
-  cyrillic and cjk text become `ar`/`ru`/`zh`; latin text stays unhinted.
-* Routing is automatic from there: non-latin scripts (ar/zh/ru/fa/ur/he)
-  pin the `multilingual` checkpoint, latin rides laya's own auto-routing.
-  Pin a checkpoint per request with `model=...` when you want to overrule.
-* `bouncer pack init FILE --preset gaming` exports any pack as editable
+The full recipe, in the order bouncer applies it:
+
+* **Pack tags** — presets carry a language tag (`PRESET_LANG`): picking
+  `es`/`fr`/`ar` also hints the downstream language (reason language, model
+  routing). Every routed language either has a pack or is listed packless
+  (`lang_coverage()` + [presets.md](presets.md): zh/ru/fa/ur/he ride the
+  multilingual checkpoint with your own rules).
+* **Explicit hint** — `--lang TAG` (API `lang=`) overrides everything; the
+  CLI notes a preset/hint mismatch instead of silently disagreeing.
+* **Script detection** — with no hint, the message's own script fills it:
+  `--lang auto` (check/watch, T893) says so explicitly, `/predict` autofills
+  per message (T892, batch rows too), and even an unhelpful `lang=` value
+  never strands non-latin text on the auto route — routing falls back to
+  the detected script (T891). Detection is script-honest, never a language
+  claim: latin text stays unhinted and rides laya's auto-routing. Pin a
+  checkpoint per request with `model=...` when you want to overrule.
+* **Adapters** — platform bots detect per message too, and
+  `BOUNCER_ADAPTER_LANG=telegram=ar,zulip=en` (T897) pins the hint per
+  platform where detection can't know your deployment; `=auto` unpins one
+  platform without clearing the rest.
+* **Pool behavior** — every checkpoint touched lands in the shared pool
+  (`BOUNCER_POOL_MAX`, default 2), so a mixed community holds english +
+  multilingual routers side by side. `GET /stats` → `pool.by_model` (T895)
+  counts checkouts per checkpoint: if `evictions` climbs while a language
+  is active, that language is thrashing the pool — raise the cap. A
+  mixed-language batch scores per message (T902), so one Arabic line in an
+  English batch doesn't misroute its neighbors.
+* **Verify routing** — `python eval/eval_i18n.py` (T898) measures that
+  script detection lands each fixture on the right checkpoint, and the gate
+  fails on misfires — no model weights needed for that number.
+* **`bouncer pack init FILE --preset gaming`** exports any pack as editable
   JSON — a `meta` block (schema version, bouncer version, creation time,
   preset, lang — T878) over the `rules` section. Translate the rule
   *texts*, keep the ids slugs, ship it back with
