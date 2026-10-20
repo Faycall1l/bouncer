@@ -569,3 +569,58 @@ def test_review_rows_carry_cause_model_preset(tmp_path, monkeypatch,
                             "ms": 1.0}) + "\n")
     assert main(["review"]) == 0
     assert "legacy01" in capsys.readouterr().out
+
+
+def test_audit_rows_carry_cause_preset_model_rid_version(tmp_path, monkeypatch,
+                                                         capsys):  # T883
+    """Every audit row is adjudication evidence, so it carries cause,
+    preset, model, rid and the bouncer version that wrote it — the model
+    path fills them in, cheap paths leave what they don't know empty, and
+    CSV export shows the same columns (old rows export as blanks)."""
+    import importlib
+
+    import gatekeeper
+    import gatekeeper.audit as _au
+    from gatekeeper import __version__
+
+    audit = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BOUNCER_AUDIT", str(audit))
+    importlib.reload(_au)
+
+    class Stub:
+        def predict(self, state, questions):
+            return {"answers": {
+                "rule": {"choice": "no-cheat", "confidence": 0.75,
+                         "probabilities": {"no-cheat": 0.75}},
+                "harm": {"score": "safe"}, "hype": {"score": "chill"},
+                "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}}
+
+    monkeypatch.setattr(gatekeeper, "_router", Stub())
+    gatekeeper.moderate("an aimbot is being sold here", preset="gaming",
+                        router=Stub(), rid="req-abc123")
+    row = json.loads(audit.read_text().splitlines()[-1])
+    assert row["cause"] and row["preset"] == "gaming", row
+    assert row["rid"] == "req-abc123" and row["v"] == __version__, row
+
+    # cheap path (empty message): no model call, so model stays empty;
+    # cause/preset/rid still ride the row
+    gatekeeper.moderate("  ", preset="study", router=Stub(), rid="req-cheap")
+    row = json.loads(audit.read_text().splitlines()[-1])
+    assert row["action"] == "allow" and row["cause"] == "empty", row
+    assert row["model"] == "" and row["preset"] == "study", row
+    capsys.readouterr()
+
+    # CSV export carries the same columns; a hand-written old row is blanks
+    old = tmp_path / "old.jsonl"
+    old.write_text(json.dumps({"t": 1, "msg": "x", "rule": "ok", "conf": 1.0,
+                               "action": "allow", "ms": 1.0}) + "\n")
+    _au._PATH = str(old)
+    out = tmp_path / "rows.csv"
+    assert main(["export", "--out", str(out), "--limit", "5"]) == 0
+    lines = out.read_text().splitlines()
+    assert lines[0].endswith("cause,preset,model,rid,v"), lines[0]
+    assert lines[1].endswith(",,,,") , lines[1]
+    _au._PATH = str(audit)
+    assert main(["export", "--out", str(out), "--limit", "5"]) == 0
+    body = out.read_text()
+    assert "gaming" in body and "req-abc123" in body, body

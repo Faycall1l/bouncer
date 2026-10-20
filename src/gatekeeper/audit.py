@@ -65,14 +65,23 @@ def close() -> None:  # T839: graceful shutdown — fsync the tail, drop the han
 
 def log_decision(msg: str, rule: str, conf: float, action: str, latency_ms: float,
                  lang: str | None = None, context_n: int = 0,
-                 thresholds: tuple | None = None) -> None:
-    """T029: one JSON line per decision; rotates at 5MB (T030 trims below)."""
+                 thresholds: tuple | None = None, cause: str | None = None,
+                 preset: str | None = None, model: str | None = None,
+                 rid: str | None = None) -> None:
+    """T029+T883: one JSON line per decision; rotates at 5MB (T030 trims
+    below). Rows carry adjudication context — cause/preset/model/rid —
+    plus the bouncer version that wrote them; unknown context is "" so
+    every row has the same shape."""
+    from . import __version__  # lazy: the package imports this module
     h = hashlib.sha256(msg.encode()).hexdigest()[:16]
     line = _dump({"t": int(time.time()), "msg": h, "rule": rule,
                   "conf": round(conf, 3), "action": action,
                   "ms": round(latency_ms, 1), "lang": lang or "",  # T237
                   "ctx": context_n,
-                  "thr": list(thresholds) if thresholds else []}) + "\n"  # T238
+                  "thr": list(thresholds) if thresholds else [],  # T238
+                  "cause": cause or "", "preset": preset or "",  # T883
+                  "model": model or "", "rid": rid or "",
+                  "v": __version__}) + "\n"
     global _F, _SINCE
     with _LOCK:  # T229
         if _maybe_rotate():  # T758: the rotated-away handle must be dropped

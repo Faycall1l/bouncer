@@ -475,8 +475,10 @@ def predict(req: ModReq, request: Request):
                      timeout_s=_request_timeout(req.timeout_s),  # T515
                      questions=questions_knob())  # T755: BOUNCER_QUESTIONS
     try:
-        res = moderate(req.message, rules, req.context, config=cfg,
-                       lang=lang, model=req.model)
+        res = moderate(req.message, req.rules, req.context, config=cfg,  # T883:
+                       lang=lang, model=req.model,  # preset name rides the row
+                       preset=preset_name,  # rules XOR preset still holds
+                       rid=getattr(request.state, "rid", None))  # T840 rid
     except RuleError as e:
         raise HTTPException(status_code=422,  # T256: machine-readable code
                             detail={"code": getattr(e, "code", "E_RULES"),
@@ -538,6 +540,7 @@ def predict_batch(req: BatchReq, request: Request):
     deadline = time.monotonic() + cfg.timeout_s
     return [_clean(r) for r in moderate_batch(req.messages, rules, config=cfg,
                                               model=req.model, lang=lang,
+                                              preset=preset_name,  # T883: audit
                                               deadline=deadline)]
 
 # Jev wire compat: {state, questions} -> {answers}. Lets TypeSafe SDKs hit us.
@@ -602,7 +605,8 @@ def systemone(body: SystemoneReq, request: Request):
                            "err": str(e)[:300]}), flush=True)
         # T834: the passthrough used to be invisible — failures now count
         # like /predict's (action + cause in /stats, hashed line in audit)
-        _record_passthrough(state, cause="breaker-open" if tripped else "model-error")
+        _record_passthrough(state, cause="breaker-open" if tripped else "model-error",
+                            rid=getattr(request.state, "rid", None))
         msg = str(e)
         if "timed out after" not in msg and "breaker open" not in msg:
             msg = "model unavailable (details in server logs)"
@@ -613,15 +617,18 @@ def systemone(body: SystemoneReq, request: Request):
     # T834: successes are counted and audited too — a raw-path decision
     # lands in /stats (action "passthrough") and the audit log (hashed
     # message), exactly like the structured path's rows
-    _record_passthrough(state, latency_ms=(_time.time() - t0) * 1000)
+    _record_passthrough(state, latency_ms=(_time.time() - t0) * 1000,
+                        rid=getattr(request.state, "rid", None))  # T883
     return answers
 
 
 def _record_passthrough(state: dict, latency_ms: float = 0.0,
-                        cause: str | None = None) -> None:  # T834
+                        cause: str | None = None,  # T834
+                        rid: str | None = None) -> None:  # T883: audit context
     """One decision row for the raw path: hashed message, no text stored."""
     from .audit import log_decision
     from .stats import record
     text = state.get("message", "") if isinstance(state, dict) else ""
     record("passthrough", "ok", latency_ms, cause=cause)  # T834
-    log_decision(str(text), "ok", 0.0, "passthrough", latency_ms)
+    log_decision(str(text), "ok", 0.0, "passthrough", latency_ms,
+                 cause=cause or "", rid=rid)  # T883: context on the audit row

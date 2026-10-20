@@ -185,11 +185,13 @@ def _quiet_active(cfg: GateConfig) -> bool:
 
 
 def _observe(msg: str, action: str, rule: str, conf: float, cause: str,
-             adapter: str | None = None) -> None:
+             adapter: str | None = None, preset: str | None = None,
+             rid: str | None = None) -> None:  # T222+T883: context on audit rows
     """T222: cheap paths (empty/fastpath) still count in stats + audit."""
     record(action, rule, 0.0, cheap=True, cause=cause,
            adapter=adapter)  # T232+T233+T234+T867
-    log_decision(msg, rule, conf, action, 0.0)
+    log_decision(msg, rule, conf, action, 0.0, cause=cause,  # T883
+                 preset=preset, rid=rid)  # no model: cheap paths never call it
 
 
 def _low_margin(a: dict, bar: float) -> bool:
@@ -386,6 +388,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
              lang: str | None = None, router: Router | None = None,
              user_id: str | None = None, adapter: str | None = None,  # T867
              model: str | None = None, preset: str | None = None,  # T455+T479
+             rid: str | None = None,  # T883: request id for the audit row
              _prevalidated: bool = False) -> dict:
     cfg = config or GateConfig(questions=questions_knob())  # T755: env default
     if threshold is not None:  # back-compat single float sets both gates
@@ -407,7 +410,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                "escalate_p": 0.0, "abstained": False, "reason": "empty message",
                "latency_ms": 0.0}
         _observe(msg, "allow", "ok", 1.0, "empty",
-                 adapter=adapter)  # T222+T867
+                 adapter=adapter, preset=preset, rid=rid)  # T222+T867+T883
         return res
     key = CACHE.key(msg, rules, cfg.allow_threshold, cfg.delete_threshold,  # T221
                     cfg.severity, lang, context or (), cfg.history_n,
@@ -423,7 +426,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         fp["latency_ms"] = 0.0
         fp["cached"] = False
         _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath",
-                 adapter=adapter)  # T222+T867
+                 adapter=adapter, preset=preset, rid=rid)  # T222+T867+T883
         CACHE.set(key, dict(fp))  # T287: repeats serve from cache
         return fp
     with _FLY_LOCK:  # T180: join identical in-flight call instead of doubling work
@@ -478,7 +481,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
             fb["reason"] = "escalate: breaker open (model failing, cooling down)"
         record("escalate", "ok", 0.0, cause=fb["cause"],
                adapter=adapter)  # T260: failures are visible, T867: tag
-        log_decision(msg, "ok", 0.0, "escalate", 0.0)
+        log_decision(msg, "ok", 0.0, "escalate", 0.0,  # T883: context rows
+                     cause=fb["cause"], preset=preset, model=model, rid=rid)
         try:
             _qadd(msg, {"action": "escalate", "rule": "ok", "confidence": 0.0,
                         "latency_ms": 0.0, "cause": fb.get("cause", "")},
@@ -517,7 +521,9 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     record(res["action"], res["rule"], res["latency_ms"], cause=res.get("cause"),
            adapter=adapter)  # T867: which platform asked
     log_decision(msg, res["rule"], res["confidence"], res["action"], res["latency_ms"],
-                 lang, len(hist), (cfg.allow_threshold, cfg.delete_threshold))
+                 lang, len(hist), (cfg.allow_threshold, cfg.delete_threshold),
+                 cause=res.get("cause"), preset=preset, model=model,  # T883
+                 rid=rid)
     if res["action"] in ("flag", "escalate"):  # T207: humans work the queue
         try:
             _qadd(msg, res, user=user_id,  # T864: appeal target per row
@@ -540,6 +546,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
 def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfig | None = None,
                    router: Router | None = None, chunk: int = 8,
                    model: str | None = None, lang: str | None = None,  # T836
+                   preset: str | None = None,  # T883: pack name for audit rows
                    deadline: float | None = None) -> list[dict]:  # T837
     """T020+T021: shared Router, chunked to bound padding; order preserved.
 
@@ -569,7 +576,8 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
                     fb["reason"] = ("escalate: batch deadline hit "
                                     "(raise timeout_s or BOUNCER_TIMEOUT)")
                     record("escalate", "ok", 0.0, cause="batch-deadline")  # T260
-                    log_decision(m, "ok", 0.0, "escalate", 0.0)
+                    log_decision(m, "ok", 0.0, "escalate", 0.0,
+                                 cause="batch-deadline", model=model)  # T883
                     try:
                         _qadd(m, {"action": "escalate", "rule": "ok",
                                   "confidence": 0.0, "latency_ms": 0.0,
@@ -581,8 +589,10 @@ def moderate_batch(messages: list[str], rules: dict[str, str], config: GateConfi
                     continue
                 # in-flight rows get only what's left, not a fresh budget
                 row_cfg = _dc_replace(cfg, timeout_s=min(cfg.timeout_s, remaining))
-            out.append(moderate(m, rules, config=row_cfg, router=r, model=model,
+            out.append(moderate(m, None if preset else rules,  # T883: preset
+                                config=row_cfg, router=r, model=model,  # resolves
                                 lang=lang,  # T836: batch rows route like single ones
+                                preset=preset,  # inside; the row names the pack
                                 _prevalidated=True))
     return out
     return out

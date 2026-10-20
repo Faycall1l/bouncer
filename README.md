@@ -210,8 +210,10 @@ Nothing persists by default — bouncer is in-memory per process. Two opt-in fil
 
 * **Audit log** (`BOUNCER_AUDIT`, default `bouncer-audit.jsonl`): one JSON line per
   decision — timestamp, hashed message (never raw text), action, rule, confidence,
-  latency. `bouncer export --out decisions.csv` (also `--format json`, `--since`,
-  `--action`, `--limit`) reads it back. `BOUNCER_AUDIT_FSYNC=N` batches disk
+  latency, plus adjudication context: cause, preset, model, request id (server
+  paths), and the bouncer version that wrote the row. `bouncer export --out
+  decisions.csv` (also `--format json`, `--since`,
+  `--action`, `--limit`) reads it back — the CSV carries the same columns. `BOUNCER_AUDIT_FSYNC=N` batches disk
   syncs for throughput: every line still flushes to the OS (process-crash
   safe), while only every Nth write pays the fsync syscall (power-loss safe
   for the last N lines, drained on exit). Unset or 0 keeps the legacy

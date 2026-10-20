@@ -109,17 +109,21 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072+T874
             msg = line.rstrip("\r\n")
             if not msg.strip():  # blank separators aren't messages
                 continue
-            res = moderate(msg, rules, config=cfg, lang=args.lang,
+            res = moderate(msg, None if args.preset else rules,  # T883:
+                           config=cfg, lang=args.lang,  # preset resolves inside
                            context=args.context or [], model=model,
-                           user_id=getattr(args, "user", None))
+                           user_id=getattr(args, "user", None),
+                           preset=args.preset)  # the audit row names the pack
             res["line"] = i
             res["reason"] = explain(res, rules)  # the CLI's own wording
             print(json.dumps(res, default=str))  # one JSON per input line
             worst = max(worst, code[res["action"]])
         return worst  # the worst action in the batch, like the single shot
-    res = moderate(args.message, rules, config=cfg, lang=args.lang,  # T311+T312
-                   context=args.context or [], model=model,
-                   user_id=getattr(args, "user", None))  # T533
+    res = moderate(args.message, None if args.preset else rules,  # T311+T312
+                   config=cfg, lang=args.lang,  # T883: preset resolves inside,
+                   context=args.context or [], model=model,  # so the audit row
+                   user_id=getattr(args, "user", None),  # T533 names the pack
+                   preset=args.preset)
     res["reason"] = explain(res, rules)
     if getattr(args, "quiet", False):  # T320
         print(res["action"])
@@ -160,8 +164,11 @@ def cmd_watch(args) -> int:
             if not isinstance(msg, str) or not msg.strip():
                 continue
         try:
-            res = moderate(msg, rules, config=cfg, user_id=user,  # T534
-                           lang=lang)  # T541
+            res = moderate(msg, None if getattr(args, "preset", None)
+                           else rules,  # T883: preset resolves inside
+                           config=cfg, user_id=user,  # T534
+                           lang=lang,  # T541
+                           preset=getattr(args, "preset", None))
         except Exception as e:  # noqa: BLE001
             print(f"bouncer: watch error: {strip_controls(str(e))}", file=sys.stderr)  # T328
             continue
@@ -481,8 +488,12 @@ def cmd_export(args) -> int:
     else:
         with open(args.out, "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["t", "msg", "rule", "conf", "action", "ms"])
-            w.writerows([d["t"], d["msg"], d["rule"], d["conf"], d["action"], d["ms"]]
+            w.writerow(["t", "msg", "rule", "conf", "action", "ms",
+                        "cause", "preset", "model", "rid", "v"])  # T883
+            w.writerows([d["t"], d["msg"], d["rule"], d["conf"], d["action"],
+                         d["ms"], d.get("cause", ""), d.get("preset", ""),
+                         d.get("model", ""), d.get("rid", ""),
+                         d.get("v", "")]  # pre-T883 rows export as ""
                         for d in rows)
     mss.sort()  # T316
     p50 = mss[len(mss) // 2] if mss else 0
