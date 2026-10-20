@@ -912,3 +912,44 @@ def test_snapshot_v1_end_to_end_gains_namespaced_strikes(tmp_path,
     assert _st.standing("telegram:42")["strikes"] == 3
     _st.reset()
     reset_stats()
+
+
+def test_p46_cli_rules_storage_sweep():  # T890: P46 closer — every box
+    # ticked, every box has a receipt outside TODO.md, no invented citations
+    import re
+    from pathlib import Path
+
+    todo = Path("TODO.md").read_text()
+    p46 = [b for b in re.findall(r"- \[[ x]\] (T\d{3,4})\b", todo)
+           if 871 <= int(b[1:]) <= 890]
+    assert sorted(p46) == [f"T{n}" for n in range(871, 891)], p46
+    for b in p46:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+    assert "## P46 CLI, rules, storage (T871–T890)" in todo
+
+    # receipts live OUTSIDE TODO.md — across this batch's own surfaces
+    corpus = (Path("README.md").read_text()
+              + Path("CONTRIBUTING.md").read_text()
+              + Path("verify.sh").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if (p.is_file()
+                    and p.suffix in (".md", ".py", ".yml", ".yaml", ".sh")):
+                corpus += p.read_text()
+    for b in p46:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity: every T-number the surfaces this batch touched
+    # cite is a box TODO.md actually knows — invented receipts fail here
+    for name in ("error-codes.md", "api.md", "threat-model.md", "SECURITY.md",
+                 "runbook.md", "cookbook.md", "rule-guide.md"):
+        f = Path("docs") / name
+        for t in set(re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
+
+    # this batch's own surfaces carry their docs, not just the tests
+    assert "bouncer config validate" in Path("README.md").read_text()
+    assert "bouncer completion" in Path("README.md").read_text()
+    assert "export --queue" in Path("docs/api.md").read_text()
+    assert "E_PACK_SIG" in Path("docs/error-codes.md").read_text()
+    assert "bouncer_auth_failures_total" in Path("docs/api.md").read_text()
