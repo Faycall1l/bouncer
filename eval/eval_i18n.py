@@ -30,7 +30,48 @@ def _route(msg, lang):
     return model_for_lang(lang) or model_for_script(detect_lang(msg))
 
 
-def main(path="data/examples_i18n.jsonl", limit=0):
+def score_model(model_dir, rows, lang_of):  # T918: i18n eval of a RUN, not just wiring
+    """Per-language decision quality against the fine-tuned checkpoint itself.
+    Checks are ordered for honesty BEFORE capability: a dir that doesn't look
+    like a laya checkpoint fails the same way whether or not laya exists, a
+    valid-looking dir without laya skips with a receipt, and only then does it
+    score — CPU by default (CI runners have no GPU), with any load/predict
+    failure recorded as a receipt instead of a fabricated per-language score."""
+    cfg_path = os.path.join(model_dir, "rl_agent_config.json")
+    if not os.path.isdir(model_dir) or not os.path.isfile(cfg_path):
+        return {"status": "fail",
+                "receipt": f"not a usable checkpoint: {model_dir} has no "
+                           "rl_agent_config.json — nothing scored"}
+    try:
+        import laya
+    except ModuleNotFoundError:
+        return {"status": "skipped",
+                "receipt": f"laya not importable here; --model {model_dir} was "
+                           "given but decision quality was not measured"}
+    try:
+        agent = laya.Agent(model_dir, device="cpu")
+        per: dict = {}
+        for row in rows:
+            lang = lang_of(row)
+            q = build_questions(row["state"]["rules"], lang)
+            pred = agent.predict(row["state"], q)["answers"]["rule"]["choice"]
+            good = pred == row["labels"]["rule"]
+            d = per.setdefault(lang, {"n": 0, "ok": 0})
+            d["n"] += 1
+            d["ok"] += good
+    except Exception as e:  # noqa: BLE001 — a failed run records WHY, it doesn't crash
+        return {"status": "fail",
+                "receipt": f"could not score {model_dir}: "
+                           f"{type(e).__name__}: {e}"}
+    for d in per.values():
+        d["rule_acc"] = round(d["ok"] / d["n"], 3)
+    n = sum(d["n"] for d in per.values())
+    ok = sum(d["ok"] for d in per.values())
+    return {"status": "measured", "model": model_dir, "device": "cpu",
+            "n": n, "rule_acc": round(ok / max(1, n), 3), "per_lang": per}
+
+
+def main(path="data/examples_i18n.jsonl", limit=0, model_dir=None):
     errs = check_file(path, limit)
     with open(path) as f:
         rows = [json.loads(line) for line in f]
@@ -64,15 +105,21 @@ def main(path="data/examples_i18n.jsonl", limit=0):
             routing["wrong"].append({"message": row["state"]["message"][:60],
                                      "lang": lang, "want": want, "got": got})
     # T898: quality needs weights — skip with a receipt, never fake a score
-    try:
-        import laya  # noqa: F401  — presence is the whole question
-        quality = {"status": "weights present — run eval_gatekeeper.py "
-                             "for per-language decision quality"}
-    except ModuleNotFoundError:
-        quality = {"status": "skipped",
-                   "receipt": "laya (model weights) not importable here; "
-                              "routing above is script-based and weightless, "
-                              "so it was measured — decision quality was not"}
+    # T918: with --model (a fine-tuned run's dir) it measures that run itself
+    if model_dir is not None:
+        quality = score_model(model_dir, rows,
+                              lambda r: next(LANG_OF[k] for k in r["state"]["rules"]
+                                             if k in LANG_OF))
+    else:
+        try:
+            import laya  # noqa: F401  — presence is the whole question
+            quality = {"status": "weights present — run eval_gatekeeper.py "
+                                 "for per-language decision quality"}
+        except ModuleNotFoundError:
+            quality = {"status": "skipped",
+                       "receipt": "laya (model weights) not importable here; "
+                                  "routing above is script-based and weightless, "
+                                  "so it was measured — decision quality was not"}
     return {"n": len(rows), "errors": errs, "per_lang": per_lang,
             "routing": routing, "quality": quality}
 
@@ -83,9 +130,16 @@ if __name__ == "__main__":
     ap.add_argument("--limit", type=int, default=0)  # T509
     ap.add_argument("--out", default="eval/reports/i18n.json")  # T509
     ap.add_argument("--json", action="store_true")  # T509
+    ap.add_argument("--model", default=None,  # T918: i18n eval of a fine-tuned run
+                    help="checkpoint dir (e.g. /kaggle/working/bouncer-421m) — "
+                         "measures per-language decision quality against it")
     a = ap.parse_args()
-    report = main(a.path, a.limit)
+    report = main(a.path, a.limit, a.model)
     os.makedirs("eval/reports", exist_ok=True)
     with open(a.out, "w") as f:
         json.dump(report, f, indent=2)
     print(json.dumps(report, indent=None if a.json else 2))
+    # T918: a requested measurement that failed exits loud — the JSON report
+    # still carries the receipt, but CI must not see exit 0 and move on
+    if a.model and report["quality"]["status"] == "fail":
+        sys.exit(1)

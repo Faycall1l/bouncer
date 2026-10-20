@@ -333,3 +333,93 @@ def test_model_card_written_before_push_and_logged():  # T917: source wiring
     assert 'log_rec(kind="model_card"' in src
     # upload_folder ships the whole folder — README.md rides along
     assert 'api.upload_folder(folder_path=OUT' in src
+
+
+# --- T918: eval_i18n measures a fine-tuned run itself (--model) --------------
+
+def test_eval_i18n_model_flag_fails_loudly_on_bad_dir(tmp_path):  # T918
+    """--model DIR makes eval_i18n score per-language decision quality against
+    that checkpoint. A dir that isn't a checkpoint fails the SAME way whether
+    or not laya is installed (the artifact check precedes the import — honest
+    ordering): status=fail with a receipt, and exit 1 so CI can't miss it.
+    The routing section still ran — it's weightless."""
+    import json as _json
+
+    r = subprocess.run(
+        [sys.executable, "eval/eval_i18n.py", "--json",
+         "--model", str(tmp_path / "not-a-checkpoint"), "--out",
+         str(tmp_path / "i18n.json")],
+        check=False, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 1, (r.returncode, r.stdout[-500:], r.stderr)
+    report = _json.loads((tmp_path / "i18n.json").read_text())
+    q = report["quality"]
+    assert q["status"] == "fail", q
+    assert "rl_agent_config.json" in q["receipt"], "names exactly what was missing"
+    # the weightless sections still measured — quality failing doesn't erase them
+    assert report["errors"] == []
+    assert report["routing"]["wrong"] == []
+
+
+def test_eval_i18n_model_flag_untouched_default(tmp_path):  # T918: no flag, no change
+    """Without --model the quality section is exactly the pre-T918 behavior
+    (skip-with-receipt or weights-present pointer) — the flag is additive."""
+    import json as _json
+
+    r = subprocess.run(
+        [sys.executable, "eval/eval_i18n.py", "--json", "--out",
+         str(tmp_path / "i18n.json")],
+        check=False, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stderr
+    report = _json.loads((tmp_path / "i18n.json").read_text())
+    q = report["quality"]
+    assert q["status"] != "measured" and q["status"] != "fail", \
+        "no --model means no measurement was requested"
+
+
+def test_eval_i18n_score_model_honest_branches():  # T918: unit-level branches
+    """score_model's three branches without a GPU: missing artifact fails
+    (before any laya import), a valid-looking dir with laya absent skips with
+    a receipt naming the model, and a load failure records WHY instead of
+    crashing or fabricating a score."""
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    _sys.path.insert(0, "eval")
+    import eval_i18n
+
+    # branch 1: not a checkpoint -> fail (runs before laya import: identical
+    # verdict with or without laya, so this test passes in BOTH environments)
+    out = eval_i18n.score_model("/nonexistent/ckpt", [], lambda r: "es")
+    assert out["status"] == "fail" and "rl_agent_config.json" in out["receipt"]
+
+    # a dir WITH the artifact but without weights under it: laya's verdict
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        _Path(d, "rl_agent_config.json").write_text("{}")
+        try:
+            import laya  # noqa: F401
+            has_laya = True
+        except ModuleNotFoundError:
+            has_laya = False
+        out = eval_i18n.score_model(d, [], lambda r: "es")
+        if not has_laya:
+            assert out["status"] == "skipped", out
+            assert d in out["receipt"], "the receipt names the model given"
+        else:
+            # with laya present, an empty config either fails to load (fail,
+            # receipt says why) or loads and scores zero rows (measured n=0)
+            assert out["status"] in ("fail", "measured"), out
+            if out["status"] == "measured":
+                assert out["n"] == 0
+
+
+def test_eval_i18n_model_flag_source_wiring():  # T918: the CLI surface
+    src = Path("eval/eval_i18n.py").read_text()
+    assert 'ap.add_argument("--model"' in src, "the flag exists and is documented"
+    # artifact check precedes the laya import — bad dir fails identically
+    # whether or not laya is installed (the CI/local determinism guarantee)
+    assert src.index("rl_agent_config.json") < src.index("import laya")
+    # a failed requested measurement exits nonzero — never exit 0 + receipt
+    assert 'sys.exit(1)' in src and 'status"] == "fail"' in src
+    # scoring runs on CPU: no GPU needed to evaluate a run's i18n quality
+    assert 'device="cpu"' in src
