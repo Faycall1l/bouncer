@@ -387,3 +387,47 @@ def test_eval_i18n_measures_routing_with_honest_skip(tmp_path):  # T898
     checks = {c["name"]: c for c in gate.collect_i18n(old, args)}
     assert "i18n_routing_wrong" not in checks
     assert checks["i18n_errors"]["ok"] is True
+
+
+# T901: the routing sweep — every script class pinned end to end. These
+# strings are the fixtures: change a cell and the test says which class
+# broke. "mixed" rows pin the DOMINANT-script rule (T492): the tally wins,
+# not the first non-latin character anyone types.
+_ROUTING_SWEEP = [
+    # (message, script, lang tag, checkpoint)
+    ("hello there friend", "latin", None, None),
+    ("مباراة جميلة جدا اليوم", "arabic", "ar", "multilingual"),
+    ("привет всем друзья", "cyrillic", "ru", "multilingual"),
+    ("你好世界欢迎", "cjk", "zh", "multilingual"),
+    ("مرحبا hello مرحبا بالجميع", "arabic", "ar", "multilingual"),
+    ("hello привет hello friend", "latin", None, None),
+    ("hello 你好你好世界", "cjk", "zh", "multilingual"),
+    ("123 !!! ...", "other", None, None),
+    ("", "other", None, None),
+]
+
+
+def test_script_detection_routing_sweep():  # T901
+    """The pinned sweep: each script class through the whole chain —
+    detect_script, detect_lang, model_for_script, and the moderate()
+    checkpoint decision with no lang hint. ar/cyrillic/cjk land
+    multilingual, latin and other stay auto, mixed text follows the
+    dominant script (the tally, not the first exotic char)."""
+    from gatekeeper.adapters.common import detect_lang
+    from gatekeeper.normalize import detect_script
+    from gatekeeper.pool import model_for_script
+
+    for msg, want_script, want_lang, want_model in _ROUTING_SWEEP:
+        got_script = detect_script(msg)
+        assert got_script == want_script, (msg[:20], got_script, want_script)
+        got_lang = detect_lang(msg)
+        assert got_lang == want_lang, (msg[:20], got_lang, want_lang)
+        got_model = model_for_script(got_script)
+        assert got_model == want_model, (msg[:20], got_model, want_model)
+
+    # the same table through moderate(): the checkpoint the engine picks
+    for msg, _s, _l, want_model in _ROUTING_SWEEP:
+        if not msg.strip():
+            continue  # empty messages short-circuit before routing (T043)
+        _, probe = _mod(msg)
+        assert probe.seen[-1]["model"] == want_model, (msg[:20], probe.seen[-1])
