@@ -600,3 +600,64 @@ def test_adapter_lang_pin_passes_through_every_platform(monkeypatch):  # T903
                             "user_id": "mm-user"}, rules)
     assert seen == [("discord", "ar"), ("twitch", "ru"),
                     ("mattermost", None)], seen
+
+
+def test_adapter_lang_pin_is_per_platform(monkeypatch):  # T904
+    """The pin is per platform, not ambient: with several platforms pinned
+    at once each one receives ITS pin regardless of the message script,
+    pinning one platform never leaks a tag to another, and the engine's
+    own moderate() (CLI, API) is untouched by the env — the override is an
+    adapter-layer contract, nothing more."""
+    import gatekeeper
+    from gatekeeper.adapters import matrix_bot, webhooks
+    from gatekeeper.adapters import telegram_bot as tg
+    from gatekeeper.adapters.common import adapter_lang
+
+    real_moderate = gatekeeper.moderate  # before the stub swaps it out
+    seen: list[tuple] = []
+
+    def record(text, rules, **kw):
+        seen.append((kw.get("adapter"), kw.get("lang")))
+        return {"action": "allow", "rule": "ok", "confidence": 1.0}
+
+    monkeypatch.setattr(gatekeeper, "moderate", record)
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG",
+                       "telegram=ar,matrix=zh,slack=ru,zulip=fr")
+    rules = {"r": "t"}
+
+    # four platforms, four scripts — every one gets ITS pin, not detection
+    tg.handle_update({"message": {"text": "hello normal latin text",
+                                  "message_id": 1, "chat": {"id": 1},
+                                  "from": {"id": 1}}}, rules)
+    matrix_bot.handle_event(
+        {"type": "m.room.message", "event_id": "$e", "room_id": "!r",
+         "sender": "@u:o.org",
+         "content": {"msgtype": "m.text", "body": "مرحبا بالجميع"}}, rules)
+    webhooks.receive_slack_event({"text": "hello there", "user": "U1"}, rules)
+    assert seen == [("telegram", "ar"), ("matrix", "zh"),
+                    ("slack", "ru")], seen
+    # and the raw resolver agrees for the platform not driven above
+    assert adapter_lang("zulip", "hello") == "fr"
+
+    # pinning one platform leaks nothing to its neighbors: matrix is
+    # pinned zh here, but with the env narrowed to telegram only it
+    # detects again — per platform, not ambient
+    monkeypatch.setenv("BOUNCER_ADAPTER_LANG", "telegram=ar")
+    seen.clear()
+    matrix_bot.handle_event(
+        {"type": "m.room.message", "event_id": "$e2", "room_id": "!r",
+         "sender": "@u:o.org",
+         "content": {"msgtype": "m.text", "body": "привет всем"}}, rules)
+    assert seen == [("matrix", "ru")], "unpinned matrix detects (cyrillic)"
+
+    # the engine itself never reads the env: direct moderate() with no
+    # lang stays unhinted even while telegram is pinned
+    from gatekeeper.cache import CACHE
+    from gatekeeper.normalize import detect_script
+    CACHE.clear()
+    assert detect_script("hello normal latin spam text") == "latin"
+    assert adapter_lang("telegram", "hello") == "ar", "adapter layer pinned"
+    rules2 = {"no-spam": "spam"}  # rule word -> model path, so lang shows
+    res = real_moderate("hello normal latin spam text", rules2,
+                        router=_RouteProbe())
+    assert res["lang"] is None, "CLI/API moderate unaffected by the env pin"
