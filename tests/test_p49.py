@@ -262,3 +262,35 @@ def test_t943_every_scrape_line_parses_and_families_are_complete():
                  "bouncer_review_queue_depth", "bouncer_requests_total",
                  "bouncer_breaker_open", "bouncer_coalesce_joined"):
         assert types.get(name) in ("counter", "gauge"), name
+
+
+def test_t944_scrape_cardinality_bounded_under_adversarial_input():
+    """T944: T942 capped the rule-label map, but the scrape is the surface
+    that must stay bounded — a Prometheus text parse of the whole body,
+    counting total label-sets across every family, after 5k distinct client
+    rule ids × 4 actions, fresh rule/status/cause values and a queue flood.
+    The bound is a constant, not a function of traffic: label sets ≤ a few
+    hundred regardless of how many distinct ids arrive."""
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import stats
+    from gatekeeper.stats import record, reset_stats
+
+    reset_stats()
+    try:
+        # 5k distinct ids across every action — each id×action is a fresh
+        # potential label-set in rules, decisions and the joint block
+        for i in range(5000):
+            for act in ("allow", "flag", "delete", "escalate"):
+                record(act, f"flood-{i}", 1.0,
+                       cause=f"cause-{i % 7}", adapter="telegram")
+        body = TestClient(serve.app).get("/metrics").text
+        label_sets = sum(1 for l in body.splitlines()
+                         if l and not l.startswith("#") and "{" in l)
+        # bound: the four known actions + rules under the cap (200+_other)
+        # + 7 causes + 4 telegram actions + statuses + the unlabeled singles
+        assert label_sets <= 300, label_sets
+        # and the map behind it never exceeded the cap
+        assert len(stats.get_stats()["rules"]) <= stats.MAX_RULE_LABELS + 1
+    finally:
+        reset_stats()

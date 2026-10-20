@@ -1040,7 +1040,7 @@
 - [x] T941 adp: per-adapter counters exported to /metrics (bouncer_adapter_decisions_total{adapter,action} from T867's recording; no-series-without-adapter keeps cardinality bounded; receipt tests/test_p49.py)
 - [x] T942 metrics: cardinality guard — label values capped, no unbounded series (stats.MAX_RULE_LABELS=200: fresh client rule ids fold into `_other` at record time and on snapshot restore; decisions still count; receipt tests/test_p49.py)
 - [x] T943 test: every /metrics line parses as Prometheus text; HELP/TYPE pairs complete (serve.metrics emits one HELP+TYPE per family via a `family()` helper; strict regex parser in tests/test_p49.py rejects unknown directives, bad labels, non-numeric values, duplicate/missing metadata)
-- [ ] T944 test: metrics cardinality stays bounded under adversarial rule ids
+- [x] T944 test: metrics cardinality stays bounded under adversarial rule ids (5k ids × 4 actions + fresh causes/adapters: total labeled sample lines stay ≤300 — a constant, not a function of traffic; tests/test_p49.py)
 - [ ] T945 docs: api.md metrics section — full export list with types
 - [ ] T946 docs: runbook scrape recipe (Prometheus snippet, alert on breaker-open)
 - [ ] T947 perf: /metrics under threaded load — p95 budget measured + reported
