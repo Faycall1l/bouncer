@@ -1046,3 +1046,59 @@ def test_roadmap_finetune_section_lists_pipeline_receipts_honestly():  # T928
     todo = Path("TODO.md").read_text()
     for t in set(_re.findall(r"\bT\d{3,4}\b", rm)):
         assert t in todo, f"ROADMAP cites unknown box {t}"
+
+
+# --- T930: P48 closer — every box ticked, receipts outside TODO.md ----------
+
+def test_p48_finetune_pipeline_sweep():  # T930: every box T911-T930 ticked,
+    # every box has a receipt outside TODO.md, no invented citations
+    import re as _re
+
+    todo = Path("TODO.md").read_text()
+    p48 = [b for b in _re.findall(r"- \[[ x]\] (T\d{3,4})\b", todo)
+           if 911 <= int(b[1:]) <= 930]
+    assert sorted(p48) == [f"T{n}" for n in range(911, 931)], p48
+    for b in p48:
+        assert f"- [x] {b}" in todo, f"{b} unticked"
+    assert "## P48 Fine-tune pipeline (T911–T930)" in todo
+
+    # receipts live OUTSIDE TODO.md — across this batch's own surfaces:
+    # the train script, its README, the smoke + publisher scripts, the
+    # nightly workflow, ROADMAP, and the tests themselves
+    corpus = (Path("README.md").read_text()
+              + Path("CONTRIBUTING.md").read_text()
+              + Path("verify.sh").read_text())
+    for root in ("docs", "tests", "src", ".github", "eval", "kaggle",
+                 "scripts", "notebooks"):
+        for p in Path(root).rglob("*"):
+            if (p.is_file()
+                    and p.suffix in (".md", ".py", ".yml", ".yaml", ".sh")):
+                corpus += p.read_text()
+    for b in p48:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    # citation integrity: every T-number on the surfaces this batch touched
+    # is a box TODO.md actually knows — invented receipts fail here
+    for f in (Path("kaggle/README.md"), Path("kaggle/train/train.py"),
+              Path("scripts/ft_smoke.py"),
+              Path("scripts/upload_dataset_kaggle.py"),
+              Path(".github/workflows/nightly.yml"),
+              Path("docs/ROADMAP.md")):
+        for t in set(_re.findall(r"T\d{3,4}", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
+
+    # the pipeline's gates are all on their surfaces, not just in TODO:
+    # data gate before training, full ship gate, named refusals
+    train = TRAIN.read_text()
+    assert "DATA_GATE" in train and "gate_pass = None" in train
+    readme = Path("kaggle/README.md").read_text()
+    assert "NOT RUN" in readme, "the run status stays honest"
+    assert Path("scripts/ft_smoke.py").exists(), "the CPU smoke exists (T926)"
+    assert "ft-smoke" in Path(".github/workflows/nightly.yml").read_text()
+    # the smoke passes on THIS machine (T929's finding, re-checked here):
+    # the pre-flight the nightly runs is green, not aspirational
+    import subprocess as _sp
+    r = _sp.run([sys.executable, "scripts/ft_smoke.py", "--json"],
+                check=False, capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert json.loads(r.stdout)["ok"] is True
