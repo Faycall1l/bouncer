@@ -1027,7 +1027,7 @@
 - [x] T930 test: P48 fine-tune-pipeline sweep (every box ticked, receipts outside TODO.md)
 
 ## P49 Observability (T931–T950)
-- [ ] T931 stats: /metrics per-rule decision counters (bouncer_decisions_rule_total)
+- [x] T931 stats: /metrics per-rule decision counters (stale at birth — T884 already exports `bouncer_rule_total{rule=...}` / stats-style per-rule series; pinned by tests/test_p46.py:647, full suite 552-green)
 - [ ] T932 stats: /metrics cause counters
 - [ ] T933 stats: /metrics p95 latency export
 - [ ] T934 stats: /metrics strikes summary export
