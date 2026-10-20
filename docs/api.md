@@ -14,7 +14,8 @@ _(Last checked against v0.4.0.)_
   delete_threshold?, lang?, timeout_s?}` → array, order kept. 1–32 messages
   (else 422/413), each ≤ 8000 chars. `lang` validates and routes like
   `/predict`'s (T836) — a preset autofills its pack's language when `lang` is
-  omitted (T502 parity). `timeout_s`/`BOUNCER_TIMEOUT` bounds the **whole
+  omitted (T502 parity), and with neither, each message autofills from its
+  own script (T902: a mixed-script batch tags per row). `timeout_s`/`BOUNCER_TIMEOUT` bounds the **whole
   batch** (T837): rows that don't start before the deadline return escalate
   fallbacks (cause `batch-deadline`) instead of touching the model. Shares
   rate/auth guards with `/predict`.
@@ -77,7 +78,7 @@ don't have to repeat them:
   per-IP bucket keying (and its trusted-proxy rule, T777) is identical in
   every worker.
 
-## Presets + language (T595)
+## Presets + language (T595, refreshed T907)
 
 * `rules` and `preset` are **mutually exclusive** on `/predict` and
   `/predict/batch`: pass a built-in pack by name (`{"preset": "gaming"}`) or your
@@ -91,6 +92,27 @@ don't have to repeat them:
   `422 {code: "E_LANG"}`. Presets tagged `es`/`fr`/`ar` autofill the hint —
   passing an explicit `lang` still wins. (The demo UI offers an `auto` option;
   the API simply omits the field.)
+* When `lang` is omitted entirely, `/predict` **autofills it from the
+  message's own script** (T892): arabic/cyrillic/cjk text gets `ar`/`ru`/`zh`
+  and the response echoes that tag; latin text stays unhinted (`lang: null`).
+  A preset's pack language (T502) fills the gap before detection, so
+  explicit `lang` > preset tag > script detection. `/predict/batch` fills
+  **per message** (T902) — a mixed-script batch tags each row from its own
+  script, identical to running the rows one by one.
+* Script-vs-lang, the whole contract in one table:
+
+  | input | `lang` in response | checkpoint | why |
+  |---|---|---|---|
+  | explicit `lang` | that slug | pinned iff `ar`/`zh`/`ru`/... (T457) | the caller said |
+  | preset (no `lang`) | pack tag | pinned iff the pack is `ar` | the pack said (T502) |
+  | omitted, arabic/cyrillic/cjk text | `ar`/`ru`/`zh` (T892) | `multilingual` | the message's script said |
+  | omitted, latin text | `null` | laya auto-route | nobody claimed a language |
+
+  A hint without a checkpoint opinion (say `lang: "es"` on Arabic text) still
+  lets the detected script pick the checkpoint (T891) — the tag routes reason
+  language, the script protects the model choice. Detection never invents a
+  language claim for latin text (T857). Adapters derive their hint the same
+  way, unless `BOUNCER_ADAPTER_LANG` pins the platform (T897).
 
 ## Snapshots + stats export (T608)
 
