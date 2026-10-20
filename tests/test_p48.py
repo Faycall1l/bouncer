@@ -905,3 +905,88 @@ def test_eval_out_name_is_the_gated_report_name():  # T925: naming wiring
     # exactly two uses: the producer's --out and the gate's argument
     assert src.count('os.path.join(OUT, "eval_test.json")') == 2
     assert "gate_pass = None" in src, "not-run starts as refuse, not pass"
+
+
+# --- T926: bouncer-ft smoke — the fine-tune pre-flight, scripted on CPU ------
+
+FT_SMOKE = Path("scripts/ft_smoke.py")
+
+
+def test_ft_smoke_passes_on_cpu_without_cuda():  # T926
+    """`bouncer-ft smoke` is the whole pre-flight in one command: train.py's
+    dry run (config parse + validate_config) chained with the dataset schema
+    check — no weights, no GPU, no torch. It passes on THIS interpreter,
+    which has no training stack installed: the proof of "without CUDA" is a
+    green run where CUDA cannot exist."""
+    import os as _os
+
+    env = {**_os.environ, "PATH": "/usr/bin:/bin"}
+    r = subprocess.run([sys.executable, str(FT_SMOKE), "--json"],
+                       check=False, capture_output=True, text=True, env=env,
+                       timeout=300)
+    assert r.returncode == 0, r.stdout + r.stderr
+    rep = json.loads(r.stdout)
+    assert rep["ok"] is True, rep
+    by_step = {s["step"]: s for s in rep["steps"]}
+    assert set(by_step) == {"dataset", "dry_run", "validate_data"}
+    assert all(s["ok"] for s in rep["steps"]), rep
+    # the dry run is the REAL one: the contract token proves config validation
+    # happened, not just a zero exit
+    assert "DRY_RUN_OK" in by_step["dry_run"]["detail"]
+    # and the script stays weightless: no torch anywhere in its source
+    assert "torch" not in FT_SMOKE.read_text()
+
+
+def test_ft_smoke_names_the_failing_step():  # T926: refusals are pointed
+    """A bad dataset fails the smoke WITHOUT failing the other steps: the
+    receipt shows dataset+dry_run green and validate_data red, stderr names
+    the failing step in FT_SMOKE_FAIL, and a missing dataset is reported as
+    such — never a traceback pretending the file was fine."""
+    import os as _os
+
+    bad = Path.cwd() / "ft_smoke_bad.jsonl"
+    bad.write_text(json.dumps({"nope": 1}) + "\n")
+    env = {**_os.environ, "PATH": "/usr/bin:/bin"}
+    try:
+        r = subprocess.run([sys.executable, str(FT_SMOKE), "--json",
+                            "--dataset", str(bad)],
+                           check=False, capture_output=True, text=True, env=env,
+                           timeout=300)
+    finally:
+        bad.unlink(missing_ok=True)
+    assert r.returncode == 1, r.stdout + r.stderr
+    rep = json.loads(r.stdout)
+    by_step = {s["step"]: s for s in rep["steps"]}
+    assert by_step["dataset"]["ok"] is True  # the file exists — it's the rows
+    assert by_step["dry_run"]["ok"] is True  # config is fine; data is not
+    assert by_step["validate_data"]["ok"] is False
+    assert "FT_SMOKE_FAIL: validate_data" in r.stderr
+
+    # missing dataset: named, not crashed
+    r = subprocess.run([sys.executable, str(FT_SMOKE), "--json",
+                        "--dataset", "/nonexistent/ft.jsonl"],
+                       check=False, capture_output=True, text=True, env=env,
+                       timeout=300)
+    assert r.returncode == 1
+    rep = json.loads(r.stdout)
+    by_step = {s["step"]: s for s in rep["steps"]}
+    assert by_step["dataset"]["ok"] is False
+    assert "not found" in by_step["dataset"]["detail"]
+    assert "FT_SMOKE_FAIL:" in r.stderr
+
+
+def test_ft_smoke_drives_the_pinned_pre_flight_surfaces():  # T926: wiring
+    """The smoke chains the SAME two pre-flights the rest of the repo pins:
+    train.py --dry-run (T911/T919) and eval/validate_data.py (T381, the
+    checker behind the T924 data gate). If either surface moves and the
+    smoke doesn't follow, it would go red on CI before anything trains —
+    so the exact invocations are pinned here."""
+    src = FT_SMOKE.read_text()
+    assert '"--dry-run"' in src, "the config-parse step invokes the dry run"
+    assert "validate_data.py" in src, "the data step invokes the schema checker"
+    # the smoke is a runner, not a copy: no schema rules or config rules live
+    # here — those stay single-sourced in their own scripts
+    assert "def check_row" not in src and "def validate_config" not in src
+    # the default dataset is the one shipped in the repo, so a fresh clone
+    # can run the smoke before building the 12k set
+    assert "data/examples.jsonl" in src

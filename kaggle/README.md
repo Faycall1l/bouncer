@@ -15,6 +15,15 @@ The dry run checks the knobs (LORA block, floors, flag values) and prints
 A broken config exits 2 with `DRY_RUN_FAIL:` naming the flag. This is also
 what CI runs (`tests/test_p48.py::test_train_parses_and_dry_run_config_validates_end_to_end`).
 
+```bash
+python scripts/ft_smoke.py            # T926: dry run + data validate, one command
+```
+
+`bouncer-ft smoke` chains this dry run with the dataset schema check
+(`eval/validate_data.py`) — the whole pre-flight that runs on any CPU,
+before quota is a thought. One receipt, one line per step; a failing step
+is named in `FT_SMOKE_FAIL`.
+
 ## Flags (train.py)
 
 | flag | default | effect | box |
