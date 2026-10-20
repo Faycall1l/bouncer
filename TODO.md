@@ -971,7 +971,7 @@
 - [x] T878 cli: pack init writes pack metadata (version, created, lang) — typed packs, not bare dicts
 - [x] T879 rules: pack lint detects exact-duplicate ids (the JSON scanner silently keeps the last one, so _read_pack rejects at parse) + invisible-only text — zero-width/control passes strip() but renders as nothing; plain whitespace stays validate_rules' job
 - [x] T880 rules: pack lint warns when a rule's text duplicates another preset's rule verbatim
-- [ ] T881 strikes: amnesty command — operator clears a user's strikes after an appeal
+- [x] T881 strikes: amnesty command — operator clears a user's strikes after an appeal
 - [ ] T882 review: queue rows gain cause/model/preset fields (adjudication context, not just text+rule)
 - [ ] T883 audit: rows gain cause/preset/model/rid/version fields
 - [ ] T884 stats: /metrics exports per-rule counters + causes + p95 + strikes (all exist in /stats, none in /metrics)

@@ -492,3 +492,37 @@ def test_pack_lint_warns_on_verbatim_preset_text(tmp_path, capsys):  # T880
     solo.write_text(json.dumps({"one": "stick to raid planning and logistics"}))
     assert main(["pack", "lint", "--rules", str(solo)]) == 0
     assert "verbatim" not in capsys.readouterr().out
+
+
+def test_amnesty_command_clears_or_reduces_strikes(tmp_path, monkeypatch,
+                                                   capsys):  # T881
+    """bouncer amnesty USER is the operator's strike forgiveness outside the
+    review queue (adjudicate only amnesties a rejected row's user): it loads
+    the persisted table (the CLI is a fresh process), clears everything by
+    default, subtracts exactly N with --weight, saves back, and refuses a
+    user with no strikes."""
+    from gatekeeper import strikes as _st
+    monkeypatch.setattr(_st, "_PATH", str(tmp_path / "strikes.json"))
+    _st.reset()
+    _st.add_strike("u1", 3)
+    _st.save()
+    _st.reset()  # the CLI process starts empty — amnesty must reload
+    capsys.readouterr()
+
+    # full clear (the default): 3 -> 0, entry dropped, file updated
+    assert main(["amnesty", "u1"]) == 0
+    assert "amnesty u1: strikes 3 -> 0" in capsys.readouterr().out
+    assert "u1" not in _st._strikes
+    doc = json.loads((tmp_path / "strikes.json").read_text())
+    assert "u1" not in doc["strikes"], "the file records the forgiveness"
+
+    # --weight subtracts exactly N (the T865 primitive)
+    _st.add_strike("u2", 3)
+    _st.save()
+    _st.reset()
+    assert main(["amnesty", "u2", "--weight", "2"]) == 0
+    assert "amnesty u2: strikes 3 -> 1" in capsys.readouterr().out
+
+    # a user with no strikes is refused, loudly
+    assert main(["amnesty", "nobody"]) == 1
+    assert "no strikes for nobody" in capsys.readouterr().err

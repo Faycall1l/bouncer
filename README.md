@@ -84,6 +84,7 @@ bouncer demo --share  # public gradio link: rulebook + messages go public (you g
 bouncer watch --preset gaming < chat.log        # live tail, colored verdicts
 bouncer review                                  # queued flags/escalations
 bouncer adjudicate ROW_ID reject                # operator verdict; reject = strike amnesty
+bouncer amnesty USER                            # clear a user's strikes after an appeal (--weight N subtracts N)
 bouncer config validate                         # lint bouncer.toml + a gate JSON (E_ADAPTER/E_CONFIG)
 bouncer completion bash                         # shell completion, generated from the parser
 bouncer snapshot save snap.json                 # counters + strikes (T606)

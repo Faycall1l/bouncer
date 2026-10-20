@@ -248,6 +248,28 @@ def cmd_adjudicate(args) -> int:  # T865: operator verdict on one queued row
     return 0
 
 
+def cmd_amnesty(args) -> int:  # T881: operator forgiveness, outside the queue
+    """`bouncer amnesty USER [--weight N]` — clear a user's strikes after an
+    appeal, without needing a queue row (adjudicate's amnesty only fires on
+    a rejected row). Loads the persisted table first (the CLI is a fresh
+    process), clears everything by default, subtracts exactly N with
+    --weight (the T865 primitive), then saves back."""
+    import os
+
+    from gatekeeper import strikes
+    if os.path.exists(strikes._PATH):  # a missing table is an empty table
+        strikes.load()  # SnapshotError (E_SNAPSHOT) propagates to the wrapper
+    before = strikes.standing(args.user)["strikes"]
+    if not before:
+        print(f"bouncer: no strikes for {args.user}", file=sys.stderr)
+        return 1
+    weight = before if args.weight is None else max(0, args.weight)
+    after = strikes.amnesty(args.user, weight)
+    strikes.save()
+    print(f"amnesty {args.user}: strikes {before} -> {after['strikes']}")
+    return 0
+
+
 def cmd_config(args) -> int:  # T871: standalone config lint
     """`bouncer config validate` — parse bouncer.toml (E_ADAPTER) and/or a
     GateConfig JSON (E_CONFIG: unknown keys, bad ranges, wrong shape,
@@ -842,6 +864,11 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     aj.add_argument("row_id")
     aj.add_argument("verdict", choices=("approve", "reject"))
     aj.set_defaults(fn=cmd_adjudicate)
+    am = sub.add_parser("amnesty")  # T881: strike forgiveness, no queue row needed
+    am.add_argument("user")
+    am.add_argument("--weight", type=int, default=None,
+                    help="subtract exactly N strikes (default: clear them all)")
+    am.set_defaults(fn=cmd_amnesty)
     cf = sub.add_parser("config")  # T871: standalone config lint
     cf_sub = cf.add_subparsers(dest="cfg_cmd")
     cv = cf_sub.add_parser("validate")  # lint only — no decision, no server

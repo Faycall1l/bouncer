@@ -73,4 +73,7 @@ version — the two-key window means no client deadline:
 3. `bouncer snapshot save` before the process exits, then stop it.
 4. The review queue drains by hand: `bouncer review` to list, adjudicate
    out-of-band, then `bouncer review --clear --yes` (T318) — `--clear`
-   without `--yes` refuses, because it drops the whole queue.
+   without `--yes` refuses, because it drops the whole queue. A rejected
+   row amnesties that user's strikes by the row's weight (T865); for an
+   appeal decided off the queue entirely, `bouncer amnesty USER` clears
+   the user's strikes directly (T881, `--weight N` subtracts N).
