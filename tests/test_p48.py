@@ -1018,3 +1018,31 @@ def test_nightly_runs_the_ft_cpu_smoke():  # T927
     # and the smoke's own contract still holds — the job is only useful
     # because the script refuses (exit 1) on a failed step
     assert FT_SMOKE.exists(), "the nightly job's script was removed"
+
+
+# --- T928: ROADMAP fine-tune section — pipeline receipts, status NOT RUN -----
+
+def test_roadmap_finetune_section_lists_pipeline_receipts_honestly():  # T928
+    """ROADMAP's fine-tune section now names what P48 actually built (dry
+    run, resume, provenance, model card, data gate, full ship gate, the
+    CPU smoke and its nightly job) — while the status line stays NOT RUN
+    and the closing bullet says plainly that receipts on the PATH are not
+    a trained checkpoint. Every box it cites must exist in TODO.md (the
+    same citation-integrity rule docs tests already enforce), so the page
+    can't thank a box that was never written."""
+    import re as _re
+
+    rm = Path("docs/ROADMAP.md").read_text()
+    assert "Fine-tune results (status: NOT RUN)" in rm
+    # the pipeline receipts are listed, and so is their limit
+    for needle in ("tests/test_p48.py", "scripts/ft_smoke.py",
+                   "T911/T919", "T915/T920", "T924", "T926", "T927"):
+        assert needle in rm, needle
+    assert "not that a checkpoint was trained" in rm, \
+        "receipts on the path must not read as a run"
+    # status honesty survives the addition: no run, no after-column
+    assert "has **not run**" in rm and 'mode:"real"' in rm
+    # citation integrity: every T-number on the page is a real box
+    todo = Path("TODO.md").read_text()
+    for t in set(_re.findall(r"\bT\d{3,4}\b", rm)):
+        assert t in todo, f"ROADMAP cites unknown box {t}"

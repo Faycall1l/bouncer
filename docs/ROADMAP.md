@@ -23,6 +23,18 @@ uses.
 * What the run can and cannot change is pre-registered in
   `docs/drafts/finetune-run-impact.md` — unmeasured until the run
   happens, no exceptions.
+* The PIPELINE around the run is built and receipted, even though the
+  run itself is not (P48, `tests/test_p48.py`): import-safe train script
+  with dry-run config validation (T911/T919), resume (T914), provenance
+  in every log line (T916), an auto-generated model card (T917), a data
+  gate that refuses on bad rows or a hash mismatch before training starts
+  (T924), and a ship gate that runs gate.py's FULL thresholds with no
+  local overrides (T915/T920).
+* Pre-flight without a GPU: `python scripts/ft_smoke.py` chains the dry
+  run with the dataset schema check (T926), and the nightly workflow
+  runs that same smoke on CPU (T927) — config parse + data validate, no
+  weights. Still not a run: these receipts prove the path is testable,
+  not that a checkpoint was trained or pushed.
 
 ## Plugins (status: planned — design not started)
 
