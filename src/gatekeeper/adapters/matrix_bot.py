@@ -9,26 +9,22 @@ prefix parity). Flag-only default — `BOUNCER_MX_REDACT=1` opts into
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
-import json
 import sys
-import urllib.request
 
 
 def api(token: str, homeserver: str, method: str, path: str, params=None):
     """One Matrix client-API call as JSON; raises OSError/URLError on failure.
 
     T851: 429/5xx are retried via the shared `http_json` helper (backoff
-    honoring Retry-After); everything else still raises immediately.
+    honoring Retry-After); T951: the request builder lives in `common.api`.
     """
-    from gatekeeper.adapters.common import http_json
+    from gatekeeper.adapters.common import api as _api
 
-    req = urllib.request.Request(
-        f"{homeserver}/_matrix/client/v0{path}",
-        data=json.dumps(params).encode() if params else None,
-        method=method,
-        headers={"Authorization": f"Bearer {token}",
-                 "Content-Type": "application/json"})
-    return http_json(req, timeout=70)
+    return _api(f"{homeserver}/_matrix/client/v0{path}", method=method,
+                headers={"Authorization": f"Bearer {token}",
+                         "Content-Type": "application/json"},
+                params=params or None,  # {} sends no body, like the copy did
+                timeout=70)
 
 
 def _command(body, rules, event, token, homeserver, api_fn, out):

@@ -12,25 +12,22 @@ from __future__ import annotations
 # Apache-2.0. See LICENSE.
 import base64
 import json
-import urllib.parse
-import urllib.request
 
 
 def api(email: str, key: str, site: str, method: str, path: str, **params):
     """One Zulip v1 call as JSON (HTTP Basic: bot email + api key).
 
     T851: 429/5xx are retried via the shared `http_json` helper (backoff
-    honoring Retry-After); everything else still raises immediately.
+    honoring Retry-After); T951: the request builder lives in `common.api`
+    (form-encoded body, no Content-Type — Zulip's convention).
     """
-    from gatekeeper.adapters.common import http_json
+    from gatekeeper.adapters.common import api as _api
 
     auth = base64.b64encode(f"{email}:{key}".encode()).decode()
-    req = urllib.request.Request(
-        f"{site}/api/v1{path}",
-        data=urllib.parse.urlencode(params).encode() if params else None,
-        method=method,
-        headers={"Authorization": f"Basic {auth}"})
-    return http_json(req, timeout=60)
+    return _api(f"{site}/api/v1{path}", method=method,
+                headers={"Authorization": f"Basic {auth}"},
+                params=params or None,  # {} sends no body, like the copy did
+                encode="form", timeout=60)
 
 
 def _command(text, rules, msg, creds, api_fn, out):

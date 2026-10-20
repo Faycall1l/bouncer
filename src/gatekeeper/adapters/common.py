@@ -240,6 +240,32 @@ def install_shutdown(name: str, log=print, hard: bool = False):
     return stopping
 
 
+def api(url, *, method=None, headers=None, params=None, encode="json",
+        timeout: float = 30.0):  # T951
+    """One platform REST call: build the request, encode the body, hand off
+    to `http_json` (T851's retries/backoff). The single copy behind
+    telegram/matrix/mattermost/zulip's `api()` wrappers (T951) — the
+    wrappers keep their platform signatures and own their URL/auth; this
+    helper never sees a credential.
+
+    `params=None` sends no body (GETs and empty POSTs alike); a dict is
+    encoded per `encode` — "json" (default) or "form" (Zulip's urlencoded
+    POSTs, no Content-Type). `method=None` lets urllib pick (data ⇒ POST),
+    which is the telegram behavior the four shared.
+    """
+    import json as _json
+    import urllib.parse
+    import urllib.request
+
+    data = None
+    if params is not None:
+        data = (urllib.parse.urlencode(params).encode() if encode == "form"
+                else _json.dumps(params).encode())
+    req = urllib.request.Request(url, data=data, headers=headers or {},
+                                 method=method)
+    return http_json(req, timeout=timeout)
+
+
 def http_json(req, *, timeout: float = 30.0, opener=None, attempts: int = 3,
               backoff_s: float = 0.5, backoff_cap_s: float = 8.0,
               retry_after_cap_s: float = 60.0,

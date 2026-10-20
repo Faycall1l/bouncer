@@ -1049,7 +1049,7 @@
 - [x] T950 test: P49 observability sweep (every box ticked, receipts outside TODO.md)
 
 ## P50 Refactor & repo hygiene (T951–T970)
-- [ ] T951 adp: shared api() helper moves to common.py — 4 copies deleted
+- [x] T951 adp: shared api() helper moves to common.py — 4 copies deleted (receipt: tests/test_p50.py::test_t951 — the four wrappers delegate to common.api, byte-identical URL/verb/body/headers/timeout)
 - [ ] T952 adp: shared command table + parser helper — 5 copies reduced
 - [ ] T953 adp: shared moderate+action skeleton — 4 copies reduced
 - [ ] T954 explain: announce_line wired or removed (dead since introduction)

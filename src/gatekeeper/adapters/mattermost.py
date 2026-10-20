@@ -16,25 +16,21 @@ from __future__ import annotations
 import hmac
 import json
 import sys
-import urllib.parse
-import urllib.request
 
 
 def api(token: str, server: str, method: str, path: str, **params):
     """One Mattermost REST call as JSON.
 
     T851: 429/5xx are retried via the shared `http_json` helper (backoff
-    honoring Retry-After); everything else still raises immediately.
+    honoring Retry-After); T951: the request builder lives in `common.api`.
     """
-    from gatekeeper.adapters.common import http_json
+    from gatekeeper.adapters.common import api as _api
 
-    req = urllib.request.Request(
-        f"{server}/api/v4{path}",
-        data=json.dumps(params).encode() if params else None,
-        method=method,
-        headers={"Authorization": f"Bearer {token}",
-                 "Content-Type": "application/json"})
-    return http_json(req, timeout=30)
+    return _api(f"{server}/api/v4{path}", method=method,
+                headers={"Authorization": f"Bearer {token}",
+                         "Content-Type": "application/json"},
+                params=params or None,  # {} sends no body, like the copy did
+                timeout=30)
 
 
 def handle_post(post: dict, rules: dict, *, token=None, server=None,

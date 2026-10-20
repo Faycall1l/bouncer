@@ -9,8 +9,6 @@ deletes by default is one rule typo away from silencing a channel.
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
-import json
-import urllib.request
 
 API_URL = "https://api.telegram.org/bot{token}/{method}"
 
@@ -19,15 +17,13 @@ def api(token: str, method: str, **params):
     """One Bot API call as JSON; raises OSError/URLError on network failure.
 
     T851: 429/5xx are retried via the shared `http_json` helper (backoff
-    honoring Retry-After); everything else still raises immediately.
+    honoring Retry-After); T951: the request builder itself now lives in
+    `common.api` — this wrapper keeps only the URL and the body.
     """
-    from gatekeeper.adapters.common import http_json
+    from gatekeeper.adapters.common import api as _api
 
-    req = urllib.request.Request(
-        API_URL.format(token=token, method=method),
-        data=json.dumps(params).encode(),
-        headers={"Content-Type": "application/json"})
-    return http_json(req, timeout=60)
+    return _api(API_URL.format(token=token, method=method), params=params,
+                headers={"Content-Type": "application/json"}, timeout=60)
 
 
 def _command(text: str, rules: dict, chat_id, token, api_fn, out,
