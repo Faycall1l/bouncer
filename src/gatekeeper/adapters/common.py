@@ -212,6 +212,44 @@ def parse_command(text: str, *drop):  # T952
     return words[0].lower() if words else ""
 
 
+def moderate_action(text, rules, *, adapter, uid, enabled, effect, out,
+                    sender: bool = True, flag: str = "deleted"):  # T953
+    """The moderate+action skeleton behind telegram/matrix/mattermost/
+    zulip's four handle_* copies (T953): platform identity + language
+    plumbing, the decision, the delete effect, the announce line.
+
+    The rate-cap guard (T701) stays with each caller — its message is the
+    surface's voice and the T701 wire test scans for it per adapter.
+
+    `enabled` is the caller's delete permission already ANDed with its
+    credentials (token, homeserver, message id, ...); `effect(dry, res)`
+    is the only platform-shaped part: with dry=True it prints its own
+    [dry-run] intent line, otherwise it deletes (matrix's reason field
+    reads the rule out of `res`, hence the second argument). `sender`
+    controls the `<...>` prefix on the announce line — telegram groups
+    carry the sender in the chat itself, so it passes False. `flag` keys
+    the effect result: "deleted", or "redacted" for matrix.
+    """
+    from gatekeeper import moderate
+    res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
+                        user_id=as_user_id(adapter, uid),
+                        lang=adapter_lang(adapter, text),  # T897: env pin, else detect
+                        adapter=adapter))  # T867: per-adapter counters
+    res[flag] = False
+    if res["action"] == "delete" and enabled:
+        if dry_run():  # T697: print the intent, never the act
+            effect(dry=True, res=res)
+            res["dry_run"] = True
+        else:
+            effect(dry=False, res=res)
+            res[flag] = True
+    if res["action"] in ("delete", "flag", "escalate"):
+        who = f"<{redact(uid)}> " if sender else ""
+        out(f"[{res['action']}] {who}{redact(text[:120])} "
+            f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
+    return res
+
+
 def verify_signature(secret: str, header: str, body, *, prefix: str = "",
                      digestmod: str = "sha256") -> bool:
     """T704: constant-time HMAC signature check for webhook receivers.

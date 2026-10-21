@@ -67,28 +67,21 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
         out(f"[rate-limited] chat {chat_id} over the per-user cap; "
             "message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
-    from gatekeeper import moderate
-    from gatekeeper.adapters.common import adapter_lang, as_user_id, dry_run
-    res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
-                        user_id=as_user_id("telegram",
-                                           (msg.get("from") or {}).get("id")),
-                        lang=adapter_lang("telegram", text),  # T897: env pin, else detect
-                        adapter="telegram"))  # T867: per-adapter counters
-    res["deleted"] = False
-    if res["action"] == "delete" and can_delete and token:
-        if dry_run():  # T697: print the intent, never the act
+    from gatekeeper.adapters.common import moderate_action
+
+    def _delete(dry, res):  # T953: the platform-shaped part of the skeleton
+        if dry:
             out(f"[dry-run] would deleteMessage chat={chat_id} "
                 f"msg={msg.get('message_id')}")
-            res["dry_run"] = True
-        else:
-            api_fn(token, "deleteMessage", chat_id=chat_id,
-                   message_id=msg.get("message_id"))
-            res["deleted"] = True
-    if res["action"] in ("delete", "flag", "escalate"):
-        from gatekeeper.adapters.common import redact
-        out(f"[{res['action']}] {redact(text[:120])} "
-            f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
-    return res
+            return
+        api_fn(token, "deleteMessage", chat_id=chat_id,
+               message_id=msg.get("message_id"))
+
+    return moderate_action(
+        text, rules, adapter="telegram",
+        uid=(msg.get("from") or {}).get("id"),
+        enabled=bool(can_delete and token), effect=_delete, out=out,
+        sender=False)  # the group line already shows who sent it
 
 
 def run():

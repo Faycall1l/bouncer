@@ -81,27 +81,18 @@ def handle_event(event: dict, rules: dict, *, own_id=None, creds=None,
         out(f"[rate-limited] <{msg.get('sender_id')}> over the per-user cap; "
             "message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
-    from gatekeeper import moderate
-    from gatekeeper.adapters.common import adapter_lang, as_user_id, dry_run
-    res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
-                        user_id=as_user_id("zulip", msg.get("sender_id")),
-                        lang=adapter_lang("zulip", text),  # T897: env pin, else detect
-                        adapter="zulip"))  # T867: per-adapter counters
-    res["deleted"] = False
-    if (res["action"] == "delete" and can_delete and creds
-            and msg.get("id") is not None):
-        if dry_run():  # T697: print the intent, never the act
+    from gatekeeper.adapters.common import moderate_action
+
+    def _delete(dry, res):  # T953: the platform-shaped part of the skeleton
+        if dry:
             out(f"[dry-run] would delete message {msg['id']}")
-            res["dry_run"] = True
-        else:
-            api_fn(*creds, "DELETE", f"/messages/{msg['id']}")
-            res["deleted"] = True
-    if res["action"] in ("delete", "flag", "escalate"):
-        from gatekeeper.adapters.common import redact
-        out(f"[{res['action']}] <{redact(msg.get('sender_id'))}> "
-            f"{redact(text[:120])} "
-            f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
-    return res
+            return
+        api_fn(*creds, "DELETE", f"/messages/{msg['id']}")
+
+    return moderate_action(
+        text, rules, adapter="zulip", uid=msg.get("sender_id"),
+        enabled=bool(can_delete and creds and msg.get("id") is not None),
+        effect=_delete, out=out)
 
 
 def run():

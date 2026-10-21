@@ -837,7 +837,9 @@ def test_adapters_pass_detected_lang_to_moderate(monkeypatch):  # T857
     assert seen == ["ar", "ru", "zh", None, "ar", "ru", "zh"], seen
     for name in ("telegram_bot", "matrix_bot", "zulip_bot", "mattermost",
                  "discord_bot", "twitch_irc", "webhooks"):  # all seven wired
-        assert "adapter_lang(" in (ADAPTERS / f"{name}.py").read_text(), name
+        # four route through the T953 skeleton, the rest call it directly
+        src = (ADAPTERS / f"{name}.py").read_text()
+        assert "adapter_lang(" in src or "moderate_action(" in src, name
 
 
 def test_discord_removed_notice_is_a_threaded_reply():  # T859
@@ -1195,7 +1197,11 @@ def test_readme_capability_matrix_matches_sources():  # T868
         assert "T857" in rows[platform], platform
     for f in ("telegram_bot.py", "matrix_bot.py", "zulip_bot.py", "mattermost.py",
               "discord_bot.py", "twitch_irc.py", "webhooks.py"):
-        assert "adapter_lang(" in (ADAPTERS / f).read_text(), f  # T897
+        # T897 wiring: direct, or delegated to the T953 skeleton which
+        # calls adapter_lang() for its four pollers (runtime proof in
+        # test_adapters_pass_detected_lang_to_moderate)
+        src = (ADAPTERS / f).read_text()
+        assert "adapter_lang(" in src or "moderate_action(" in src, f
 
 
 def test_p45_adapter_depth_sweep():  # T870: P45 closer — every box ticked,

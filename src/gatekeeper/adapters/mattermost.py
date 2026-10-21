@@ -48,27 +48,18 @@ def handle_post(post: dict, rules: dict, *, token=None, server=None,
         out(f"[rate-limited] <{redact(post.get('user_id'))}> over the "
             "per-user cap; message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
-    from gatekeeper import moderate
-    from gatekeeper.adapters.common import adapter_lang, as_user_id, dry_run
-    res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
-                        user_id=as_user_id("mattermost",
-                                           post.get("user_id")),
-                        lang=adapter_lang("mattermost", text),  # T897: env pin, else detect
-                        adapter="mattermost"))  # T867: per-adapter counters
-    res["deleted"] = False
-    if res["action"] == "delete" and can_delete and token and server:
-        if dry_run():  # T697: print the intent, never the act
+    from gatekeeper.adapters.common import moderate_action
+
+    def _delete(dry, res):  # T953: the platform-shaped part of the skeleton
+        if dry:
             out(f"[dry-run] would deletePost {post.get('id')}")
-            res["dry_run"] = True
-        else:
-            api_fn(token, server, "DELETE", f"/posts/{post['id']}")
-            res["deleted"] = True
-    if res["action"] in ("delete", "flag", "escalate"):
-        from gatekeeper.adapters.common import redact
-        out(f"[{res['action']}] <{redact(post.get('user_id'))}> "
-            f"{redact(text[:120])} "
-            f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
-    return res
+            return
+        api_fn(token, server, "DELETE", f"/posts/{post['id']}")
+
+    return moderate_action(
+        text, rules, adapter="mattermost", uid=post.get("user_id"),
+        enabled=bool(can_delete and token and server),
+        effect=_delete, out=out)
 
 
 def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,

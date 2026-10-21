@@ -68,30 +68,22 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
         out(f"[rate-limited] <{redact(event.get('sender'))}> over the "
             "per-user cap; message not moderated")
         return {"action": "ignored", "reason": "rate-limited"}
-    from gatekeeper import moderate
-    from gatekeeper.adapters.common import adapter_lang, as_user_id, dry_run
-    res = dict(moderate(body, rules,  # T856+T857: strikes + detected lang
-                        user_id=as_user_id("matrix", event.get("sender")),
-                        lang=adapter_lang("matrix", body),  # T897: env pin, else detect
-                        adapter="matrix"))  # T867: per-adapter counters
-    res["redacted"] = False
-    if res["action"] == "delete" and can_redact and token and homeserver:
-        if dry_run():  # T697: print the intent, never the act
+    from gatekeeper.adapters.common import moderate_action
+
+    def _delete(dry, res):  # T953: the platform-shaped part of the skeleton
+        if dry:
             out(f"[dry-run] would redact {event['event_id']} "
                 f"in {event['room_id']}")
-            res["dry_run"] = True
-        else:
-            api_fn(token, homeserver, "PUT",
-                   f"/rooms/{event['room_id']}/redact/{event['event_id']}/bouncer1",
-                   {"redacts": event["event_id"],
-                    "reason": f"bouncer:{res.get('rule')}"})
-            res["redacted"] = True
-    if res["action"] in ("delete", "flag", "escalate"):
-        from gatekeeper.adapters.common import redact
-        out(f"[{res['action']}] <{redact(event.get('sender'))}> "
-            f"{redact(body[:120])} "
-            f"({res.get('rule')}@{res.get('confidence', 0):.2f})")
-    return res
+            return
+        api_fn(token, homeserver, "PUT",
+               f"/rooms/{event['room_id']}/redact/{event['event_id']}/bouncer1",
+               {"redacts": event["event_id"],
+                "reason": f"bouncer:{res.get('rule')}"})
+
+    return moderate_action(
+        body, rules, adapter="matrix", uid=event.get("sender"),
+        enabled=bool(can_redact and token and homeserver),
+        effect=_delete, out=out, flag="redacted")
 
 
 def _flatten_page(page: dict) -> list:

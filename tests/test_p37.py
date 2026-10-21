@@ -713,11 +713,12 @@ def test_adapter_output_is_redacted(monkeypatch, capsys):  # T700: wired
     err = capsys.readouterr().err
     assert "sekrit-token-xyz" not in err and "TELEGRAM_TOKEN" in err
     assert "sekrit-token-xyz" not in h.line()
-    # every adapter either applies the pass or delegates to it
+    # every adapter either applies the pass or delegates to it (T953: the
+    # four pollers redact through the shared moderate_action skeleton)
     for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
                  "webhooks", "twitch_irc"):
         src = (ADAPTERS / f"{name}.py").read_text()
-        assert "redact(" in src, name
+        assert "redact(" in src or "moderate_action(" in src, name
 
 
 def test_rate_cap_sliding_window_and_sweep():  # T701
@@ -1469,7 +1470,10 @@ def test_p37_sweep_adapter_invariants():  # T710: cross-cutting consistency
                  "twitch_irc", "discord_bot"):
         src = (ADAPTERS / f"{name}.py").read_text()
         for invariant in ("require_env(", "load_rules(", "load_config()",
-                          "install_shutdown(", "redact("):
+                          "install_shutdown("):
             assert invariant in src, (name, invariant)
+        # redaction: applied directly or delegated to the T953 skeleton
+        assert "redact(" in src or "moderate_action(" in src, \
+            (name, "redact(")
         # dry_run is wired everywhere; twitch's is the documented no-op
         assert "dry_run" in src.lower(), name

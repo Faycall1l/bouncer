@@ -112,3 +112,64 @@ def test_t952_shared_command_table_and_parser(monkeypatch):  # T952
     assert common.parse_command("bouncery rules", "bouncer") == "bouncery"
     assert common.parse_command("rules now", "bouncer") == "rules"
     assert common.parse_command("", "bouncer") == ""
+
+
+def test_t953_moderate_action_skeleton_shared_by_four_pollers(monkeypatch,
+                                                              capsys):  # T953
+    """T953: telegram/matrix/mattermost/zulip run moderate+effect+announce
+    through common.moderate_action; only the effect callback is local.
+    Their rate-cap guards stay put (T701 scans for them per adapter)."""
+    import gatekeeper
+
+    seen = {}
+
+    def fake(text, rules, **kw):
+        seen.update(kw)
+        return {"action": "delete", "rule": "no-spam", "confidence": 0.97}
+
+    monkeypatch.setattr(gatekeeper, "moderate", fake)
+    monkeypatch.delenv("BOUNCER_DRY_RUN", raising=False)
+    effects, out = [], []
+
+    def eff(dry, res):
+        effects.append((dry, res.get("rule")))
+
+    res = common.moderate_action(
+        "buy followers", {"no-spam": "t"}, adapter="telegram", uid=7,
+        enabled=True, effect=eff, out=out.append, sender=False)
+    assert res["deleted"] is True and "dry_run" not in res
+    assert effects == [(False, "no-spam")]
+    assert seen["user_id"] == "telegram:7" and seen["adapter"] == "telegram"
+    assert "lang" in seen  # T897: env pin, else detect — the plumbing moved
+    assert out == ["[delete] buy followers (no-spam@0.97)"]  # no <sender>
+
+    monkeypatch.setenv("BOUNCER_DRY_RUN", "1")  # T697: intent, never the act
+    res = common.moderate_action(
+        "buy followers", {"no-spam": "t"}, adapter="mattermost", uid=9,
+        enabled=True, effect=eff, out=out.append)
+    assert res["deleted"] is False and res["dry_run"] is True
+    assert effects[-1] == (True, "no-spam")
+    assert out[-1].startswith("[delete] <9> ")  # sender prefix, redacted
+
+    monkeypatch.delenv("BOUNCER_DRY_RUN")
+    before = len(effects)
+    res = common.moderate_action(
+        "buy followers", {"no-spam": "t"}, adapter="zulip", uid=3,
+        enabled=False, effect=eff, out=out.append)  # no creds -> no effect
+    assert res["deleted"] is False and len(effects) == before
+    assert out[-1].startswith("[delete] ")  # the announce still prints
+
+    res = common.moderate_action(
+        "buy followers", {"no-spam": "t"}, adapter="matrix",
+        uid="alice:hs", enabled=True, effect=eff, out=out.append,
+        flag="redacted")  # matrix keys its flag differently
+    assert res["redacted"] is True
+    assert out[-1].startswith("[delete] <alice:hs> buy followers")
+
+    # the four copies are gone; the T701 cap guards they kept are not
+    for name in ("telegram_bot.py", "matrix_bot.py", "mattermost.py",
+                 "zulip_bot.py"):
+        src = (ADAPTERS / name).read_text()
+        assert "moderate_action(" in src, f"{name} bypasses the skeleton"
+        assert "dict(moderate(" not in src, f"{name} keeps its own copy"
+        assert 'reason": "rate-limited"' in src, f"{name} lost its cap guard"
