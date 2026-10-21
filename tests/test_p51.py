@@ -333,3 +333,63 @@ def test_t978_sigterm_drain_vs_force_race(monkeypatch, tmp_path):  # T978
     # documented where operators will look for the procedure
     runbook = Path("docs/runbook.md").read_text()
     assert "T978" in runbook and "force" in runbook
+
+
+def test_t981_forward_ssrf_pin_through_adapter_wiring(monkeypatch):  # T981
+    """T981: the T785 SSRF pin re-tested on the path T866 opened — platform
+    events now fire forward_if_interesting from run_loop, so a hostile
+    BOUNCER_FORWARD_URL handed to the ADAPTER entry dies the same way:
+    scheme and allowlist checked before any socket opens, E_WEBHOOK
+    raised, urlopen never called. The interesting-gate is pinned too: an
+    allow decision never attempts the URL at all — hostile or clean —
+    and the wiring itself (run_loop -> forward_if_interesting) is
+    asserted, so the guarded path is the path that runs."""
+    import pytest
+
+    from gatekeeper.adapters import webhooks as wh
+
+    calls: list = []
+
+    class Resp:
+        def read(self):
+            return b"ok"
+
+    def _fake(req, timeout):
+        calls.append(req.full_url)
+        return Resp()
+
+    monkeypatch.setattr(wh.urllib.request, "urlopen", _fake)
+    monkeypatch.delenv("BOUNCER_DRY_RUN", raising=False)
+    flag = {"action": "flag", "rule": "r", "confidence": 0.9, "reason": "why"}
+
+    # the adapter-side wiring exists (T866) — the guarded path is live
+    common = Path("src/gatekeeper/adapters/common.py").read_text()
+    assert "forward_if_interesting(res," in common
+
+    # adapter entry, hostile schemes: dead before a socket, nothing sent
+    for bad in ("file:///etc/passwd", "gopher://x/1", "data:text/plain,x"):
+        monkeypatch.setenv("BOUNCER_FORWARD_URL", bad)
+        with pytest.raises(wh.WebhookError) as e:
+            wh.forward_if_interesting(flag, "platform text")
+        assert "scheme" in str(e.value), e.value
+    assert calls == [], calls
+
+    # the allowlist narrowing still applies on this entry (T785 exactness)
+    monkeypatch.setenv("BOUNCER_FORWARD_ALLOW", "hooks.example")
+    monkeypatch.setenv("BOUNCER_FORWARD_URL", "http://evil.example/x")
+    with pytest.raises(wh.WebhookError):
+        wh.forward_if_interesting(flag, "platform text")
+    assert calls == []
+
+    # the boring path: an allow decision never touches the URL at all
+    monkeypatch.setenv("BOUNCER_FORWARD_URL", "https://hooks.example/x")
+    allow = {"action": "allow", "rule": "r", "confidence": 0.95, "reason": ""}
+    assert wh.forward_if_interesting(allow, "platform text") is False
+    assert calls == []
+
+    # clean interesting traffic goes through, incl. breaker-open (T707)
+    assert wh.forward_if_interesting(flag, "platform text") is True
+    brk = {"action": "allow", "rule": "ok", "confidence": 0.0, "reason": "",
+           "cause": "breaker-open"}
+    assert wh.forward_if_interesting(brk, "platform text") is True
+    assert calls == ["https://hooks.example/x", "https://hooks.example/x"]
