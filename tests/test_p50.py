@@ -389,3 +389,29 @@ def test_t959_stricter_ruff_config_enabled_and_fixed_not_suppressed():  # T959
             continue
         for lineno, line in enumerate(path.read_text().splitlines(), 1):
             assert not bad.search(line), f"{path}:{lineno}: {line.strip()}"
+
+
+def test_t960_in_tree_artifact_classes_gitignored():  # T960
+    """T960: every artifact class that can land in the tree is ignored by
+    git. T623 already held the runtime-state line (audit/review jsonl,
+    stats, reports); this is the box's own sweep over its named classes —
+    audit/review jsonl, build/, site/, egg-info — plus the dist/ sibling.
+    Config-level receipt: hypothetical paths, no file has to exist. The
+    live tree being clean right now is T961's test."""
+    import subprocess
+
+    candidates = [
+        "bouncer-audit.jsonl",                # audit jsonl
+        "bouncer-audit.jsonl.1",              # rotated audit jsonl
+        "review-queue.jsonl",                 # review jsonl
+        "build/lib/gatekeeper/__init__.py",   # build/ (setuptools staging)
+        "build/bdist.macosx-11.0-arm64/x",    # build/ (bdist)
+        "site/index.html",                    # site/ (mkdocs output, T801)
+        "src/gatekeeper_1.egg-info/PKG-INFO",  # egg-info (src layout)
+        "gatekeeper_1.egg-info/PKG-INFO",     # egg-info (flat layout)
+        "dist/bouncer-0.4.0-py3-none-any.whl",  # dist/ (build/ sibling)
+    ]
+    r = subprocess.run(["git", "check-ignore", "--stdin"], input="\n".join(candidates),
+                       capture_output=True, text=True, check=True)
+    missing = set(candidates) - set(r.stdout.split())
+    assert not missing, f"not gitignored: {sorted(missing)}"
