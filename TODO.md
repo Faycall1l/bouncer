@@ -1071,7 +1071,7 @@
 - [x] T970 test: P50 refactor/hygiene sweep (every box ticked, receipts outside TODO.md) (the sweep parses the P50 section itself — all 20 boxes T951-T970 ticked, each T-number cited literally in a non-TODO file; closing gate of the batch — receipt: `test_t970_p50_sweep_every_box_ticked_with_receipts`)
 
 ## P51 Security refresh (T971–T990)
-- [ ] T971 sec: threat model updated for the 0.5.x surface (stream cap, typed systemone, appeal flow, namespaced strikes)
+- [x] T971 sec: threat model updated for the 0.5.x surface (stream cap, typed systemone, appeal flow, namespaced strikes) (doc header now declares the refresh; the bounds row cites T832's typed wire shape; two new countermeasure rows — `platform:user` namespaced strikes T858/T864 can't cross identities, and adjudication has no HTTP surface T864/T865/T886 — receipts: docs/threat-model.md carries T971+T832+T858+T886 and tests/test_p41.py's T771 pins stay green, strict mkdocs build clean)
 - [ ] T972 sec: known-gaps table re-audited — the "None open" claim re-checked against P44-P50 additions
 - [ ] T973 sec: appeal/adjudicate path is operator-only (CLI), platform users cannot adjudicate — test pins it
 - [ ] T974 sec: strike amnesty is operator-only + audited (who/when/why in the row)

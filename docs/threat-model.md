@@ -1,6 +1,8 @@
 # Threat model (T771)
 
 _(Last checked against v0.4.0.)_
+_(Refreshed for the 0.5.x surface — T971: stream body cap, typed
+systemone shape, appeal/adjudicate flow, namespaced strikes.)_
 
 Scope: bouncer as deployed — the HTTP API (`bouncer serve`, including the
 `/v1/systemone` passthrough), the CLI, and the files it writes (audit log,
@@ -89,7 +91,9 @@ each opened with a row here and moved up when it landed.
 | vulnerable dependency ships | CI `audit` job runs pip-audit over the versions pip resolves from pyproject on **every push** — a known CVE turns the build red before anything ships | T781 |
 | forwarder as internal scanner (SSRF) | `forward()` refuses non-http(s) schemes before any socket opens; opt-in `BOUNCER_FORWARD_ALLOW` pins exact destination hosts (case-insensitive, no subdomain wildcards) | T785 |
 | unbounded history on the raw path | `/v1/systemone` trims `state.history` to the newest 20 items server-side before forwarding — same window as `/predict`'s context (T308); under-cap and non-list states pass through untouched | T774 |
-| context item / dict-key / body-size bounds | context items ≤ 8000 chars → 422 `E_CONTEXT` (structured path **rejects**); `/v1/systemone` `state`/`questions` keys ≤ 64 → 422 `E_STATE` and its history items **trim** to 8000 (passthrough precedent from T774); every POST with `Content-Length` > 1 MB → 413 from the request middleware *before* the body is read or parsed (T775); a chunked or lying body that crosses the cap **mid-stream** is cut at the byte level before the handler runs (T831). Both 413s fire **before auth by design**: the reject is for the body's size, so the key check is never spent on a body the server would refuse anyway — an unauthenticated prober learns only the documented 1 MB cap | T775, T831, T843 |
+| context item / dict-key / body-size bounds | context items ≤ 8000 chars → 422 `E_CONTEXT` (structured path **rejects**); `/v1/systemone`'s wire shape is typed since T832 (non-object `state`/`questions` → 422 at the door instead of a forwarded 500 — contents stay the router's to bound), its `state`/`questions` keys ≤ 64 → 422 `E_STATE` and its history items **trim** to 8000 (passthrough precedent from T774); every POST with `Content-Length` > 1 MB → 413 from the request middleware *before* the body is read or parsed (T775); a chunked or lying body that crosses the cap **mid-stream** is cut at the byte level before the handler runs (T831). Both 413s fire **before auth by design**: the reject is for the body's size, so the key check is never spent on a body the server would refuse anyway — an unauthenticated prober learns only the documented 1 MB cap | T832, T775, T831, T843 |
+| strikes crossing identities | strike keys are namespaced `platform:user` (T858): a Discord id 42 and a Telegram id 42 are two table entries, so an identity collision on one platform can neither revoke nor inflate another platform's strikes; a payload without a sender accrues to no one (`None` never becomes the literal target), and cached/coalesced verdicts carry only the asking user's strikes — never another row's | T858, T864 |
+| appealed verdicts manipulated over the API | adjudication has no HTTP surface at all: approve/reject is `bouncer adjudicate` on the operator's CLI (T865), so no key holder can end an appeal; queue rows carry the namespaced user and the pre-decision strike count as appeal context (T864), and `export --queue` emits the full appeal trail for review | T864, T865, T886 |
 
 ## Known gaps (tracked, not hidden)
 
