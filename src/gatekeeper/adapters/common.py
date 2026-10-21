@@ -160,6 +160,58 @@ def adapter_lang(adapter: str, text):  # T897
     return detect_lang(text)
 
 
+def command_reply(cmd: str, rules: dict, user=None, *, stats=None,
+                  help_text: str | None = None):  # T952
+    """The one command table behind all five adapters (T952) — the five
+    local `if cmd == "rules"` ladders (discord's T705 copy first) reduced
+    to this: rules / stats / appeal / help answer identically everywhere.
+
+    Returns None for anything else; each surface then applies its own
+    unknown-command or usage fallback, because those texts name the
+    platform's own prefixes (`/bouncer`, `!bouncer`, `bouncer ...`).
+
+    `stats` injects the decision counts (tests, precomputed callers);
+    `help_text` is the surface's own help line — a surface that passes
+    None (matrix, mattermost, zulip: they answer "usage:" or map help to
+    their unknown-command path) keeps that exact behavior, since `help`
+    then falls through to the None return.
+    """
+    if cmd == "rules":
+        return "active: " + ", ".join(sorted(rules))
+    if cmd == "stats":
+        if stats is None:
+            from gatekeeper.stats import get_stats
+            stats = get_stats()["actions"]
+        return "decisions: " + ", ".join(f"{a}={n}"
+                                         for a, n in sorted(stats.items()))
+    if cmd == "appeal":
+        from gatekeeper.review import appeal_reply
+        return appeal_reply(user, rules)
+    if cmd == "help" and help_text is not None:
+        return help_text
+    return None
+
+
+def parse_command(text: str, *drop):  # T952
+    """The one first-word dance behind telegram/matrix/mattermost/zulip's
+    hand-rolled parsers (T952): strip leading slashes (these surfaces
+    treat `/` as decoration), drop the trigger word when the first word
+    IS one of `drop` (case-insensitive; `bouncery` is not `bouncer`),
+    then the first word lowercased — '' when nothing is left.
+
+    Callers keep their own mention/trigger gates (telegram's
+    `startswith("/")`, zulip's `startswith("bouncer")`, matrix's
+    `!bouncer`); this replaces only the `lstrip("/").split()[0].lower()`
+    copies. The '' return is also stricter than the telegram copy, which
+    raised IndexError on a bare `/`. Discord's strict prefix parser
+    (T705) owns the None-for-non-commands contract and stays as it is.
+    """
+    words = (text or "").strip().lstrip("/").split()
+    if drop and words and words[0].lower() in drop:
+        words = words[1:]
+    return words[0].lower() if words else ""
+
+
 def verify_signature(secret: str, header: str, body, *, prefix: str = "",
                      digestmod: str = "sha256") -> bool:
     """T704: constant-time HMAC signature check for webhook receivers.

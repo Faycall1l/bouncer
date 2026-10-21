@@ -28,19 +28,12 @@ def api(token: str, homeserver: str, method: str, path: str, params=None):
 
 
 def _command(body, rules, event, token, homeserver, api_fn, out):
-    from gatekeeper.adapters.common import dry_run
-    cmd = body.split()[1].lower() if len(body.split()) > 1 else ""
-    if cmd == "rules":
-        reply = "active: " + ", ".join(sorted(rules))
-    elif cmd == "stats":
-        from gatekeeper.stats import get_stats
-        s = get_stats()["actions"]
-        reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
-    elif cmd == "appeal":  # T864: row-linked appeal answer
-        from gatekeeper.adapters.common import as_user_id
-        from gatekeeper.review import appeal_reply
-        reply = appeal_reply(as_user_id("matrix", event.get("sender")), rules)
-    else:
+    from gatekeeper.adapters.common import as_user_id, command_reply, dry_run, parse_command
+    cmd = parse_command(body, "!bouncer")  # T952: shared trigger + word
+    reply = command_reply(  # T952: shared table; no help_text here — help
+        cmd, rules,  # maps to the unknown-command branch, as before
+        as_user_id("matrix", event.get("sender")))
+    if reply is None:
         return {"action": "ignored", "reason": "unknown-command"}
     if token and homeserver and not dry_run():
         import time

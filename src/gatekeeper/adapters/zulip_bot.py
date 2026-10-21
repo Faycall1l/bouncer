@@ -31,24 +31,13 @@ def api(email: str, key: str, site: str, method: str, path: str, **params):
 
 
 def _command(text, rules, msg, creds, api_fn, out):
-    parts = text.lstrip("/").split()
-    if parts and parts[0].lower() == "bouncer":  # mention/trigger prefix
-        parts = parts[1:]
-    cmd = parts[0].lower() if parts else ""
-    if cmd == "rules":
-        reply = "active: " + ", ".join(sorted(rules))
-    elif cmd == "stats":
-        from gatekeeper.stats import get_stats
-        s = get_stats()["actions"]
-        reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
-    elif cmd == "appeal":  # T864: row-linked appeal answer
-        from gatekeeper.adapters.common import as_user_id
-        from gatekeeper.review import appeal_reply
-        reply = appeal_reply(as_user_id("zulip", msg.get("sender_id")), rules)
-    else:
-        reply = "usage: bouncer rules | bouncer stats | bouncer appeal"
-        cmd = cmd or "help"
-    from gatekeeper.adapters.common import dry_run
+    from gatekeeper.adapters.common import as_user_id, command_reply, dry_run, parse_command
+    cmd = parse_command(text, "bouncer")  # T952: shared trigger + word
+    reply = command_reply(  # T952: shared table; usage fallback is ours
+        cmd, rules,  # — it names the bare `bouncer` mention this surface speaks
+        as_user_id("zulip", msg.get("sender_id"))) \
+        or "usage: bouncer rules | bouncer stats | bouncer appeal"
+    cmd = cmd or "help"
     if creds:
         if msg.get("type") == "stream" and msg.get("display_recipient"):
             if dry_run():  # T697: print the intent, never the act

@@ -20,25 +20,19 @@ def parse_command(text: str) -> str | None:  # T705: one parser, both surfaces
     return None
 
 
-def command_reply(cmd: str, rules: dict, stats=None,  # T705
-                  user=None) -> str | None:  # T864: user feeds the appeal
-    """The single command table — the prefix handler and the slash handler
-    both call this, so the two surfaces cannot drift apart."""
-    if cmd == "rules":
-        return "active: " + ", ".join(rules)
-    if cmd == "stats":
-        if stats is None:
-            from gatekeeper.stats import get_stats
-            stats = get_stats()["actions"]
-        return "decisions: " + ", ".join(
-            f"{a}={n}" for a, n in sorted(stats.items()))
-    if cmd == "appeal":  # T864: row-linked appeal answer
-        from gatekeeper.review import appeal_reply
-        return appeal_reply(user, rules)
-    if cmd == "help":
-        return ("commands: !bouncer rules | !bouncer stats | !bouncer appeal "
-                "| !bouncer help (slash: /bouncer command:)")
-    return None
+def command_reply(cmd: str, rules: dict, stats=None,  # T705 → T952 shared
+                  user=None) -> str | None:
+    """The prefix handler and the slash handler both call this, so the two
+    surfaces cannot drift apart — and since T952 the ladder itself lives
+    in `common.command_reply`, so no *adapter* can drift from the others
+    either. This wrapper keeps discord's signature and its help line (the
+    `!bouncer`/`/bouncer` prefixes are this surface's own)."""
+    from gatekeeper.adapters.common import command_reply as _table
+    return _table(cmd, rules, user, stats=stats, help_text=_HELP_TEXT)
+
+
+_HELP_TEXT = ("commands: !bouncer rules | !bouncer stats | !bouncer appeal "
+              "| !bouncer help (slash: /bouncer command:)")
 
 
 def moderate_message(text: str, user_id, rules: dict, *, health,

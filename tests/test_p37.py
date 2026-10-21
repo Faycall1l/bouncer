@@ -982,8 +982,9 @@ def test_discord_prefix_and_slash_parse_identically():  # T705
     assert parse_command("just talking") is None
     assert parse_command("!bouncerx") is None  # not our prefix
     assert parse_command("") is None
-    # the table itself
-    assert command_reply("rules", rules) == "active: sin-spam, no-doxx"
+    # the table itself (T952: shared with every adapter — it sorts, so
+    # discord's reply is alphabetical like the other four surfaces')
+    assert command_reply("rules", rules) == "active: no-doxx, sin-spam"
     assert command_reply("stats", rules,
                          stats={"allow": 2, "flag": 1}) == \
         "decisions: allow=2, flag=1"
@@ -1304,7 +1305,8 @@ def test_discord_full_session_stubbed_sdk(monkeypatch):  # T708
     assert handlers["ran_token"] == "t"  # the session reached connect
     assert spam.deleted is True
     assert sent == ["removed (no-spam @ 0.99)",
-                    "active: " + ", ".join(get_preset("gaming"))]
+                    "active: " + ", ".join(sorted(get_preset("gaming")))]
+    # ^ T952: discord now answers from the shared table, which sorts
 
 
 def test_load_config_missing_broken_and_env_path(monkeypatch, tmp_path):  # T709

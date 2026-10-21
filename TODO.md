@@ -1050,7 +1050,7 @@
 
 ## P50 Refactor & repo hygiene (T951–T970)
 - [x] T951 adp: shared api() helper moves to common.py — 4 copies deleted (receipt: tests/test_p50.py::test_t951 — the four wrappers delegate to common.api, byte-identical URL/verb/body/headers/timeout)
-- [ ] T952 adp: shared command table + parser helper — 5 copies reduced
+- [x] T952 adp: shared command table + parser helper — 5 copies reduced (receipt: tests/test_p50.py::test_t952 — common.command_reply + common.parse_command; no adapter keeps `cmd == "rules"`; discord's two order pins updated to the shared table's sort)
 - [ ] T953 adp: shared moderate+action skeleton — 4 copies reduced
 - [ ] T954 explain: announce_line wired or removed (dead since introduction)
 - [ ] T955 normalize: caps_flood/emoji_flood wired into the engine cheap paths or demoted to eval-only, honestly documented

@@ -65,3 +65,50 @@ def test_t951_common_api_is_the_single_request_builder(monkeypatch):  # T951
                  "zulip_bot.py"):
         assert "urllib.request.Request" not in (ADAPTERS / name).read_text(), \
             f"{name} still reimplements the shared api() builder"
+
+
+def test_t952_shared_command_table_and_parser(monkeypatch):  # T952
+    """T952: one table + one first-word parser behind all five adapters —
+    the five local `if cmd == "rules"` ladders and four hand-rolled
+    lstrip/split/lower dances reduced to common.command_reply and
+    common.parse_command."""
+    from gatekeeper.adapters import discord_bot
+
+    rules = {"sin-spam": "t", "no-doxx": "t"}
+
+    # the table: sorted (deterministic), injectable stats, help contract
+    assert common.command_reply("rules", rules) == "active: no-doxx, sin-spam"
+    assert common.command_reply(
+        "stats", rules, stats={"allow": 2, "flag": 1}) == \
+        "decisions: allow=2, flag=1"
+    assert common.command_reply("help", rules, help_text="mine") == "mine"
+    assert common.command_reply("help", rules) is None  # no help_text ->
+    assert common.command_reply("bogus", rules) is None  # the surface's
+    # own unknown/usage fallback answers instead
+    from gatekeeper import review  # appeal passes the caller's user
+    monkeypatch.setattr(review, "appeal_reply",
+                        lambda u, r: f"appeal:{u}:{min(r)}")
+    assert common.command_reply("appeal", rules, "discord:1") == \
+        "appeal:discord:1:no-doxx"
+
+    # no adapter keeps a private copy of the ladder
+    for name in ("discord_bot.py", "telegram_bot.py", "matrix_bot.py",
+                 "mattermost.py", "zulip_bot.py"):
+        src = (ADAPTERS / name).read_text()
+        assert 'cmd == "rules"' not in src, f"{name} still has its own table"
+        assert "command_reply" in src, f"{name} does not use the shared table"
+    assert discord_bot.command_reply("help", rules)  # wrapper keeps its
+    assert "bouncer" in discord_bot.command_reply("help", rules)  # own text
+
+    # the parser: telegram shape (no drops) — slash runs stripped, lowered
+    assert common.parse_command("/rules") == "rules"
+    assert common.parse_command("  //HELP ") == "help"
+    assert common.parse_command("/") == ""  # was IndexError in that copy
+    # trigger-word drops (matrix / mattermost / zulip shapes)
+    assert common.parse_command("!bouncer stats", "!bouncer") == "stats"
+    assert common.parse_command("!bouncer", "!bouncer") == ""  # bare trigger
+    assert common.parse_command("/bouncer rules", "bouncer") == "rules"
+    assert common.parse_command("bouncer stats", "bouncer") == "stats"
+    assert common.parse_command("bouncery rules", "bouncer") == "bouncery"
+    assert common.parse_command("rules now", "bouncer") == "rules"
+    assert common.parse_command("", "bouncer") == ""

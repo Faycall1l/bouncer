@@ -78,27 +78,15 @@ def handle_slash(form: dict, rules: dict, *, slash_token=None, token=None,
     if slash_token and not hmac.compare_digest(
             str(form.get("token") or ""), slash_token):
         return {"action": "ignored", "reason": "bad-token"}
-    parts = (form.get("text") or "").split()
     # Mattermost sends only the args after the trigger ("rules"); tolerate a
-    # full "/bouncer rules" pasted into text too
-    if parts and parts[0].lstrip("/").lower() == "bouncer":
-        parts = parts[1:]
-    cmd = parts[0].lstrip("/").lower() if parts else ""
-    if cmd == "rules":
-        reply = "active: " + ", ".join(sorted(rules))
-    elif cmd == "stats":
-        from gatekeeper.stats import get_stats
-        s = get_stats()["actions"]
-        reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
-    elif cmd == "appeal":  # T864: row-linked appeal answer
-        from gatekeeper.adapters.common import as_user_id
-        from gatekeeper.review import appeal_reply
-        reply = appeal_reply(as_user_id("mattermost", form.get("user_id")),
-                             rules)
-    else:
-        reply = "usage: /bouncer rules | /bouncer stats | /bouncer appeal"
-        cmd = cmd or "help"
-    from gatekeeper.adapters.common import dry_run
+    # full "/bouncer rules" pasted into text too (T952: shared parser)
+    from gatekeeper.adapters.common import as_user_id, command_reply, dry_run, parse_command
+    cmd = parse_command(form.get("text") or "", "bouncer")  # T952
+    reply = command_reply(  # T952: shared table; usage fallback is ours —
+        cmd, rules,  # it names the /bouncer prefixes this surface speaks
+        as_user_id("mattermost", form.get("user_id"))) \
+        or "usage: /bouncer rules | /bouncer stats | /bouncer appeal"
+    cmd = cmd or "help"
     if token and server and form.get("channel_id") and not dry_run():
         api_fn(token, server, "POST", "/posts",
                channel_id=form["channel_id"], message=reply,

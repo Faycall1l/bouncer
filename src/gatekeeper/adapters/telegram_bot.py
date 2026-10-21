@@ -31,21 +31,13 @@ def _command(text: str, rules: dict, chat_id, token, api_fn, out,
     """T692: `/` commands answer in place; no model call, no side effects.
     T860: the answer threads under its trigger (reply_to_message_id), so
     in a busy group the notice says which command it answers."""
-    from gatekeeper.adapters.common import dry_run
-    cmd = text.split("@", 1)[0].lstrip("/").split()[0].lower()
-    if cmd == "rules":
-        reply = "active: " + ", ".join(sorted(rules))
-    elif cmd == "stats":
-        from gatekeeper.stats import get_stats
-        s = get_stats()["actions"]
-        reply = "decisions: " + ", ".join(f"{a}={n}" for a, n in sorted(s.items()))
-    elif cmd == "appeal":  # T864: row-linked appeal answer
-        from gatekeeper.review import appeal_reply
-        reply = appeal_reply(user, rules)
-    elif cmd == "help":
-        reply = "bouncer: /rules, /stats, /appeal, /help — messages are " \
-                "moderated, flag-only by default (BOUNCER_TG_DELETE=1 to delete)"
-    else:
+    from gatekeeper.adapters.common import command_reply, dry_run, parse_command
+    cmd = parse_command(text.split("@", 1)[0])  # T952: shared first-word dance
+    reply = command_reply(  # T952: the shared table, not a local ladder
+        cmd, rules, user,
+        help_text="bouncer: /rules, /stats, /appeal, /help — messages are "
+                  "moderated, flag-only by default (BOUNCER_TG_DELETE=1 to delete)")
+    if reply is None:
         return {"action": "ignored", "reason": "unknown-command"}
     if token and not dry_run():
         api_fn(token, "sendMessage", chat_id=chat_id, text=reply,
