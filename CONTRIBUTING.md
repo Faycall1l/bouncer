@@ -80,6 +80,8 @@
   sweep fails the suite on an undocumented action.
 * A test over 1s needs a written entry in `tests/conftest.py`
   `SLOW_JUSTIFIED` (T967); the budget hook fails the session otherwise.
+  CI enforces a 5s backstop for the same table — shared runners measure
+  sub-second local tests at up to ~1.7s (T969).
 * OpenAPI schema changes are deliberate re-pins: T964's digest test
   prints the one-liner that regenerates the pinned hash.
 * Every non-obvious change carries the box id that made it: `# T###` in

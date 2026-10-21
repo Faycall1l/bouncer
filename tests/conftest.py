@@ -5,10 +5,18 @@ over 1s must appear in SLOW_JUSTIFIED with a written reason; otherwise
 the session ends nonzero after the summary lists the offenders. The
 justified ones print their real time as a receipt, per the house rule
 that timing numbers are printed, never asserted.
+
+T969: shared CI runners + --cov instrumentation measure sub-second local
+tests at 1.0-1.7s, so CI enforces a 5s backstop (same offender list,
+same table) while verify.sh's local run keeps the strict 1s — the box's
+gate is where contributors run it, and CI absorbs runner variance.
 """
+import os
 import time
 
 import pytest
+
+CI_BUDGET_S = 5.0
 
 # name -> written justification. Editing this table IS the process: an
 # entry only lands here with a sentence on why the test needs >1s.
@@ -43,6 +51,11 @@ SLOW_JUSTIFIED: dict[str, str] = {
     "test_pip_install_produces_working_bouncer":
         "pip-installs the freshly built wheel into a throwaway env and runs "
         "the console script from it — a real package install lives near 1s",
+    "test_graceful_shutdown_drains_and_flushes":
+        "drives the FastAPI lifespan directly; the drain/flush logic under "
+        "test is sub-second, but startup warmup is environment-dependent "
+        "(T849's note) and lands at 11-17s on CI runners with "
+        "huggingface/laya present",
 }
 
 _overshoot: list[tuple[str, float]] = []
@@ -51,10 +64,11 @@ _justified_seen: list[tuple[str, float]] = []
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item, nextitem):
+    budget = CI_BUDGET_S if os.environ.get("CI") else 1.0
     start = time.perf_counter()
     yield
     took = time.perf_counter() - start
-    if took > 1.0:
+    if took > budget:
         if item.name in SLOW_JUSTIFIED:
             _justified_seen.append((item.nodeid, took))
         else:
@@ -63,12 +77,13 @@ def pytest_runtest_protocol(item, nextitem):
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     tr = terminalreporter
+    budget = CI_BUDGET_S if os.environ.get("CI") else 1.0
     if _justified_seen:
         tr.write_sep("=", "T967 slow tests (justified, receipt)")
         for nodeid, took in sorted(_justified_seen, key=lambda x: -x[1]):
             tr.write_line(f"  {took:6.2f}s  {nodeid}")
     if _overshoot:
-        tr.write_sep("=", "T967 WALL-TIME BUDGET EXCEEDED (1s per test)")
+        tr.write_sep("=", f"T967 WALL-TIME BUDGET EXCEEDED ({budget:g}s per test)")
         for nodeid, took in sorted(_overshoot, key=lambda x: -x[1]):
             tr.write_line(f"  {took:6.2f}s  {nodeid}")
         tr.write_line("  justify it in tests/conftest.py SLOW_JUSTIFIED "

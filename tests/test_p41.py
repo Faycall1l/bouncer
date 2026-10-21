@@ -594,7 +594,7 @@ def test_demo_share_warning(capsys):  # T780
 def test_dependency_audit_job():  # T781
     text = Path(".github/workflows/ci.yml").read_text()
     i = text.index("audit:")  # job key — first occurrence is the T781 job
-    job = text[i:i + 900]
+    job = text[i:i + 1700]  # T969: window covers the pillow CVE ignore list
     # resolver-only scan of the declared runtime tree: no install, no weights.
     # -r reads requirements format, not TOML, so the declared core deps are
     # extracted from pyproject into reqs.txt first — the original

@@ -126,4 +126,16 @@ jobs:
       # extract the declared core deps first (3.12 job: stdlib tomllib)
       - run: |
           python -c "import tomllib; [print(d) for d in tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']]" > reqs.txt
-          pip-audit -r reqs.txt
+          # T969: pillow 12.3.0 carries 8 CVEs fixed in 13.0.0, but gradio
+          # pins pillow<13.0 — the resolver cannot reach the fix. Each CVE
+          # is listed, never silenced wholesale; drop an entry the day
+          # gradio lifts the cap and the resolver picks up 13.x.
+          pip-audit -r reqs.txt \
+            --ignore-vuln CVE-2026-112395 \
+            --ignore-vuln CVE-2026-112397 \
+            --ignore-vuln CVE-2026-112400 \
+            --ignore-vuln CVE-2026-112404 \
+            --ignore-vuln CVE-2026-112895 \
+            --ignore-vuln CVE-2026-112896 \
+            --ignore-vuln CVE-2026-112897 \
+            --ignore-vuln CVE-2026-112899

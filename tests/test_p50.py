@@ -375,7 +375,10 @@ def test_t959_stricter_ruff_config_enabled_and_fixed_not_suppressed():  # T959
     of the 148 pre-existing violations were silenced with noqa."""
     import re
 
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # T969: Python < 3.11 — the tomli backport (T814)
+        import tomli as tomllib
 
     py = tomllib.loads(Path("pyproject.toml").read_text())
     lint = py["tool"]["ruff"]["lint"]
