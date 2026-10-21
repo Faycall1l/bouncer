@@ -426,3 +426,52 @@ def test_t982_docker_non_root_and_read_only_paths():  # T982
     for pat in ("models/", "hf-cache/", ".env", "*.jsonl", "build/",
                 "dist/", "site/", "*.egg-info", "**/__pycache__"):
         assert pat in di.split(), f"{pat} not excluded from the image context"
+
+
+def test_t983_sbom_covers_new_optional_deps(tmp_path):  # T983
+    """T983: the SBOM's extras block pinned member-for-member — the same
+    rigor T726 gives the core `packages` list. T726's test asserts
+    group-name equality and floor shape, but group equality passes even
+    if a group arrives EMPTY, so this compares every extra's actual
+    dependency names and requirements against pyproject, and names the
+    post-T726 arrivals outright: finetune's training stack (T729/T652)
+    and dev's coverage plugin (T747). A new optional dep that never
+    reaches the manifest fails here."""
+    import json
+    import subprocess
+    import sys
+
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
+
+    out = tmp_path / "sbom.json"
+    r = subprocess.run([sys.executable, "scripts/sbom.py", "--out", str(out)],
+                       capture_output=True, text=True, check=False, timeout=60)
+    assert r.returncode == 0, r.stderr
+    sbom = json.loads(out.read_text())
+    with open("pyproject.toml", "rb") as f:
+        py_extras = tomllib.load(f)["project"]["optional-dependencies"]
+
+    assert set(sbom["extras"]) == set(py_extras)
+    for group, deps in py_extras.items():
+        want: dict = {}
+        for d in deps:  # independent parse: name, floor-or-asterisk
+            for op in (">=", "==", "~=", "<="):
+                if op in d:
+                    name, ver = d.split(op, 1)
+                    want[name.strip()] = op + ver.strip()
+                    break
+            else:
+                want[d.strip()] = "*"
+        got = {p["name"]: p["requirement"]
+               for p in sbom["extras"][group]}
+        assert got == want, (group, got, want)
+
+    # the post-T726 arrivals, named outright
+    ft_names = {p["name"] for p in sbom["extras"]["finetune"]}
+    assert ft_names >= {"transformers", "torch", "safetensors",
+                        "accelerate", "peft"}
+    dev_names = {p["name"] for p in sbom["extras"]["dev"]}
+    assert dev_names == {"pytest", "ruff", "pytest-cov"}
