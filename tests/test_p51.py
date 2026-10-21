@@ -3,6 +3,7 @@
 
 import inspect
 import json
+import re
 from pathlib import Path
 
 
@@ -475,3 +476,37 @@ def test_t983_sbom_covers_new_optional_deps(tmp_path):  # T983
                         "accelerate", "peft"}
     dev_names = {p["name"] for p in sbom["extras"]["dev"]}
     assert dev_names == {"pytest", "ruff", "pytest-cov"}
+
+
+def test_t984_pip_audit_over_extracted_deps():  # T984
+    """T984: the audit's input and exceptions pinned. CI re-runs the real
+    pip-audit over them on every push (T781's job, T969's exception
+    list); this pins what feeds it: the workflow's extractor reads
+    `project.dependencies` from pyproject (replayed in-process — the
+    extraction is that exact expression, nothing narrowed), so
+    "pip-audit clean" always means the whole declared runtime tree; and
+    the eight pillow CVEs (blocked upstream — gradio pins pillow<13.0)
+    are each ignored BY NAME, counted, so a blanket skip can never
+    quietly take their place."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
+        import tomli as tomllib
+
+    py = tomllib.loads(Path("pyproject.toml").read_text())
+    core = py["project"]["dependencies"]
+    # the workflow's extraction expression, replayed in-process: same
+    # source, same result — the full declared tree or nothing
+    assert "tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']" \
+        in Path(".github/workflows/ci.yml").read_text()
+    extracted = list(core)
+    assert extracted == core and len(extracted) >= 9
+    assert any("gradio" in d for d in extracted)  # the CVE-carrying tree
+
+    ci = Path(".github/workflows/ci.yml").read_text()
+    assert "pip-audit -r reqs.txt" in ci
+    ignore = re.findall(r"--ignore-vuln (\S+)", ci)
+    assert sorted(ignore) == [
+        "CVE-2026-112395", "CVE-2026-112397", "CVE-2026-112400",
+        "CVE-2026-112404", "CVE-2026-112895", "CVE-2026-112896",
+        "CVE-2026-112897", "CVE-2026-112899"], ignore  # T969, all eight
