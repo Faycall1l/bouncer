@@ -291,3 +291,71 @@ def test_t957_no_dead_public_code_in_src():  # T957 receipt: this sweep
         if not decorated and hits - n_defs < 1:
             dead.append(full)
     assert not dead, f"public code with no reference outside its defs: {dead}"
+
+
+def test_t958_adapter_parity_matrix_shared_helpers():  # T958
+    """T958: the parity matrix — rows are the seven adapters, columns the
+    helpers common owns. Cells are 'calls it', 'via moderate_action' (the
+    T953 skeleton carries it), or a thin delegating wrapper that imports
+    the common name. The global rule: an adapter defining a helper common
+    owns without importing that name from common is a local
+    reimplementation and fails — except the one documented contract split."""
+    import ast
+
+    adapters = {n: (Path("src/gatekeeper/adapters") / f"{n}.py").read_text()
+                for n in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+                          "discord_bot", "twitch_irc", "webhooks")}
+    pollers = ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot",
+               "discord_bot", "twitch_irc")
+
+    # column 1-7: the startup/shared plumbing every poller must ride
+    for name in pollers:
+        for helper in ("require_env(", "load_rules(", "load_config()",
+                       "cfg_get(", "install_shutdown(", "as_user_id(",
+                       "Health("):
+            assert helper in adapters[name], (name, helper)
+    # column 8: rate caps on five; twitch is the documented T701 gap
+    # (README's capability table says so and test_p45 holds that line)
+    for name in pollers[:5]:
+        assert "rate_cap_from_env(" in adapters[name], name
+    assert "rate_cap_from_env(" not in adapters["twitch_irc"]
+    # column 9: the webhook library row — signature + identity + dry-run,
+    # but no env/shutdown/health: it runs inside someone else's process
+    for helper in ("verify_signature(", "as_user_id(", "dry_run(",
+                   "redact(", "adapter_lang("):
+        assert helper in adapters["webhooks"], helper
+    for helper in ("require_env(", "install_shutdown(", "Health("):
+        assert helper not in adapters["webhooks"], helper
+    # column 10: the quartet's decision path is the shared one (T952+T953),
+    # and their lang/redact plumbing arrives through moderate_action
+    for name in ("telegram_bot", "matrix_bot", "mattermost", "zulip_bot"):
+        for helper in ("command_reply(", "parse_command(", "moderate_action("):
+            assert helper in adapters[name], (name, helper)
+        assert "adapter_lang(" not in adapters[name], name  # via the skeleton
+    # column 11: the three direct-call surfaces spell adapter_lang out
+    for name in ("discord_bot", "twitch_irc", "webhooks"):
+        assert "adapter_lang(" in adapters[name], name
+
+    # no local reimplementation: every adapter def colliding with a
+    # common-owned helper must import that name from common
+    common_src = Path("src/gatekeeper/adapters/common.py").read_text()
+    tree = ast.parse(common_src)
+    owned = {n.name for n in tree.body
+             if isinstance(n, (ast.FunctionDef, ast.ClassDef))
+             and not n.name.startswith("_")}
+    # documented contract split: discord's strict T705 parser answers
+    # None-for-non-commands (common.parse_command's docstring says so);
+    # it is not a copy of the shared first-word dance
+    allowed_own = {("discord_bot", "parse_command")}
+    for name, src in adapters.items():
+        atree = ast.parse(src)
+        imported = {a.name for n in ast.walk(atree)
+                    if isinstance(n, ast.ImportFrom)
+                    and (n.module or "").endswith("common")
+                    for a in n.names}
+        for node in atree.body:
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)) \
+                    and node.name in owned \
+                    and (name, node.name) not in allowed_own:
+                assert node.name in imported, \
+                    (name, node.name, "reimplements common without importing it")
