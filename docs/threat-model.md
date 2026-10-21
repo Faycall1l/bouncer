@@ -84,8 +84,9 @@ each opened with a row here and moved up when it landed.
 | rule-set ambiguity | rules XOR preset, unknown preset → 422 `E_PRESET` | T471, T482 |
 | hostile input (random bytes, JSON bombs, lone surrogates) | seeded fuzz over `/predict` proves no 5xx: malformed bodies 400, nesting 422, surrogate text sanitized (message/history) or rejected (`E_RULES_TEXT`) at the engine boundary | T772 |
 | rule-set bombs (oversized value/id/count) | `validate_rules` rejects >280-char values (`E_RULES_TEXT`), non-slug ids >24 chars (`E_RULES_ID`), >12 rules (`E_RULES_COUNT`) — was already enforced, now pinned end-to-end and documented; `pack lint` also refuses hostile pack *documents* (path-looking ids, NUL/bidi/format-string ids, non-mapping or 300-deep JSON, missing file) with machine codes and exit 4, never a traceback | T004–T006, T773, T786 |
+| rule-pack tampering in transit or at rest | `pack sign FILE` writes a sha256 manifest beside the pack; `pack verify` recomputes it — a flipped byte fails with `E_PACK_SIG` and a machine-code exit, so a poisoned rules file (an integrity asset above) is caught before it redefines verdicts | T873, T888 |
 | rushed rotation = leaked old key | two-key window: `BOUNCER_KEY_OLD` accepted constant-time beside the new key — clients migrate with no deadline, closing the window kills the old key in one step; both compares always run | T776 |
-| metrics intel leak (traffic, breaker, cache) | `/metrics` needs `BOUNCER_KEY` off-box the moment a key exists; loopback-without-forwarding stays free; the socket peer is unspoofable — a forwarding header can only lose the local exemption, never gain it | T778 |
+| metrics intel leak (traffic, breaker, cache) | `/metrics` needs `BOUNCER_KEY` off-box the moment a key exists; `/stats` rides the same gate (T842) — and what both expose is aggregates only: counts by action/rule/adapter, causes, p95, strike **totals** (T884/T885), never user ids (T439) or payload text; loopback-without-forwarding stays free; the socket peer is unspoofable — a forwarding header can only lose the local exemption, never gain it | T778, T842, T884, T885 |
 | log/terminal injection (CWE-117) | log lines are `json.dumps` (fixed keys, escaped values); `X-Request-ID` scrubbed before echo+log; reasons scrubbed at the source in `explain()`; watch previews and error lines scrubbed | T779 |
 | public demo discloses rules/messages | `bouncer demo --share` prints a structured `{"warn"}` at launch — before gradio loads or the port binds; docs tell operators a shared link is full disclosure (rulebook, messages, review rows) | T780 |
 | vulnerable dependency ships | CI `audit` job runs pip-audit over the versions pip resolves from pyproject on **every push** — a known CVE turns the build red before anything ships | T781 |
@@ -100,3 +101,12 @@ each opened with a row here and moved up when it landed.
 _None open. Every gap this doc ever carried named its box (T772–T775) and
 moved into *Countermeasures* the day that box landed — the next gap starts
 the same way: a risk row here, a box in TODO.md, no promises without one._
+
+_Re-audited at T972 against every P44–P50 addition (server hardening
+T831–T848, adapter depth T851–T870, CLI/rules/storage T871–T890,
+multilingual routing T891–T910, fine-tune pipeline T911–T930,
+observability T931–T950, refactor T951–T970): each new surface is either
+enforced in *Countermeasures* above or has a P51 box (T973–T988) pinning
+it there. The two citation gaps the audit itself found are fixed in the
+same pass — /stats behind the key (T842) and pack sign/verify (T873) are
+now cited rows._

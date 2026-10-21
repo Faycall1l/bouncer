@@ -1072,7 +1072,7 @@
 
 ## P51 Security refresh (T971–T990)
 - [x] T971 sec: threat model updated for the 0.5.x surface (stream cap, typed systemone, appeal flow, namespaced strikes) (doc header now declares the refresh; the bounds row cites T832's typed wire shape; two new countermeasure rows — `platform:user` namespaced strikes T858/T864 can't cross identities, and adjudication has no HTTP surface T864/T865/T886 — receipts: docs/threat-model.md carries T971+T832+T858+T886 and tests/test_p41.py's T771 pins stay green, strict mkdocs build clean)
-- [ ] T972 sec: known-gaps table re-audited — the "None open" claim re-checked against P44-P50 additions
+- [x] T972 sec: known-gaps table re-audited — the "None open" claim re-checked against P44-P50 additions (re-audit note added to the gaps section naming every batch walked T831–T970; the two citation gaps it found are fixed in the same pass — /stats behind the key now cites T842, a new rule-pack tampering row cites sign/verify T873/T888, and the metrics row now cites T842/T884/T885; receipt: docs/threat-model.md carries T972 and the T771/T809 pins stay green, strict mkdocs clean)
 - [ ] T973 sec: appeal/adjudicate path is operator-only (CLI), platform users cannot adjudicate — test pins it
 - [ ] T974 sec: strike amnesty is operator-only + audited (who/when/why in the row)
 - [ ] T975 sec: typed systemone schema regression pin — oversized values still refused
