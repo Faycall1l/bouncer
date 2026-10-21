@@ -129,6 +129,15 @@ Notes that keep these honest:
    waits for it) and fsyncs+closes the audit tail before the process goes;
    the last log line reports both: `{"event": "shutdown",
    "inference_drained_s": ..., "audit": "closed"}` (T839).
+   **Drain vs force (T978):** the drain is an unbounded wait by design —
+   the same unboundedness the interpreter already applies to non-daemon
+   threads at exit — so a wedged predict means SIGTERM alone won't exit
+   the process. After one timeout window, force it: a second signal, then
+   `SIGKILL` if the second signal was also swallowed. Forcing is
+   data-safe — every audit row is flushed to the OS per write (T758), so
+   the worst a force-kill costs is the fsync batching window, never a
+   flushed row. The `inference_drained_s` shutdown line prints only when
+   the drain *completed*; its absence is how you know the force path ran.
 3. `bouncer snapshot save` before the process exits, then stop it.
 4. The review queue drains by hand: `bouncer review` to list (rows carry
    cause/model/preset adjudication context, T882), adjudicate

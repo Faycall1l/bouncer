@@ -287,3 +287,49 @@ def test_t977_rate_limit_holds_under_parallel_threads():  # T977
     assert len(refused) == len(ips) * 15
     assert serve._RATE_429 - before_429 == len(ips) * 15, "lost 429 count"
     assert all(len(serve._BUCKETS[ip]) == 60 for ip in ips)
+
+
+def test_t978_sigterm_drain_vs_force_race(monkeypatch, tmp_path):  # T978
+    """T978: the drain-vs-force race, pinned from both sides. Drain side:
+    drain_inference() waits out a ran pool, reports measured seconds, and
+    resets _EXEC so a later submit lazily rebuilds — the wait is
+    unbounded by design (the same unboundedness the interpreter already
+    applies to non-daemon threads at exit). Force side: audit rows are
+    flushed to the OS per write (T758), so the operator's force-kill
+    during a wedged drain loses at most the fsync batching window — the
+    row is readable before any close(). The runbook documents the
+    procedure: one timeout window, then force; the `inference_drained_s`
+    line prints only when the drain completed."""
+    import importlib
+
+    import gatekeeper as gk
+    from gatekeeper import _executor, drain_inference
+    from gatekeeper import audit as _au
+
+    # drain side: waited seconds reported, pool reset, fresh rebuild
+    ex = _executor()
+    fut = ex.submit(sum, range(10_000))
+    assert fut.result() == sum(range(10_000))
+    waited = drain_inference()
+    assert waited >= 0.0, waited
+    assert gk._EXEC is None, "drain resets the pool for a fresh build"
+    ex2 = _executor()  # lazy rebuild — a later submit gets a live pool
+    assert ex2 is not None and ex2 is not ex
+    drain_inference()  # leave the module clean for other tests
+
+    # force side: a per-write-flushed row is on disk before any close()
+    monkeypatch.setenv("BOUNCER_AUDIT", str(tmp_path / "audit.jsonl"))
+    importlib.reload(_au)
+    try:
+        _au.log_decision("t978 force-side check", "ok", 0.9, "allow", 1.0)
+        raw = (tmp_path / "audit.jsonl").read_text()
+        assert len(raw.splitlines()) == 1, "flushed row readable pre-close"
+        assert '"action": "allow"' in raw
+    finally:
+        if _au._F:
+            _au._F.close()
+        importlib.reload(_au)  # restore the default audit path
+
+    # documented where operators will look for the procedure
+    runbook = Path("docs/runbook.md").read_text()
+    assert "T978" in runbook and "force" in runbook
