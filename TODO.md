@@ -1064,7 +1064,7 @@
 - [x] T963 config: GateConfig.from_dict unknown-key rejection tested at every entry point (inventory = from_dict's full call-site list: library call, config validate --json, check --config, watch --config — all four probe-wired in one sweep test; load_config/TOML documented as out of scope, it never reaches from_dict — receipt: `test_t963_from_dict_unknown_keys_rejected_at_every_entry_point`)
 - [x] T964 serve: OpenAPI snapshot stable test (schema changes are deliberate, not drift) (content digest of app.openapi() pinned + readable 11-route path list; failure message carries the re-pin one-liner; dependency-driven schema reshapes also surface here — receipt: `test_t964_openapi_snapshot_stable`)
 - [x] T965 cli: every parser flag documented in --help (help-text sweep) (63 undocumented actions — 53 flags + 10 positionals — given grounded help strings across all 12 subparsers; receipt walks the full parser tree and proves descriptions render in formatted help — receipt: `test_t965_every_parser_flag_documented_in_help`)
-- [ ] T966 test: import budget re-verified after the refactor (still under 200ms)
+- [x] T966 test: import budget re-verified after the refactor (still under 200ms) (standalone bench after T951-T965: p50 31.9ms / p95 45.5ms of the 200ms budget; the budget gate now carries the T966 re-verification mark in-test and passes in-suite — receipt: `test_wheel_import_time_budget_200ms` marked T966)
 - [ ] T967 test: suite wall-time budget — no new test over 1s without a written justification
 - [ ] T968 docs: CONTRIBUTING refresh — new layout, shared-helper conventions
 - [ ] T969 fix: P50 reds — any failure the sweep finds, fixed here
