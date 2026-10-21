@@ -219,3 +219,25 @@ def test_t955_flood_signals_are_eval_baseline_only():  # T955
     from gatekeeper.normalize import caps_flood, emoji_flood
     assert caps_flood("STOP DOING THAT RIGHT NOW OK")
     assert emoji_flood("🔥" * 12)
+
+
+def test_t956_serve_one_httpexception_import_and_dead_branches_gone():
+    """T956: one HTTPException import — predict's literal duplicate and the
+    other lazy copies are gone — and the dead branches cleaned: the
+    catch-all's isinstance (Starlette's MRO lookup hands HTTPExceptions to
+    FastAPI's default handler first, same body), _rate's None guard (no
+    caller can pass None), systemone's isinstance(dict) tautologies."""
+    src = Path("src/gatekeeper/serve.py").read_text()
+    assert "from fastapi import FastAPI, HTTPException, Request" in src
+    assert "from fastapi import HTTPException" not in src, "lazy copies back"
+    assert "isinstance(exc, HTTPException)" not in src
+    assert "if request is None" not in src
+    assert "isinstance(part, dict)" not in src
+    assert src.count("T956") >= 4  # each cleanup left its mark
+
+    # the consolidated import still serves HTTP errors from the top level
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import serve
+    r = TestClient(serve.app).get("/presets/definitely-not-a-preset")
+    assert r.status_code == 404 and r.json()["detail"]["code"] == "E_PRESET"

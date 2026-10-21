@@ -4,7 +4,7 @@ import threading  # T841: rate-limit buckets are shared across the threadpool
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request  # T956: one import, not 15 copies
 from fastapi.middleware.cors import CORSMiddleware  # T055
 from pydantic import BaseModel
 from starlette.middleware.gzip import GZipMiddleware  # T284
@@ -140,9 +140,8 @@ def _client_ip(request) -> str:
 
 
 def _rate(request: Request) -> None:
-    if request is None:
-        return
-    ip = _client_ip(request)
+    ip = _client_ip(request)  # T956: the old request-is-None guard was dead —
+    # every caller passes the FastAPI-injected Request, none can be None
     now = time.time()
     with _RATE_LOCK:  # T841: check-then-append must be one atomic step
         _sweep(now)  # T227
@@ -153,7 +152,6 @@ def _rate(request: Request) -> None:
         global _RATE_429  # T885: the rate-limit line is a counter, not a log
         with _HTTP_LOCK:
             _RATE_429 += 1
-        from fastapi import HTTPException
         raise HTTPException(status_code=429, detail="rate limited",
                             headers={"Retry-After": "60"})  # T306
 
@@ -174,7 +172,6 @@ def _auth(request) -> None:
             global _AUTH_FAILS  # T885: key probing is visible in /metrics
             with _HTTP_LOCK:
                 _AUTH_FAILS += 1
-            from fastapi import HTTPException
             raise HTTPException(status_code=401, detail="bad API key")
 
 
@@ -222,13 +219,14 @@ async def _mw(request, call_next):
 
 @app.exception_handler(Exception)  # T269: structured 500, no traceback to clients
 async def _internal(request: Request, exc: Exception):
-    from fastapi import HTTPException
-    from fastapi.responses import JSONResponse
-    if isinstance(exc, HTTPException):  # T269: HTTP errors keep status + detail
-        return JSONResponse(status_code=exc.status_code,
-                            content={"detail": exc.detail},
-                            headers=exc.headers)
+    # T956: the old HTTPException isinstance branch was dead —
+    # Starlette's handler lookup walks the MRO, and FastAPI's default
+    # HTTPException handler is registered ahead of this catch-all, so
+    # T269's "HTTP errors keep status + detail" was already its doing
+    # (identical {"detail": ...} body); only real 500s land here.
     import json as _json  # T779: dumped, not interpolated — path can carry %22
+
+    from fastapi.responses import JSONResponse
     print(_json.dumps({"event": "internal-error", "path": request.url.path,
                        "err": type(exc).__name__}), flush=True)
     return JSONResponse(status_code=500,
@@ -302,7 +300,6 @@ def presets():
 
 @app.get("/presets/{name}")  # T477+T478
 def preset_one(name: str):
-    from fastapi import HTTPException
 
     from . import get_preset, list_presets
     if name not in list_presets():
@@ -439,7 +436,6 @@ def _clean(res: dict) -> dict:
 
 def _resolve_rules(rules: dict | None, preset: str | None) -> tuple[dict, str | None]:
     """T472+T476: exactly one of rules/preset; unknown presets are 422 E_PRESET."""
-    from fastapi import HTTPException
 
     from . import get_preset, list_presets
     if rules is not None and preset is not None:  # T482: ambiguous source rejected
@@ -469,7 +465,6 @@ def _resolve_rules(rules: dict | None, preset: str | None) -> tuple[dict, str | 
 def _thresholds(threshold: float, allow: float | None,
                 delete: float | None) -> tuple[float, float]:
     """T223: split gates with back-compat single float; 422 on out-of-range."""
-    from fastapi import HTTPException
     a = threshold if allow is None else allow
     d = threshold if delete is None else delete
     for t in (a, d):
@@ -489,7 +484,6 @@ MODELS = ("english", "multilingual", "typed-decisions")  # T459: laya checkpoint
 def _check_model(model: str | None) -> None:
     """T459: only real checkpoint names route explicitly."""
     if model is not None and model not in MODELS:
-        from fastapi import HTTPException
         raise HTTPException(status_code=422,
                             detail={"code": "E_MODEL_NAME",
                                     "message": f"unknown model {model!r} (pick from {list(MODELS)})"})
@@ -500,7 +494,6 @@ def _request_timeout(req_timeout: float | None) -> float:
     import os as _os
     if req_timeout is not None:
         if not 0.5 <= req_timeout <= 60:
-            from fastapi import HTTPException
             raise HTTPException(status_code=422,
                                 detail={"code": "E_TIMEOUT",
                                         "message": "timeout_s must be in [0.5, 60]"})
@@ -515,7 +508,6 @@ def _check_lang(lang: str | None) -> None:
     """T496: lang hints are short slugs, not sentences."""
     import re as _re
     if lang is not None and not _re.fullmatch(r"[a-z-]{2,16}", lang):
-        from fastapi import HTTPException
         raise HTTPException(status_code=422,
                             detail={"code": "E_LANG",
                                     "message": f"bad lang hint {lang!r} (want like 'es', 'fr')"})
@@ -531,7 +523,6 @@ def _body_too_big(request: Request, limit: int = MAX_BODY) -> bool:
 
 @app.post("/predict")
 def predict(req: ModReq, request: Request):
-    from fastapi import HTTPException
     _rate(request)
     _auth(request)
     if len(req.message) > 8000:  # T064
@@ -544,7 +535,6 @@ def predict(req: ModReq, request: Request):
         raise HTTPException(status_code=422,
                             detail={"code": "E_CONTEXT",
                                     "message": f"context item capped at {MAX_ITEM} chars"})
-    from fastapi import HTTPException
 
     from .config import GateConfig, questions_knob
     from .explain import explain
@@ -599,7 +589,6 @@ class BatchReq(BaseModel):
 
 @app.post("/predict/batch")  # T050
 def predict_batch(req: BatchReq, request: Request):
-    from fastapi import HTTPException
     _rate(request)  # T224: batch shares the same guards as single
     _auth(request)
     if _body_too_big(request):  # T291
@@ -653,9 +642,10 @@ def systemone(body: SystemoneReq, request: Request):
     questions = body.questions or {}
     # T775: keys and item text are unvalidated on this raw path — bound the
     # keys (reject: they can't be trimmed coherently) at both top levels
+    # (T956: the isinstance(dict) guards were tautologies — pydantic types
+    # both fields dict|None and the `or {}` above makes them always dicts)
     for part in (state, questions):
-        if isinstance(part, dict) and any(len(k) > MAX_KEY for k in part):
-            from fastapi import HTTPException
+        if any(len(k) > MAX_KEY for k in part):
             raise HTTPException(status_code=422,
                                 detail={"code": "E_STATE",
                                         "message": f"state/questions key capped at "
@@ -663,7 +653,7 @@ def systemone(body: SystemoneReq, request: Request):
     # T774: this raw path forwards `state` straight to the router, so nothing
     # else caps it — bound history to the newest MAX_CONTEXT items, the same
     # window /predict's context (T308) and the engine's [-history_n:] use.
-    if isinstance(state, dict) and isinstance(state.get("history"), list):
+    if isinstance(state.get("history"), list):  # state is always a dict (T956)
         hist = state["history"][-MAX_CONTEXT:]
         # T775: per-item text is bounded too — trim (passthrough precedent
         # from T774), while structured /predict rejects the same bound
@@ -701,8 +691,7 @@ def systemone(body: SystemoneReq, request: Request):
         msg = str(e)
         if "timed out after" not in msg and "breaker open" not in msg:
             msg = "model unavailable (details in server logs)"
-        from fastapi import HTTPException as _HE
-        raise _HE(status_code=503,
+        raise HTTPException(status_code=503,
                   detail={"code": getattr(e, "code", "E_MODEL"),
                           "message": msg})
     # T834: successes are counted and audited too — a raw-path decision
