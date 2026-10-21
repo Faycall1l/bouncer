@@ -241,3 +241,53 @@ def test_t956_serve_one_httpexception_import_and_dead_branches_gone():
     from gatekeeper import serve
     r = TestClient(serve.app).get("/presets/definitely-not-a-preset")
     assert r.status_code == 404 and r.json()["detail"]["code"] == "E_PRESET"
+
+
+def test_t957_no_dead_public_code_in_src():  # T957 receipt: this sweep
+    """T957: every public function/class in src/ is referenced in code,
+    docs or tests — outside its own definition lines.
+
+    Heuristic, stated honestly: word-boundary mentions across src+eval+
+    tests+docs minus one per definition line; a decorated definition
+    counts as wired (FastAPI routes are attached by @app.get and the
+    text never says the function's name); TODO.md is excluded — a box
+    mentioning a name is not a receipt (the same rule the batch sweeps
+    apply). Name collisions can hide a dead alias behind a live one of
+    the same word; whole-name death is what fails here."""
+    import ast
+    import re
+
+    corpus = []
+    for pat in ("src/**/*.py", "tests/**/*.py", "eval/**/*.py",
+                "docs/**/*.md"):
+        corpus += [p.read_text() for p in Path().glob(pat)]
+    corpus += [p.read_text() for p in Path().glob("*.md")
+               if p.name != "TODO.md"]  # boxes are not receipts
+    corpus += [p.read_text() for p in Path("eval").glob("*.md")]
+
+    defs = []  # (name, lineno, end_lineno, decorated)
+    for p in Path("src").rglob("*.py"):
+        tree = ast.parse(p.read_text())
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                 ast.ClassDef)) and not node.name.startswith("_"):
+                defs.append((node.name, node.lineno, node.end_lineno,
+                             bool(node.decorator_list)))
+                if isinstance(node, ast.ClassDef):
+                    for sub in node.body:
+                        if isinstance(sub, (ast.FunctionDef,
+                                            ast.AsyncFunctionDef)) \
+                                and not sub.name.startswith("_"):
+                            defs.append((f"{node.name}.{sub.name}",
+                                         sub.lineno, sub.end_lineno, False))
+
+    assert len(defs) > 100, f"the walk missed src/: only {len(defs)} defs"
+    dead = []
+    for full, _lo, _hi, decorated in defs:
+        name = full.split(".")[-1]
+        hits = sum(len(re.findall(rf"\b{re.escape(name)}\b", t))
+                   for t in corpus)
+        n_defs = sum(1 for n, *_ in defs if n.split(".")[-1] == name)
+        if not decorated and hits - n_defs < 1:
+            dead.append(full)
+    assert not dead, f"public code with no reference outside its defs: {dead}"

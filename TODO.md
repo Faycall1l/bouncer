@@ -1055,7 +1055,7 @@
 - [x] T954 explain: announce_line wired or removed (dead since introduction) — removed with a T896-style tombstone; receipt: tests/test_p50.py::test_explain_has_no_dead_announce_line (gone, T954/T184 cited, no caller can return)
 - [x] T955 normalize: caps_flood/emoji_flood wired into the engine cheap paths or demoted to eval-only, honestly documented — demoted (a cheap flag path would downgrade model-delete spam to review flag); receipts: tests/test_p50.py::test_t955 + T955 notes in normalize.py and docs/architecture.md (diagram's phantom flood step removed)
 - [x] T956 serve: duplicate HTTPException import + any other dead branch cleaned — one top-level import (15 lazy copies incl. predict's literal dup); dead: catch-all isinstance (Starlette serves HTTPExceptions first), _rate None-guard, 2 isinstance(dict) tautologies; receipt: tests/test_p50.py::test_t956
-- [ ] T957 test: no-dead-code sweep — every public function in src/ is referenced (code, docs, or test)
+- [x] T957 test: no-dead-code sweep — every public function in src/ is referenced (code, docs, or test) — receipt: tests/test_p50.py::test_t957 (178 defs walked, word-boundary refs minus def lines, decorator-wired exempt, TODO.md not a corpus; found 0 dead — preset_one/predict_batch flagged pre-exemption are @app-wired)
 - [ ] T958 test: adapter parity matrix — all adapters use the shared helpers, no local reimplementation
 - [ ] T959 lint: stricter ruff rule subset enabled repo-wide (existing violations fixed, not noqa'd)
 - [ ] T960 repo: in-tree artifacts untracked + gitignored (audit/review jsonl, build/, site/, egg-info)
