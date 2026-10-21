@@ -1,6 +1,11 @@
 # Environment variables (T807)
 
 _(Last checked against v0.4.0.)_
+_(Refreshed at T979 for the P44–P50 surface: every var those batches
+added was already a row — the completeness test above demands it — so
+this pass carries the newer semantics onto the rows: the systemone
+passthrough sharing the timeout, the per-write audit flush behind the
+fsync knob, and the standalone config lint._
 
 Every environment variable the code reads, in one table. The split of
 duties: this page is the *inventory* (kept honest by a test in both
@@ -24,7 +29,7 @@ are what the code falls back to at read time.
 | `BOUNCER_CACHE_SIZE` | `1024` | decision-cache entries (T271) |
 | `BOUNCER_CACHE_TTL` | `60.0` | seconds before a cached decision expires (T271) |
 | `BOUNCER_BREAKER` | `on` | `off` disables the circuit breaker (T523) |
-| `BOUNCER_TIMEOUT` | `10.0` | per-request model timeout in seconds, clamped to 0.5–60 |
+| `BOUNCER_TIMEOUT` | `10.0` | per-request model timeout in seconds, clamped to 0.5–60; the `/v1/systemone` passthrough shares this timeout on its retry/breaker path (T833) |
 | `BOUNCER_POOL_MAX` | `2` | router-pool slots (T597); size it ≥ hot checkpoints |
 | `BOUNCER_DEVICE` | unset (auto) | `cpu` / `cuda` device hint for router construction |
 | `BOUNCER_MODEL_DIR` | unset | directory holding finetuned checkpoints (T664) |
@@ -35,11 +40,11 @@ are what the code falls back to at read time.
 | variable | default | meaning |
 |---|---|---|
 | `BOUNCER_AUDIT` | `bouncer-audit.jsonl` | append-only decision log path (hashes only, no raw text) |
-| `BOUNCER_AUDIT_FSYNC` | `0` | fsync every N audit lines; `0` = no forced fsync |
+| `BOUNCER_AUDIT_FSYNC` | `0` | fsync every N audit lines; `0` = no forced fsync — every row flushes to the OS per write regardless, so a force-kill loses at most the fsync batching window (T758, T978) |
 | `BOUNCER_REVIEW` | `review-queue.jsonl` | queue of flags/escalations, written `0600` (T784) |
 | `BOUNCER_STATS` | `bouncer-stats.json` | counters snapshot path (T435) |
 | `BOUNCER_STRIKES` | `bouncer-strikes.json` | per-user strike counters path (T432) |
-| `BOUNCER_CONFIG` | `bouncer.toml` | config file read by CLI and adapters |
+| `BOUNCER_CONFIG` | `bouncer.toml` | config file read by CLI and adapters; `bouncer config validate` lints it standalone, no decision or server (T871) |
 | `BOUNCER_RULES` | unset | default rules for adapters: a preset name or a JSON file path |
 | `BOUNCER_RULES_<ADAPTER>` | unset | per-adapter override of `BOUNCER_RULES` (e.g. `BOUNCER_RULES_MATRIX`); either a preset name or a JSON path |
 | `BOUNCER_PRESET` | `gaming` | preset for the container self-test in `scripts/docker-entrypoint.sh` |
