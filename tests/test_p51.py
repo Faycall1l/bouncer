@@ -54,3 +54,57 @@ def test_t973_adjudicate_is_operator_only_cli(monkeypatch, tmp_path):  # T973
     after = json.loads(Path(q).read_text().splitlines()[0])
     assert "verdict" not in after and "vt" not in after, after
     assert after == row  # byte-identical: rendering changed nothing
+
+
+def test_t974_amnesty_operator_only_and_audited(monkeypatch, tmp_path):  # T974
+    """T974: strike forgiveness is operator-only and leaves evidence. The
+    mutating amnesty exists only on the CLI — no HTTP route, no adapter
+    mentions it — and a successful run writes exactly one audit row:
+    who = the subject as the standard 16-hex hash (the audit log stays
+    hash-only, T029/T883 — plaintext user ids live only in the 0600
+    strikes table), when = the row's `t`, why = the applied weight and
+    the before->after count in `cause`. The adjudicate-reject path was
+    already recorded in-row (verdict/vt/after, T865); this row closes
+    the standalone CLI path (T881)."""
+    import hashlib
+    import importlib
+    import inspect
+
+    from gatekeeper import audit as _au
+    from gatekeeper import serve
+    from gatekeeper import strikes as _st
+    from gatekeeper.cli import main
+
+    # operator-only: no route, no source wiring, no adapter command
+    assert not any("amnesty" in r.path for r in serve.app.routes)
+    assert "amnesty" not in inspect.getsource(serve)
+    for p in sorted(Path("src/gatekeeper/adapters").glob("*.py")):
+        assert "amnesty" not in p.read_text(), p.name
+
+    # functional: amnesty leaves one hash-only row with who/when/why
+    _st.reset()
+    _st.add_strike("u1")       # 3 strikes accrued in total
+    _st.add_strike("u1")
+    _st.add_strike("u1")
+    monkeypatch.setattr(_st, "_PATH", str(tmp_path / "strikes.json"))
+    monkeypatch.setenv("BOUNCER_AUDIT", str(tmp_path / "audit.jsonl"))
+    importlib.reload(_au)
+    try:
+        assert main(["amnesty", "u1", "--weight", "2"]) == 0
+        lines = (tmp_path / "audit.jsonl").read_text().splitlines()
+        assert len(lines) == 1, lines
+        row = json.loads(lines[0])
+        assert row["action"] == "amnesty" and row["rule"] == "amnesty"
+        assert row["cause"] == "weight=2 strikes 3->1", row["cause"]
+        assert row["t"] > 0  # when: the row's own timestamp
+        digest = hashlib.sha256(b"amnesty u1").hexdigest()[:16]
+        assert row["msg"] == digest  # who, hashed like every other row
+        assert "u1" not in lines[0]  # plaintext user never reaches the audit
+
+        # no effect, no row: a no-strikes amnesty exits 1, logs nothing
+        assert main(["amnesty", "nobody"]) == 1
+        assert len((tmp_path / "audit.jsonl").read_text().splitlines()) == 1
+    finally:
+        if _au._F:
+            _au._F.close()
+        importlib.reload(_au)  # restore the default audit path

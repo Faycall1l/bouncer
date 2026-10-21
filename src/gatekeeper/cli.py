@@ -271,12 +271,18 @@ def cmd_adjudicate(args) -> int:  # T865: operator verdict on one queued row
     return 0
 
 
-def cmd_amnesty(args) -> int:  # T881: operator forgiveness, outside the queue
+def cmd_amnesty(args) -> int:  # T881+T974: operator forgiveness, audited
     """`bouncer amnesty USER [--weight N]` — clear a user's strikes after an
     appeal, without needing a queue row (adjudicate's amnesty only fires on
     a rejected row). Loads the persisted table first (the CLI is a fresh
     process), clears everything by default, subtracts exactly N with
-    --weight (the T865 primitive), then saves back."""
+    --weight (the T865 primitive), then saves back. T974: a successful
+    amnesty writes one audit row — who (the subject as the standard
+    16-hex hash: the audit log stays hash-only, T029/T883), when (the
+    row's `t`), why (applied weight + before->after count in `cause`) —
+    so forgiveness leaves the same evidence trail as a verdict; the
+    adjudicate-reject path was already recorded in-row (verdict/vt/after,
+    T865). A no-strikes amnesty writes nothing: no effect, no row."""
     import os
 
     from gatekeeper import strikes
@@ -289,6 +295,10 @@ def cmd_amnesty(args) -> int:  # T881: operator forgiveness, outside the queue
     weight = before if args.weight is None else max(0, args.weight)
     after = strikes.amnesty(args.user, weight)
     strikes.save()
+    from gatekeeper import audit as _au
+    _au.log_decision(f"amnesty {args.user}", "amnesty", 1.0, "amnesty", 0.0,
+                     cause=f"weight={weight} strikes {before}"
+                           f"->{after['strikes']}")
     print(f"amnesty {args.user}: strikes {before} -> {after['strikes']}")
     return 0
 
