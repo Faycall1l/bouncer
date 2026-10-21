@@ -457,3 +457,46 @@ def test_t961_repo_root_carries_no_unignored_runtime_artifacts():  # T961
                            text=True, check=True)
         missing = set(on_disk) - set(r.stdout.split())
         assert not missing, f"present but unignored: {sorted(missing)}"
+
+
+def test_t963_from_dict_unknown_keys_rejected_at_every_entry_point(
+        tmp_path, capsys):  # T963
+    """T963: unknown config keys are rejected at EVERY entry point that
+    feeds user JSON into GateConfig. The inventory is from_dict's full
+    call-site list: the library call itself, `config validate --json`,
+    and `_cfg_from_args` (which serves `check --config` and
+    `watch --config`). adapters' load_config/TOML is deliberately out of
+    scope — it returns raw adapter settings and never reaches from_dict."""
+    import json
+
+    import pytest
+
+    from gatekeeper import cli
+    from gatekeeper.config import ConfigError, GateConfig
+
+    bad = {"warp_speed": 9}
+
+    # 1. the library entry: raises, coded, and names the key
+    with pytest.raises(ConfigError) as ei:
+        GateConfig.from_dict(bad)
+    assert ei.value.code == "E_CONFIG"
+    assert "warp_speed" in str(ei.value)
+
+    # 2. config validate --json: reported as a fail line, exit 1
+    f = tmp_path / "bad.json"
+    f.write_text(json.dumps(bad))
+    assert cli.main(["config", "validate", "--json", str(f)]) == 1
+    out = capsys.readouterr().out
+    assert "E_CONFIG" in out and "warp_speed" in out, out
+
+    # 3. check --config: coded line via main(), exit 4, never a traceback
+    rc = cli.main(["check", "--preset", "study", "--config", str(f), "hi"])
+    assert rc == 4
+    err = capsys.readouterr().err
+    assert "E_CONFIG" in err and "warp_speed" in err, err
+
+    # 4. watch --config: same contract, rejection happens before the pipe
+    rc = cli.main(["watch", "--preset", "study", "--config", str(f)])
+    assert rc == 4
+    err = capsys.readouterr().err
+    assert "E_CONFIG" in err and "warp_speed" in err, err
