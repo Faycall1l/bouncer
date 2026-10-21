@@ -737,9 +737,12 @@ def cmd_pack(args) -> int:
 
 
 def _add_threshold_flags(p) -> None:
-    p.add_argument("--threshold", type=float, default=0.85)
-    p.add_argument("--allow-threshold", type=float, default=None)  # T223
-    p.add_argument("--delete-threshold", type=float, default=None)  # T223
+    p.add_argument("--threshold", type=float, default=0.85,
+                   help="single allow/delete gate threshold (default 0.85)")
+    p.add_argument("--allow-threshold", type=float, default=None,
+                   help="allow gate threshold; falls back to --threshold when unset")  # T223
+    p.add_argument("--delete-threshold", type=float, default=None,
+                   help="delete gate threshold; falls back to --threshold when unset")  # T223
 
 
 def _cmd_serve(args) -> int:  # T547+T549: secrets/flags applied before uvicorn starts
@@ -864,70 +867,120 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     p = argparse.ArgumentParser(prog="bouncer",  # T321: exit codes up front
                                 epilog="exit codes: 0 allow · 2 delete/flag · 3 escalate · "
                                        "4 usage/rules error")
-    p.add_argument("--version", action="store_true")  # T215
+    p.add_argument("--version", action="store_true",
+                   help="print the bouncer version and exit")  # T215
     sub = p.add_subparsers(dest="cmd", required=False)
     sub.required = False
     c = sub.add_parser("check")
-    c.add_argument("message", nargs="?", default=None)  # T874: or --file
-    c.add_argument("--file", default=None)  # T874: one message per line, JSONL out
-    c.add_argument("--rules", default=None)  # T483: None = not passed (conflict check)
-    c.add_argument("--preset")
+    c.add_argument("message", nargs="?", default=None,
+                   help="text to moderate (or pass --file)")  # T874: or --file
+    # T874: one message per line, JSONL out
+    c.add_argument("--file", default=None,
+                   help="moderate messages one per line from FILE (JSONL output)")
+    # T483: None = not passed (conflict check)
+    c.add_argument("--rules", default=None,
+                   help="rules JSON file (conflicts with --preset; default rules.json)")
+    c.add_argument("--preset",
+                   help="named preset rules instead of a file (see bouncer presets)")
     _add_threshold_flags(c)
     c.add_argument("--lang", default=None,  # T311
                    help="language hint, or 'auto' to detect from script (T893)")
-    c.add_argument("--context", action="append", default=None)  # T312: repeatable
-    c.add_argument("--severity", action="append", default=None)  # T313: RULE=low|high
-    c.add_argument("--quiet", action="store_true")  # T320: action word only
-    c.add_argument("--history", type=int, default=None)  # T329: override history_n
-    c.add_argument("--model", default=None)  # T460: pin checkpoint
-    c.add_argument("--timeout", type=float, default=None)  # T516: inference budget
-    c.add_argument("--config", default=None)  # T531: JSON gate config file
-    c.add_argument("--user", default=None)  # T533: strikes attribution
-    c.add_argument("--json", action="store_true")
+    c.add_argument("--context", action="append", default=None,
+                   help="earlier chat line to condition on (repeatable)")  # T312: repeatable
+    # T313: RULE=low|high
+    c.add_argument("--severity", action="append", default=None,
+                   help="per-rule severity override RULE=low|high (repeatable)")
+    c.add_argument("--quiet", action="store_true",
+                   help="print only the action word")  # T320: action word only
+    # T329: override history_n
+    c.add_argument("--history", type=int, default=None,
+                   help="override how many recent lines are kept as context")
+    c.add_argument("--model", default=None,
+                   help="pin a specific model checkpoint")  # T460: pin checkpoint
+    c.add_argument("--timeout", type=float, default=None,
+                   help="inference time budget in seconds")  # T516: inference budget
+    # T531: JSON gate config file
+    c.add_argument("--config", default=None,
+                   help="JSON gate config file (base; CLI flags override it)")
+    c.add_argument("--user", default=None,
+                   help="attribute the message to USER for strikes")  # T533: strikes attribution
+    c.add_argument("--json", action="store_true",
+                   help="emit machine-readable JSON instead of text")
     c.set_defaults(fn=cmd_check)
     s = sub.add_parser("serve")  # T068
-    s.add_argument("--host", default="127.0.0.1")
-    s.add_argument("--port", type=int, default=8000)
-    s.add_argument("--workers", type=int, default=1)  # T322
-    s.add_argument("--key-file", default=None)  # T547: read API key from a file
-    s.add_argument("--cors", default=None)  # T549: comma origins, overrides env
+    s.add_argument("--host", default="127.0.0.1",
+                   help="bind address (default 127.0.0.1)")
+    s.add_argument("--port", type=int, default=8000,
+                   help="HTTP port (default 8000)")
+    s.add_argument("--workers", type=int, default=1,
+                   help="uvicorn worker processes (default 1)")  # T322
+    s.add_argument("--key-file", default=None,
+                   help="read the API key from FILE")  # T547: read API key from a file
+    # T549: comma origins, overrides env
+    s.add_argument("--cors", default=None,
+                   help="comma-separated allowed origins (overrides the env)")
     s.add_argument("--keep-alive", type=float, default=None,  # T838
                    help="uvicorn timeout_keep_alive seconds (default 5)")
     s.add_argument("--limit-concurrency", type=int, default=None,  # T838
                    help="max simultaneous connections (default unlimited)")
     s.set_defaults(fn=_cmd_serve)
     d = sub.add_parser("demo")  # T069
-    d.add_argument("--port", type=int, default=7860)  # T323
-    d.add_argument("--share", action="store_true")  # T323
-    d.add_argument("--preset", default=None)  # T548: default selection on launch
+    d.add_argument("--port", type=int, default=7860,
+                   help="demo UI port (default 7860)")  # T323
+    d.add_argument("--share", action="store_true",
+                   help="create a public gradio share link")  # T323
+    # T548: default selection on launch
+    d.add_argument("--preset", default=None,
+                   help="preset selected in the demo on launch")
     d.set_defaults(fn=lambda a: (_demo(a), 0))
     w = sub.add_parser("watch")  # T070+T169: stdin pipe, colored live tail
-    w.add_argument("--rules", default=None)  # T483
-    w.add_argument("--preset")
-    w.add_argument("--config", default=None)  # T532
-    w.add_argument("--user", default=None)  # T534: attribute piped lines to one user
-    w.add_argument("--action", default=None)  # T535: comma list, e.g. flag,escalate
+    w.add_argument("--rules", default=None,
+                   help="rules JSON file (conflicts with --preset; default rules.json)")  # T483
+    w.add_argument("--preset",
+                   help="named preset rules instead of a file (see bouncer presets)")
+    w.add_argument("--config", default=None,
+                   help="JSON gate config file (same shape as check --config)")  # T532
+    # T534: attribute piped lines to one user
+    w.add_argument("--user", default=None,
+                   help="attribute every piped line to USER for strikes")
+    # T535: comma list, e.g. flag,escalate
+    w.add_argument("--action", default=None,
+                   help="only print these actions, comma list (e.g. flag,escalate)")
     w.add_argument("--lang", default=None,  # T541: hint for the whole pipe,
                    help="or 'auto' to detect per line from script (T893)")
-    w.add_argument("--json-in", action="store_true")  # T542: per-line {"message","user_id"}
+    # T542: per-line {"message","user_id"}
+    w.add_argument("--json-in", action="store_true",
+                   help='treat each line as {"message","user_id"} JSON (default: raw text)')
     _add_threshold_flags(w)
     w.set_defaults(fn=cmd_watch)
     r = sub.add_parser("review")  # T170
-    r.add_argument("--limit", type=int, default=20)
-    r.add_argument("--action", default=None)  # T317
-    r.add_argument("--since", type=float, default=0)  # T537: epoch seconds
-    r.add_argument("--rule", default=None)  # T543
-    r.add_argument("--prune", action="store_true")  # T540: drop aged rows
-    r.add_argument("--older-than", type=float, default=86400.0)  # T540: seconds
-    r.add_argument("--clear", action="store_true")  # T318
-    r.add_argument("--yes", action="store_true")  # T318
+    r.add_argument("--limit", type=int, default=20,
+                   help="max rows to list (default 20)")
+    r.add_argument("--action", default=None,
+                   help="filter rows by action, comma list")  # T317
+    r.add_argument("--since", type=float, default=0,
+                   help="only rows at or after this epoch time")  # T537: epoch seconds
+    r.add_argument("--rule", default=None,
+                   help="filter rows by rule name")  # T543
+    # T540: drop aged rows
+    r.add_argument("--prune", action="store_true",
+                   help="drop queue rows older than --older-than, list the rest")
+    r.add_argument("--older-than", type=float, default=86400.0,
+                   help="age cutoff in seconds for --prune (default 86400)")  # T540: seconds
+    r.add_argument("--clear", action="store_true",
+                   help="drop the entire queue (requires --yes)")  # T318
+    r.add_argument("--yes", action="store_true",
+                   help="confirm destructive review actions")  # T318
     r.set_defaults(fn=cmd_review)
     aj = sub.add_parser("adjudicate")  # T865: approve/reject, strike amnesty
-    aj.add_argument("row_id")
-    aj.add_argument("verdict", choices=("approve", "reject"))
+    aj.add_argument("row_id",
+                    help="queue row id to adjudicate")
+    aj.add_argument("verdict", choices=("approve", "reject"),
+                    help="approve the row or reject it (grants strike amnesty)")
     aj.set_defaults(fn=cmd_adjudicate)
     am = sub.add_parser("amnesty")  # T881: strike forgiveness, no queue row needed
-    am.add_argument("user")
+    am.add_argument("user",
+                    help="user whose strikes are reset")
     am.add_argument("--weight", type=int, default=None,
                     help="subtract exactly N strikes (default: clear them all)")
     am.set_defaults(fn=cmd_amnesty)
@@ -941,39 +994,58 @@ def build_parser() -> argparse.ArgumentParser:  # T610: testable without dispatc
     cf.set_defaults(fn=cmd_config)
     cv.set_defaults(fn=cmd_config)
     cp = sub.add_parser("completion")  # T875: shell completion script
-    cp.add_argument("shell", choices=("bash", "zsh"))
+    cp.add_argument("shell", choices=("bash", "zsh"),
+                    help="shell to emit the completion script for")
     cp.set_defaults(fn=cmd_completion)
     md = sub.add_parser("models")  # T538
     md.set_defaults(fn=cmd_models)
     ps = sub.add_parser("presets")  # T539
     ps.set_defaults(fn=cmd_presets)
     st = sub.add_parser("stats")  # T171
-    st.add_argument("--json", action="store_true")  # T315
+    st.add_argument("--json", action="store_true",
+                    help="emit stats as JSON")  # T315
     st.set_defaults(fn=cmd_stats)
     ex = sub.add_parser("export")  # T172
-    ex.add_argument("--out", default="audit.csv")
-    ex.add_argument("--since", type=float, default=0)  # T327: epoch seconds
-    ex.add_argument("--stats", default=None)  # T445: snapshot JSON path
-    ex.add_argument("--limit", type=int, default=0)  # T449: bounded tail export
-    ex.add_argument("--format", choices=["csv", "json"], default="csv")  # T536
-    ex.add_argument("--action", default=None)  # T544: comma list, e.g. delete
+    ex.add_argument("--out", default="audit.csv",
+                    help="output file (default audit.csv)")
+    ex.add_argument("--since", type=float, default=0,
+                    help="only rows at or after this epoch time")  # T327: epoch seconds
+    ex.add_argument("--stats", default=None,
+                    help="stats snapshot JSON to embed in the export")  # T445: snapshot JSON path
+    ex.add_argument("--limit", type=int, default=0,
+                    help="max rows to export (0 = all)")  # T449: bounded tail export
+    ex.add_argument("--format", choices=["csv", "json"], default="csv",
+                    help="output format (default csv)")  # T536
+    ex.add_argument("--action", default=None,
+                    help="rows to export, comma list of actions")  # T544: comma list, e.g. delete
     ex.add_argument("--queue", action="store_true",  # T886: appeal audit trail
                     help="export the review queue (who/why/verdict) instead")
     ex.set_defaults(fn=cmd_export)
     sn = sub.add_parser("snapshot")  # T437+T438
-    sn.add_argument("action", choices=["save", "load"])
-    sn.add_argument("file")
+    sn.add_argument("action", choices=["save", "load"],
+                    help="save the live snapshot or load it back")
+    sn.add_argument("file",
+                    help="snapshot file path")
     sn.set_defaults(fn=cmd_snapshot)
     pk = sub.add_parser("pack")  # T173+T174
     pk.add_argument("action", choices=["show", "lint", "init", "diff",
-                                       "sign", "verify"])  # T545+T872+T873
-    pk.add_argument("file", nargs="?", default=None)  # T545: init target path
-    pk.add_argument("file2", nargs="?", default=None)  # T872: diff NEW
-    pk.add_argument("--force", action="store_true")  # T545: overwrite on init
-    pk.add_argument("--preset", default="gaming")
-    pk.add_argument("--rules")
-    pk.add_argument("--strict", action="store_true")  # T319: exit 2 on warnings
-    pk.add_argument("--format", choices=["json", "lines"], default="json")  # T325
+                                       "sign", "verify"],  # T545+T872+T873
+                    help="show, lint, init, diff, sign or verify")
+    # T545: init target path
+    pk.add_argument("file", nargs="?", default=None,
+                    help="pack file: init target, sign/verify subject, or diff base")
+    pk.add_argument("file2", nargs="?", default=None,
+                    help="second pack file for diff (the NEW side)")  # T872: diff NEW
+    pk.add_argument("--force", action="store_true",
+                    help="overwrite an existing file on init")  # T545: overwrite on init
+    pk.add_argument("--preset", default="gaming",
+                    help="base preset for show/lint/init (default gaming)")
+    pk.add_argument("--rules",
+                    help="pack file to show or lint instead of --preset")
+    pk.add_argument("--strict", action="store_true",
+                    help="exit 2 on warnings instead of 0")  # T319: exit 2 on warnings
+    pk.add_argument("--format", choices=["json", "lines"], default="json",
+                    help="output format (default json)")  # T325
     pk.set_defaults(fn=cmd_pack)
     dr = sub.add_parser("doctor")  # T727: env/dep/route self-diagnosis
     dr.set_defaults(fn=cmd_doctor)

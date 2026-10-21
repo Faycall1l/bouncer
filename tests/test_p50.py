@@ -538,3 +538,35 @@ def test_t964_openapi_snapshot_stable():  # T964
         'python -c "import json,hashlib;from gatekeeper import serve;'
         'print(hashlib.sha256(json.dumps(serve.app.openapi(),'
         'sort_keys=True).encode()).hexdigest())"')
+
+
+def test_t965_every_parser_flag_documented_in_help():  # T965
+    """T965: help-text sweep — every flag and positional on every
+    subparser carries help text, so `bouncer <cmd> --help` documents the
+    whole surface instead of bare option strings. The walk covers the
+    full parser tree (-h is argparse's own), and one render check proves
+    descriptions reach the formatted help, not just the action objects."""
+    import argparse
+
+    from gatekeeper.cli import build_parser
+
+    undocumented = []
+
+    def walk(parser, path):
+        for a in parser._actions:
+            if isinstance(a, argparse._SubParsersAction):
+                for name, sub in a.choices.items():
+                    walk(sub, path + [name])
+            elif a.dest == "help":
+                continue
+            elif a.help in (None, argparse.SUPPRESS) or not str(a.help).strip():
+                undocumented.append(" ".join(path + (a.option_strings or [a.dest])))
+
+    walk(build_parser(), [])
+    assert not undocumented, f"flags without help text: {undocumented}"
+
+    # the descriptions render: a subcommand's formatted help carries them
+    subs = next(a for a in build_parser()._actions
+                if isinstance(a, argparse._SubParsersAction))
+    assert "text to moderate (or pass --file)" in subs.choices["check"].format_help()
+    assert "show, lint, init, diff, sign or verify" in subs.choices["pack"].format_help()
