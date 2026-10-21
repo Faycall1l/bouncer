@@ -137,6 +137,10 @@ def test_wheel_builds_clean():  # T713
             # nothing heavy leaked in: tests, weights, VCS stay out (T713+T718)
             assert not any(n.startswith(("tests/", ".git/", "model"))
                            for n in names), "heavy paths leaked into the wheel"
+            # T962: build/ staging and site/ mkdocs output stay out too —
+            # verified against a real wheel build, not assumed from config
+            assert not any(n.startswith(("build/", "site/"))
+                           for n in names), "build/ or site/ leaked into the wheel"
 
 
 def test_sdist_includes_license_readme_and_data_examples():  # T714
@@ -169,6 +173,10 @@ def test_sdist_includes_license_readme_and_data_examples():  # T714
         assert "src/gatekeeper/__init__.py" in members
         assert not any(m.startswith((".git/", "model", "build/"))
                        for m in members), "heavy paths leaked into the sdist"
+        # T962: the mkdocs output dir stays out of the sdist too — same
+        # verified-not-assumed line, on a real sdist member list
+        assert not any(m.startswith("site/") for m in members), \
+            "site/ leaked into the sdist"
 
 
 def test_license_year_and_holder():  # T715
