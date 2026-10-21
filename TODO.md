@@ -1057,7 +1057,7 @@
 - [x] T956 serve: duplicate HTTPException import + any other dead branch cleaned — one top-level import (15 lazy copies incl. predict's literal dup); dead: catch-all isinstance (Starlette serves HTTPExceptions first), _rate None-guard, 2 isinstance(dict) tautologies; receipt: tests/test_p50.py::test_t956
 - [x] T957 test: no-dead-code sweep — every public function in src/ is referenced (code, docs, or test) — receipt: tests/test_p50.py::test_t957 (178 defs walked, word-boundary refs minus def lines, decorator-wired exempt, TODO.md not a corpus; found 0 dead — preset_one/predict_batch flagged pre-exemption are @app-wired)
 - [x] T958 test: adapter parity matrix — all adapters use the shared helpers, no local reimplementation (receipt: tests/test_p50.py::test_t958 — 7 adapter rows x 11 helper columns; wrappers must import the common name, discord's T705 strict parser documented as the one contract split)
-- [ ] T959 lint: stricter ruff rule subset enabled repo-wide (existing violations fixed, not noqa'd)
+- [x] T959 lint: stricter ruff rule subset enabled repo-wide (existing violations fixed, not noqa'd) (extend-select E+W in pyproject, 148 pre-existing violations fixed across 25 files — 26 kaggle E402s scoped via documented per-file-ignore, zero noqa suppressions; pre-commit rev pinned v0.17.1 to match CI's uvx ruff — receipt: `test_t959_stricter_ruff_config_enabled_and_fixed_not_suppressed`)
 - [ ] T960 repo: in-tree artifacts untracked + gitignored (audit/review jsonl, build/, site/, egg-info)
 - [ ] T961 repo: test that the repo root carries no unignored runtime artifacts
 - [ ] T962 pkg: sdist/wheel exclude build/ and site/ (verified, not assumed)

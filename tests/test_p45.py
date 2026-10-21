@@ -560,7 +560,7 @@ def test_twitch_watch_once_counts_decisions_and_errors(monkeypatch, capsys):  # 
 
     class _Sock:  # test_p37 T708's scripted transcript, then "closes"
         def __init__(self, lines):
-            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._data = "".join(ln + "\r\n" for ln in lines).encode()
             self._pos = 0
             self.sent = []
 
@@ -670,7 +670,7 @@ def test_every_adapter_passes_the_platform_user_to_moderate(monkeypatch):  # T85
     # 6) twitch: the PRIVMSG nick (transcript ends -> OSError, not ours)
     class _Sock:
         def __init__(self, lines):
-            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._data = "".join(ln + "\r\n" for ln in lines).encode()
             self._pos = 0
 
         def recv(self, n):
@@ -815,7 +815,7 @@ def test_adapters_pass_detected_lang_to_moderate(monkeypatch):  # T857
 
     class _Sock:  # test_p37 T708's scripted transcript, then "closes"
         def __init__(self, lines):
-            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._data = "".join(ln + "\r\n" for ln in lines).encode()
             self._pos = 0
 
         def recv(self, n):

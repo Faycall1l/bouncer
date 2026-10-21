@@ -195,7 +195,7 @@ def test_license_year_and_holder():  # T715
 def test_dockerfile_slim_nonroot_healthcheck():  # T716
     text = Path("Dockerfile").read_text()
     # slim base, pinned to a minor so rebuilds don't silently jump distros
-    from_lines = [l for l in text.splitlines() if l.startswith("FROM ")]
+    from_lines = [ln for ln in text.splitlines() if ln.startswith("FROM ")]
     assert from_lines == ["FROM python:3.12-slim"], from_lines
     # non-root: a dedicated user is created and switched to
     assert "useradd" in text and "USER bouncer" in text
@@ -331,7 +331,7 @@ def test_dockerfile_oci_labels_are_honest():  # T720
     assert labels["authors"] == py["project"]["authors"][0]["name"]
     assert labels["source"] == py["project"]["urls"]["Homepage"]
     assert labels["licenses"] == py["project"]["license"]["text"]
-    from_line = next(l for l in text.splitlines() if l.startswith("FROM "))
+    from_line = next(ln for ln in text.splitlines() if ln.startswith("FROM "))
     assert labels["base.name"].endswith(from_line.split()[1])
     # version/created stay CI-stamped: a static one would rot (T720 decision)
     assert "version" not in labels and "created" not in labels

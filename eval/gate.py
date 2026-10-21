@@ -453,7 +453,8 @@ def main(argv=None) -> int:
     ap.add_argument("--max-import-p50-ms", type=float, default=200.0,  # T766
                     help="import-time p50 budget in ms (200 = T764's wheel "
                          "budget; local p50 is ~30ms)")
-    ap.add_argument("--max-stats-p95-ms", type=float, default=250.0,  # T766; widened 100->250: tiny-sample p95 flake
+    # T766; widened 100->250: tiny-sample p95 flake
+    ap.add_argument("--max-stats-p95-ms", type=float, default=250.0,
                     help="GET /stats p95 budget in ms under threaded load "
                          "(local ~11ms in-process; the P40 sweep samples p95 "
                          "over ~10 requests, so the budget is an "

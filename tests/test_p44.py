@@ -495,7 +495,8 @@ def test_serve_flags_reach_uvicorn(monkeypatch):  # T838 (receipt for T845)
     assert "limit_concurrency" not in seen
 
 
-def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  # T839 (receipt for T848)
+def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  # T839
+    # (receipt for T848)
     """The shutdown used to print a note and hope. Now the lifespan waits for
     queued/running predicts (a timed-out _predict_safe does NOT cancel the
     future — the model keeps running in its thread), fsyncs+ closes the
@@ -555,8 +556,8 @@ def test_graceful_shutdown_drains_and_flushes(tmp_path, monkeypatch, capsys):  #
         assert "t839" not in row["msg"], "message stays hashed (T029)"
 
         # the shutdown line is a measurement, not a note
-        line = [l for l in capsys.readouterr().out.splitlines()
-                if '"shutdown"' in l][-1]
+        line = [ln for ln in capsys.readouterr().out.splitlines()
+                if '"shutdown"' in ln][-1]
         ev = _json.loads(line)
         assert ev["inference_drained_s"] >= 0.25, ev  # it really waited
         assert ev["audit"] == "closed"
@@ -597,9 +598,9 @@ def test_access_log_method_status_and_rid_correlation(capsys):  # T840
         assert r.status_code == 200
 
         out = capsys.readouterr().out.splitlines()
-        access = _json.loads([l for l in out if '"rid"' in l and '"method"' in l][-1])
+        access = _json.loads([ln for ln in out if '"rid"' in ln and '"method"' in ln][-1])
         assert (access["rid"], access["method"], access["status"]) == ("rid-t840", "POST", 200)
-        decision = _json.loads([l for l in out if '"decision"' in l][-1])
+        decision = _json.loads([ln for ln in out if '"decision"' in ln][-1])
         assert decision["rid"] == "rid-t840"  # the two lines join on rid
 
         # a non-200 is visible in the access log too (was unlogged before)
@@ -607,8 +608,8 @@ def test_access_log_method_status_and_rid_correlation(capsys):  # T840
         r = client.post("/predict", json={"message": "hello", "rules": {"r": "t"},
                                           "thresold": 1})  # T835: 422
         assert r.status_code == 422
-        access = _json.loads([l for l in capsys.readouterr().out.splitlines()
-                              if '"method"' in l][-1])
+        access = _json.loads([ln for ln in capsys.readouterr().out.splitlines()
+                              if '"method"' in ln][-1])
         assert access["status"] == 422 and access["method"] == "POST"
     finally:
         gatekeeper._router = None
@@ -838,7 +839,7 @@ def test_systemone_parity_caps_breaker_audit(tmp_path, monkeypatch):  # T847
 
         # audit: the passthrough's row is hashed like every decision row and
         # the failure counted with its cause (T834)
-        rows = [_json.loads(l) for l in audit.read_text().splitlines()]
+        rows = [_json.loads(ln) for ln in audit.read_text().splitlines()]
         assert rows and all(row["action"] == "passthrough" for row in rows)
         assert "h" * 100 not in audit.read_text()  # raw state never lands
         assert get_stats()["causes"].get("breaker-open", 0) >= before

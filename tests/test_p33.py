@@ -295,7 +295,7 @@ def test_breaker_and_pool_metrics_lines():  # T628
                  "bouncer_pool_hits", "bouncer_pool_creates",
                  "bouncer_pool_evictions"):
         assert line in body, f"missing {line}"
-        val = next(l for l in body.splitlines() if l.startswith(line + " "))
+        val = next(ln for ln in body.splitlines() if ln.startswith(line + " "))
         assert float(val.split()[1]) >= 0  # well-formed numeric sample
     # breaker flip is observable: mark it open, scrape again
     with gatekeeper._BREAKER_LOCK:

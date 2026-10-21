@@ -34,7 +34,8 @@ def _explain(res: dict, rules: dict) -> str:
     if probs and conf < 0.9:
         top2 = sorted(probs.items(), key=lambda kv: -kv[1])[:2]
         if len(top2) == 2:
-            base += f"; runner-up '{top2[1][0]}' @ {top2[1][1]:.2f} (margin {top2[0][1]-top2[1][1]:.2f})"
+            base += (f"; runner-up '{top2[1][0]}' @ {top2[1][1]:.2f}"
+                     f" (margin {top2[0][1]-top2[1][1]:.2f})")
     if res.get("abstained"):
         base += " [abstained: low margin]"
     return base

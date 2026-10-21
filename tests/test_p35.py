@@ -203,7 +203,8 @@ def test_max_samples_smoke_flag():  # T658: smoke truncation without breaking sp
     assert "T658: smoke path" in src  # truncation happens AFTER completeness asserts
     assert "T658: smoke split" in src and "split left an empty part" in src
     flag = src.index('"--max-samples"')
-    assert flag < src.index("rows_raw = rows_raw[:MAX_SAMPLES]") < src.index("train_items, calib_items")
+    assert (flag < src.index("rows_raw = rows_raw[:MAX_SAMPLES]")
+            < src.index("train_items, calib_items"))
 
 
 def test_smoke_run_path_documented():  # T659+T913: 50 rows, 1 epoch default

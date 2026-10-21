@@ -144,8 +144,8 @@ def test_telegram_adapter_is_stdlib_only():  # T692: no pip extra to run it
                    "import httpx", "import requests"):
         assert banned not in src
     # every top-level import is stdlib
-    top = [l.strip() for l in src.splitlines()
-           if l.startswith(("import ", "from ")) and "future" not in l]
+    top = [ln.strip() for ln in src.splitlines()
+           if ln.startswith(("import ", "from ")) and "future" not in ln]
     allowed = {"json", "os", "sys", "urllib.request"}
     for line in top:
         mod = line.split()[1]
@@ -477,7 +477,9 @@ def test_dry_run_prints_never_posts(monkeypatch, capsys):  # T697
                                       "confidence": 0.99})
     rules = {"sin-spam": "t"}
     calls = []
-    recorder = lambda *a, **k: calls.append((a, k))  # stub transport
+
+    def recorder(*a, **k):  # stub transport
+        calls.append((a, k))
 
     from gatekeeper.adapters import matrix_bot as mx
     from gatekeeper.adapters import mattermost as mm
@@ -1210,7 +1212,7 @@ def test_twitch_full_session_stubbed_socket(monkeypatch, capsys):  # T708
 
     class _Sock:  # scripted IRC transcript, then the socket "closes"
         def __init__(self, lines):
-            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._data = "".join(ln + "\r\n" for ln in lines).encode()
             self._pos = 0
             self.sent = []
 

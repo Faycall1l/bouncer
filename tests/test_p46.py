@@ -693,10 +693,10 @@ def test_metrics_counts_requests_auth_failures_and_429():  # T885
         assert 'bouncer_requests_total{status="200"}' in body, body
         assert 'bouncer_requests_total{status="404"}' in body, body
         assert 'bouncer_requests_total{status="401"}' in body, body
-        auth = next(l for l in body.splitlines()
-                    if l.startswith("bouncer_auth_failures_total "))
-        rate = next(l for l in body.splitlines()
-                    if l.startswith("bouncer_rate_limited_total "))
+        auth = next(ln for ln in body.splitlines()
+                    if ln.startswith("bouncer_auth_failures_total "))
+        rate = next(ln for ln in body.splitlines()
+                    if ln.startswith("bouncer_rate_limited_total "))
         assert float(auth.split()[1]) >= 1 and float(rate.split()[1]) >= 1
         assert "9.9.9.9" not in body, "counters never leak a client ip"
     finally:

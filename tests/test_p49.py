@@ -108,8 +108,8 @@ def test_t931_938_p49_metrics_families_pinned_end_to_end(capsys, tmp_path):
         # a request through the middleware first, so the rid-bearing access
         # log the scrape's counters sit behind is actually emitted
         TestClient(serve.app).get("/version")
-        access = [json.loads(l) for l in capsys.readouterr().out.splitlines()
-                  if l.startswith("{") and '"rid"' in l]
+        access = [json.loads(ln) for ln in capsys.readouterr().out.splitlines()
+                  if ln.startswith("{") and '"rid"' in ln]
         assert access, "middleware must emit a rid-bearing access log (T938)"
         assert all(a["rid"] for a in access), access
 
@@ -189,8 +189,8 @@ def test_t940_review_queue_depth_in_metrics(tmp_path, monkeypatch):
 
     def scrape() -> float:
         body = TestClient(serve.app).get("/metrics").text
-        line = next(l for l in body.splitlines()
-                    if l.startswith("bouncer_review_queue_depth "))
+        line = next(ln for ln in body.splitlines()
+                    if ln.startswith("bouncer_review_queue_depth "))
         return float(line.split()[1])
 
     assert scrape() == 0, "absent file is depth 0, not an error"
@@ -218,8 +218,8 @@ def test_t941_adapter_counters_reach_the_scrape():
     reset_stats()
     try:
         body = TestClient(serve.app).get("/metrics").text
-        assert not any(l.startswith("bouncer_adapter_decisions_total{")
-                       for l in body.splitlines()), body  # family declared (T943), no samples
+        assert not any(ln.startswith("bouncer_adapter_decisions_total{")
+                       for ln in body.splitlines()), body  # family declared (T943), no samples
         record("delete", "no-spam", 3.0, adapter="telegram")
         record("delete", "no-spam", 3.0, adapter="telegram")
         record("flag", "be-kind", 4.0, adapter="discord")
@@ -252,11 +252,11 @@ def test_t942_rule_label_cardinality_stays_capped():
         for i in range(cap + 50):
             record("allow", f"adversarial-{i}", 1.0)
         body = TestClient(serve.app).get("/metrics").text
-        rule_lines = [l for l in body.splitlines()
-                      if l.startswith("bouncer_rule_total{")]
+        rule_lines = [ln for ln in body.splitlines()
+                      if ln.startswith("bouncer_rule_total{")]
         assert len(rule_lines) <= cap + 1, len(rule_lines)  # +1 = _other
-        other = next(l for l in rule_lines
-                     if 'rule="_other"' in l)
+        other = next(ln for ln in rule_lines
+                     if 'rule="_other"' in ln)
         assert int(other.split()[1]) == 51, other  # 250 fresh - 199 that fit
         assert 'rule="spam"} 1' in body, body
         # a snapshot with the same flood restores under the same cap
@@ -354,8 +354,8 @@ def test_t944_scrape_cardinality_bounded_under_adversarial_input():
                 record(act, f"flood-{i}", 1.0,
                        cause=f"cause-{i % 7}", adapter="telegram")
         body = TestClient(serve.app).get("/metrics").text
-        label_sets = sum(1 for l in body.splitlines()
-                         if l and not l.startswith("#") and "{" in l)
+        label_sets = sum(1 for ln in body.splitlines()
+                         if ln and not ln.startswith("#") and "{" in ln)
         # bound: the four known actions + rules under the cap (200+_other)
         # + 7 causes + 4 telegram actions + statuses + the unlabeled singles
         assert label_sets <= 300, label_sets
@@ -390,7 +390,7 @@ def test_t945_api_md_metrics_table_matches_the_scrape():
     doc = Path("docs/api.md").read_text()
     section = doc.split("## Metrics export (T945)")[1].split("## ")[0]
     # only table rows name families; the prose below mentions label values
-    table = "\n".join(l for l in section.splitlines() if l.startswith("|"))
+    table = "\n".join(ln for ln in section.splitlines() if ln.startswith("|"))
     # a row can carry a chain of names: "`bouncer_pool_size` / `_max` / …" —
     # each `_`-prefixed continuation joins the previous name's stem
     expanded: set[str] = set()

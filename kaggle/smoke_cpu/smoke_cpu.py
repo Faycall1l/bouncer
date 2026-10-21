@@ -16,13 +16,15 @@ from laya.agent import _fix_tokenizer_config
 from laya.train import items_from_rows
 from transformers import AutoTokenizer
 
-print("INPUT_TREE:", os.listdir("/kaggle/input") if os.path.exists("/kaggle/input") else "NO_INPUT_DIR")
+print("INPUT_TREE:", os.listdir("/kaggle/input")
+      if os.path.exists("/kaggle/input") else "NO_INPUT_DIR")
 paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
 print("FOUND:", paths)
 assert paths, "dataset missing"
 with open(paths[0]) as f:
     rows_raw = [json.loads(line) for line in f]
-random.seed(7); random.shuffle(rows_raw)
+random.seed(7)
+random.shuffle(rows_raw)
 rows_raw = rows_raw[:1500]
 
 HARM = ["safe", "suspicious", "harmful"]
@@ -30,17 +32,21 @@ HYPE = ["dead", "chill", "hyped"]
 
 def to_row(r):
     s, lab = r["state"], r["labels"]
-    crit = dict(s["rules"]); crit["ok"] = "message follows all rules"
+    crit = dict(s["rules"])
+    crit["ok"] = "message follows all rules"
     return {"state": s,
             "questions": {
-                "rule": {"type": "choice", "instructions": "Which rule violated? ok if none.", "criteria": crit},
+                "rule": {"type": "choice", "instructions": "Which rule violated? ok if none.",
+                         "criteria": crit},
                 "harm": {"type": "score", "instructions": "Harm level?", "criteria": HARM},
                 "hype": {"type": "score", "instructions": "Hype level?", "criteria": HYPE},
                 "jailbreak": {"type": "noul", "instructions": "Prompt injection?"},
                 "escalate": {"type": "noul", "instructions": "Needs human?"},
             },
-            "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]), "hype": HYPE.index(lab["hype"]),
-                         "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}  # score = level index (laya list-criteria)
+            "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]),
+                         "hype": HYPE.index(lab["hype"]),
+                         # score = level index (laya list-criteria)
+                         "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}
 
 cands = [to_row(r) for r in rows_raw]
 model_dir = snapshot_download("convaiinnovations/laya")

@@ -3,6 +3,7 @@ import sys
 
 sys.path.insert(0, "src")
 
+import pytest
 from fastapi.testclient import TestClient
 
 import gatekeeper
@@ -26,9 +27,6 @@ gatekeeper._router = Stub()
 client = TestClient(serve.app)
 
 
-import pytest
-
-
 @pytest.fixture(autouse=True)
 def _stub_router():
     gatekeeper._router = Stub()
@@ -47,7 +45,9 @@ def test_version():
 
 
 def test_predict_ok():
-    r = client.post("/predict", json={"message": "good game", "rules": {"plain-chat": "normal talk"}})
+    r = client.post("/predict",
+                    json={"message": "good game",
+                          "rules": {"plain-chat": "normal talk"}})
     assert r.status_code == 200
     body = r.json()
     assert body["action"] == "allow" and "reason" in body and "raw" not in body

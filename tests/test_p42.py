@@ -310,7 +310,7 @@ def test_mermaid_has_ascii_fallback():  # T800
                     if _fence_info(lines, i) == "mermaid"]
         texts = [i for i in range(len(lines))
                  if _fence_info(lines, i) == "text"]
-        headings = [i for i, l in enumerate(lines) if re.match(r"^#{1,6} ", l)]
+        headings = [i for i, ln in enumerate(lines) if re.match(r"^#{1,6} ", ln)]
         for mi in mermaids:
             found += 1
             # a plain-text block in the SAME section (no heading between
@@ -366,8 +366,8 @@ def test_search_friendly_headings():  # T802
     for p in sorted(Path("docs").glob("*.md")):
         lines = _strip_code(p.read_text()).splitlines()
         heads = [(len(m.group(1)), m.group(2), i)
-                 for i, l in enumerate(lines)
-                 if (m := re.match(r"^(#{1,6})\s+(.+)$", l))]
+                 for i, ln in enumerate(lines)
+                 if (m := re.match(r"^(#{1,6})\s+(.+)$", ln))]
         # exactly one H1 per page: it is the page's title in search
         # results and in the rendered toc — six (T149 demo-script had
         # '#' comment lines that markdown reads as headings) broke that
@@ -401,8 +401,8 @@ def test_readme_badges_and_anchor_links():  # T803
     assert 'requires-python = ">=3.10"' in Path("pyproject.toml").read_text()
     assert Path("LICENSE").read_text().splitlines()[0].startswith(
         "Apache License 2.0")
-    badge_lines = [l for l in readme.splitlines()[:6]
-                   if "img.shields.io" in l or "badge.svg" in l]
+    badge_lines = [ln for ln in readme.splitlines()[:6]
+                   if "img.shields.io" in ln or "badge.svg" in ln]
     assert len(badge_lines) >= 3, "badge block missing at the top"
 
     # every relative link in the README resolves to a real file, and

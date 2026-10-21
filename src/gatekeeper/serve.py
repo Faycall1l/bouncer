@@ -486,7 +486,8 @@ def _check_model(model: str | None) -> None:
     if model is not None and model not in MODELS:
         raise HTTPException(status_code=422,
                             detail={"code": "E_MODEL_NAME",
-                                    "message": f"unknown model {model!r} (pick from {list(MODELS)})"})
+                                    "message": f"unknown model {model!r} "
+                                               f"(pick from {list(MODELS)})"})
 
 
 def _request_timeout(req_timeout: float | None) -> float:

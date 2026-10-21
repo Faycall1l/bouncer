@@ -1,7 +1,8 @@
 # T156
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.0
+    rev: v0.17.1  # T959: track CI's `uvx ruff` (floating latest) — the v0.11 pin
+    # enforced a different default rule set than CI and flagged 148 errors CI never saw
     hooks:
       - id: ruff
         args: [--fix]

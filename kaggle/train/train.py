@@ -122,16 +122,19 @@ def fill_provenance(data_path):  # T916
 
 def to_row(r):
     s, lab = r["state"], r["labels"]
-    crit = dict(s["rules"]); crit["ok"] = "message follows all rules"
+    crit = dict(s["rules"])
+    crit["ok"] = "message follows all rules"
     return {"state": s,
             "questions": {
-                "rule": {"type": "choice", "instructions": "Which rule violated? ok if none.", "criteria": crit},
+                "rule": {"type": "choice", "instructions": "Which rule violated? ok if none.",
+                         "criteria": crit},
                 "harm": {"type": "score", "instructions": "Harm level?", "criteria": HARM},
                 "hype": {"type": "score", "instructions": "Hype level?", "criteria": HYPE},
                 "jailbreak": {"type": "noul", "instructions": "Prompt injection?"},
                 "escalate": {"type": "noul", "instructions": "Needs human?"},
             },
-            "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]), "hype": HYPE.index(lab["hype"]),
+            "expected": {"rule": lab["rule"], "harm": HARM.index(lab["harm"]),
+                         "hype": HYPE.index(lab["hype"]),
                          "jailbreak": lab["jailbreak"], "escalate": lab["escalate"]}}
 
 
@@ -331,7 +334,8 @@ def main():  # T911: every GPU/network/data step lives behind this guard
         "state.rules must be a non-empty mapping"
     assert set(sample["labels"]) >= {"rule", "harm", "hype", "jailbreak", "escalate"}, \
         "labels missing heads"
-    random.seed(SEED); random.shuffle(rows_raw)  # T913: --seed makes the order reproducible
+    random.seed(SEED)
+    random.shuffle(rows_raw)  # T913: --seed makes the order reproducible
     if MAX_SAMPLES:  # T658: smoke path — data must still be complete on disk (asserts above)
         rows_raw = rows_raw[:MAX_SAMPLES]
     if len(rows_raw) < 2000:  # T658: smoke split ~80/10/10 when truncated
@@ -360,7 +364,8 @@ def main():  # T911: every GPU/network/data step lives behind this guard
                                      cfg["max_len"], cfg["head_max_len"])
     print(f"ITEMS={len(items)} SKIPPED={skipped}", flush=True)
     assert items, "tokenizer produced zero items — check max_len/head_max_len"
-    assert skipped < len(train_rows) * 0.5, f"skipped {skipped}/{len(train_rows)} rows — malformed data?"
+    assert skipped < len(train_rows) * 0.5, \
+        f"skipped {skipped}/{len(train_rows)} rows — malformed data?"
 
     # --- single-GPU RLCD (same canonical fns as train_ddp.py) ---
     from laya.calibrate import fit_temperature_map
@@ -377,8 +382,10 @@ def main():  # T911: every GPU/network/data step lives behind this guard
 
     model = build_model(cfg, encoder_dir=os.path.join(model_dir, "encoder"))
     model.load_state_dict(load_file(os.path.join(model_dir, "model.safetensors")), strict=True)
-    assert any("encoder." in n for n, _ in model.named_parameters()), "no encoder params — wrong build?"
-    model.encoder.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+    assert any("encoder." in n for n, _ in model.named_parameters()), \
+        "no encoder params — wrong build?"
+    model.encoder.gradient_checkpointing_enable(
+        gradient_checkpointing_kwargs={"use_reentrant": False})
     if LORA["enabled"]:  # T652: adapter run — train ~1% of params, not the full model
         from peft import LoraConfig, get_peft_model
         model = get_peft_model(model, LoraConfig(
@@ -388,14 +395,16 @@ def main():  # T911: every GPU/network/data step lives behind this guard
     model.head_checkpointing = True
     model.to(device).train()
 
-    train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.1, seed=20260922)
+    train_items, calib_items = split_calibration(items, calib_max=400, calib_frac=0.1,
+                                                 seed=20260922)
     assert train_items and calib_items, "empty train or calibration split"
     EPOCHS = EPOCHS_FLAG or (1 if MAX_SAMPLES else 3)  # T659+T913: smoke=1 epoch, flag overrides
     MICRO, ACCUM = 8, 8  # eff batch 64, same as 2xT4 recipe
     PATIENCE = 1  # T653: stop after N epochs without dev rule_acc improvement
     assert len(train_items) >= MICRO, "fewer items than one micro-batch"
     enc_p = [p for n, p in model.named_parameters() if "encoder." in n and p.requires_grad]
-    head_p = [p for n, p in model.named_parameters() if "encoder." not in n and p.requires_grad]  # T652: LoRA-safe
+    head_p = [p for n, p in model.named_parameters()
+              if "encoder." not in n and p.requires_grad]  # T652: LoRA-safe
     opt = torch.optim.AdamW([{"params": enc_p, "lr": LR_FLAG or 2.5e-5},
                              {"params": head_p, "lr": (LR_FLAG or 2.5e-5) * 4}],  # head4x encoder
                             weight_decay=0.01)  # T913: --lr scales both, ratio kept
@@ -425,7 +434,8 @@ def main():  # T911: every GPU/network/data step lives behind this guard
     t0 = time.time()
 
     for epoch in range(start_epoch, EPOCHS):
-        random.seed(42 + epoch); random.shuffle(train_items)
+        random.seed(42 + epoch)
+        random.shuffle(train_items)
         sigma, eloss, nb = sigma_at(epoch, EPOCHS, 0.4, 0.1), 0.0, 0
         opt.zero_grad(set_to_none=True)
         for step, b in enumerate(range(0, len(train_items), MICRO)):
@@ -435,21 +445,26 @@ def main():  # T911: every GPU/network/data step lives behind this guard
             bt = collate_items([enc], tok.pad_token_id)
             with torch.autocast("cuda", dtype=torch.float16):
                 logits, _ = model(bt["input_ids"].to(device), bt["attention_mask"].to(device),
-                                  bt["marker_pos"].to(device), bt["marker_mask"].to(device), bt["qtype"].to(device))
+                                  bt["marker_pos"].to(device), bt["marker_mask"].to(device),
+                                  bt["qtype"].to(device))
             loss = rlcd_loss(logits.float(), bt["target"].to(device), bt["marker_mask"].to(device),
                              bt["qtype"].to(device), sigma, samples=4, w_sph=0.75, w_rps=1.0)
             scaler.scale(loss / ACCUM).backward()
-            eloss += float(loss); nb += 1
+            eloss += float(loss)
+            nb += 1
             if acc % ACCUM == 0 or (b + MICRO) >= len(train_items):
                 scaler.unscale_(opt)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                scaler.step(opt); scaler.update(); sched.step()
+                scaler.step(opt)
+                scaler.update()
+                sched.step()
                 opt.zero_grad(set_to_none=True)
             if nb % 50 == 0:
                 print(f"ep{epoch+1}/{EPOCHS} step{nb} loss={float(loss):.4f}", flush=True)
                 log_rec(kind="step", epoch=epoch + 1, step=nb, loss=round(float(loss), 4))
         save_checkpoint(model, tok, dict(cfg), os.path.join(OUT, "checkpoint_latest"))
-        print(f"EPOCH {epoch+1} done in {time.time()-t0:.0f}s avg={eloss/max(1,nb):.4f}", flush=True)
+        print(f"EPOCH {epoch+1} done in {time.time()-t0:.0f}s avg={eloss/max(1,nb):.4f}",
+              flush=True)
         dev_acc = dev_rule_acc(os.path.join(OUT, "checkpoint_latest"), dev_rows)
         print(f"EP{epoch+1} dev_rule_acc={dev_acc:.3f} best={best_dev:.3f}", flush=True)
         log_rec(kind="epoch", epoch=epoch + 1, avg_loss=round(eloss / max(1, nb), 4),
@@ -477,7 +492,8 @@ def main():  # T911: every GPU/network/data step lives behind this guard
         model.load_state_dict(best_state, strict=False)
     model.eval()
     try:
-        recs = calibration_records(model, tok, calib_items, device, cfg["max_len"], cfg["head_max_len"], batch_size=16)
+        recs = calibration_records(model, tok, calib_items, device, cfg["max_len"],
+                                   cfg["head_max_len"], batch_size=16)
         fit = fit_temperature_map(recs)
         cfg["temperature"] = fit["temperature"]
         cfg.pop("temperature_by_options", None)
@@ -508,8 +524,10 @@ def main():  # T911: every GPU/network/data step lives behind this guard
         good = pred == r["labels"]["rule"]
         ok += good
         if conf >= 0.85:
-            gated_n += 1; gated_ok += good
-    print(f"TEST n={len(test_rows)} rule_acc={ok/len(test_rows):.3f} gate@0.85={gated_ok}/{gated_n}", flush=True)
+            gated_n += 1
+            gated_ok += good
+    print(f"TEST n={len(test_rows)} rule_acc={ok/len(test_rows):.3f} "
+          f"gate@0.85={gated_ok}/{gated_n}", flush=True)
     test_acc = ok / max(1, len(test_rows))  # T661: regression gate input
     log_rec(kind="test", n=len(test_rows), rule_acc=round(test_acc, 4),
             gate85=f"{gated_ok}/{gated_n}")  # T654: final number lands in the trail too
@@ -535,7 +553,8 @@ def main():  # T911: every GPU/network/data step lives behind this guard
                              "--out", os.path.join(OUT, "eval_test.json"), "--model", OUT],
                             env=env, check=False)
         log_rec(kind="eval_gatekeeper", returncode=ev.returncode)
-        print("eval_gatekeeper on test split:", "OK" if ev.returncode == 0 else "FAILED", flush=True)
+        print("eval_gatekeeper on test split:",
+              "OK" if ev.returncode == 0 else "FAILED", flush=True)
         # --- ship gate (T915): the FULL gate.py thresholds over that report ---
         # Same thresholds CI gates with (rule_acc floor, ECE ceiling, latency
         # budget, abstention band, per-rule floor) — passed via NO threshold
@@ -569,7 +588,8 @@ def main():  # T911: every GPU/network/data step lives behind this guard
         token = UserSecretsClient().get_secret("HF_TOKEN")
     except Exception:  # noqa: BLE001 — no secrets in this env
         token = None
-    if token and best_dev >= DEV_FLOOR and test_acc >= REGEX_FLOOR and gate_pass:  # T655+T661+T915: earn the ship
+    # T655+T661+T915: earn the ship
+    if token and best_dev >= DEV_FLOOR and test_acc >= REGEX_FLOOR and gate_pass:
         from huggingface_hub import HfApi
         api = HfApi(token=token)
         api.create_repo("bouncer-421m", exist_ok=True)

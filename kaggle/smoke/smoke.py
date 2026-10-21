@@ -20,7 +20,8 @@ paths = glob.glob("/kaggle/input/gatekeeper-chatmix-12k/*.jsonl")
 assert paths, "dataset missing"
 with open(paths[0]) as f:
     rows_raw = [json.loads(line) for line in f]
-random.seed(7); random.shuffle(rows_raw)
+random.seed(7)
+random.shuffle(rows_raw)
 rows_raw = rows_raw[:1500]
 
 HARM = ["safe", "suspicious", "harmful"]
@@ -29,10 +30,12 @@ HYPE = ["dead", "chill", "hyped"]
 def to_row(r):
     s, lab = r["state"], r["labels"]
     rules = s["rules"]
-    crit = dict(rules); crit["ok"] = "message follows all rules"
+    crit = dict(rules)
+    crit["ok"] = "message follows all rules"
     return {"state": s,
             "questions": {
-                "rule": {"type": "choice", "instructions": "Which rule violated? ok if none.", "criteria": crit},
+                "rule": {"type": "choice", "instructions": "Which rule violated? ok if none.",
+                         "criteria": crit},
                 "harm": {"type": "score", "instructions": "Harm level?", "criteria": HARM},
                 "hype": {"type": "score", "instructions": "Hype level?", "criteria": HYPE},
                 "jailbreak": {"type": "noul", "instructions": "Prompt injection?"},
@@ -86,7 +89,9 @@ for i in range(0, 20 * 4, 4):
                           b["marker_pos"].cuda(), b["marker_mask"].cuda(), b["qtype"].cuda())
     loss = rlcd_loss(logits.float(), b["target"].cuda(), b["marker_mask"].cuda(),
                      b["qtype"].cuda(), 0.4, samples=2, w_sph=0.75, w_rps=1.0)
-    opt.zero_grad(); loss.backward(); opt.step()
+    opt.zero_grad()
+    loss.backward()
+    opt.step()
     losses.append(round(float(loss), 4))
     print(f"step {len(losses)}/20 loss={losses[-1]}", flush=True)
 print("SMOKE_OK", losses[0], "->", losses[-1])

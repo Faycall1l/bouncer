@@ -25,7 +25,8 @@ def ece(probs, golds, n=10):
     e = 0.0
     for i in range(n):
         m = (probs >= i/n) & (probs < (i+1)/n)
-        if m.sum(): e += abs(probs[m].mean() - golds[m].mean()) * m.mean()
+        if m.sum():
+            e += abs(probs[m].mean() - golds[m].mean()) * m.mean()
     return float(e)
 
 
@@ -69,17 +70,22 @@ if __name__ == "__main__":
         lat.append(res.get("latency_ms", 0))
         actions[res["action"]] += 1  # T373
         abstained_n += bool(res.get("abstained"))  # T374
-        pred = res["rule"]; conf = res["confidence"]
+        pred = res["rule"]
+        conf = res["confidence"]
         good = pred == lab["rule"]
-        ok += good; confs.append(conf); golds.append(good)
-        per_rule[lab["rule"]] += 1; per_rule_ok[lab["rule"]] += good  # T098
+        ok += good
+        confs.append(conf)
+        golds.append(good)
+        per_rule[lab["rule"]] += 1
+        per_rule_ok[lab["rule"]] += good  # T098
         if not good:
             conf_pairs[(lab["rule"], pred)] += 1
             conf_sums[(lab["rule"], pred)] = conf_sums.get((lab["rule"], pred), 0) + conf  # T376
         if conf >= 0.9 and not good:
             overconf += 1
         if conf >= 0.85:
-            gated_n += 1; gated_ok += good
+            gated_n += 1
+            gated_ok += good
     lat.sort()
     report = {"n": len(rows), "rule_acc": round(ok / len(rows), 3),  # T100: JSON report
               "model": a.model or "base-router",  # T576+T583: which checkpoint ran

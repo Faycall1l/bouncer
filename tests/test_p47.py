@@ -201,7 +201,7 @@ def test_cli_lang_auto_detects_per_message(tmp_path, monkeypatch,
     f.write_text("هذا كلام عادي spam\nnormal latin spam line\n")
     assert main(["check", "--file", str(f), "--rules", rules,
                  "--lang", "auto"]) == 0
-    rows = [_json.loads(l) for l in capsys.readouterr().out.splitlines()]
+    rows = [_json.loads(ln) for ln in capsys.readouterr().out.splitlines()]
     assert [r["lang"] for r in rows] == ["ar", None], rows
 
     # watch: same detection per piped line
@@ -233,7 +233,7 @@ def test_preset_lang_covers_every_routed_language():  # T894
     assert set(PACKLESS) <= set(ROUTED_LANGS)
     # and the map agrees with PRESET_LANG on the languages that DO ship
     assert cov["ar"] == ["ar"]
-    assert all(model_for_lang(l) == "multilingual" for l in ROUTED_LANGS)
+    assert all(model_for_lang(ln) == "multilingual" for ln in ROUTED_LANGS)
 
     # docs own the packless list: each name appears in presets.md
     doc = Path("docs/presets.md").read_text()
@@ -243,7 +243,7 @@ def test_preset_lang_covers_every_routed_language():  # T894
 
     # packless languages are exactly the routed ones WITHOUT a preset pack
     packed_langs = set(PRESET_LANG.values())
-    assert {l for l in ROUTED_LANGS if l not in packed_langs} == set(PACKLESS)
+    assert {ln for ln in ROUTED_LANGS if ln not in packed_langs} == set(PACKLESS)
     assert len(list_presets()) == len(PRESET_LANG), "catalogue is the tag table"
 
 
@@ -588,7 +588,7 @@ def test_adapter_lang_pin_passes_through_every_platform(monkeypatch):  # T903
 
     class _Sock:
         def __init__(self, lines):
-            self._data = "".join(l + "\r\n" for l in lines).encode()
+            self._data = "".join(ln + "\r\n" for ln in lines).encode()
             self._pos = 0
 
         def recv(self, n):

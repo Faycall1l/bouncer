@@ -146,15 +146,18 @@ def launch(port: int = 7860, share: bool = False, preset: str | None = None):  #
             lat_txt += " (cached)"
         elif r.get("coalesced"):
             lat_txt += " (coalesced)"
-        return badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"] + note, bars, meters, lat_txt
+        return (badge, f"{r['rule']} @ {r['confidence']:.2f}", r["reason"] + note,
+                bars, meters, lat_txt)
 
     with gr.Blocks(title="bouncer", theme=gr.themes.Soft()) as app:  # T091
         from gatekeeper import __version__  # T365
         gr.Markdown(f"# 🛡️ bouncer {__version__} — programmable mod, 30ms")
         gr.Markdown("~1,000 decisions per second per GPU · self-hosted $0 marginal · "  # T176
                    "vs ~$0.50/1M tokens for an LLM judge doing the same 5 questions.")
-        gr.Markdown("> allow ≥0.85 & calm · flag = suspected · delete = confident violation · "  # T090
-                   "escalate = unsure/stakes. Tune the slider: higher = fewer auto-actions, fewer mistakes.")
+        gr.Markdown("> allow ≥0.85 & calm · flag = suspected · delete = "  # T090
+                    "confident violation · escalate = unsure/stakes. "
+                    "Tune the slider: higher = fewer auto-actions, "
+                    "fewer mistakes.")
         gr.Markdown("> Order: jailbreak-delete → human-escalate → confident delete → "  # T363
                    "suspected flag → calm allow → unsure escalate. Close calls abstain; "
                    "see docs/gates.md.")

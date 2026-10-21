@@ -27,7 +27,7 @@ def test_split_is_server_disjoint(tmp_path):  # T632: no rule-set leaks between 
     parts = {}
     for name in ("train", "dev", "test"):
         with open(f"{out[:-6]}.{name}.jsonl") as f:
-            parts[name] = [json.loads(l) for l in f]
+            parts[name] = [json.loads(ln) for ln in f]
     keys = {n: {_server(x) for x in rows} for n, rows in parts.items()}
     assert not keys["train"] & keys["dev"]
     assert not keys["train"] & keys["test"]
@@ -139,13 +139,13 @@ def test_examples_row_count_and_size():  # T641: shipped fixtures stay pinned
 
     p = pathlib.Path("data/examples.jsonl")
     with open(p) as f:
-        rows = [json.loads(l) for l in f]
+        rows = [json.loads(ln) for ln in f]
     assert len(rows) == 300  # T637 regeneration pinned this count
     assert all(r.get("v") == 1 for r in rows)  # T640 stamps present
     assert p.stat().st_size < 1_000_000  # example file stays small
     q = pathlib.Path("data/examples_i18n.jsonl")
     with open(q) as f:
-        irows = [json.loads(l) for l in f]
+        irows = [json.loads(ln) for ln in f]
     assert len(irows) == 12 and all(r.get("v") == 1 for r in irows)
     assert q.stat().st_size < 50_000
 
@@ -165,7 +165,7 @@ def test_stratify_keeps_label_mix():  # T643: label-preserving split beats plain
     def dev_distance(splits):  # squared distance of dev's label mix from global
         c = Counter(r["labels"]["rule"] for r in splits["dev"])
         n = len(splits["dev"]) or 1
-        return sum((c[l] / n - 1 / 3) ** 2 for l in ("ok", "be-kind", "no-spam"))
+        return sum((c[ln] / n - 1 / 3) ** 2 for ln in ("ok", "be-kind", "no-spam"))
 
     plain = split_rows(rows, seed=0)
     strat = split_rows(rows, seed=0, stratify=True)
@@ -241,11 +241,11 @@ def test_synth_quarantine_file_written(tmp_path):  # T645: CLI end-to-end
     assert r.returncode == 0, r.stderr
     assert "quarantined" in r.stderr
     with open(tmp_path / "q.quarantine.jsonl") as f:
-        q = [json.loads(l) for l in f]
+        q = [json.loads(ln) for ln in f]
     assert len(q) == 2  # n=3 -> 1 template row + 2 corrupt teacher rows
     assert all("raw" in e and "error" in e for e in q)
     with open(out) as f:
-        rows = [json.loads(l) for l in f]
+        rows = [json.loads(ln) for ln in f]
     assert len(rows) == 1  # the valid template row still ships
 
 
@@ -261,7 +261,7 @@ def test_12k_template_build_end_to_end(tmp_path):  # T647: full-size pipeline ru
     keys, total = {}, 0
     for name in ("train", "dev", "test"):
         with open(f"{out.removesuffix('.jsonl')}.{name}.jsonl") as f:
-            part = [json.loads(l) for l in f]
+            part = [json.loads(ln) for ln in f]
         total += len(part)
         keys[name] = {tuple(sorted(x["state"]["rules"])) for x in part}
     assert total == rep["n"]
@@ -269,7 +269,7 @@ def test_12k_template_build_end_to_end(tmp_path):  # T647: full-size pipeline ru
     assert not keys["dev"] & keys["test"]
     # every row stamped (T640) and carries history (T635)
     with open(out) as f:
-        all_rows = [json.loads(l) for l in f]
+        all_rows = [json.loads(ln) for ln in f]
     assert all(x["v"] == 1 and 2 <= len(x["state"]["history"]) <= 4 for x in all_rows)
 
 
@@ -278,9 +278,9 @@ def test_i18n_rows_flow_through_pipeline(tmp_path):  # T649: not hand-kept
     r = _run("data/build_dataset.py", "--i18n", "--seed", "42", "--out", out)
     assert r.returncode == 0, r.stderr
     with open(out) as f:
-        gen = [json.loads(l) for l in f]
+        gen = [json.loads(ln) for ln in f]
     with open("data/examples_i18n.jsonl") as f:
-        shipped = [json.loads(l) for l in f]
+        shipped = [json.loads(ln) for ln in f]
     assert len(gen) == len(shipped) == 12
 
     def key(r_):
@@ -332,7 +332,7 @@ def test_build_dedupe_cli(tmp_path):  # T650 sweep: --dedupe end-to-end
     assert r.returncode == 0, r.stderr
     rep = json.loads(r.stdout)
     with open(out) as f:
-        rows = [json.loads(l) for l in f]
+        rows = [json.loads(ln) for ln in f]
     assert rep["n"] == len(rows) == rep["deduped"]["kept"]
     assert rep["deduped"]["dropped"] > 0
     hashes = [normalized_hash(x["state"]["message"]) for x in rows]

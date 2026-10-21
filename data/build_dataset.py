@@ -14,9 +14,10 @@ import re
 import sys
 from collections import Counter
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, _HERE)
-sys.path.insert(0, os.path.join(_HERE, "..", "eval"))
+# T959: inlined (was _HERE) — a plain assignment before the sibling imports is
+# an E402; sys.path manipulation itself is exempt.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "eval"))
 
 from synth_rules import hard_rows, i18n_rows, llm_rows, template_rows
 from validate_data import check_row
@@ -65,7 +66,7 @@ def split_rows(rows: list, ratios=(0.8, 0.1, 0.1), seed: int = 0,
         """T643: squared distance of the split's label mix from the global mix."""
         after = lab_counts[n] + labs
         na = sum(after.values()) or 1
-        return sum((c - na * global_share[l] / gtotal) ** 2 for l, c in after.items()) / na
+        return sum((c - na * global_share[ln] / gtotal) ** 2 for ln, c in after.items()) / na
 
     for key in sorted(keys, key=lambda k: -len(groups[k])):  # largest first
         if stratify:  # T643: keep label shares close to the global mix

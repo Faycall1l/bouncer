@@ -109,10 +109,10 @@ def test_baseline_limit_truncates(tmp_path):  # T584
     full = _run("eval/baseline_regex.py", str(data), "--json")
     half = _run("eval/baseline_regex.py", str(data), "--limit", "3", "--json")
     assert full.returncode == half.returncode == 0, full.stderr + half.stderr
-    assert json.loads([l for l in full.stdout.splitlines()
-                       if l.startswith("{")][-1])["n"] == 6
-    assert json.loads([l for l in half.stdout.splitlines()
-                       if l.startswith("{")][-1])["n"] == 3  # T584: truncated
+    assert json.loads([ln for ln in full.stdout.splitlines()
+                       if ln.startswith("{")][-1])["n"] == 6
+    assert json.loads([ln for ln in half.stdout.splitlines()
+                       if ln.startswith("{")][-1])["n"] == 3  # T584: truncated
     empty = _run("eval/baseline_regex.py", str(data), "--limit", "0")
     assert empty.returncode == 0  # --limit 0 means no truncation (not "zero rows")
 
@@ -130,17 +130,17 @@ def test_validate_limit_truncates(tmp_path):  # T585
     assert json.loads(capped.stdout)["errors"] == 0
     full = _run("eval/validate_data.py", str(data), "--json")
     assert full.returncode == 1  # the malformed row is caught without --limit
-    assert json.loads([l for l in full.stdout.splitlines()
-                       if l.startswith("{")][-1])["errors"] == 1
+    assert json.loads([ln for ln in full.stdout.splitlines()
+                       if ln.startswith("{")][-1])["errors"] == 1
 
 
 def test_i18n_rows_validate_clean():  # T586: shipped fixtures stay schema-clean
     r = _run("eval/validate_data.py", "data/examples_i18n.jsonl", "--json")
     assert r.returncode == 0, r.stdout + r.stderr
-    rep = json.loads([l for l in r.stdout.splitlines() if l.startswith("{")][-1])
+    rep = json.loads([ln for ln in r.stdout.splitlines() if ln.startswith("{")][-1])
     assert rep["errors"] == 0
     with open("data/examples_i18n.jsonl") as f:
-        langs = [json.loads(l)["state"]["rules"] for l in f]
+        langs = [json.loads(ln)["state"]["rules"] for ln in f]
     assert len(langs) == 12  # 4 each es/fr/ar (T504)
 
 
@@ -187,10 +187,10 @@ def test_p31_sweep(tmp_path):  # T590: eval/data cross-checks in one pass
         assert r.returncode == 0, f"{script}: {r.stderr}"
     # 2. eval_i18n and validate_data agree on the shipped fixtures
     #    (--out into tmp: T815 — a test never writes the real reports dir)
-    rep = json.loads([l for l in _run("eval/eval_i18n.py", "--json",
+    rep = json.loads([ln for ln in _run("eval/eval_i18n.py", "--json",
                                       "--out", str(tmp_path / "i18n.json"))
                       .stdout.splitlines()
-                      if l.startswith("{")][-1])
+                      if ln.startswith("{")][-1])
     assert rep["n"] == 12 and rep["errors"] == []
     # 3. synth with a seed is byte-stable across runs (T382 reproducibility)
     a = _run("data/synth_rules.py", "--n", "30", "--template-only", "--seed", "3",

@@ -1,5 +1,6 @@
 """Synthesize gatekeeper dataset: dynamic rule-sets per row (the point).
-Format per row: {state: {message, history, rules}, questions: built at train time, labels: {rule, harm, hype, jailbreak, escalate}}
+Format per row: {state: {message, history, rules}, questions: built at train
+time, labels: {rule, harm, hype, jailbreak, escalate}}
 Teacher: OpenAI-compatible LLM (--template-only for offline bootstrap).
 """
 import argparse
@@ -34,16 +35,21 @@ TEMPLATES = [
 # Spam without links, polite insults, sarcasm; the model must actually read rules.
 HARD_NEGATIVES = [
     ("bump, adding everyone on snap for boosted accounts", "no-spam", "suspicious", "chill", 0, 0),
-    ("with all due respect, your gameplay is utterly clueless", "be-kind", "suspicious", "chill", 0, 0),
+    ("with all due respect, your gameplay is utterly clueless",
+     "be-kind", "suspicious", "chill", 0, 0),
     ("DM me for cheap coins, cash only, ask for vouches", "no-spam", "harmful", "chill", 0, 0),
-    ("you're such a treasure, truly one of a kind (in the worst way)", "be-kind", "harmful", "chill", 0, 0),
+    ("you're such a treasure, truly one of a kind (in the worst way)",
+     "be-kind", "harmful", "chill", 0, 0),
     ("he dies at the end, just so you know", "no-spoiler", "suspicious", "chill", 0, 0),
     ("congrats on the ban, very deserved honestly", "be-kind", "suspicious", "chill", 0, 0),
-    ("PSA: my tournament starts in 10 min, stream link in bio", "no-spam", "suspicious", "hyped", 0, 0),
+    ("PSA: my tournament starts in 10 min, stream link in bio",
+     "no-spam", "suspicious", "hyped", 0, 0),
 ]
 
-PROMPT = """You are a chat-mod teacher. Given RULES, write a message + labels as JSON: {{message, rule, harm(safe|suspicious|harmful), hype(dead|chill|hyped), jailbreak(0/1), escalate(0/1)}}.
-RULES: {rules}. Vary K=3-6 rules, hard negatives, edge cases."""
+PROMPT = ("You are a chat-mod teacher. Given RULES, write a message + labels as JSON: "
+          "{{message, rule, harm(safe|suspicious|harmful), hype(dead|chill|hyped), "
+          "jailbreak(0/1), escalate(0/1)}}.\n"
+          "RULES: {rules}. Vary K=3-6 rules, hard negatives, edge cases.")
 
 HIST_USERS = ["nova", "pixel_witch", "draven", "mossy", "kite"]  # T635
 HIST_MSGS = ["hey all", "gg that was close", "what time is the raid?", "brb water",
@@ -144,10 +150,14 @@ def llm_rows(n, model="qwen3-4b", quarantine=None):
             raw = r.choices[0].message.content
             d = json.loads(raw.strip().strip("`"))
             d["rules"] = rules
-            rows.append({"v": 1, "state": {"message": d["message"], "history": synth_history(), "rules": rules},
-                         "labels": {"rule": d["rule"] if d["rule"] in rules or d["rule"]=="ok" else "ok",
+            rows.append({"v": 1,
+                         "state": {"message": d["message"], "history": synth_history(),
+                                   "rules": rules},
+                         "labels": {"rule": d["rule"] if d["rule"] in rules
+                                                 or d["rule"] == "ok" else "ok",
                                     "harm": d["harm"], "hype": d["hype"],
-                                    "jailbreak": bool(d["jailbreak"]), "escalate": bool(d["escalate"])}})
+                                    "jailbreak": bool(d["jailbreak"]),
+                                    "escalate": bool(d["escalate"])}})
         except Exception as e:  # noqa: BLE001 — quarantined, not dropped (T645)
             if quarantine is not None:
                 entry = {"stage": "llm_rows", "i": i, "rules": rules,

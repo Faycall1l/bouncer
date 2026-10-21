@@ -1,4 +1,7 @@
-"""`bouncer` CLI: check/serve/demo/watch/stats/review/pack. Exit codes: 0 allow, 2 delete/flag, 3 escalate."""
+"""`bouncer` CLI: check/serve/demo/watch/stats/review/pack.
+
+Exit codes: 0 allow, 2 delete/flag, 3 escalate.
+"""
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
@@ -138,7 +141,8 @@ def cmd_check(args) -> int:  # T066+T067+T071+T072+T874
     if getattr(args, "quiet", False):  # T320
         print(res["action"])
     else:
-        print(json.dumps(res, default=str, indent=2) if args.json else f"{res['action']}: {res['reason']}")
+        print(json.dumps(res, default=str, indent=2) if args.json
+              else f"{res['action']}: {res['reason']}")
     return {"allow": 0, "delete": 2, "flag": 2, "escalate": 3}[res["action"]]
 
 

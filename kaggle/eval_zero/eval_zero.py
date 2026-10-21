@@ -16,7 +16,8 @@ from laya import Router
 paths = glob.glob("/kaggle/input/**/*.jsonl", recursive=True)
 with open(paths[0]) as f:
     rows = [json.loads(line) for line in f]
-random.seed(11); random.shuffle(rows)
+random.seed(11)
+random.shuffle(rows)
 rows = rows[:200]
 
 router = Router()
@@ -24,7 +25,8 @@ ok = gated_ok = gated_n = over = 0
 confs, golds, lats, pairs = [], [], [], Counter()
 for row in rows:
     s, lab = row["state"], row["labels"]
-    crit = dict(s["rules"]); crit["ok"] = "message follows all rules"
+    crit = dict(s["rules"])
+    crit["ok"] = "message follows all rules"
     qs = {"rule": {"type": "choice", "instructions": "Which rule violated? ok if none.",
                    "criteria": crit}}
     t = time.time()
@@ -32,13 +34,16 @@ for row in rows:
     lats.append((time.time() - t) * 1000)
     pred, conf = a["rule"]["choice"], float(a["rule"].get("confidence", 0))
     good = pred == lab["rule"]
-    ok += good; confs.append(conf); golds.append(good)
+    ok += good
+    confs.append(conf)
+    golds.append(good)
     if not good:
         pairs[(lab["rule"], pred)] += 1
     if conf >= 0.9 and not good:
         over += 1
     if conf >= 0.85:
-        gated_n += 1; gated_ok += good
+        gated_n += 1
+        gated_ok += good
 lats.sort()
 print(json.dumps({"n": len(rows), "rule_acc": round(ok / len(rows), 3),
                   "p50_ms": round(lats[len(lats)//2], 1),

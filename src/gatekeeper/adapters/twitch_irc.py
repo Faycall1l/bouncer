@@ -76,7 +76,8 @@ def _watch_once(sock, rules, health=None) -> None:  # T855: health parity
                 if health is not None:
                     health.error(redact(str(e)))  # T699+T855: recorded, not just printed
             if res["action"] in ("delete", "flag", "escalate"):
-                print(f"[{res['action']}] <{user}> {text[:120]} ({res['rule']}@{res['confidence']:.2f})",
+                print(f"[{res['action']}] <{user}> {text[:120]} "
+                      f"({res['rule']}@{res['confidence']:.2f})",
                       flush=True)
             if health is not None:
                 if res.get("action") not in ("ignored", "command"):  # T699

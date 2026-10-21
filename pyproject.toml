@@ -86,5 +86,20 @@ line-length = 100
 # T388: Space entry carries HF frontmatter (not plain Python) — lint the package, not it.
 exclude = ["app/app.py"]
 
+[tool.ruff.lint]
+# T959: full pycodestyle error/warning families on top of ruff's default curated
+# set. Pinned explicitly because the default set is version-dependent — the
+# v0.11.0 pre-commit pin enforced E4/E7 while CI's floating `uvx ruff` (0.17.x)
+# had silently dropped them, and the two disagreed on 148 violations.
+extend-select = ["E", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# T959: the Kaggle kernels and smoke scripts are single-file artifacts pasted
+# into notebooks — they pip-install their deps in-process before importing them
+# (T102 smoke/eval contract, needs /kaggle/input + GPU, untestable off-Kaggle).
+# Restructuring into main() would break that contract, so the one rule the
+# pattern violates is documented here instead.
+"kaggle/**" = ["E402"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

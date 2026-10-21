@@ -359,3 +359,33 @@ def test_t958_adapter_parity_matrix_shared_helpers():  # T958
                     and (name, node.name) not in allowed_own:
                 assert node.name in imported, \
                     (name, node.name, "reimplements common without importing it")
+
+
+def test_t959_stricter_ruff_config_enabled_and_fixed_not_suppressed():  # T959
+    """T959: the lint skew fix is CONFIG, not suppressions. The pycodestyle
+    E/W families are turned on repo-wide in pyproject, the one documented
+    exception (kaggle kernels' pip-install-before-import = E402) is scoped
+    to those files, the pre-commit pin tracks CI's floating ruff, and none
+    of the 148 pre-existing violations were silenced with noqa."""
+    import re
+
+    import tomllib
+
+    py = tomllib.loads(Path("pyproject.toml").read_text())
+    lint = py["tool"]["ruff"]["lint"]
+    assert lint["extend-select"] == ["E", "W"], lint["extend-select"]
+    pfi = lint["per-file-ignores"]
+    assert pfi == {"kaggle/**": ["E402"]}, pfi  # the single, documented exception
+
+    pre = Path(".pre-commit-config.yaml").read_text()
+    assert "rev: v0.17.1" in pre  # same generation as CI's `uvx ruff`
+    assert pre.index("rev: v0.17.1") < pre.index("id: ruff")  # the ruff hook's rev
+
+    # the violations were FIXED, not noqa'd: no pycodestyle suppression
+    # anywhere in the Python sources (BLE001/F401/SIM115 predate T959)
+    bad = re.compile(r"#\s*noqa:\s*[A-Z]*\d*\b.*\b[EW]\d{3,4}\b")
+    for path in Path(".").rglob("*.py"):
+        if ".git" in path.parts or "p13env" in path.parts:
+            continue
+        for lineno, line in enumerate(path.read_text().splitlines(), 1):
+            assert not bad.search(line), f"{path}:{lineno}: {line.strip()}"
