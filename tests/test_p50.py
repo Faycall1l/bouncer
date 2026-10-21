@@ -415,3 +415,45 @@ def test_t960_in_tree_artifact_classes_gitignored():  # T960
                        capture_output=True, text=True, check=True)
     missing = set(candidates) - set(r.stdout.split())
     assert not missing, f"not gitignored: {sorted(missing)}"
+
+
+def test_t961_repo_root_carries_no_unignored_runtime_artifacts():  # T961
+    """T961: the LIVE tree, not the config — the repo root must carry no
+    unignored runtime artifacts. Three angles: nothing untracked-and-
+    unignored at the root is artifact-shaped, nothing artifact-shaped is
+    tracked at the root, and any artifact from the T960 classes that
+    physically exists on disk right now is covered by an ignore rule.
+    Root-scoped on purpose: fixture files under tests/ are sources, and
+    eval/reports is T623/T960's line."""
+    import subprocess
+
+    def git(*args: str) -> list[str]:
+        return subprocess.run(["git", *args], capture_output=True, text=True,
+                              check=True).stdout.splitlines()
+
+    def is_artifact(entry: str) -> bool:
+        e = entry.rstrip("/")
+        if e in ("build", "site", "dist", "htmlcov"):
+            return True  # artifact directory sitting at the root
+        if "/" in e:
+            return False  # the box scopes to the root level
+        return (e == ".coverage" or ".egg-info" in e
+                or e.endswith((".jsonl", ".json", ".csv", ".log")))
+
+    untracked_bad = [e for e in git("ls-files", "--others", "--exclude-standard")
+                     if is_artifact(e)]
+    assert not untracked_bad, f"unignored untracked at root: {untracked_bad}"
+    tracked_bad = [e for e in git("ls-files") if is_artifact(e)]
+    assert not tracked_bad, f"tracked artifact at root: {tracked_bad}"
+
+    # whatever of the artifact classes exists on disk must be ignored
+    on_disk = [p for p in ("bouncer-audit.jsonl", "review-queue.jsonl",
+                           "bouncer-stats.json", "audit.csv",
+                           "build", "site", "dist")
+               if Path(p).exists()]
+    if on_disk:
+        r = subprocess.run(["git", "check-ignore", "--stdin"],
+                           input="\n".join(on_disk), capture_output=True,
+                           text=True, check=True)
+        missing = set(on_disk) - set(r.stdout.split())
+        assert not missing, f"present but unignored: {sorted(missing)}"
