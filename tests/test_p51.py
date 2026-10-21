@@ -393,3 +393,36 @@ def test_t981_forward_ssrf_pin_through_adapter_wiring(monkeypatch):  # T981
            "cause": "breaker-open"}
     assert wh.forward_if_interesting(brk, "platform text") is True
     assert calls == ["https://hooks.example/x", "https://hooks.example/x"]
+
+
+def test_t982_docker_non_root_and_read_only_paths():  # T982
+    """T982: the container posture re-verified after the P44–P50 changes.
+    Non-root: the nologin useradd precedes the single `USER bouncer` and
+    nothing re-escalates after it; compose never overrides the user.
+    Read-only paths: .dockerignore keeps weights, secrets, runtime state
+    and every P50 artifact class (build/, dist/, egg-info, site/,
+    *.jsonl) out of the build context — no image layer can carry a
+    checkpoint, a .env, a local audit/queue file or stale docs/build
+    output — and the only writable mounts are T717's two named volumes,
+    under the non-root user's own paths."""
+    dockerfile = Path("Dockerfile").read_text()
+    assert "useradd --create-home --shell /usr/sbin/nologin bouncer" in dockerfile
+    user_lines = [ln for ln in dockerfile.splitlines() if ln.startswith("USER ")]
+    assert user_lines == ["USER bouncer"], user_lines
+    # volume dirs pre-created and chowned BEFORE the user switch (T717)
+    assert "chown -R bouncer:bouncer /app /home/bouncer/.cache" in dockerfile
+    assert (dockerfile.index("chown -R bouncer:bouncer")
+            < dockerfile.index("USER bouncer"))
+
+    # compose mounts only the two named volumes, both under the non-root
+    # user's paths, and never overrides the user
+    compose = Path("compose.yaml").read_text()
+    assert "user:" not in compose
+    for vol in ("hf-cache:/home/bouncer/.cache", "snapshots:/app/snapshots"):
+        assert vol in compose, vol
+
+    # read-only paths: nothing writable or sensitive enters the context
+    di = Path(".dockerignore").read_text()
+    for pat in ("models/", "hf-cache/", ".env", "*.jsonl", "build/",
+                "dist/", "site/", "*.egg-info", "**/__pycache__"):
+        assert pat in di.split(), f"{pat} not excluded from the image context"

@@ -51,6 +51,10 @@ SLOW_JUSTIFIED: dict[str, str] = {
     "test_pip_install_produces_working_bouncer":
         "pip-installs the freshly built wheel into a throwaway env and runs "
         "the console script from it — a real package install lives near 1s",
+    "test_container_entrypoint_runs_self_test":
+        "exercises the shell entrypoint as real subprocesses (sh -n syntax "
+        "check plus six stubbed runs handing off to CMD) — spawn-heavy: "
+        "sub-second idle, but shared machine load has measured it to 3s",
     "test_graceful_shutdown_drains_and_flushes":
         "drives the FastAPI lifespan directly; the drain/flush logic under "
         "test is sub-second, but startup warmup is environment-dependent "

@@ -18,7 +18,9 @@ __pycache__
 *.pyc
 # secrets
 .env
-# local build artifacts
+# local build artifacts (T982: sdist/wheel keep these out — T962 —
+# and so does the image context: no layer can carry stale output)
 build/
 dist/
+site/
 *.egg-info
