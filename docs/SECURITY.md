@@ -140,6 +140,24 @@ act beyond moderation:
   `E_SLACK` instead of letting an unsigned event through (T704).
 * Everything an adapter forwards to `BOUNCER_FORWARD_URL` goes through the
   SSRF pin above (T785) — the platform side inherits the same guard.
+* **Bounded, jittered retries** (T851–T853). One shared HTTP helper
+  retries 429/5xx honoring `Retry-After` on a capped jittered ladder
+  (5s base, 60s cap; websocket reconnects jitter likewise and reset after
+  a stable session) — a sick platform API gets a polite client, never a
+  tight hammering loop from every bot at once.
+* **Per-user caps before the model** (T701, T854). Pollers enforce the
+  per-user model calls/min cap *before* spending a model call, so one
+  abusive platform user can't burn the quota; Twitch has no cap at all.
+* **Strikes accrue per namespaced platform user** (T856, T858). Every
+  adapter passes the sender as `platform:user`, so per-user strikes now
+  accrue from live platform traffic — a Discord id 42 and a Telegram id
+  42 stay separate rows — and cached/coalesced verdicts never carry
+  another user's strikes.
+* **Appeals answer; operators decide** (T864, T865, T973). The APPEAL
+  command renders the user's newest queue row read-only, citing its row
+  id; approve/reject and strike amnesty exist only on the operator's
+  CLI (pinned T973), and every CLI amnesty writes a hash-only audit row
+  (T974).
 
 Per-platform setup (which extra, which vars) lives in the
 [adapters README](https://github.com/Faycall1l/bouncer/blob/main/src/gatekeeper/adapters/README.md);
