@@ -4,7 +4,7 @@ _(Last checked against v0.4.0.)_
 
 ```mermaid
 flowchart LR
-    msg[chat message] --> norm[normalize: clean, flood, links]
+    msg[chat message] --> norm[normalize: clean, links]
     norm --> fp{fastpath?}
     fp -->|link-rules, no links| allow[allow + stats/audit]
     fp -->|else| cache{cache?}
@@ -19,7 +19,7 @@ Plain-text fallback (same diagram, no renderer needed):
 
 ```text
 chat message
-  -> normalize (clean, flood, links)
+  -> normalize (clean, links)
   -> fastpath?
        | link-rules, no links -> allow + stats/audit
        | else -> cache?
@@ -34,7 +34,9 @@ Cache key covers every decision input: message, rules, both thresholds,
 severity, lang, bounded context, history window, quiet state, gate knobs —
 same text under other settings never gets a stale verdict. Cheap paths
 (empty/fastpath) and model-failure fallbacks are recorded in stats + audit too.
-Gate precedence: `docs/gates.md`.
+Gate precedence: `docs/gates.md`. (T955: the normalize step is clean + links
+only — `caps_flood`/`emoji_flood` (T014/T015) are eval-baseline signals that
+never decide here; the diagram used to claim a flood step it never had.)
 
 ## Router pools + circuit breaker (T597)
 

@@ -196,3 +196,26 @@ def test_explain_has_no_dead_announce_line():  # T954
         if p.resolve() == me:  # this test's own name matches the pattern
             continue
         assert "announce_line(" not in p.read_text(), p
+
+
+def test_t955_flood_signals_are_eval_baseline_only():  # T955
+    """T955: caps_flood/emoji_flood demoted honestly — the engine never
+    calls them (wiring them as cheap paths would silently downgrade
+    model-delete spam to a review-queue flag), the eval baseline does,
+    and docs/architecture.md no longer claims a flood step it never had."""
+    engine = Path("src/gatekeeper/__init__.py").read_text()
+    assert "caps_flood" not in engine and "emoji_flood" not in engine
+    baseline = Path("eval/baseline_regex.py").read_text()
+    assert "caps_flood" in baseline and "emoji_flood" in baseline
+    demo = Path("src/gatekeeper/demo_app.py").read_text()
+    assert "caps_flood" in demo  # T175's regex-baseline meter still compares
+    norm = Path("src/gatekeeper/normalize.py").read_text()
+    assert "T955" in norm  # the demotion is documented, not silent
+    arch = Path("docs/architecture.md").read_text()
+    assert "clean, flood, links" not in arch  # the diagram's overclaim
+    assert "normalize: clean, links" in arch
+    assert "T955" in arch  # and the honest note cites the box
+    # the signals themselves still work — baseline fidelity preserved
+    from gatekeeper.normalize import caps_flood, emoji_flood
+    assert caps_flood("STOP DOING THAT RIGHT NOW OK")
+    assert emoji_flood("🔥" * 12)

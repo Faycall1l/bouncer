@@ -1,4 +1,14 @@
-"""Cheap pre-model signals: normalization + flood/link detectors (no weights needed)."""
+"""Cheap pre-model signals: normalization + link detection (no weights needed).
+
+T955: the flood detectors here (T014/T015) are baseline signals, not
+engine steps — moderate() runs clean_text and extract_links only
+(docs/architecture.md shows the real pipeline). Wiring them as cheap
+paths was the fork in the box: a pre-model flag would silently downgrade
+model-delete spam to a review-queue flag, so they were demoted instead.
+caps_flood/emoji_flood stay public because the eval regex baseline
+(eval/baseline_regex.py) and the demo's T175 baseline meter must
+reproduce the old regex era exactly, and test_units pins them as
+library units."""
 from __future__ import annotations
 
 # Apache-2.0. See LICENSE.
@@ -30,7 +40,10 @@ def strip_controls(text: str) -> str:
 
 
 def caps_flood(msg: str, ratio: float = 0.7, min_len: int = 12) -> bool:
-    """T014: True when mostly-caps shouting on a long-enough message."""
+    """T014: True when mostly-caps shouting on a long-enough message.
+
+    T955: baseline-only — eval/baseline_regex.py and the demo's T175
+    meter call it, moderate() never does (see the module docstring)."""
     if not isinstance(msg, str):  # T265
         return False
     letters = [c for c in msg if c.isalpha()]
@@ -40,7 +53,9 @@ def caps_flood(msg: str, ratio: float = 0.7, min_len: int = 12) -> bool:
 
 
 def emoji_flood(msg: str, max_run: int = 5, max_total: int = 10) -> bool:
-    """T015: True on emoji walls (long run or high total of non-text symbols)."""
+    """T015: True on emoji walls (long run or high total of non-text symbols).
+
+    T955: baseline-only — same story as caps_flood (module docstring)."""
     if not isinstance(msg, str):  # T265
         return False
     syms = [c for c in msg if not (c.isalnum() or c.isspace() or c in ".,!?;:'\"-()")]
