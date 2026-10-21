@@ -1,0 +1,80 @@
+"""T967: suite wall-time budget — no test over 1s without written justification.
+
+Every test's full protocol (setup + call + teardown) is timed. Anything
+over 1s must appear in SLOW_JUSTIFIED with a written reason; otherwise
+the session ends nonzero after the summary lists the offenders. The
+justified ones print their real time as a receipt, per the house rule
+that timing numbers are printed, never asserted.
+"""
+import time
+
+import pytest
+
+# name -> written justification. Editing this table IS the process: an
+# entry only lands here with a sentence on why the test needs >1s.
+SLOW_JUSTIFIED: dict[str, str] = {
+    "test_ci_eval_gate_job_replays_weightless":
+        "replays the CI eval-gate job as a real subprocess "
+        "(gate.py --all --ci over a freshly generated weightless report set)",
+    "test_t957_no_dead_public_code_in_src":
+        "P50 dead-code sweep AST-parses every source file and "
+        "cross-references every public symbol — O(repo), not O(one test)",
+    "test_gate_pool_speedup_hits_scenario":
+        "runs the real bench_pool.py end-to-end then gates its report — "
+        "a timing benchmark that only means something if it does the work",
+    "test_ci_benchmark_job_posts_summary":
+        "replays the CI bench job as a subprocess (bench_stub + bench_pool, "
+        "the same two runners CI invokes in its summary step)",
+    "test_bench_pool_measures_mixed_language_thrash":
+        "measures mixed-language pool thrash by running the multilingual "
+        "deployment itself — the measurement IS the wall time",
+    "test_packaging_smoke_release_tree":
+        "builds a real wheel AND sdist and installs the wheel into a throwaway "
+        "env — two package builds cannot fit in a second",
+    "test_pool_bench_weightless":
+        "runs bench_pool.py with an eviction demo (6 requests, pool of 2) — "
+        "naive-vs-pooled timing needs real elapsed time",
+    "test_systemone_safe_path_timeout_retry_breaker":
+        "drives the passthrough through real timeout → retry → breaker paths; "
+        "the waits are the behaviour under test",
+    "test_batch_shares_one_deadline":
+        "proves one shared deadline across a batch by elapsing real time — "
+        "a timing contract cannot be faked with a clock stub",
+    "test_pip_install_produces_working_bouncer":
+        "pip-installs the freshly built wheel into a throwaway env and runs "
+        "the console script from it — a real package install lives near 1s",
+}
+
+_overshoot: list[tuple[str, float]] = []
+_justified_seen: list[tuple[str, float]] = []
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_protocol(item, nextitem):
+    start = time.perf_counter()
+    yield
+    took = time.perf_counter() - start
+    if took > 1.0:
+        if item.name in SLOW_JUSTIFIED:
+            _justified_seen.append((item.nodeid, took))
+        else:
+            _overshoot.append((item.nodeid, took))
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    tr = terminalreporter
+    if _justified_seen:
+        tr.write_sep("=", "T967 slow tests (justified, receipt)")
+        for nodeid, took in sorted(_justified_seen, key=lambda x: -x[1]):
+            tr.write_line(f"  {took:6.2f}s  {nodeid}")
+    if _overshoot:
+        tr.write_sep("=", "T967 WALL-TIME BUDGET EXCEEDED (1s per test)")
+        for nodeid, took in sorted(_overshoot, key=lambda x: -x[1]):
+            tr.write_line(f"  {took:6.2f}s  {nodeid}")
+        tr.write_line("  justify it in tests/conftest.py SLOW_JUSTIFIED "
+                      "or make the test faster")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if _overshoot:
+        session.exitstatus = 1

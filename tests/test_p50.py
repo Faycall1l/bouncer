@@ -570,3 +570,18 @@ def test_t965_every_parser_flag_documented_in_help():  # T965
                 if isinstance(a, argparse._SubParsersAction))
     assert "text to moderate (or pass --file)" in subs.choices["check"].format_help()
     assert "show, lint, init, diff, sign or verify" in subs.choices["pack"].format_help()
+
+
+def test_t967_slow_justification_table_names_real_tests():  # T967
+    """T967: the wall-time budget's justification table cannot rot —
+    every entry must name a test that actually exists, so a renamed or
+    deleted test surfaces as a red instead of a silent never-matching
+    key. (The budget itself runs as the conftest protocol hook.)"""
+    import re
+
+    src = Path("tests/conftest.py").read_text()
+    names = re.findall(r'^    "(test_\w+)":', src, re.MULTILINE)
+    assert names, "the SLOW_JUSTIFIED table is empty"
+    defs = "\n".join(p.read_text() for p in sorted(Path("tests").glob("test_*.py")))
+    for name in names:
+        assert f"def {name}(" in defs, f"justified but nonexistent: {name}"
