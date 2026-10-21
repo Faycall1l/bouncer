@@ -227,3 +227,63 @@ def test_t976_preflight_options_side_effect_free_and_auth_free(
         if _au._F:
             _au._F.close()
         importlib.reload(_au)  # restore the default audit path
+
+
+def test_t977_rate_limit_holds_under_parallel_threads():  # T977
+    """T977: T841's atomic check-then-append re-verified under load, from
+    the angle T841 didn't cover — many buckets in parallel. Six IPs
+    hammered concurrently (one thread each, switch interval forced to
+    1e-6) each admit exactly their own 60: no cross-bucket leakage, no
+    over-admission, bucket lengths stay at the cap — and T885's 429
+    counter, incremented under a SEPARATE lock, lands exactly on the
+    refused count: every refusal counted once under contention."""
+    import sys
+    import threading
+    import types
+    import typing
+
+    from fastapi import HTTPException
+
+    from gatekeeper import serve
+
+    ips = [f"10.7.0.{i}" for i in range(1, 7)]
+
+    class Req:
+        headers: typing.ClassVar[dict] = {}
+
+        def __init__(self, ip):
+            self.client = types.SimpleNamespace(host=ip)
+
+    admitted: dict = {ip: 0 for ip in ips}
+    refused: list = []
+    count_lock = threading.Lock()
+    barrier = threading.Barrier(len(ips))
+
+    def hammer(ip):
+        barrier.wait()  # all six buckets collide from a standing start
+        for _ in range(75):  # 15 over the 60/min cap per IP
+            try:
+                serve._rate(Req(ip))
+                with count_lock:  # dict += is read-modify-write, not atomic
+                    admitted[ip] += 1
+            except HTTPException as e:
+                assert e.status_code == 429
+                refused.append(1)  # list.append is atomic under the GIL
+
+    serve._BUCKETS.clear()
+    before_429 = serve._RATE_429
+    old_si = sys.getswitchinterval()
+    sys.setswitchinterval(1e-6)  # force preemption inside the race window
+    try:
+        threads = [threading.Thread(target=hammer, args=(ip,)) for ip in ips]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    finally:
+        sys.setswitchinterval(old_si)
+
+    assert admitted == {ip: 60 for ip in ips}, admitted
+    assert len(refused) == len(ips) * 15
+    assert serve._RATE_429 - before_429 == len(ips) * 15, "lost 429 count"
+    assert all(len(serve._BUCKETS[ip]) == 60 for ip in ips)
