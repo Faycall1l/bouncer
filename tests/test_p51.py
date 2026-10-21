@@ -108,3 +108,71 @@ def test_t974_amnesty_operator_only_and_audited(monkeypatch, tmp_path):  # T974
         if _au._F:
             _au._F.close()
         importlib.reload(_au)  # restore the default audit path
+
+
+def test_t975_systemone_oversized_values_still_refused():  # T975
+    """T975: regression pin on the typed systemone door (T832/T774/T775).
+    Oversized values are refused at the wire, never forwarded: dict keys
+    past MAX_KEY at either top level -> 422 E_STATE (a key can't be
+    trimmed coherently), non-object state/questions -> 422 from the
+    pydantic shape (not a forwarded 500), bodies past MAX_BODY -> 413
+    before parsing. The two values the passthrough deliberately TRIMS
+    still trim — history items to MAX_ITEM and the list to the newest
+    MAX_CONTEXT (raw-path precedent, structured /predict rejects the
+    same bound) — so any future change to these six behaviors is a
+    deliberate one, caught here first."""
+    from fastapi.testclient import TestClient
+
+    import gatekeeper
+    from gatekeeper import serve
+
+    seen: dict = {}
+
+    class Rec:
+        def predict(self, state, questions):
+            seen["state"] = state
+            return {"answers": {}}
+
+    gatekeeper._router = Rec()
+    client = TestClient(serve.app, raise_server_exceptions=False)
+
+    def post(payload=None, **kw):
+        serve._BUCKETS.clear()
+        return client.post("/v1/systemone", json=payload, **kw)
+
+    # refused: oversized keys at both top levels; exactly MAX_KEY passes
+    r = post({"state": {"k" * (serve.MAX_KEY + 1): "v"}, "questions": {}})
+    assert r.status_code == 422 and "E_STATE" in r.text, r.text
+    r = post({"state": {}, "questions": {"q" * (serve.MAX_KEY + 1): {}}})
+    assert r.status_code == 422 and "E_STATE" in r.text, r.text
+    r = post({"state": {"k" * serve.MAX_KEY: "v"}, "questions": {}})
+    assert r.status_code == 200, r.text
+
+    # refused: non-object shapes die at the typed door (T832); explicit
+    # null/absent stays the documented "no state" (200)
+    for bad in ("oops", ["x"], 5):
+        r = post({"state": bad, "questions": {}})
+        assert r.status_code == 422, (bad, r.status_code, r.text)
+    r = post({"state": {}, "questions": "oops"})
+    assert r.status_code == 422, r.text
+    assert post({"state": None}).status_code == 200
+
+    # trimmed, not refused: oversized item inside the kept window is cut
+    # to MAX_ITEM; the list keeps only the newest MAX_CONTEXT entries
+    hist_in = [f"m{i}" for i in range(serve.MAX_CONTEXT + 5)]
+    hist_in.append("h" * (serve.MAX_ITEM + 999))  # newest = oversized
+    r = post({"state": {"history": hist_in}, "questions": {}})
+    assert r.status_code == 200, r.text
+    hist = seen["state"]["history"]
+    assert len(hist) == serve.MAX_CONTEXT, len(hist)
+    assert len(hist[-1]) == serve.MAX_ITEM, len(hist[-1])
+
+    # refused: an oversized body never reaches the door at all — 413 from
+    # the request middleware before parsing (T775/T831 pre-check)
+    serve._BUCKETS.clear()
+    big = ('{"state": {"history": ['
+           + ",".join('"' + "y" * 60_000 + '"' for _ in range(18)) + "]}}").encode()
+    assert len(big) > serve.MAX_BODY
+    r = client.post("/v1/systemone", content=big,
+                    headers={"content-type": "application/json"})
+    assert r.status_code == 413 and "body too large" in r.text, r.text
