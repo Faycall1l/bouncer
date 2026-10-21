@@ -176,3 +176,54 @@ def test_t975_systemone_oversized_values_still_refused():  # T975
     r = client.post("/v1/systemone", content=big,
                     headers={"content-type": "application/json"})
     assert r.status_code == 413 and "body too large" in r.text, r.text
+
+
+def test_t976_preflight_options_side_effect_free_and_auth_free(
+        monkeypatch, tmp_path):  # T976
+    """T976: a preflight is a question, not an attempt. OPTIONS on the POST
+    endpoints gets the framework's 405 + `allow: POST` — the handler never
+    runs — so it writes no audit row, spends no rate bucket, and needs no
+    key even when one is set; the contrast case (the same POST without the
+    key is 401) proves auth is present and working, just not reached by a
+    preflight. Auth and limits live inside the handlers; documented in
+    docs/api.md."""
+    import importlib
+
+    from fastapi.testclient import TestClient
+
+    from gatekeeper import audit as _au
+    from gatekeeper import serve
+
+    monkeypatch.setenv("BOUNCER_AUDIT", str(tmp_path / "audit.jsonl"))
+    importlib.reload(_au)
+    client = TestClient(serve.app, raise_server_exceptions=False)
+    orig = (serve._KEY, serve._KEY_OLD)
+    try:
+        for path in ("/predict", "/v1/systemone"):
+            serve._KEY = serve._KEY_OLD = ""
+            serve._BUCKETS.clear()
+            r = client.options(path)
+            assert r.status_code == 405, (path, r.status_code)
+            assert r.headers.get("allow") == "POST", r.headers
+            assert dict(serve._BUCKETS) == {}, "preflight spent no bucket"
+
+        # with a key set the preflight still answers (auth-free), while
+        # the real POST without the key is refused (auth present, working)
+        serve._KEY = "preflight-key-0123456789"
+        serve._BUCKETS.clear()
+        r = client.options("/predict")
+        assert r.status_code == 405 and r.headers.get("allow") == "POST"
+        r = client.post("/predict", json={"message": "p976",
+                                          "rules": {"r": "t"}})
+        assert r.status_code == 401, r.text
+
+        # no side effects anywhere: no verdict, no audit row
+        assert not (tmp_path / "audit.jsonl").exists()
+
+        # documented where API users look
+        assert "OPTIONS" in Path("docs/api.md").read_text()
+    finally:
+        serve._KEY, serve._KEY_OLD = orig
+        if _au._F:
+            _au._F.close()
+        importlib.reload(_au)  # restore the default audit path
