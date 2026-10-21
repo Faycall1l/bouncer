@@ -173,3 +173,26 @@ def test_t953_moderate_action_skeleton_shared_by_four_pollers(monkeypatch,
         assert "moderate_action(" in src, f"{name} bypasses the skeleton"
         assert "dict(moderate(" not in src, f"{name} keeps its own copy"
         assert 'reason": "rate-limited"' in src, f"{name} lost its cap guard"
+
+
+def test_explain_has_no_dead_announce_line():  # T954
+    """announce_line (T184) was dead since introduction — no caller in src,
+    tests or docs ever appeared. The box is a fork: wire it or remove it;
+    we removed it (T896's tombstone precedent), and this test keeps the
+    third option (leave dead code around) off the table."""
+    from gatekeeper import explain
+
+    assert not hasattr(explain, "announce_line"), "dead twin is gone, not dormant"
+    src = Path("src/gatekeeper/explain.py").read_text()
+    assert "T954" in src and "T184" in src  # the tombstone cites both boxes
+    # nothing anywhere can call it back unnoticed (the tombstone itself
+    # writes the name with a space before any parenthesis)
+    corpus = (list(Path("src").rglob("*.py"))
+              + list(Path("tests").rglob("*.py"))
+              + list(Path("docs").rglob("*.md"))
+              + [Path("README.md")])
+    me = Path(__file__).resolve()
+    for p in corpus:
+        if p.resolve() == me:  # this test's own name matches the pattern
+            continue
+        assert "announce_line(" not in p.read_text(), p

@@ -1052,7 +1052,7 @@
 - [x] T951 adp: shared api() helper moves to common.py — 4 copies deleted (receipt: tests/test_p50.py::test_t951 — the four wrappers delegate to common.api, byte-identical URL/verb/body/headers/timeout)
 - [x] T952 adp: shared command table + parser helper — 5 copies reduced (receipt: tests/test_p50.py::test_t952 — common.command_reply + common.parse_command; no adapter keeps `cmd == "rules"`; discord's two order pins updated to the shared table's sort)
 - [x] T953 adp: shared moderate+action skeleton — 4 copies reduced (receipt: tests/test_p50.py::test_t953 — common.moderate_action runs decision/effect/announce for telegram/matrix/mattermost/zulip; cap guards stay (T701 scans); 3 wiring-scan tests gained honest delegation clauses)
-- [ ] T954 explain: announce_line wired or removed (dead since introduction)
+- [x] T954 explain: announce_line wired or removed (dead since introduction) — removed with a T896-style tombstone; receipt: tests/test_p50.py::test_explain_has_no_dead_announce_line (gone, T954/T184 cited, no caller can return)
 - [ ] T955 normalize: caps_flood/emoji_flood wired into the engine cheap paths or demoted to eval-only, honestly documented
 - [ ] T956 serve: duplicate HTTPException import + any other dead branch cleaned
 - [ ] T957 test: no-dead-code sweep — every public function in src/ is referenced (code, docs, or test)

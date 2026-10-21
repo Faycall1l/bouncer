@@ -51,11 +51,11 @@ def appeal_text(res: dict, rules: dict | None = None) -> str:
             "If this looks wrong, reply APPEAL and a human reviews it within a day.")
 
 
-def announce_line(res: dict) -> str:
-    """T184: pin-friendly one-liner for mod channels."""
-    return f"[{res['action'].upper()}] {res['rule']} @ {res['confidence']:.0%}"
-
-
 # T896: lang_note (T186) is gone — detect_script (T492) / detect_lang (T857)
 # do the same job with a dominant-script tally instead of any-char hits, and
 # everything that wanted the note already calls those. No dead twins.
+# T954: announce_line (T184) is gone the same way — dead since introduction:
+# no caller in src, tests or docs ever appeared, and the decision announces
+# itself where it happens (the shared moderate_action line, T953). Removed
+# rather than wired: inventing a mod-channel consumer would be the feature
+# nobody asked for. No dead twins.
