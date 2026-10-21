@@ -1062,7 +1062,7 @@
 - [x] T961 repo: test that the repo root carries no unignored runtime artifacts (live git probe: untracked-unignored, tracked, and on-disk-present angles, root-scoped; negative probe — root-probe.json fails it, removal passes — receipt: `test_t961_repo_root_carries_no_unignored_runtime_artifacts`)
 - [x] T962 pkg: sdist/wheel exclude build/ and site/ (verified, not assumed) (real `uv build` of both artifacts showed zero build/ or site/ members — asserted permanently now: wheel asserts in test_wheel_builds_clean, sdist asserts in test_sdist_includes_license_readme_and_data_examples — receipts: `test_wheel_builds_clean` + `test_sdist_includes_license_readme_and_data_examples`, both citing T962)
 - [x] T963 config: GateConfig.from_dict unknown-key rejection tested at every entry point (inventory = from_dict's full call-site list: library call, config validate --json, check --config, watch --config — all four probe-wired in one sweep test; load_config/TOML documented as out of scope, it never reaches from_dict — receipt: `test_t963_from_dict_unknown_keys_rejected_at_every_entry_point`)
-- [ ] T964 serve: OpenAPI snapshot stable test (schema changes are deliberate, not drift)
+- [x] T964 serve: OpenAPI snapshot stable test (schema changes are deliberate, not drift) (content digest of app.openapi() pinned + readable 11-route path list; failure message carries the re-pin one-liner; dependency-driven schema reshapes also surface here — receipt: `test_t964_openapi_snapshot_stable`)
 - [ ] T965 cli: every parser flag documented in --help (help-text sweep)
 - [ ] T966 test: import budget re-verified after the refactor (still under 200ms)
 - [ ] T967 test: suite wall-time budget — no new test over 1s without a written justification

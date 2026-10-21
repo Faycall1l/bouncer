@@ -10,6 +10,12 @@ from gatekeeper.adapters import zulip_bot as zulip
 ADAPTERS = Path("src/gatekeeper/adapters")
 
 
+# T964: content digest of serve.app.openapi() (json.dumps sort_keys=True).
+# Re-pin deliberately after reviewing the schema diff; the test message
+# carries the one-liner that prints the new digest.
+OPENAPI_SHA256 = "2db679d7ccb33b023d61383e896527aab10fe850d9829afc0bbb6d4dc70b0333"
+
+
 def test_t951_common_api_is_the_single_request_builder(monkeypatch):  # T951
     """T951: the four api() copies now delegate to `common.api` — one
     request builder. Captured at the http_json seam, each wrapper must
@@ -500,3 +506,35 @@ def test_t963_from_dict_unknown_keys_rejected_at_every_entry_point(
     assert rc == 4
     err = capsys.readouterr().err
     assert "E_CONFIG" in err and "warp_speed" in err, err
+
+
+def test_t964_openapi_snapshot_stable():  # T964
+    """T964: the serve OpenAPI schema is content-pinned. A route, field,
+    status code or schema change moves the hash and fails here — a schema
+    change has to be deliberate: review the diff, re-pin the digest. The
+    readable path list pins the surface itself, so a removed route is
+    named in the failure rather than hidden inside a hash. The digest
+    covers fastapi/pydantic's emitted form too, so a dependency upgrade
+    that reshapes the schema also surfaces as a deliberate re-pin."""
+    import hashlib
+    import json
+
+    from gatekeeper import serve
+
+    schema = serve.app.openapi()
+
+    # the surface in readable form: every route the server documents
+    assert sorted(schema["paths"]) == [
+        "/health", "/metrics", "/models", "/predict", "/predict/batch",
+        "/presets", "/presets/{name}", "/ready", "/stats", "/v1/systemone",
+        "/version",
+    ]
+
+    digest = hashlib.sha256(
+        json.dumps(schema, sort_keys=True).encode()).hexdigest()
+    assert digest == OPENAPI_SHA256, (
+        f"OpenAPI schema drifted: {digest} != pinned {OPENAPI_SHA256}. "
+        "If the change is deliberate, review the schema diff and re-pin: "
+        'python -c "import json,hashlib;from gatekeeper import serve;'
+        'print(hashlib.sha256(json.dumps(serve.app.openapi(),'
+        'sort_keys=True).encode()).hexdigest())"')
