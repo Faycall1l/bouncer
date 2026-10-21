@@ -588,3 +588,34 @@ def test_t967_slow_justification_table_names_real_tests():  # T967
     defs = "\n".join(p.read_text() for p in sorted(Path("tests").glob("test_*.py")))
     for name in names:
         assert f"def {name}(" in defs, f"justified but nonexistent: {name}"
+
+
+def test_t970_p50_sweep_every_box_ticked_with_receipts():  # T970
+    """T970: the P50 sweep — all twenty boxes (T951–T970) are ticked, and
+    every ticked box's T-number appears literally in some non-TODO file:
+    its receipt. This is the batch's closing gate; a red here means a box
+    was ticked without doing (or citing) its work."""
+    import re
+
+    todo = Path("TODO.md").read_text()
+    section = re.search(r"^## P50 .*?(?=^## |\Z)", todo,
+                        re.MULTILINE | re.DOTALL)
+    assert section, "P50 section missing from TODO.md"
+    pairs = re.findall(r"^- \[( |x)\] (T9[5-7]\d)", section.group(0),
+                       re.MULTILINE)
+    status = {name: tick for tick, name in pairs}
+    assert set(status) == {f"T{n}" for n in range(951, 971)}, sorted(status)
+    unticked = sorted(n for n, t in status.items() if t != "x")
+    assert not unticked, f"boxes still open at the sweep: {unticked}"
+
+    # the receipts: every cited number shows up outside TODO.md itself
+    keep = ("src", "tests", "eval", "data", "kaggle", "scripts", "app",
+            "notebooks", "docs")
+    parts = [p.read_text(errors="ignore")
+             for d in keep for p in Path(d).rglob("*")
+             if p.is_file() and not {"__pycache__", "build", "site"} & set(p.parts)
+             and p.suffix in {".py", ".md", ".toml", ".yml", ".yaml", ".txt"}]
+    parts += [p.read_text(errors="ignore") for p in Path(".").glob("*.md")]
+    blob = "\n".join(parts)
+    missing = sorted(n for n in status if n not in blob)
+    assert not missing, f"ticked but no receipt outside TODO.md: {missing}"
