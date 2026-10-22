@@ -2,6 +2,7 @@
 # Apache-2.0. See LICENSE.
 
 import importlib.util
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -182,3 +183,47 @@ def test_t992_docs_workflow_builds_versioned_artifacts_behind_flag():  # T992
     assert 'python scripts/build_docs_version.py "$tag" --site-dir site' \
         in step, "the loop must call T991's script, not mkdocs directly"
     assert "skip" in step, "filtered tags must say why in the CI log"
+
+
+def test_t993_versions_page_resolves_every_entry_to_its_delta():  # T993
+    """T993: the switcher story catches up with T991/T992 — versions.md
+    stops saying 'once versioned builds ship' and every version a reader
+    can be on resolves through one table to its delta section. Pins:
+    every git tag in the repo is named in the table (docs-era tags with
+    their snapshot path, pre-docs tags with the honest no-snapshot
+    gap), every local anchor the page hands out resolves to a real
+    heading slug on the same page (the table's links can't rot), the
+    T809 freshness marker still stands exactly once, and the stale
+    conditional language is gone. A future docs-era tag without a row
+    fails here on purpose — an entry that resolves to nothing is the
+    bug this box exists to prevent."""
+    text = Path("docs/versions.md").read_text()
+    assert "T993" in text
+    assert "once versioned builds ship" not in text, "stale conditional"
+    assert text.count("_(Last checked against v0.4.0.)_") == 1, \
+        "T809's freshness marker must stand exactly once"
+
+    tags = [t for t in subprocess.run(
+        ["git", "tag"], check=False, capture_output=True,
+        text=True).stdout.split() if t]
+    docs_era, pre_docs = [], []
+    for t in tags:
+        has_docs = subprocess.run(
+            ["git", "cat-file", "-e", f"{t}:mkdocs.yml"],
+            check=False, capture_output=True).returncode == 0
+        (docs_era if has_docs else pre_docs).append(t)
+    assert docs_era and pre_docs, "the split this page tells must exist"
+    for t in docs_era:
+        assert f"`{t}`" in text, f"{t} has no table row"
+        assert f"/{t}/" in text, f"{t} row doesn't name its snapshot dir"
+    for t in pre_docs:
+        assert f"`{t}`" in text, f"{t} missing from the no-snapshot rows"
+
+    # every anchor handed out on the page resolves to a real heading
+    # slug (python-markdown's toc rule: strip non-word chars, spaces
+    # to dashes — material's toc slugifier matches for these titles)
+    headings = re.findall(r"^#{1,6}\s+(.+)$", text, re.MULTILINE)
+    slugs = {re.sub(r"[^\w\s-]", "", h).strip().lower().replace(" ", "-")
+             for h in headings}
+    for anchor in re.findall(r"\]\(#([^)]+)\)", text):
+        assert anchor in slugs, f"anchor #{anchor} resolves to nothing"

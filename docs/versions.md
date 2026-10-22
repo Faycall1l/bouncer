@@ -4,12 +4,34 @@ _(Last checked against v0.4.0.)_
 
 This site tracks `main` — the newest code, currently package version
 **0.4.0** (`pyproject.toml`, `bouncer --version`). If you're reading an
-older release — a `v0.x.y` tag checkout or, once versioned builds ship,
-the **version switcher** in the nav sidebar — this page is the bridge:
-what the behavior deltas are between 0.1, 0.2, 0.3, and 0.4, so old docs
-don't mislead you. The authoritative list is the
+older release — a `v0.x.y` tag checkout, or a versioned snapshot at
+`/<tag>/` on this site — this page is the bridge: what the behavior
+deltas are between 0.1, 0.2, 0.3, and 0.4, so old docs don't mislead
+you. The authoritative list is the
 [CHANGELOG](https://github.com/Faycall1l/bouncer/blob/main/CHANGELOG.md);
 this page keeps only the deltas that change *what you observe*.
+
+## Where each version resolves (T993)
+
+Every versioned snapshot on this site is built from that tag's own
+`docs/` tree by the docs workflow — one directory per tag, served
+beside the root site; the site and its snapshots publish together,
+behind the same `DOCS_DEPLOY` flag. Each version a reader can be on
+resolves to its delta section here:
+
+| You are reading docs as of | Start here | Versioned snapshot |
+| --- | --- | --- |
+| `v0.4.0` | [On 0.4.0 (latest)](#on-040-latest) | yes — `/v0.4.0/` |
+| `v0.3.0` | [Coming from 0.3.x](#coming-from-03x) | no — docs didn't exist yet |
+| `v0.2.0` | [Coming from 0.2.0](#coming-from-020) | no — docs didn't exist yet |
+| `v0.1.0`, `v0.1.1`, `v0.1.2` | [Coming from 0.1.x](#coming-from-01x) | no — docs didn't exist yet |
+
+A tag from before `v0.4.0` can't have a snapshot — there is nothing to
+build — so the versioned build names it and moves on rather than
+serving a broken half-site. On one of those checkouts, read this page
+here on `main`. A new tag that carries docs gets a snapshot directory
+from the workflow and a row in this table by hand, resolving to its
+own "Coming from ..." section once the next release lands one.
 
 ## Coming from 0.1.x
 
@@ -75,9 +97,9 @@ this page keeps only the deltas that change *what you observe*.
 
 ## On 0.4.0 (latest)
 
-You're current — nothing above applies. Watch this page and the CHANGELOG
-when a versioned build of the site starts serving older docs through the
-switcher; each switcher entry will resolve to the delta section matching
-its version.
+You're current — nothing above applies. This same page is what the
+`/v0.4.0/` snapshot serves, so the table at the top lands you in the
+right place either way. When the next release tags, it joins that
+table with its own delta section.
 
 Terms used here are defined in the [Glossary](glossary.md).

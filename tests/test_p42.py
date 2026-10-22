@@ -204,8 +204,11 @@ def test_version_switcher_note():  # T797
     # covers all three tagged generations the box asks about
     for v in ("0.1", "0.2", "0.3"):
         assert v in text, v
-    # switcher framing: why this page exists (older readers vs main)
-    assert "switcher" in text.lower() and "CHANGELOG" in text
+    # resolution framing: why this page exists (older readers vs main).
+    # T993 replaced the *promised* switcher story with the real one —
+    # per-tag snapshots and a table resolving every version to its
+    # delta — so the needle follows the mechanism, not the old promise
+    assert "resolves" in text.lower() and "CHANGELOG" in text
     # real behavior deltas, needles straight from the CHANGELOG entries
     for needle in ("E_PRESET", "--allow-threshold", "breaker-open",
                    "E_SNAPSHOT", "Stale-verdict"):
