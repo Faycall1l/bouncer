@@ -495,3 +495,65 @@ def test_t1000_roadmap_sections_honest_about_p44_p50():  # T1000
 
     # T805's pins this commit edits around
     assert "DOCS_DEPLOY" in text and "](versions.md)" in text
+
+
+def test_t1001_glossary_terms_pin_what_they_define():  # T1001
+    """T1001: the glossary gains the four terms P44-P50 introduced —
+    appeal, amnesty, namespaced strike, script routing. Each definition
+    is pinned against the source it describes, so the entry can't drift
+    into vibes: the appeal linkage really is a T864 queue-row uuid in
+    review.py and adapters really carry the APPEAL command; amnesty's
+    CLI, its T974 audit row and T341's weight table (delete=2,
+    flag=1, everything else 0 — the definition quotes those numbers,
+    so the numbers are re-read from strikes.py here); the namespaced
+    strike accrual really sits in _accrue on every path (T858); and
+    script routing's ar/ru/zh claim is checked against detect_lang's
+    own block (T857) with the serve-side autofill (T892) and --lang
+    auto (T893) present. Every T-number the four entries cite must be
+    a real box."""
+    text = Path("docs/glossary.md").read_text()
+    assert "T1001" in text
+    assert text.count("_(Last checked against v0.4.0.)_") == 1
+
+    def entry(term: str) -> str:
+        lines = text.splitlines()
+        start = next(i for i, ln in enumerate(lines)
+                     if ln.startswith(f"* **{term}**"))
+        rest = [ln for ln in lines[start + 1:] if not ln.startswith("* **")]
+        return " ".join(lines[start:start + 1] + rest)
+
+    appeal, amnesty = entry("appeal"), entry("amnesty")
+    namespaced, routing = entry("namespaced strike"), entry("script routing")
+
+    review = Path("src/gatekeeper/review.py").read_text()
+    assert "T864" in appeal and "uuid.uuid4" in review and "T864" in review
+    assert "queue-row id" in appeal or "queue row" in appeal
+    explain = Path("src/gatekeeper/explain.py").read_text()
+    assert "APPEAL" in review and "APPEAL" in explain, \
+        "the command word lives in the review/explain surfaces"
+
+    cli = Path("src/gatekeeper/cli.py").read_text()
+    assert "T881" in amnesty and 'add_parser("amnesty' in cli
+    assert "T974" in amnesty and "T881+T974" in cli, "the audit cite"
+    assert "T341" in amnesty and "T865" in amnesty
+    weights = Path("src/gatekeeper/strikes.py").read_text()
+    wt = weights.split("def weight_for_action")[1].split("\ndef ")[0]
+    assert '"delete": 2' in wt and '"flag": 1' in wt, \
+        "the definition's numbers must match the table"
+
+    init = Path("src/gatekeeper/__init__.py").read_text()
+    assert "T858" in namespaced and "_accrue" in init and "T340+T858" in init
+
+    common = Path("src/gatekeeper/adapters/common.py").read_text()
+    block = common.split("def detect_lang")[1].split("\ndef ")[0]
+    for tag in ("ar", "ru", "zh"):
+        assert tag in block, f"detect_lang lost the {tag} tag"
+    assert "T892" in routing and "T892" in Path(
+        "src/gatekeeper/serve.py").read_text()
+    assert "T893" in routing and '"--lang"' in cli
+
+    # every T-number these entries cite is a real box
+    todo = Path("TODO.md").read_text()
+    for line in (appeal, amnesty, namespaced, routing):
+        for t in set(re.findall(r"\bT\d{3,4}\b", line)):
+            assert t in todo, f"glossary entry cites unknown box {t}"

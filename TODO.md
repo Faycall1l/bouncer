@@ -1103,7 +1103,7 @@
 - [x] T998 docs: getting-started updated for the 0.5.0 surface (doctor, lang auto, /stats + /metrics behind the key gate, P44 pre-auth 1MB + extra-forbid claims, cookbook/api in Next; every new claim pinned against cli.py/serve.py by test_t998)
 - [x] T999 docs: RELEASE-CHECKLIST gains the new gates (metrics report, i18n routing) (one new checkbox: bench_metrics.py + gate.py --all --ci, eval_i18n.py, T739's eight runners named verbatim; commands pinned against the eval sources by test_t999)
 - [x] T1000 docs: ROADMAP graduation — plugin section honest about what P44-P50 did/didn't build (no plugin surface built, named seams inherited: signed packs, adapter lang, finetune, metrics families; versioned-docs section graduated to shipped-behind-the-flag with its receipts; test_t1000 pins both)
-- [ ] T1001 docs: glossary additions (appeal, amnesty, namespaced strike, script routing)
+- [x] T1001 docs: glossary additions (appeal, amnesty, namespaced strike, script routing) (each definition pinned against its source by test_t1001 — appeal linkage T864 uuids, amnesty weights re-read from strikes.weight_for_action T341, _accrue T858, detect_lang ar/ru/zh T857; T1001 note under the freshness marker)
 - [ ] T1002 docs: example scripts re-run green after every surface change
 - [ ] T1003 test: mkdocs nav still equals the file set
 - [ ] T1004 test: link checker green (root + docs, extends T821)
