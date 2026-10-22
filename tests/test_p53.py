@@ -98,3 +98,67 @@ def test_t1018_readme_version_sensitive_claims_match_source():  # T1018
     ):
         assert shown in readme, f"README dropped {shown!r}"
         assert source in cli, f"source lost {source!r} README shows"
+
+
+def test_t1019_version_strings_consistent_050_everywhere():  # T1019
+    """T1019: extends T819's release sweep — '0.5.0 everywhere' plus the
+    current-claim scan T819 doesn't do. Three layers: (1) the T819
+    triplet re-asserted — pyproject == __version__ == README doctor line
+    == a dated CHANGELOG section; (2) no tracked file may still call
+    0.4.0 the version you are reading (latest/currently/ships/as-of/
+    package-version phrasings), with the historical records explicitly
+    exempt — CHANGELOG entries, the 0.4.0 release draft, golden behavior
+    notes, ROADMAP/SECURITY history are records, not claims; (3) the
+    versions page carries the new latest structurally — exactly one
+    '(latest)' heading and it is 0.5.0's, the v0.4.0 row resolves to
+    its delta section, and the stale 0.4.0-latest anchor is gone."""
+    import subprocess
+
+    version = re.search(r'^version = "([^"]+)"',
+                        pathlib.Path("pyproject.toml").read_text(),
+                        re.MULTILINE).group(1)
+    assert version == "0.5.0"
+    import gatekeeper
+    assert gatekeeper.__version__ == version
+    readme = pathlib.Path("README.md").read_text()
+    assert f"bouncer: {version}" in readme, "T819's doctor line"
+    changelog = pathlib.Path("CHANGELOG.md").read_text()
+    assert re.search(rf"^## {re.escape(version)} — \d{{4}}-\d{{2}}-\d{{2}} "
+                     rf"\(T\d+\)$", changelog, re.MULTILINE), \
+        "no dated section for the shipped version"
+
+    # (2) current-claim scan: 0.4.0 sold as the version you read.
+    # tests/ is exempt by design: an assertion mentioning 0.4.0 is a
+    # claim about claims (like this test's own stale needles), never a
+    # surface a reader is told to trust — the claim surfaces (docs/,
+    # src/, root files, configs) are all scanned.
+    current_claim = re.compile(
+        r"(?:latest|currently|ships (?:as|at)|as of|package version)"
+        r"[^\n]{0,60}0\.4\.0|0\.4\.0 \(latest\)")
+    exempt_prefix = ("docs/drafts/", "tests/")
+    exempt_names = {"CHANGELOG.md", "TODO.md"}
+    files = subprocess.run(["git", "ls-files"], check=False,
+                           capture_output=True, text=True).stdout.split()
+    hits = []
+    for f in files:
+        if not f.endswith((".md", ".py", ".toml", ".yml", ".yaml")):
+            continue
+        if f in exempt_names or f.startswith(exempt_prefix):
+            continue
+        try:
+            text = pathlib.Path(f).read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if current_claim.search(text):
+            hits.append(f)
+    assert not hits, f"0.4.0 still sold as current in: {hits}"
+
+    # (3) versions.md structure: one latest, it is 0.5.0's
+    vnotes = pathlib.Path("docs/versions.md").read_text()
+    assert vnotes.count("(latest)") == 1, "exactly one latest claim"
+    assert "## On 0.5.0 (latest)" in vnotes, "0.5.0 must be the latest"
+    assert "## On 0.4.0 (latest)" not in vnotes, "stale latest heading"
+    assert "#on-040-latest" not in vnotes, "stale anchor handed out"
+    assert "[Coming from 0.4.x](#coming-from-04x)" in vnotes, \
+        "the v0.4.0 row must resolve to its delta section"
+    assert "T1030" in vnotes, "the v0.5.0 tag-row obligation stays named"

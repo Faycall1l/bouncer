@@ -1123,7 +1123,7 @@
 - [x] T1016 docs: CHANGELOG 0.5.0 dated (notes written at this box — the heading was dated earlier at T1011 because T819's release sweep demands it the moment pyproject reads 0.5.0; content review, themes and T-ranges corrected here: the T1011 stub's eval-gates-in-CI theme misattributed T739, which shipped in 0.4.0)
 - [x] T1017 docs: release notes draft (drafts/release-0.5.0.md)
 - [x] T1018 docs: README version-sensitive claims re-checked
-- [ ] T1019 test: version strings consistent (0.5.0 everywhere, extends T819)
+- [x] T1019 test: version strings consistent (0.5.0 everywhere, extends T819)
 - [ ] T1020 test: adapters matrix table matches runnable stubs (re-run, extends T820)
 - [ ] T1021 test: docs link checker green (root + docs)
 - [ ] T1022 test: packaging smoke (wheel+sdist stamped 0.5.0, installs, --version)

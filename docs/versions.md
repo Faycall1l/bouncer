@@ -7,9 +7,9 @@ This site tracks `main` — the newest code, currently package version
 older release — a `v0.x.y` tag checkout, or a versioned snapshot at
 `/<tag>/` on this site — this page is the bridge: what the behavior
 deltas are between the 0.x releases, so old docs don't
-mislead you. (The 0.5.0 notes live in the CHANGELOG; this page's 0.5.0 delta
-section and the latest-tag refresh come with T1019's version sweep —
-until then, treat 0.4.0 as the last *documented* delta.) The authoritative list is the
+mislead you. (The full notes live in the CHANGELOG; this page keeps
+only the deltas you would *observe* — the 0.4.0 → 0.5.0 set is the
+"Coming from 0.4.x" section.) The authoritative list is the
 [CHANGELOG](https://github.com/Faycall1l/bouncer/blob/main/CHANGELOG.md);
 this page keeps only the deltas that change *what you observe*.
 
@@ -23,7 +23,7 @@ resolves to its delta section here:
 
 | You are reading docs as of | Start here | Versioned snapshot |
 | --- | --- | --- |
-| `v0.4.0` | [On 0.4.0 (latest)](#on-040-latest) | yes — `/v0.4.0/` |
+| `v0.4.0` | [Coming from 0.4.x](#coming-from-04x) | yes — `/v0.4.0/` |
 | `v0.3.0` | [Coming from 0.3.x](#coming-from-03x) | no — docs didn't exist yet |
 | `v0.2.0` | [Coming from 0.2.0](#coming-from-020) | no — docs didn't exist yet |
 | `v0.1.0`, `v0.1.1`, `v0.1.2` | [Coming from 0.1.x](#coming-from-01x) | no — docs didn't exist yet |
@@ -33,7 +33,8 @@ build — so the versioned build names it and moves on rather than
 serving a broken half-site. On one of those checkouts, read this page
 here on `main`. A new tag that carries docs gets a snapshot directory
 from the workflow and a row in this table by hand, resolving to its
-own "Coming from ..." section once the next release lands one.
+own delta section — the "On 0.5.0" landing while it is current, "Coming
+from ..." once a newer release pushes it down.
 
 ## Coming from 0.1.x
 
@@ -97,11 +98,51 @@ own "Coming from ..." section once the next release lands one.
   JSONs: threshold flags, deltas against a baseline report, and a
   docs-drift check against the BENCHMARKS known-numbers table.
 
-## On 0.4.0 (latest)
+## Coming from 0.4.x
+
+These are the deltas 0.5.0 makes observable — full notes in the
+[CHANGELOG](https://github.com/Faycall1l/bouncer/blob/main/CHANGELOG.md).
+Nothing was removed or renamed; everything below is additive except
+where a refusal is called out.
+
+* **Unknown request fields are 422 in 0.5.0** — `ModReq` gained
+  `extra=forbid`: keys the server doesn't know are refused instead of
+  silently dropped (T835).
+* **Batches share one overall deadline in 0.5.0** — the old worst case
+  (32 messages × 60s each) is gone; a slow batch fails as one (T837).
+* **`/stats` honors `BOUNCER_KEY` in 0.5.0** — key-gated like
+  `/metrics` whenever a key is set (T842); chunked uploads are capped
+  like content-length ones, so the body cap can no longer be bypassed
+  (T831).
+* **Snapshots are schema v2 in 0.5.0** — v1 loads through an
+  in-memory migration (reported on stdout); unknown versions refuse
+  (T876).
+* **Strike keys are namespaced in 0.5.0** — platform traffic accrues
+  under `platform:user`; CLI keys stay raw and addressable (T858).
+* **Appeals exist from 0.5.0** — `APPEAL` answers with the newest
+  review-queue row id; operators adjudicate with `bouncer adjudicate`
+  or `bouncer amnesty` — CLI-only and audited (T864, T865, T881).
+* **Multilingual routing keys off detected script in 0.5.0** —
+  `/predict` autofills `lang` when omitted (batch included),
+  `check`/`watch` take `--lang auto`, adapters pass detected `lang=`
+  with `BOUNCER_ADAPTER_LANG` as the per-platform override
+  (T891–T897).
+* **`/metrics` completed in 0.5.0** — per-rule, cause, p95, strikes,
+  coalesce/breaker, review-queue depth and per-adapter families, with
+  bounded cardinality and the runbook scrape recipe (T884, T885,
+  T931–T946).
+* **New CLI in 0.5.0** — `config validate`, `pack diff`, `pack
+  sign`/`verify`, `check --file`, `completion bash|zsh`,
+  `export --queue` (T871–T886).
+* **`bouncer serve` gained uvicorn knobs in 0.5.0** —
+  `--timeout-keep-alive` and `--limit-concurrency` (T838).
+
+## On 0.5.0 (latest)
 
 You're current — nothing above applies. This same page is what the
-`/v0.4.0/` snapshot serves, so the table at the top lands you in the
-right place either way. When the next release tags, it joins that
-table with its own delta section.
+`/v0.5.0/` snapshot serves once the tag cuts (T1030) and the docs
+workflow builds it, so the table at the top lands you in the right
+place either way. Until then `main` is 0.5.0 with no snapshot
+directory to serve: the row lands with the tag commit.
 
 Terms used here are defined in the [Glossary](glossary.md).
