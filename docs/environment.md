@@ -6,6 +6,11 @@ added was already a row — the completeness test above demands it — so
 this pass carries the newer semantics onto the rows: the systemone
 passthrough sharing the timeout, the per-write audit flush behind the
 fsync knob, and the standalone config lint._
+_(Re-verified at T996 for P52: the both-directions sweep still holds —
+every var the code reads has a row, every row has a reader — the
+P44–P50 semantics T979 carried are still what the code does, and the
+two rows the server never reads (the client example's `BOUNCER_URL`,
+the container self-test's `BOUNCER_PRESET`) still say so.)_
 
 Every environment variable the code reads, in one table. The split of
 duties: this page is the *inventory* (kept honest by a test in both

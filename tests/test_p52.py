@@ -300,3 +300,38 @@ def test_t995_error_code_index_refresh_covers_p44_p50():  # T995
     for code, cite in (("E_VERDICT", "T865"), ("E_PACK_SIG", "T873"),
                        ("E_RULES_TEXT", "T879")):
         assert cite in row(code), f"{code} lost its {cite} cite"
+
+
+def test_t996_environment_sweep_reverified_with_honest_qualifiers():  # T996
+    """T996: the environment.md sweep, re-run for P52. T807's test IS
+    the both-directions inventory gate (every var the code reads has a
+    row — dynamic prefixes and example scripts included — and every
+    row has a reader) and it stays green: nothing was added or removed
+    since T979's P44-P50 pass. What that sweep cannot see, this pins:
+    the two rows the SERVER never reads keep their honest qualifiers
+    (BOUNCER_URL is the shipped client example's convenience,
+    BOUNCER_PRESET the container self-test's — a reader who exports
+    them expecting server behavior must be told otherwise), the
+    freshness marker stands exactly once with the refresh history
+    riding its own lines beneath it (T809's rule), and both refresh
+    notes — T979's and this re-verification — are on the page."""
+    text = Path("docs/environment.md").read_text()
+    assert "T996" in text
+    assert text.startswith("# Environment variables (T807)")
+    # T809's marker stands exactly once; refresh notes are separate
+    # lines under it, never replacing it
+    assert text.count("_(Last checked against v0.4.0.)_") == 1
+
+    def row(var: str) -> str:
+        return next(ln for ln in text.splitlines()
+                    if ln.startswith(f"| `{var}` |"))
+
+    url, preset = row("BOUNCER_URL"), row("BOUNCER_PRESET")
+    assert "not read by the server" in url, \
+        "BOUNCER_URL must keep its client-side-only qualifier"
+    assert "self-test" in preset and "docker-entrypoint" in preset, \
+        "BOUNCER_PRESET must keep its container-self-test qualifier"
+    # the refresh history: T979's pass and this re-verification both
+    # stand, each on its own _( ... )_ note
+    assert "_(Refreshed at T979" in text, "T979's note went missing"
+    assert "_(Re-verified at T996" in text, "this pass must record itself"
