@@ -335,3 +335,42 @@ def test_t996_environment_sweep_reverified_with_honest_qualifiers():  # T996
     # stand, each on its own _( ... )_ note
     assert "_(Refreshed at T979" in text, "T979's note went missing"
     assert "_(Re-verified at T996" in text, "this pass must record itself"
+
+
+def test_t997_cookbook_recipes_use_only_real_commands():  # T997
+    """T997: four cookbook recipes — batch scoring, appeals, metrics
+    scrape, pack signing. The completeness half (they exist, numbered,
+    each citing T997) is pinned here; the honesty half is pinned
+    against the CLI source itself: every `bouncer <cmd>` the new
+    recipes run must be a real argparse subparser in cli.py — a
+    cookbook that invents a flag is worse than no cookbook. The API
+    recipe's endpoint is checked against serve.py's routes the same
+    way, and the pack recipe's sign/verify claims are pinned against
+    the commands T872/T873 actually built."""
+    text = Path("docs/cookbook.md").read_text()
+    assert "T997" in text
+    for heading in ("## 6. Score a whole batch in one request (recipe T997)",
+                    "## 7. Work an appeal (recipe T997)",
+                    "## 8. Scrape metrics into Prometheus (recipe T997)",
+                    "## 9. Sign and verify a rules pack (recipe T997)"):
+        assert heading in text, heading
+
+    # everything the four recipes execute must exist in the real CLI
+    cli = Path("src/gatekeeper/cli.py").read_text()
+    subparsers = set(re.findall(r'add_parser\("([a-z-]+)"', cli))
+    new_recipes = text.split("## 6. Score a whole batch")[1]
+    used = set(re.findall(r"\bbouncer ([a-z]+)\b", new_recipes))
+    invented = sorted(c for c in used if c not in subparsers)
+    assert not invented, f"recipes invent CLI commands: {invented}"
+    for needed in ("review", "adjudicate", "amnesty", "export", "pack"):
+        assert needed in used, f"recipe set stopped exercising {needed}"
+
+    # the batch recipe's endpoint is a real route (T994's source)
+    routes = {f"{m.upper()} {p}" for m, p in re.findall(
+        r'@app\.(get|post)\("([^"]+)"\)',
+        Path("src/gatekeeper/serve.py").read_text())}
+    assert "POST /predict/batch" in routes
+    assert "predict/batch" in new_recipes
+    # the signing claims: the commands and the failure code are real
+    assert '"sign"' in cli and '"verify"' in cli and '"diff"' in cli
+    assert "E_PACK_SIG" in new_recipes

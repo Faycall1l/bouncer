@@ -117,12 +117,14 @@ def test_getting_started_page():  # T793
     assert "getting-started.md" in _nav_paths()
 
 
-def test_cookbook_five_recipes():  # T794
+def test_cookbook_recipes():  # T794 (+T997: four recipes added)
     cb = Path("docs/cookbook.md").read_text()
     assert cb.startswith("# Cookbook")
-    # exactly five recipes, each verified against the code it names
+    # exactly the recipes T794 shipped (five) plus T997's four, each
+    # verified against the code it names — T997's own test re-checks
+    # the new four against cli.py and serve.py
     recipes = re.findall(r"^## \d\. (.+)$", cb, re.MULTILINE)
-    assert len(recipes) == 5, recipes
+    assert len(recipes) == 9, recipes
     for want in ("Discord", "Self-host", "gates", "multilingual", "Back up"):
         assert any(want.lower() in r.lower() for r in recipes), want
     # recipe 1: the real adapter command + the real dry-run switch (T697)

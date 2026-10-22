@@ -150,4 +150,104 @@ Review queue and audit log are plain JSONL — `cp` them back to the paths
 text except the review queue itself (bounded, 0600, clearable):
 [Security § Data handling](SECURITY.md#data-handling).
 
+## 6. Score a whole batch in one request (recipe T997)
+
+```bash
+curl -s localhost:8000/predict/batch \
+  -H 'content-type: application/json' \
+  -d '{"preset": "gaming",
+       "messages": ["nice play", "kys noob", "gg wp"]}' \
+  | jq -r '.[] | .action'      # one decision per message, order kept
+```
+
+* 1–32 messages per call (else 422/413), each ≤ 8000 chars; the array
+  comes back in the same order, so results zip back by index.
+* `rules`/`preset` are the same XOR as `/predict`; a preset autofills
+  its pack's language (T502), and with neither, **each row autofills
+  from its own script** (T902) — one Arabic line in an English batch
+  doesn't misroute its neighbors.
+* One `timeout_s` (or `BOUNCER_TIMEOUT`) bounds the **whole batch**
+  (T837): rows that don't start before the deadline come back as
+  escalate fallbacks (cause `batch-deadline`) — a slow model costs one
+  budget, never `messages × 60 s`.
+* Auth and rate limits are shared with `/predict` — one key, one
+  bucket. An empty `messages` list is `422 E_BATCH_EMPTY`. Bigger
+  scale-out is just sharded ≤32-row calls.
+
+## 7. Work an appeal (recipe T997)
+
+```bash
+bouncer review --limit 50 --since "$(date -v-1d +%s)"  # GNU date: -d '1 day ago'
+bouncer adjudicate ROW1234 approve   # the row was fine — no further strikes
+bouncer adjudicate ROW1235 reject    # the row stood — strike amnesty granted
+bouncer amnesty @user42 --weight 1   # no queue row needed: subtract exactly 1 (T974)
+bouncer export --queue --out appeals.csv   # the whole trail, verdicts included
+```
+
+* Queue rows carry ids (T864); `adjudicate ROW_ID approve|reject` (T865)
+  is the whole verdict. Reject grants strike amnesty with the weighted
+  shape — delete wipes 2, flag 1, escalate 0 (T783).
+* `amnesty USER [--weight N]` (T881) forgives without a queue row;
+  both paths write one audit row — who, when, why (T988). The full
+  moderator procedure, including rotation and drain interplay, is
+  [Runbook § Amnesty](runbook.md#amnesty-strikes-forgiveness).
+* `export --queue` is the appeal audit trail for a CSV tool: who was
+  flagged, with cause/model/preset context, and how it was adjudicated.
+  Queue text stays raw there — that file carries the queue's `0600`
+  contract (T784).
+* On the chat platforms, users type the `APPEAL` command (T864) and
+  see the newest verdict rendered with its queue-row id — this recipe
+  is the moderator side of that loop.
+
+## 8. Scrape metrics into Prometheus (recipe T997)
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: bouncer
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:8000"]   # add -X-API-Key header below if BOUNCER_KEY is set
+```
+
+```bash
+curl -s localhost:8000/metrics | head        # exactly what Prometheus sees
+curl -s -H "X-API-Key: $KEY" host:8000/metrics   # the same gate as /stats (T778)
+```
+
+* `/metrics` is Prometheus text — open on loopback, `X-API-Key` once
+  `BOUNCER_KEY` is set. The full family table lives in
+  [api.md § Metrics export](api.md#metrics-export-t945).
+* Cardinality is a constant, not a function of traffic (T942–T944):
+  rule labels fold into `_other` past 200, so a scraper can't be
+  cardinality-bombed through rule ids.
+* Counters are **per worker process** (T939): `--workers N` under-reports
+  every scrape by N — scrape each worker or keep one worker for honest
+  totals.
+* Useful alarms: `bouncer_breaker_open == 1` (model down),
+  `bouncer_latency_p95_ms` climbing (rolling 200-request window, T884),
+  `bouncer_ban_suggested` rising (strike pressure — counts only, never
+  user ids).
+
+## 9. Sign and verify a rules pack (recipe T997)
+
+```bash
+bouncer pack init my-rules.json      # optional: add the meta block (T878)
+bouncer pack lint my-rules.json      # local lint before shipping
+bouncer pack sign my-rules.json      # writes my-rules.json.sig — sha256 over sorted ids+texts
+bouncer pack verify my-rules.json    # recomputes it; drift fails closed (E_PACK_SIG)
+```
+
+* Ship `FILE` and `FILE.sig` together; verify recomputes the manifest
+  from the pack's own bytes — one changed byte fails (T873). Exit 4
+  when the manifest is missing or unreadable, exit 2 on a mismatch
+  (that's CI-gate territory).
+* For drift *reporting* between two pack versions,
+  `bouncer pack diff OLD NEW` prints `+`/`-`/`~` per rule and exits 2
+  on any change (T872) — diff answers "what changed", verify answers
+  "is this exactly what was signed".
+* The signature is integrity, not authorship: distribute `FILE.sig`
+  over a channel your deployment already trusts (the repo, the release
+  artifact), and let every reader's `verify` refuse tampered copies.
+
 Terms used here are defined in the [Glossary](glossary.md).
