@@ -1,6 +1,6 @@
 # Real Laya answer shape (T202, measured laya 0.4.6)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 ```json
 {"answers": {

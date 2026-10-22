@@ -1,13 +1,15 @@
 # Version notes (T797)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 This site tracks `main` — the newest code, currently package version
-**0.4.0** (`pyproject.toml`, `bouncer --version`). If you're reading an
+**0.5.0** (`pyproject.toml`, `bouncer --version`). If you're reading an
 older release — a `v0.x.y` tag checkout, or a versioned snapshot at
 `/<tag>/` on this site — this page is the bridge: what the behavior
-deltas are between 0.1, 0.2, 0.3, and 0.4, so old docs don't mislead
-you. The authoritative list is the
+deltas are between the 0.x releases, so old docs don't
+mislead you. (The 0.5.0 notes live in the CHANGELOG; this page's 0.5.0 delta
+section comes at T1016 — until then, treat 0.4.0 as the last
+*documented* delta.) The authoritative list is the
 [CHANGELOG](https://github.com/Faycall1l/bouncer/blob/main/CHANGELOG.md);
 this page keeps only the deltas that change *what you observe*.
 

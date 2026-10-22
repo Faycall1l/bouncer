@@ -1,6 +1,6 @@
 # Gate precedence (T334)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 Decisions run one ordered ladder. First match wins; later demotions apply after.
 

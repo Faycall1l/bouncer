@@ -1,6 +1,6 @@
 # Environment variables (T807)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 _(Refreshed at T979 for the P44–P50 surface: every var those batches
 added was already a row — the completeness test above demands it — so
 this pass carries the newer semantics onto the rows: the systemone

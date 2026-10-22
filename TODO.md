@@ -1115,7 +1115,7 @@
 - [x] T1010 test: P52 docs sweep (every box ticked, receipts outside TODO.md) (all 20 boxes T991-T1010 ticked with literal receipts in the TODO-excluded corpus; citation integrity over every surface the batch touched — test_t1010_p52_sweep_every_box_ticked_with_receipts; closes P52)
 
 ## P53 Release 0.5.0 (T1011–T1030)
-- [ ] T1011 pkg: version 0.5.0
+- [x] T1011 pkg: version 0.5.0
 - [ ] T1012 suite: full run green + count recorded
 - [ ] T1013 lint: ruff check green
 - [ ] T1014 ci: workflow green on the release commit (status recorded)

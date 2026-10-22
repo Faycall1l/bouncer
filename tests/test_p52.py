@@ -18,6 +18,20 @@ def _slug(heading: str) -> str:
                   re.sub(r"[^\w\s-]", "", heading).strip().lower())
 
 
+def _current_marker() -> str:
+    """T809's marker line for the version pyproject currently claims.
+
+    Derived, never literal: the five per-page pins below (t993, t996,
+    t998, t999, t1001) assert 'the marker stands exactly once', which is
+    a claim about placement — the version string inside it belongs to
+    T809/T1005's pyproject-derived sweeps, so T1011's bump flips these
+    pins with one honest re-read instead of five edits."""
+    version = re.search(r'^version = "([^"]+)"',
+                        Path("pyproject.toml").read_text(),
+                        re.MULTILINE).group(1)
+    return f"_(Last checked against v{version}.)_"
+
+
 def _load_build_script():
     spec = importlib.util.spec_from_file_location(
         "bouncer_build_docs_version", "scripts/build_docs_version.py")
@@ -208,7 +222,7 @@ def test_t993_versions_page_resolves_every_entry_to_its_delta():  # T993
     text = Path("docs/versions.md").read_text()
     assert "T993" in text
     assert "once versioned builds ship" not in text, "stale conditional"
-    assert text.count("_(Last checked against v0.4.0.)_") == 1, \
+    assert text.count(_current_marker()) == 1, \
         "T809's freshness marker must stand exactly once"
 
     tags = [t for t in subprocess.run(
@@ -325,7 +339,7 @@ def test_t996_environment_sweep_reverified_with_honest_qualifiers():  # T996
     assert text.startswith("# Environment variables (T807)")
     # T809's marker stands exactly once; refresh notes are separate
     # lines under it, never replacing it
-    assert text.count("_(Last checked against v0.4.0.)_") == 1
+    assert text.count(_current_marker()) == 1
 
     def row(var: str) -> str:
         return next(ln for ln in text.splitlines()
@@ -392,11 +406,12 @@ def test_t998_getting_started_covers_the_050_surface():  # T998
     api.md's (1 MB refused before auth, T843; unknown fields 422,
     T835), --lang auto exists (cli.py's T893 handling), the cookbook
     and api reference are linked from Next, and the freshness marker
-    still stands exactly once (T1005 flips it at release)."""
+    still stands exactly once (T1005's sweep pins it to pyproject —
+    flipped at T1011)."""
     text = Path("docs/getting-started.md").read_text()
     assert "T998" in text
     assert text.splitlines()[0] == "# Getting started (T793, refreshed at T998)"
-    assert text.count("_(Last checked against v0.4.0.)_") == 1
+    assert text.count(_current_marker()) == 1
 
     cli = Path("src/gatekeeper/cli.py").read_text()
     assert 'add_parser("doctor' in cli, "doctor left the CLI"
@@ -433,7 +448,7 @@ def test_t999_release_checklist_gains_the_new_gates():  # T999
     text = Path("docs/RELEASE-CHECKLIST.md").read_text()
     assert "T999" in text
     assert text.splitlines()[0] == "# Release checklist (T669, updated at T999)"
-    assert text.count("_(Last checked against v0.4.0.)_") == 1
+    assert text.count(_current_marker()) == 1
 
     # the commands exist, verbatim
     for runner in ("eval/bench_metrics.py", "eval/eval_i18n.py",
@@ -518,7 +533,7 @@ def test_t1001_glossary_terms_pin_what_they_define():  # T1001
     a real box."""
     text = Path("docs/glossary.md").read_text()
     assert "T1001" in text
-    assert text.count("_(Last checked against v0.4.0.)_") == 1
+    assert text.count(_current_marker()) == 1
 
     def entry(term: str) -> str:
         lines = text.splitlines()

@@ -1,6 +1,6 @@
 # Glossary (T150)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 _(Terms added at T1001: appeal, amnesty, namespaced strike, script
 routing — the P44–P50 vocabulary the other pages kept citing.)_
 

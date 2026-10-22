@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.5.0 — 2026-10-22 (T1016)
+
+Draft: T819's release sweep demands this dated heading the moment
+pyproject reads 0.5.0, so the T1011 bump creates it — T1016 owns the
+content review before the tag. Themes since 0.4.0: eval gates wired into
+CI (T739), the pip-audit security job with a pinned ignore list (T984),
+versioned docs snapshots per tag on the site (T991/T1000), and the
+P51–P52 docs-honesty passes (T981–T1010).
+
 ## 0.4.0 — 2026-10-19 (T811)
 
 * Eval gates (T671-T689): `eval/gate.py` pass/fail runner over report JSONs —

@@ -1,12 +1,13 @@
 # Roadmap (T805) — beyond 0.4.0
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 Where bouncer goes after the 0.4.0 line (eval gates, CI hardening,
 security work, and this docs site). Plans, not promises: an item leaves
 this page when receipts exist for it — the same rule
 [BENCHMARKS.md](https://github.com/Faycall1l/bouncer/blob/main/BENCHMARKS.md)
-uses.
+uses. (Much of this list has since shipped on the road to 0.5.0 — each
+section below carries its own shipped/NOT-RUN marker.)
 
 ## Fine-tune results (status: NOT RUN)
 

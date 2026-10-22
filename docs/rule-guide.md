@@ -1,6 +1,6 @@
 # Rule-writing guide (T138)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 The scorer reads rule *text*, not ids. Good rules are concrete and self-contained.
 

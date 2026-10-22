@@ -114,7 +114,7 @@ network — one line per check, three sections, then a summary:
 
 ```
 ok    env    python: 3.12.13 (requires >=3.10)
-ok    env    bouncer: 0.4.0
+ok    env    bouncer: 0.5.0
 info  env    TELEGRAM_TOKEN: telegram_bot: env unset (bouncer.toml may supply it)
 warn  dep    laya: missing — System One router (predicts) unavailable
 ok    route  model[zh]: multilingual

@@ -1,6 +1,6 @@
 # Golden transcript (T204) — base Laya, gaming preset, real model, 2026-10-12
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 | message | action | rule | conf | note |
 |---|---|---|---|---|

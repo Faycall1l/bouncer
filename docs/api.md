@@ -1,6 +1,6 @@
 # API reference (T141, updated T394)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 ## Route table (T994)
 

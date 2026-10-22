@@ -1,6 +1,6 @@
 [project]
 name = "gatekeeper-1"
-version = "0.4.0"
+version = "0.5.0"
 description = "Programmable live-chat moderation in one 30ms System One forward pass (Laya/Jev-compatible)"
 readme = "README.md"
 requires-python = ">=3.10"

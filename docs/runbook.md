@@ -1,6 +1,6 @@
 # Ops runbook (T789)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 Backup, restore, rotate, drain — the four procedures an operator needs at
 3am. Everything here is a file or a command that actually ships; T-boxes

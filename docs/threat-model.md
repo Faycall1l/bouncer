@@ -1,6 +1,6 @@
 # Threat model (T771)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 _(Refreshed for the 0.5.x surface — T971: stream body cap, typed
 systemone shape, appeal/adjudicate flow, namespaced strikes.)_
 

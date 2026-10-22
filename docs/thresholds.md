@@ -1,6 +1,6 @@
 # Threshold tuning (T139)
 
-_(Last checked against v0.4.0.)_
+_(Last checked against v0.5.0.)_
 
 One slider, two gates: `allow_threshold` (ok + confident → auto-allow),
 `delete_threshold` (violation + confident → auto-delete). Between them sits
