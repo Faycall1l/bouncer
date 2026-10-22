@@ -305,3 +305,30 @@ def test_t1024_golden_note_for_050_behavior_deltas():  # T1024
     assert "unchanged on 0.5.0" in note, "the verdict-preservation claim"
     for box in ("T892", "T837", "T833", "T832", "T835", "T831"):
         assert box in note, f"{box} delta uncited"
+
+
+def test_t1026_security_doc_updated_for_050_surface():  # T1026
+    """T1026: SECURITY.md's release re-check — the operational page
+    carries the v0.5.0 marker exactly once, its adapters section cites
+    this box as the re-check, and the version-sounding '0.4.0 adapters'
+    phrasing is gone (0.5.0 added no adapter: the text now says
+    seven-surface set without a version). A stale ops promise is a
+    security-doc bug, so every flag/var the page names is grepped in
+    src/ the way T826 did, and the operator-only adjudicate/amnesty
+    promise still matches the CLI parser itself."""
+    sec = pathlib.Path("docs/SECURITY.md").read_text()
+    assert sec.count("_(Last checked against v0.5.0.)_") == 1
+    assert "re-checked at T1026" in sec, "the adapters section lost the box"
+    assert "0.4.0 adapters" not in sec, "stale version-sounding phrasing"
+    assert "seven-surface set" in sec, "the count-honest phrasing"
+    src = "\n".join(p.read_text() for p in pathlib.Path("src").rglob("*.py"))
+    for flag in ("BOUNCER_TG_DELETE", "BOUNCER_MX_REDACT",
+                 "BOUNCER_MM_DELETE", "BOUNCER_ZL_DELETE", "BOUNCER_DRY_RUN",
+                 "BOUNCER_KEY_OLD", "BOUNCER_TRUSTED_PROXY",
+                 "BOUNCER_FORWARD_URL", "BOUNCER_FORWARD_ALLOW"):
+        assert flag in sec, f"{flag} missing from the security doc"
+        assert flag in src, f"{flag} is not read by any code"
+    cli = pathlib.Path("src/gatekeeper/cli.py").read_text()
+    for cmd in ("adjudicate", "amnesty"):
+        assert f'add_parser("{cmd}"' in cli, \
+            f"{cmd} promised operator-only but has no subparser"

@@ -1130,7 +1130,7 @@
 - [x] T1023 test: env-var docs coverage still enforced (ops surfaces + examples)
 - [x] T1024 test: golden note for 0.5.0 behavior deltas
 - [x] T1025 pkg: tag-vs-version CI guard passes for v0.5.0
-- [ ] T1026 sec: SECURITY.md updated for the 0.5.0 surface
+- [x] T1026 sec: SECURITY.md updated for the 0.5.0 surface
 - [ ] T1027 docs: BENCHMARKS honest-limits refreshed for this release
 - [ ] T1028 suite: final full green + stats line
 - [ ] T1029 final: push release commit

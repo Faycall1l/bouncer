@@ -114,10 +114,11 @@ further: only those exact hosts receive events (case-insensitive; a
 subdomain of an allowed host is *not* allowed). Timeout is 10s per
 attempt; failures surface as `E_WEBHOOK`, never as a silent drop.
 
-## Platform adapters — nothing destructive by default (T826, refreshed at T980)
+## Platform adapters — nothing destructive by default (T826, refreshed at T980, re-checked at T1026)
 
-The 0.4.0 adapters (Discord, Twitch, Telegram, Matrix, Mattermost, Zulip,
-webhooks) share one posture, so a bot dropped into a busy channel can't
+The adapters (Discord, Twitch, Telegram, Matrix, Mattermost, Zulip,
+webhooks — the seven-surface set, unchanged in count at 0.5.0) share one
+posture, so a bot dropped into a busy channel can't
 act beyond moderation:
 
 * **Flag-only default.** Chat-mutating actions are refused unless the
@@ -158,6 +159,11 @@ act beyond moderation:
   id; approve/reject and strike amnesty exist only on the operator's
   CLI (pinned T973), and every CLI amnesty writes a hash-only audit row
   (T974).
+
+Re-checked at T1026 for the 0.5.0 release: every flag, var and CLI
+surface named above still matches source. The namespacing and appeal
+plumbing that arrived in this release are the bullets describing them —
+0.5.0 added no adapter and changed no posture.
 
 Per-platform setup (which extra, which vars) lives in the
 [adapters README](https://github.com/Faycall1l/bouncer/blob/main/src/gatekeeper/adapters/README.md);
