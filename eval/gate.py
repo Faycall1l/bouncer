@@ -264,7 +264,19 @@ def collect_docs(args, path: str) -> list:
     pairs = [("regex_floor", args.min_rule_acc), ("max_ece", args.max_ece),
              ("max_p95_ms_t4", args.max_p95_ms),
              ("pool_speedup_floor", args.min_speedup),
-             ("import_budget_ms", args.max_import_p50_ms)]  # T766: = T764's 200
+             ("import_budget_ms", args.max_import_p50_ms),  # T764's 200
+             # T1008: the refresh closed the table over every enforced
+             # budget — abstention/per-rule (T675-T676), the five perf
+             # budgets (T766), and the P49 metrics scrape budget (T948)
+             ("min_abstention", args.min_abstention),
+             ("max_abstention", args.max_abstention),
+             ("min_per_rule_acc", args.min_per_rule_acc),
+             ("max_stub_p50_ms", args.max_stub_p50_ms),
+             ("max_stats_p95_ms", args.max_stats_p95_ms),
+             ("max_warm_p50_ms", args.max_warm_p50_ms),
+             ("max_questions_p50_ms", args.max_questions_p50_ms),
+             ("max_batch_row_ms", args.max_batch_row_ms),
+             ("max_metrics_p50_ms", args.max_metrics_p50_ms)]
     for key, enforced in pairs:
         documented = known.get(key)
         _add(checks, f"docs_{key}", f"== default {enforced}", documented,

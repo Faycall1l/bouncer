@@ -1110,7 +1110,7 @@
 - [x] T1005 test: freshness markers all at the pre-release version (no stale v0.4.0 claims) (pre-release hardening of T809 — pyproject's full version string incl. rc/dev suffixes, recursive exclusion-aware shipped set, exactly one exact-line marker per page, any paraphrased "Last checked" claim fails; test_t1005)
 - [x] T1006 docs: adapters README final pass (every P45/P50 change reflected) (SDK column now equals common.py's 24 public names exactly — the P50 helpers were missing; matrix cell gains !bouncer appeal (T864, grounded by the shared-table delegation); discord note cites the shared command_reply table (T952); new Shared plumbing section documents T951-T953 + T958's parity enforcer; test_t1006 pins every claim as a set-equality against sources)
 - [x] T1007 docs: README perf/claims re-checked against the refreshed benches (import row refreshed to T966's re-run 31.9ms — pinned number-for-number against import.json by test_t1007; cost table's latency cell names its T4 hardware; re-check paragraph records both pool numbers (T592 5.4x, in-tree lighter-params 5.0x) and the CI-scaled stats scenario split honestly)
-- [ ] T1008 docs: BENCHMARKS known-numbers refreshed (any P49 numbers landed)
+- [x] T1008 docs: BENCHMARKS known-numbers refreshed (any P49 numbers landed) (the table now covers all 14 enforced gate defaults — the P49 metrics budget T948 (100ms) plus T675-T676 abstention/per-rule and T766's five perf budgets; collect_docs' pairs extended to match so --check-docs drift-checks the whole table; test_t1008 proves the equality live via gate.py --check-docs --json)
 - [ ] T1009 fix: P52 reds — any failure the sweep finds, fixed here
 - [ ] T1010 test: P52 docs sweep (every box ticked, receipts outside TODO.md)
 

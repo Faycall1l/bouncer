@@ -873,3 +873,42 @@ def test_t1007_readme_perf_claims_rechecked_against_reports():  # T1007
     sweep = json.loads(Path("eval/reports/batch-sweep.json").read_text())
     assert any(v <= 0.5 for v in sweep["rows"].values()), \
         "no row near the README's ~0.2ms claim — re-measure, don't round"
+
+
+def test_t1008_known_numbers_covers_every_enforced_budget(tmp_path):  # T1008
+    """T1008: the Known-numbers table refreshed so it covers EVERY
+    enforced gate default, not just the five T684-era ones. The check
+    is live, not textual: a passing synthetic report goes through
+    gate.py --check-docs --json and the docs_* checks it emits must
+    equal the table's 'enforced default' rows as a set — a budget gate.py
+    enforces but the table forgot (like the P49 metrics scrape budget,
+    T948) fails here, and a table row with no matching default fails
+    the other way. Each enforced row must also name its --flag, and
+    the T948 row is pinned by value (100ms) and cite so the P49 number
+    can't quietly vanish from the docs."""
+    rep = tmp_path / "generic.json"
+    rep.write_text(json.dumps({"n": 300, "rule_acc": 0.403}))
+    r = subprocess.run([sys.executable, "eval/gate.py", str(rep),
+                        "--check-docs", "--json"], check=False,
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    checks = json.loads(r.stdout)["checks"]
+    docs = {c["name"][len("docs_"):]: c["ok"] for c in checks
+            if c["name"].startswith("docs_")}
+    assert len(docs) >= 14, f"drift checker shrank to {len(docs)} budgets"
+    assert all(docs.values()), [n for n, ok in docs.items() if not ok]
+
+    section = Path("BENCHMARKS.md").read_text().split("## Known numbers")[1]
+    enforced = set(re.findall(
+        r"^\| ([a-z0-9_]+) \| [0-9.]+ \| enforced default", section,
+        re.MULTILINE))
+    assert enforced == set(docs), \
+        f"table {sorted(enforced)} vs drift-checked {sorted(docs)}"
+    for name in enforced:
+        row = next(ln for ln in section.splitlines()
+                   if ln.startswith(f"| {name} |"))
+        assert "--" in row, f"{name} row names no flag"
+
+    # the P49 numbers landed, pinned by value and cite
+    assert "| max_metrics_p50_ms | 100 |" in section
+    assert "T948" in section and "T1008" in section
