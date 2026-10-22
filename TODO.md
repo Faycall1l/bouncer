@@ -1118,7 +1118,7 @@
 - [x] T1011 pkg: version 0.5.0
 - [x] T1012 suite: full run green + count recorded
 - [x] T1013 lint: ruff check green
-- [ ] T1014 ci: workflow green on the release commit (status recorded)
+- [x] T1014 ci: workflow green on the release commit (status recorded)
 - [ ] T1015 eval: gates run — reports refreshed or explicitly stale
 - [ ] T1016 docs: CHANGELOG 0.5.0 dated
 - [ ] T1017 docs: release notes draft (drafts/release-0.5.0.md)
