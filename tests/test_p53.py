@@ -12,6 +12,7 @@ against source. drafts/ pages stay markerless by design (T809).
 """
 import pathlib
 import re
+import sys
 
 DOCS = sorted(pathlib.Path("docs").glob("*.md"))
 
@@ -195,3 +196,49 @@ def test_t1020_adapter_matrix_runnable_set_matches_stub_sessions():  # T1020
     assert stubbed == runnable, \
         f"no stub session: {sorted(runnable - stubbed)}; " \
         f"stub without a runnable row: {sorted(stubbed - runnable)}"
+
+
+def test_t1021_link_checker_re_run_green_root_and_docs():  # T1021
+    """T1021: the release re-run of the union link checker — root entry
+    files plus every mkdocs-shipped page, drafts excluded (T1004's
+    exact scan, same shared helpers from test_p42 so one _LINK_RE and
+    one slugger serve every checker in this repo). What this box adds
+    beyond T1004 running every suite: the recorded re-run for the
+    release, with the floor raised from 60 to 100 — the corpus grew to
+    107 relative links across 29 files at this re-run (2026-10-22), and
+    a scanner that only caught dozens of them no longer deserves to
+    pass."""
+    sys.path.insert(0, str(pathlib.Path(__file__).parent))
+    from test_p42 import _LINK_RE, _headings, _strip_code
+
+    raw = pathlib.Path("mkdocs.yml").read_text()
+    block = raw.split("exclude_docs: |")[1]
+    patterns = []
+    for line in block.splitlines()[1:]:
+        if line and not line.startswith((" ", "\t")):
+            break
+        if line.strip():
+            patterns.append(line.strip())
+
+    shipped = [p for p in pathlib.Path(".").glob("*.md")]
+    shipped += [p for p in pathlib.Path("docs").rglob("*.md")
+                if not any(str(p.relative_to("docs")).startswith(pat)
+                           for pat in patterns)]
+    problems, checked = [], 0
+    for p in sorted(shipped):
+        text = _strip_code(p.read_text())
+        for _label, href in _LINK_RE.findall(text):
+            if href.startswith(("http://", "https://", "mailto:", "//", "/")):
+                continue
+            checked += 1
+            path, _, anchor = href.partition("#")
+            target = p if not path else pathlib.Path(p.parent / path)
+            if not target.exists():
+                problems.append(f"{p}: dead link {href}")
+                continue
+            if anchor and anchor not in _headings(target.read_text()):
+                problems.append(f"{p}: dead anchor {href}")
+    assert not problems, "\n".join(problems)
+    assert checked >= 100, \
+        f"only {checked} relative links at the T1021 re-run — scanner broken?"
+    assert len(shipped) >= 25, "file set shrank below the re-run's corpus"

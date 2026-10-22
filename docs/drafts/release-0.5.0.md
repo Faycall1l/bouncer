@@ -123,3 +123,7 @@ Tag: `v0.5.0` (cut at T1030, after the final green at T1028).
   env — zero_shot_rule_acc — stays marked **STALE** in the table's
   status column with its reason (T815 row, T1008 refresh), so nothing
   claims freshness it does not have — T1015.
+* docs link checker: **green — 107 relative links across 29 files, 0
+  dead links, 0 dead anchors** (root entry files + mkdocs-shipped
+  pages, drafts excluded; same shared scanner as T821/T1004, floor
+  raised 60 → 100 at the re-run) — T1021.
