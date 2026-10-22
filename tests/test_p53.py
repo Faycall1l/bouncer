@@ -57,3 +57,44 @@ def test_t1011_recheck_spotclaims_match_source():
     versions = pathlib.Path("docs/versions.md").read_text()
     assert "**0.5.0** (`pyproject.toml`, `bouncer --version`)" in versions, \
         "versions.md current-version claim must track the bump"
+
+
+def test_t1018_readme_version_sensitive_claims_match_source():  # T1018
+    """T1018: README's release-sensitive claims re-checked against source.
+
+    What a release changes: the version stamp in the doctor sample (T819
+    sweeps this too — re-asserted here as the box's own receipt), the
+    commands P46-P51 added to the quickstart, and the request limits a
+    server upgrade makes observable. Out of scope, checked and left
+    alone: `K=3-12` and the T4-era benchmark rows are byte-identical at
+    v0.4.0 (`git show v0.4.0:README.md`), so they are model-era claims,
+    not version claims."""
+    readme = pathlib.Path("README.md").read_text()
+    assert "bouncer: 0.5.0" in readme, "doctor sample lost the bump"
+    assert "bouncer: 0.4.0" not in readme, "stale version in doctor sample"
+    serve = pathlib.Path("src/gatekeeper/serve.py").read_text()
+    config = pathlib.Path("src/gatekeeper/config.py").read_text()
+    cli = pathlib.Path("src/gatekeeper/cli.py").read_text()
+    # request limits the README states, each against its constant
+    assert "≤32 messages" in readme and "MAX_BATCH = 32" in serve
+    assert "≤8000 chars" in readme and "len(req.message) > 8000" in serve
+    assert "cap at 20 items" in readme and "MAX_CONTEXT = 20" in serve
+    assert "over 1 MB are 413" in readme and "MAX_BODY = 1_000_000" in serve
+    assert "`Retry-After: 60`" in readme and '"Retry-After": "60"' in serve
+    # gate defaults the README's example decision quotes
+    assert "conf≥0.85" in readme
+    assert "allow_threshold: float = 0.85" in config
+    assert "delete_threshold: float = 0.85" in config
+    # the K upper bound in the qid table is the enforced rule cap
+    assert "K=3-12" in readme and "max_rules: int = 12" in config
+    # P46-P51 quickstart lines — every one a real subparser or flag
+    for shown, source in (
+            ("bouncer adjudicate ROW_ID", 'add_parser("adjudicate"'),
+            ("bouncer amnesty USER", 'add_parser("amnesty"'),
+            ("bouncer config validate", 'add_parser("validate"'),
+            ("bouncer completion bash", 'add_parser("completion"'),
+            ("bouncer check --file", '"--file"'),
+            ("bouncer export --queue", '"--queue"'),
+    ):
+        assert shown in readme, f"README dropped {shown!r}"
+        assert source in cli, f"source lost {source!r} README shows"
