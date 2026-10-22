@@ -766,3 +766,59 @@ def test_t1005_freshness_markers_track_the_pre_release_version():  # T1005
     # the corpus's freshness set is exactly the current version
     assert found == {exact}, f"marker drift: {found}"
     assert len(shipped) >= 20, f"file set collapsed: {len(shipped)}"
+
+
+def test_t1006_adapters_readme_final_pass_matches_sources():  # T1006
+    """T1006: the adapters README's final pass — every P45/P50 change
+    reflected. The receipts are set-equalities against the sources, not
+    prose reviews: the SDK column's shared-surface list must equal
+    common.py's actual public names exactly (the P50 refactor grew it
+    by eight — api, parse_command, command_reply, moderate_action and
+    friends — and the old list silently missed them); matrix's setup
+    cell must name `!bouncer appeal` the way its own help text does
+    (T864 wired the flow, the cell forgot); the discord note must cite
+    the shared command_reply table (T952) with appeal in its set
+    instead of the stale local-T705 story; and the new Shared plumbing
+    section must name the four P50 helpers that exist in common.py.
+    Citation integrity over every T-number the file carries closes it."""
+    text = (Path("src/gatekeeper/adapters/README.md")).read_text()
+    assert "T1006" in text
+
+    # the SDK column == common.py's public surface, exactly
+    row = next(ln for ln in text.splitlines()
+               if ln.startswith("| *shared*"))
+    listed = {n.strip() for n in row.rsplit("|", 2)[1].split(",")}
+    src = Path("src/gatekeeper/adapters/common.py").read_text()
+    actual = set(re.findall(r"^(?:async )?def ([a-z_]+)", src, re.MULTILINE))
+    actual |= set(re.findall(r"^class ([A-Za-z]+)", src, re.MULTILINE))
+    assert listed == actual, \
+        f"README misses {sorted(actual - listed)}, invents {sorted(listed - actual)}"
+
+    # matrix cell names appeal; grounding is the delegation, not a
+    # literal — matrix advertises no help text at all, its command
+    # surface IS the shared table: parse_command drops the "!bouncer"
+    # trigger and command_reply's appeal branch answers
+    mrow = next(ln for ln in text.splitlines() if ln.startswith("| Matrix "))
+    assert "!bouncer appeal" in mrow
+    mb = Path("src/gatekeeper/adapters/matrix_bot.py").read_text()
+    assert 'parse_command(body, "!bouncer")' in mb, "matrix must delegate"
+    assert "command_reply(" in mb, "matrix must use the shared table"
+    assert 'if cmd == "appeal"' in src, "the table must answer it"
+
+    # the discord note: shared table, appeal included, T952 cited
+    note = text.split("* Discord:")[1].split("\n* ")[0]
+    assert "T952" in note and "appeal" in note and "T864" in note
+    assert "T952" in Path("src/gatekeeper/adapters/common.py").read_text()
+
+    # the Shared plumbing section names the helpers that exist
+    sec = text.split("## Shared plumbing")[1].split("\n## ")[0]
+    for cite, name in (("T951", "api()"), ("T952", "command_reply()"),
+                       ("T953", "moderate_action()"), ("T958", "test_t958")):
+        assert cite in sec and name in sec, f"{cite}/{name} missing"
+    for fn in ("api", "parse_command", "command_reply", "moderate_action"):
+        assert re.search(rf"^def {fn}\(", src, re.MULTILINE), fn
+
+    # every T-number this README cites is a real box
+    todo = Path("TODO.md").read_text()
+    for t in set(re.findall(r"\bT\d{3,4}\b", text)):
+        assert t in todo, f"adapters README cites unknown box {t}"

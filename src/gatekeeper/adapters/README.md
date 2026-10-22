@@ -5,14 +5,16 @@
 | Discord | `adapters/discord_bot.py` | `pip install -e .[discord]`, `DISCORD_TOKEN=... python -m gatekeeper.adapters.discord_bot` | Health, RateCap (T854), require_env, load_rules, dry-run, redact, SIGTERM (hard — discord.py owns cleanup) |
 | Twitch | `adapters/twitch_irc.py` | stdlib only. `TWITCH_TOKEN=... TWITCH_NICK=... TWITCH_CHAN=#x python -m gatekeeper.adapters.twitch_irc` (flag-only, never bans) | Health (T855), require_env, load_rules, redact (delegates to shared pass), dry-run (no-op — print-only), SIGTERM (between reconnects) |
 | Telegram | `adapters/telegram_bot.py` | stdlib only. `TELEGRAM_TOKEN=... python -m gatekeeper.adapters.telegram_bot` (long-poll, `/rules` `/stats` `/appeal` `/help`, flag-only default; `BOUNCER_TG_DELETE=1` opts into deleteMessage) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
-| Matrix | `adapters/matrix_bot.py` | stdlib only. `MATRIX_TOKEN=... MATRIX_HOMESERVER=... python -m gatekeeper.adapters.matrix_bot` (sync timeline, `!bouncer rules` `!bouncer stats`, flag-only default; `BOUNCER_MX_REDACT=1` opts into redactions) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
+| Matrix | `adapters/matrix_bot.py` | stdlib only. `MATRIX_TOKEN=... MATRIX_HOMESERVER=... python -m gatekeeper.adapters.matrix_bot` (sync timeline, `!bouncer rules` `!bouncer stats` `!bouncer appeal`, flag-only default; `BOUNCER_MX_REDACT=1` opts into redactions) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Mattermost | `adapters/mattermost.py` | `pip install -e .[mattermost]`. `MATTERMOST_SERVER=... MATTERMOST_TOKEN=... python -m gatekeeper.adapters.mattermost` (websocket `posted` events + `/bouncer` slash webhook, `MATTERMOST_SLASH_TOKEN` compared constant-time; `BOUNCER_MM_DELETE=1` opts into deletePost) | areconnect + `_session` (T852: dropped socket redials with capped jittered backoff), Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Zulip | `adapters/zulip_bot.py` | stdlib only. `ZULIP_EMAIL=... ZULIP_API_KEY=... ZULIP_SITE=... python -m gatekeeper.adapters.zulip_bot` (event-queue poll, stream messages moderated, PMs/mentions are `bouncer` commands; `BOUNCER_ZL_DELETE=1` opts into delete) | run_loop, Health, RateCap, require_env, load_rules, dry-run, redact, SIGTERM |
 | Slack/events | `adapters/webhooks.py` | call `receive_slack_event(body, rules)` from your receiver; pass `secret`+`raw`+`ts`+`signature` to enforce Slack v0 signature verification (fail-closed) | dry-run, redact, verify_signature |
 | Any | `forward_if_interesting()` | set `BOUNCER_FORWARD_URL` to POST delete/flag/escalate events; fires from the HTTP receivers and from every `run_loop` poll loop now too (T866: each adapter passes `message_of` for the event text); breaker-open results fire too and carry `cause`; http(s) only, and `BOUNCER_FORWARD_ALLOW` (comma-separated hosts) pins exact destinations (T785) | dry-run, redact |
-| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, run_loop, http_json, backoff_wait, areconnect, Health, RateCap, redact, as_user_id, detect_lang, adapter_lang, dry_run, install_shutdown, verify_signature, load_config |
+| *shared* | `adapters/common.py` | imported, never run directly | require_env, load_rules, load_config, cfg_get, opt_in, rate_cap_from_env, run_loop, parse_command, command_reply, moderate_action, api, http_json, backoff_wait, areconnect, Health, RateCap, redact, as_user_id, detect_lang, adapter_lang, dry_run, install_shutdown, verify_signature, AdapterError |
 
-The matrix's SDK column is the T703 truth: `common.py` (T691–T709) is the
+The matrix's SDK column is the T703 truth: `common.py` (T691–T953 — the
+T691–T709 first era, then the P50 refactor's shared-plumbing growth,
+below) is the
 whole shared surface — `require_env`/`load_rules`/`load_config` at startup,
 `run_loop` + `Health` + `RateCap` + `install_shutdown` around the loop,
 `redact` + `dry_run` on every outbound line, `as_user_id` (T856+T858) handing
@@ -144,11 +146,42 @@ scheme with a 300s replay window; pass a `secret` to
 `receive_slack_event` to enforce it — fail-closed, a missing piece
 raises `E_SLACK` instead of letting an unsigned event through.
 
+## Shared plumbing (T951–T953, final pass T1006)
+
+The P50 refactor moved every copy-pasted adapter chunk into `common.py` —
+the surface those helpers define, in call order:
+
+* `parse_command()` (T952) — the one first-word dance: strips leading
+  slashes, drops the trigger word, lowercases. Four hand-rolled parsers
+  became this.
+* `command_reply()` (T952) — the one command table: `rules`, `stats`,
+  `appeal` (T864), `help` answer identically on all five surfaces.
+  Returns `None` for anything else so each platform applies its own
+  unknown-command text (those name the platform's own prefixes).
+* `moderate_action()` (T953) — the moderate+action skeleton behind
+  telegram/matrix/mattermost/zulip's `handle_*` paths: platform
+  identity, lang, cap guard, decision, effect, announce. The effect
+  (delete/redact/print) and the announce stay the platform's own.
+* `api()` (T951) — the one platform REST call: URL, verb, headers,
+  params, encoding, timeout in one place, handing off to `http_json`
+  (T851's retry/backoff). The four single-shot copies are gone.
+* `cfg_get()` / `opt_in()` (T709) — dotted config lookup and the
+  env-beats-file boolean rule, shared so `[adapter.x]` semantics can't
+  drift between bots.
+
+Enforced, not aspirational: T958's parity matrix (`test_t958`, 7
+adapters × 11 helpers) fails the suite if any adapter re-implements a
+helper instead of importing it — discord's T705 strict parser is the
+one documented contract split. `test_t1006` holds the SDK column above
+to `common.py`'s actual defs, so this table can't rot into aspiration.
+
 ## Notes (T408)
 
-* Discord: `!bouncer <cmd>` and the `/bouncer` slash command answer from one
-  table (T705): `rules`, `stats`, `help` (unknown subcommands fall back to
-  help). Deletes fall back to ⚠️ on missing perms; empty messages ignored.
+* Discord: `!bouncer <cmd>` and the `/bouncer` slash command answer from
+  the shared `command_reply` table (T952; discord's local T705 table was
+  its first copy): `rules`, `stats`, `appeal` (T864), `help` (unknown
+  subcommands fall back to help). Deletes fall back to ⚠️ on missing
+  perms; empty messages ignored.
 * Twitch: reconnects 3× with backoff, then exits 1. All console output passes
   `redact()` — the T077 helper now delegates to the shared T700 pass.
   Mentions are ordinary PRIVMSG text and get moderated like any message;

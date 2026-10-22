@@ -1108,7 +1108,7 @@
 - [x] T1003 test: mkdocs nav still equals the file set (P52-hardening of T792 — recursive docs/**/*.md minus the parsed exclude_docs patterns vs nav, both directions, floor against vacuous equality; test_t1003 + contract comment in mkdocs.yml)
 - [x] T1004 test: link checker green (root + docs, extends T821) (union scan of root entry files + exclusion-aware recursive docs pages through test_p42's shared helpers — dead links/anchors fail on either surface, floor 60; test_t1004)
 - [x] T1005 test: freshness markers all at the pre-release version (no stale v0.4.0 claims) (pre-release hardening of T809 — pyproject's full version string incl. rc/dev suffixes, recursive exclusion-aware shipped set, exactly one exact-line marker per page, any paraphrased "Last checked" claim fails; test_t1005)
-- [ ] T1006 docs: adapters README final pass (every P45/P50 change reflected)
+- [x] T1006 docs: adapters README final pass (every P45/P50 change reflected) (SDK column now equals common.py's 24 public names exactly — the P50 helpers were missing; matrix cell gains !bouncer appeal (T864, grounded by the shared-table delegation); discord note cites the shared command_reply table (T952); new Shared plumbing section documents T951-T953 + T958's parity enforcer; test_t1006 pins every claim as a set-equality against sources)
 - [ ] T1007 docs: README perf/claims re-checked against the refreshed benches
 - [ ] T1008 docs: BENCHMARKS known-numbers refreshed (any P49 numbers landed)
 - [ ] T1009 fix: P52 reds — any failure the sweep finds, fixed here
