@@ -8,3 +8,5 @@ way T812/T813/T814 built theirs as the 0.4.0 tree went green.
 
 * `pytest -q`: **622 passed, 1 warning** (2026-10-22, weightless env,
   macOS arm64, tree = the T1011 version-bump commit) — T1012.
+* `ruff check .`: **clean** — All checks passed under both ruff 0.17.2
+  (uvx latest) and the pinned 0.11.0 parity run, repo-wide — T1013.
