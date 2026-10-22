@@ -133,3 +133,9 @@ Tag: `v0.5.0` (cut at T1030, after the final green at T1028).
   into a fresh venv, `bouncer --version` printed `bouncer 0.5.0`, and
   an import from outside the repo agreed (T822's superset, version
   derived from pyproject — not a literal) — T1022.
+* `python scripts/check_tag.py v0.5.0`: **ok: v0.5.0 == 0.5.0** (rc 0,
+  run 2026-10-22 on the release tree) — T1025. The guard is wired into
+  publish.yml (T737) and the suite re-runs the same comparison against
+  the live pyproject version on every leg
+  (`test_p39::test_ci_tag_must_match_pyproject`), so the tag cut at
+  T1030 cannot disagree with the version it ships.
