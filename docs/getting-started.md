@@ -1,4 +1,4 @@
-# Getting started (T793)
+# Getting started (T793, refreshed at T998)
 
 _(Last checked against v0.4.0.)_
 
@@ -20,6 +20,9 @@ pip install -e ".[server,demo]"   # from a checkout: core + API server + demo UI
 * No training, no data: bouncer is zero-shot. The first run downloads or loads
   the System One checkpoint you pick (`bouncer models` lists what's
   configured).
+* `bouncer doctor` verifies the install without loading the model or
+  touching the network: interpreter, config, adapter env presence
+  (values are never printed), importable deps, model routing (T727).
 
 ## 2. First decision
 
@@ -46,9 +49,10 @@ makes it machine-usable** in scripts:
 | 4 | configuration error (bad preset, bad rules file, ...) |
 
 Useful flags: `--quiet` prints just the action, `--json` the full decision
-object, `--rules PATH` your own rule pack instead of a preset, and split gates
-`--allow-threshold` / `--delete-threshold` to tune the two bars independently
-(`--threshold` sets both).
+object, `--rules PATH` your own rule pack instead of a preset, `--lang auto`
+to say out loud "detect the language from the message's own script" (T893),
+and split gates `--allow-threshold` / `--delete-threshold` to tune the two
+bars independently (`--threshold` sets both).
 
 !!! note "Why no confidence numbers on this page"
     Confidences are your checkpoint's output, not a constant of the
@@ -88,13 +92,24 @@ The response carries the decision itself (fields, not sample values — see
 Errors are always structured: `{"detail": {"code": "E_*", "message": ...}}`
 (`E_PRESET`, `E_RULES_*`, `E_CONTEXT`, `E_STATE`, ... — meaning and fix for
 every code live in the [error-code index](error-codes.md). Rate limiting
-is 60 requests/min per IP; 429s carry `Retry-After: 60`.
+is 60 requests/min per IP; 429s carry `Retry-After: 60`. Two hardening
+rules worth knowing before you script against the API: bodies over 1 MB
+are refused before auth even runs (413 — the cap is public, the key
+check never spends itself on a body the server would reject anyway,
+T843), and unknown JSON fields are `422`, never silently dropped — a
+typo like `thresold` can't quietly fall back to defaults (T835).
 
 Health checks for load balancers: `GET /health`, `GET /ready` (checks the
-model, not just the process), `GET /version`.
+model, not just the process), `GET /version`. Observability endpoints
+`GET /stats` and `GET /metrics` (Prometheus text) sit behind the same
+key gate as everything else — open on loopback, `X-API-Key` once
+`BOUNCER_KEY` is set (T778).
 
 ## Next
 
+* [Cookbook](cookbook.md) — batch scoring, appeals, metrics scraping,
+  pack signing, and the tuning/multilingual/back-up recipes
+* [API reference](api.md) — the full route table, then the contract
 * [Example scripts](examples/01_in_process.py) — three copy-paste starting
   points in `docs/examples/`: in-process, API client, custom rule pack
 * [Demo script](demo-script.md) — the Gradio UI tour

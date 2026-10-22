@@ -374,3 +374,43 @@ def test_t997_cookbook_recipes_use_only_real_commands():  # T997
     # the signing claims: the commands and the failure code are real
     assert '"sign"' in cli and '"verify"' in cli and '"diff"' in cli
     assert "E_PACK_SIG" in new_recipes
+
+
+def test_t998_getting_started_covers_the_050_surface():  # T998
+    """T998: getting-started catches up with the surface 0.5.0 will
+    ship — what a NEW reader needs from P44-P51, pinned against the
+    sources each claim comes from: `bouncer doctor` is a real
+    subparser (cli.py) and the page describes it weightlessly (no
+    model, no network — that's its T727 contract), GET /metrics is a
+    real route (serve.py) and the page puts /stats and /metrics behind
+    the correct key gate (T778), the P44 hardening claims match
+    api.md's (1 MB refused before auth, T843; unknown fields 422,
+    T835), --lang auto exists (cli.py's T893 handling), the cookbook
+    and api reference are linked from Next, and the freshness marker
+    still stands exactly once (T1005 flips it at release)."""
+    text = Path("docs/getting-started.md").read_text()
+    assert "T998" in text
+    assert text.splitlines()[0] == "# Getting started (T793, refreshed at T998)"
+    assert text.count("_(Last checked against v0.4.0.)_") == 1
+
+    cli = Path("src/gatekeeper/cli.py").read_text()
+    assert 'add_parser("doctor' in cli, "doctor left the CLI"
+    assert "bouncer doctor" in text and "T727" in text
+    assert "network" in text, "doctor's weightless contract belongs here"
+
+    routes = {p for _, p in re.findall(
+        r'@app\.(get|post)\("([^"]+)"\)', Path("src/gatekeeper/serve.py").read_text())}
+    for route in ("/metrics", "/stats", "/ready"):
+        assert route in routes, f"{route} left serve.py"
+    assert "GET /metrics" in text and "Prometheus" in text
+    assert "T778" in text, "the key-gate cite is the point of the line"
+
+    # the P44 hardening claims, same wording api.md commits to
+    api = Path("docs/api.md").read_text()
+    assert "1 MB" in text and "before auth" in text and "T843" in text
+    assert "413" in api and "T843" in api
+    assert "T835" in text and "422" in text
+
+    assert '"auto"' in cli and "--lang auto" in text  # T893's surface
+    for link in ("cookbook.md", "api.md"):
+        assert f"]({link})" in text, f"Next lost its {link} link"
