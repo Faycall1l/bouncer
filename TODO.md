@@ -1097,7 +1097,7 @@
 - [x] T992 ci: docs workflow builds versioned artifacts behind DOCS_DEPLOY (fetch-depth 0, root build first then tag loop via T991 script; T801 flag count 2→3; the gated path runs in CI only where the flag is on, loop mechanics verified locally)
 - [x] T993 docs: versions.md switcher story updated (each entry resolves to its delta) (resolution table names every tag — docs-era ones with their /<tag>/ snapshot, pre-docs ones with the honest no-snapshot gap; all anchors verified against the rendered strict build)
 - [x] T994 docs: api.md full route table refresh (every endpoint from P44-P49) (all 11 serve.py routes as rows with P44-P49-era behavior; set-equality pinned against the decorators by test_t994; /ready and /presets/{name} promoted out of prose)
-- [ ] T995 docs: error-code index refresh (codes added by P44-P50)
+- [x] T995 docs: error-code index refresh (codes added by P44-P50) (audit found one semantic gap: E_MODEL's 503 passthrough surface (T833) undocumented — row now carries both surfaces; P44-P50 row cites pinned by test_t995; heading refreshed)
 - [ ] T996 docs: environment.md refresh sweep (every new var, both directions)
 - [ ] T997 docs: cookbook recipes — batch scoring, appeals, metrics scrape, pack signing
 - [ ] T998 docs: getting-started updated for the 0.5.0 surface

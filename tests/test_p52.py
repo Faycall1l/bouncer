@@ -267,3 +267,36 @@ def test_t994_api_route_table_covers_every_endpoint():  # T994
     assert len(anchors) >= 8, "every covered row must link its details"
     for anchor in anchors:
         assert anchor in slugs, f"#{anchor} resolves to nothing"
+
+
+def test_t995_error_code_index_refresh_covers_p44_p50():  # T995
+    """T995: the error-code index gets its P44-P50 audit. T808's test
+    already pins set-coverage both ways (every emitted code has a row,
+    every row has an emitter) — this pins what coverage can't: the
+    semantics P44-P50 hardening added. E_MODEL gained a second surface
+    (a dead model is a coded 503 on the /v1/systemone passthrough,
+    T833 — never a fabricated answer, never a hung socket) and the row
+    that described only the pre-hardening server would still pass T808.
+    Also pins: each P44-P50-era row carries the T-number of the work
+    that created or changed it (E_VERDICT T865, E_PACK_SIG T873,
+    E_RULES_TEXT's zero-width expansion T879), and the heading carries
+    the refresh cite so the next audit knows this pass happened."""
+    text = Path("docs/error-codes.md").read_text()
+    assert "T995" in text
+    assert text.splitlines()[0].endswith("(T808, refreshed at T995)")
+
+    def row(code: str) -> str:
+        return next(ln for ln in text.splitlines()
+                    if ln.startswith(f"| `{code}` |"))
+
+    # E_MODEL: both surfaces live in one row, the 503 one is T833's
+    emodel = row("E_MODEL")
+    assert "503" in emodel and "T833" in emodel, \
+        "the passthrough's 503 E_MODEL surface is undocumented"
+    assert "/v1/systemone" in emodel
+    assert "escalate" in emodel, "the scored-route surface must stay"
+
+    # the P44-P50 rows each cite the work that made them
+    for code, cite in (("E_VERDICT", "T865"), ("E_PACK_SIG", "T873"),
+                       ("E_RULES_TEXT", "T879")):
+        assert cite in row(code), f"{code} lost its {cite} cite"
