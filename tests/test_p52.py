@@ -719,3 +719,50 @@ def test_t1004_link_checker_covers_every_shipped_page():  # T1004
     # floor: the union links heavily (README into docs/, pages to each
     # other) — a drop to dozens means the scanner lost its grip
     assert checked >= 60, f"only {checked} relative links — scanner broken?"
+
+
+def test_t1005_freshness_markers_track_the_pre_release_version():  # T1005
+    """T1005: every shipped page's freshness marker sits at pyproject's
+    version, so the bump at release (T1011) can't leave a stale v0.4.0
+    claim behind. T809 already pins this for top-level docs/*.md with
+    an X.Y.Z-only regex; this is the pre-release hardening: the parse
+    takes pyproject's FULL version string (rc/dev suffixes included —
+    T809's regex would report '0 markers' on an rc version, so the
+    release machinery needs a form that survives one), the file set is
+    the recursive exclusion-aware shipped set (drafts/ may keep stale
+    markers — it never ships), and any 'Last checked' phrasing that ISN'T
+    the exact marker line fails outright, so a paraphrase can never
+    masquerade as a freshness receipt. Exactly one marker per page, all
+    of them on the current version — the whole claim in two asserts."""
+    version = re.search(r'^version = "([^"]+)"',
+                        Path("pyproject.toml").read_text(), re.MULTILINE).group(1)
+    exact = f"_(Last checked against v{version}.)_"
+
+    raw = Path("mkdocs.yml").read_text()
+    block = raw.split("exclude_docs: |")[1]
+    patterns = []
+    for line in block.splitlines()[1:]:
+        if line and not line.startswith((" ", "\t")):
+            break
+        if line.strip():
+            patterns.append(line.strip())
+
+    shipped = [p for p in Path("docs").rglob("*.md")
+               if not any(str(p.relative_to("docs")).startswith(pat)
+                          for pat in patterns)]
+    problems, found = [], set()
+    for p in sorted(shipped):
+        lines = p.read_text().splitlines()
+        hits = [ln for ln in lines if ln.strip() == exact]
+        if len(hits) != 1:
+            problems.append(f"{p}: {len(hits)} exact markers (want 1)")
+        # any freshness claim that isn't the exact line is stale by
+        # construction — a paraphrase is a claim we can't verify
+        stray = [ln for ln in lines if "Last checked" in ln and ln.strip() != exact]
+        if stray:
+            problems.append(f"{p}: non-marker claim {stray[0].strip()!r}")
+        found |= {ln.strip() for ln in lines if "Last checked" in ln}
+    assert not problems, "\n".join(problems)
+    # the corpus's freshness set is exactly the current version
+    assert found == {exact}, f"marker drift: {found}"
+    assert len(shipped) >= 20, f"file set collapsed: {len(shipped)}"
