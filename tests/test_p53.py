@@ -242,3 +242,44 @@ def test_t1021_link_checker_re_run_green_root_and_docs():  # T1021
     assert checked >= 100, \
         f"only {checked} relative links at the T1021 re-run — scanner broken?"
     assert len(shipped) >= 25, "file set shrank below the re-run's corpus"
+
+
+def test_t1023_env_var_docs_coverage_still_enforced():  # T1023
+    """T1023: re-run of the env-var coverage chain (T609 core files →
+    T807 forward+reverse over src/eval/scripts/examples → T823
+    container/CI ops surfaces) plus the one surface the chain still
+    leaves: the shipped docs pages themselves. A markdown code block is
+    code a reader runs — a BOUNCER_* var any shipped page mentions must
+    resolve to an environment.md row, or the reader hits an
+    undocumented knob with nowhere to look it up. At the release re-run
+    (2026-10-22): 20 vars across 22 shipped pages, every one rowed; the
+    table stands at 45 rows, so this box raises T807's floor of 40 to
+    the release-era inventory — a shrunk table no longer gets to call
+    itself complete. drafts/ stays excluded (never ships, T1003's
+    exclusion-aware set) and environment.md itself is the target, not
+    a source."""
+    env = pathlib.Path("docs/environment.md").read_text()
+    raw = pathlib.Path("mkdocs.yml").read_text()
+    block = raw.split("exclude_docs: |")[1]
+    patterns = []
+    for line in block.splitlines()[1:]:
+        if line and not line.startswith((" ", "\t")):
+            break
+        if line.strip():
+            patterns.append(line.strip())
+    pages = [p for p in pathlib.Path("docs").rglob("*.md")
+             if p.name != "environment.md"
+             and not any(str(p.relative_to("docs")).startswith(pat)
+                         for pat in patterns)]
+    assert len(pages) >= 20, f"only {len(pages)} shipped pages — set moved"
+    missing = {}
+    for p in pages:
+        for v in re.findall(r"BOUNCER_[A-Z_]+", p.read_text()):
+            # BOUNCER_RULES_<ADAPTER>'s prefix form rstrips to the base
+            # name T807's dynamic row spells out
+            v = v.rstrip("_")
+            if v not in env:
+                missing.setdefault(v, set()).add(str(p))
+    assert not missing, f"docs-mentioned vars without a row: {missing}"
+    rows = set(re.findall(r"^\| `([A-Z][A-Z0-9_]*)` \|", env, re.MULTILINE))
+    assert len(rows) >= 45, f"only {len(rows)} table rows — inventory shrank"

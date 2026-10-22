@@ -1127,7 +1127,7 @@
 - [x] T1020 test: adapters matrix table matches runnable stubs (re-run, extends T820)
 - [x] T1021 test: docs link checker green (root + docs)
 - [x] T1022 test: packaging smoke (wheel+sdist stamped 0.5.0, installs, --version)
-- [ ] T1023 test: env-var docs coverage still enforced (ops surfaces + examples)
+- [x] T1023 test: env-var docs coverage still enforced (ops surfaces + examples)
 - [ ] T1024 test: golden note for 0.5.0 behavior deltas
 - [ ] T1025 pkg: tag-vs-version CI guard passes for v0.5.0
 - [ ] T1026 sec: SECURITY.md updated for the 0.5.0 surface
