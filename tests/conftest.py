@@ -60,6 +60,23 @@ SLOW_JUSTIFIED: dict[str, str] = {
         "test is sub-second, but startup warmup is environment-dependent "
         "(T849's note) and lands at 11-17s on CI runners with "
         "huggingface/laya present",
+    "test_t991_versioned_docs_build_script_per_tag_snapshot":
+        "spawns the docs-build CLI four times and builds a throwaway git "
+        "repo (commits, lightweight + annotated tags) — spawn-heavy like "
+        "the entrypoint test: sub-second idle, machine load has measured "
+        "it near 2s",
+    "test_t991_snapshot_build_strict_where_mkdocs_exists":
+        "runs a real strict mkdocs-material build of the whole docs site "
+        "into a per-tag dir — a full site build cannot fit in a second "
+        "(and it skips itself where mkdocs is absent)",
+    "test_wheel_builds_clean":
+        "runs a real uv build and inspects the wheel and sdist contents — "
+        "subprocess packaging work that is sub-second idle, but shared "
+        "machine load has measured it past 1s (T991: 1.15s at load 2-3)",
+    "test_p40_perf_sweep_weightless":
+        "runs the real weightless perf sweep over generated reports — the "
+        "sweep's subject IS wall time, so its own duration tracks machine "
+        "load (T991: 1.43s at load 2-3)",
 }
 
 _overshoot: list[tuple[str, float]] = []

@@ -1093,7 +1093,7 @@
 - [x] T990 test: P51 security sweep (every box ticked, receipts outside TODO.md) (sweep real this time — and it earned its keep on first run: T980's receipt claim (T980 in docs/SECURITY.md) had never landed — zero hits outside TODO.md, the adapters refresh only carried T826/T85x/T86x citations — so the section heading now reads T826 refreshed at T980 in this same commit; it also closed T970's vacuity (the old sweep's receipt blob globbed TODO.md itself, so the outside-TODO half could never fire — both sweeps now exclude it; P50 receipts re-verified real by the same scan), all twenty boxes ticked with every number literally in the work product; receipt: test_t990_p51_sweep_every_box_ticked_with_receipts in tests/test_p51.py)
 
 ## P52 Docs & versioned site (T991–T1010)
-- [ ] T991 docs: versioned docs build script — per-tag site snapshot
+- [x] T991 docs: versioned docs build script — per-tag site snapshot (scripts/build_docs_version.py; git-archive extraction, strict build to site/<tag>/; refs before v0.4.0 fail with the honest no-docs message)
 - [ ] T992 ci: docs workflow builds versioned artifacts behind DOCS_DEPLOY
 - [ ] T993 docs: versions.md switcher story updated (each entry resolves to its delta)
 - [ ] T994 docs: api.md full route table refresh (every endpoint from P44-P49)
