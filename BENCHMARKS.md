@@ -283,7 +283,7 @@ checks (T656/T657) before burning quota.
 
 ## Honest limits
 
-_(T109, refreshed T407, refreshed again T827 for 0.4.0)_ — kept out of the
+_(T109, refreshed T407, refreshed again T827 for 0.4.0, refreshed again T1027 for 0.5.0)_ — kept out of the
 heading on purpose: the anchor `#honest-limits` is linked from README and
 data/README, and refreshes must not break it.
 
@@ -307,3 +307,16 @@ data/README, and refreshes must not break it.
   Long-history requests are now trimmed to a history token budget
   (`max_context_tokens`, 1000 default, T756): benchmarks with huge
   conversation windows measure the trimmed path, not an unbounded one.
+* 0.5.0 refresh (T1027): the single-machine caveat above still holds —
+  every gate added since 0.4.0 is a budget over a new surface, not a
+  value: `i18n` (T908) gates that non-latin input reaches the right
+  checkpoint, `metrics` (T948) gates the scrape surface at p50 ≤100ms,
+  and the suite wall-time budget (T967) keeps the whole run bounded
+  without pinning any test to one machine. Two 0.5.0 serve changes
+  shape what a benchmark measures: batches share one deadline (T837 —
+  a slow tail escalates instead of getting its own 60s) and omitted
+  `lang` autofills from the message's script (T892 — non-latin bench
+  input measures the routed path). Reports as of this release: i18n +
+  pool re-measured 2026-10-22, metrics 2026-10-20, import 2026-10-21,
+  the other six still 2026-10-19; zero_shot stays **STALE** for the
+  reason above.
