@@ -144,3 +144,41 @@ def test_t991_snapshot_build_strict_where_mkdocs_exists(tmp_path):  # T991
     assert sibling.read_text() == "must survive the sibling build\n", \
         "mkdocs cleaned outside its site-dir"
     assert "HEAD" in r.stdout and "-> " in r.stdout, "no receipt line"
+
+
+def test_t992_docs_workflow_builds_versioned_artifacts_behind_flag():  # T992
+    """T992: the docs workflow builds per-tag site snapshots behind the
+    same DOCS_DEPLOY flag as publishing — pinned at the wiring level,
+    because the flag is a repo variable no test can flip: where it is
+    off nothing versioned is built or uploaded, where it is on the loop
+    runs T991's script (whose mechanics test_p52 pins elsewhere).
+    Pins: the checkout fetches full history (a shallow clone carries no
+    tags, so the loop would silently build nothing), the ROOT build
+    runs before the snapshot loop and the upload after it (mkdocs
+    cleans its site-dir — snapshots written earlier would be wiped from
+    the artifact), the step's gate matches the upload gate byte for
+    byte, and the loop walks git tag filtering pre-docs refs via
+    cat-file instead of letting the script fail on them — skipped tags
+    still say why in the log."""
+    text = Path(".github/workflows/docs.yml").read_text()
+    assert "T992" in text
+    assert "fetch-depth: 0" in text, "shallow clones carry no tags"
+    root_i = text.index("mkdocs build --strict")
+    snap_i = text.index("Build versioned tag snapshots")
+    up_i = text.index("Upload Pages artifact")
+    assert root_i < snap_i < up_i, "order must be root, tags, upload"
+    step = text[snap_i:up_i]  # exactly the snapshot step's own block
+
+    def gate_of(chunk: str) -> str:
+        return next(ln.strip() for ln in chunk.splitlines()
+                    if ln.strip().startswith("if:"))
+
+    # gated exactly like publishing, down to the byte
+    assert gate_of(step) == gate_of(text[up_i:]), \
+        "snapshots must gate exactly like the upload"
+    assert "pull_request" in gate_of(step), "PRs must not build snapshots"
+    assert "for tag in $(git tag)" in step
+    assert 'git cat-file -e "$tag:mkdocs.yml"' in step, "pre-docs filter"
+    assert 'python scripts/build_docs_version.py "$tag" --site-dir site' \
+        in step, "the loop must call T991's script, not mkdocs directly"
+    assert "skip" in step, "filtered tags must say why in the CI log"

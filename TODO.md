@@ -1094,7 +1094,7 @@
 
 ## P52 Docs & versioned site (T991–T1010)
 - [x] T991 docs: versioned docs build script — per-tag site snapshot (scripts/build_docs_version.py; git-archive extraction, strict build to site/<tag>/; refs before v0.4.0 fail with the honest no-docs message)
-- [ ] T992 ci: docs workflow builds versioned artifacts behind DOCS_DEPLOY
+- [x] T992 ci: docs workflow builds versioned artifacts behind DOCS_DEPLOY (fetch-depth 0, root build first then tag loop via T991 script; T801 flag count 2→3; the gated path runs in CI only where the flag is on, loop mechanics verified locally)
 - [ ] T993 docs: versions.md switcher story updated (each entry resolves to its delta)
 - [ ] T994 docs: api.md full route table refresh (every endpoint from P44-P49)
 - [ ] T995 docs: error-code index refresh (codes added by P44-P50)

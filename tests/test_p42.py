@@ -338,10 +338,12 @@ def test_docs_deploy_workflow_behind_flag():  # T801
     assert "mkdocs build --strict" in text
     # ...with mkdocs 2.0 excluded (material depends on 1.x systems)
     assert 'mkdocs>=1.6,<2' in text and "mkdocs-material" in text
-    # THE FLAG: publish steps gated on the DOCS_DEPLOY repo variable —
-    # unset (default) means nothing ever reaches Pages
+    # THE FLAG: the versioned build, the artifact upload, and the deploy
+    # are all gated on the DOCS_DEPLOY repo variable — unset (default)
+    # means no per-version dirs are built and nothing ever reaches Pages
     flag = "vars.DOCS_DEPLOY == 'true'"
-    assert text.count(flag) == 2, "artifact upload and deploy both gated"
+    assert text.count(flag) == 3, \
+        "versioned build, artifact upload, and deploy all gated"
     assert "DOCS_DEPLOY" in text.split("jobs:")[0], \
         "flag must be documented in the workflow header"
     # no secret-based alternate publish path

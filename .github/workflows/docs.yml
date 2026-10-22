@@ -34,13 +34,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # T992: the versioned snapshot loop below walks `git tag` —
+          # a shallow clone carries none, so the loop would silently
+          # build nothing where the flag is on
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       # upper bounds on purpose: mkdocs 2.0 drops the plugin/theming
       # systems material relies on (see material's 2026-02-18 post)
       - run: pip install "mkdocs-material>=9.5,<10" "mkdocs>=1.6,<2"
+      # T992: the ROOT site builds FIRST on purpose — mkdocs cleans its
+      # own site-dir, so tag dirs written before this line would be
+      # wiped from the artifact
       - run: mkdocs build --strict
+      # T992: versioned snapshots — one dir per docs-era tag beside the
+      # root site, behind the same DOCS_DEPLOY flag as publishing (the
+      # versioned site exists only where the site is actually deployed).
+      # Pre-docs tags (v0.1.0–v0.3.0) are filtered out here; used
+      # directly, the script names them honestly instead.
+      - name: Build versioned tag snapshots
+        if: vars.DOCS_DEPLOY == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          for tag in $(git tag); do
+            if git cat-file -e "$tag:mkdocs.yml" 2>/dev/null; then
+              python scripts/build_docs_version.py "$tag" --site-dir site
+            else
+              echo "skip $tag — no mkdocs.yml at that ref (pre-docs era)"
+            fi
+          done
       - name: Upload Pages artifact
         if: vars.DOCS_DEPLOY == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
