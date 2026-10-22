@@ -325,7 +325,11 @@ def test_t978_sigterm_drain_vs_force_race(monkeypatch, tmp_path):  # T978
         _au.log_decision("t978 force-side check", "ok", 0.9, "allow", 1.0)
         raw = (tmp_path / "audit.jsonl").read_text()
         assert len(raw.splitlines()) == 1, "flushed row readable pre-close"
-        assert '"action": "allow"' in raw
+        # T989: parse, never match separators — gradio (a core dep) brings
+        # orjson, so full installs serialize compact via the T194 fastpath
+        # while a --no-deps env stays spaced; both are the same JSON
+        row = json.loads(raw)
+        assert row["action"] == "allow" and row["rule"] == "ok"
     finally:
         if _au._F:
             _au._F.close()
@@ -808,3 +812,54 @@ def test_t988_runbook_has_drain_and_amnesty_procedures():  # T988
     # both sections are in the shipped nav (T792's coverage is nav-driven)
     nav = Path("mkdocs.yml").read_text()
     assert "runbook.md" in nav
+
+
+def test_t989_audit_row_assertion_is_serializer_agnostic():  # T989
+    """T989: the only P51 red, fixed at the assertion — and fixed so the
+    failure class can't recur. CI's force-side row came back compact
+    ({"t":..,"action":"allow"}) while the check demanded the spaced
+    stdlib form; it passed locally only because p13env was built
+    --no-deps without gradio, and gradio — a pyproject CORE dep — is
+    what declares orjson~=3.0, so every full install has the T194
+    fastpath and compact IS the production serialization. Both shapes
+    are the same JSON: json.loads takes either, so the t978 check now
+    parses instead of matching separators. Pins: both separator shapes
+    round-trip to the identical dict, the live _dump output parses
+    under whichever serializer this environment happens to hold, the
+    t978 force-side body really parses and carries no substring match
+    over raw text, the orjson carrier is still declared (gradio in
+    dependencies, `import orjson` in audit.py), and the exact old
+    assert line appears nowhere in the test tree — needle built at
+    runtime so this file cannot self-match."""
+    from gatekeeper import audit as _au
+
+    d = {"t": 1, "msg": "0478e15cb8935fef", "rule": "ok", "conf": 0.9,
+         "action": "allow", "ms": 1.0, "v": "0.4.0"}
+    spaced = json.dumps(d)                          # stdlib fallback
+    compact = json.dumps(d, separators=(",", ":"))  # orjson fastpath shape
+    assert '"conf": 0.9' in spaced
+    assert '"conf":0.9' in compact and '"conf": ' not in compact
+    assert json.loads(spaced) == json.loads(compact) == d
+
+    # the live dump parses under whatever serializer is installed here
+    out = _au._dump(d)
+    assert isinstance(out, str) and json.loads(out) == d
+
+    # the fixed check: t978's force-side body parses, no raw substring
+    body = Path("tests/test_p51.py").read_text().split(
+        "def test_t978_", 1)[1].split("\ndef ", 1)[0]
+    assert "json.loads(raw)" in body, "force-side check must parse"
+    assert "in raw" not in body, "substring match crept back into t978"
+
+    # the orjson carrier is declared, not accidental: gradio rides in
+    # core dependencies (the claim: gradio pins orjson~=3.0)
+    deps = Path("pyproject.toml").read_text().split(
+        "dependencies = [", 1)[1].split("]", 1)[0]
+    assert "gradio>=" in deps
+    assert "import orjson" in Path("src/gatekeeper/audit.py").read_text()
+
+    # regression: the exact old assert line exists nowhere in the tree
+    old_line = "assert " + "'" + '"action": "allow"' + "'" + " in raw"
+    offenders = [str(p) for p in Path("tests").rglob("*.py")
+                 if old_line in p.read_text()]
+    assert not offenders, offenders
