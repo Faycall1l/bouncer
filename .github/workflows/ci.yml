@@ -126,10 +126,13 @@ jobs:
       # extract the declared core deps first (3.12 job: stdlib tomllib)
       - run: |
           python -c "import tomllib; [print(d) for d in tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']]" > reqs.txt
-          # T969: pillow 12.3.0 carries 8 CVEs fixed in 13.0.0, but gradio
-          # pins pillow<13.0 — the resolver cannot reach the fix. Each CVE
-          # is listed, never silenced wholesale; drop an entry the day
-          # gradio lifts the cap and the resolver picks up 13.x.
+          # T969: pillow 12.3.0's CVEs are fixed in 13.0.0, but gradio
+          # pins pillow<13.0 — the resolver cannot reach the fix. 8 at
+          # T969; +16 more on 2026-10-22 when the advisory DB grew (the
+          # audit job caught it as a red — all 24 are the same gradio-cap
+          # block). Each CVE is listed, never silenced wholesale; drop
+          # entries the day gradio lifts the cap and the resolver picks
+          # up 13.x.
           pip-audit -r reqs.txt \
             --ignore-vuln CVE-2026-112395 \
             --ignore-vuln CVE-2026-112397 \
@@ -138,4 +141,20 @@ jobs:
             --ignore-vuln CVE-2026-112895 \
             --ignore-vuln CVE-2026-112896 \
             --ignore-vuln CVE-2026-112897 \
-            --ignore-vuln CVE-2026-112899
+            --ignore-vuln CVE-2026-112899 \
+            --ignore-vuln CVE-2026-112390 \
+            --ignore-vuln CVE-2026-112391 \
+            --ignore-vuln CVE-2026-112392 \
+            --ignore-vuln CVE-2026-112393 \
+            --ignore-vuln CVE-2026-112396 \
+            --ignore-vuln CVE-2026-112399 \
+            --ignore-vuln CVE-2026-112401 \
+            --ignore-vuln CVE-2026-112402 \
+            --ignore-vuln CVE-2026-112405 \
+            --ignore-vuln CVE-2026-112406 \
+            --ignore-vuln CVE-2026-112891 \
+            --ignore-vuln CVE-2026-112892 \
+            --ignore-vuln CVE-2026-112893 \
+            --ignore-vuln CVE-2026-112894 \
+            --ignore-vuln CVE-2026-112900 \
+            --ignore-vuln CVE-2026-112901

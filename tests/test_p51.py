@@ -489,9 +489,10 @@ def test_t984_pip_audit_over_extracted_deps():  # T984
     `project.dependencies` from pyproject (replayed in-process — the
     extraction is that exact expression, nothing narrowed), so
     "pip-audit clean" always means the whole declared runtime tree; and
-    the eight pillow CVEs (blocked upstream — gradio pins pillow<13.0)
-    are each ignored BY NAME, counted, so a blanket skip can never
-    quietly take their place."""
+    the pillow CVEs (blocked upstream — gradio pins pillow<13.0; eight
+    at T969, twenty-four after the 2026-10-22 advisory-DB growth the
+    audit red surfaced) are each ignored BY NAME, counted, so a blanket
+    skip can never quietly take their place."""
     try:
         import tomllib
     except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
@@ -510,10 +511,18 @@ def test_t984_pip_audit_over_extracted_deps():  # T984
     ci = Path(".github/workflows/ci.yml").read_text()
     assert "pip-audit -r reqs.txt" in ci
     ignore = re.findall(r"--ignore-vuln (\S+)", ci)
-    assert sorted(ignore) == [
-        "CVE-2026-112395", "CVE-2026-112397", "CVE-2026-112400",
-        "CVE-2026-112404", "CVE-2026-112895", "CVE-2026-112896",
-        "CVE-2026-112897", "CVE-2026-112899"], ignore  # T969, all eight
+    assert sorted(ignore) == [  # T969's eight + 16 more from the
+        # 2026-10-22 advisory-DB growth (the audit red this refresh fixed;
+        # all 24 are pillow 12.3.0 blocked behind gradio's cap)
+        "CVE-2026-112390", "CVE-2026-112391", "CVE-2026-112392",
+        "CVE-2026-112393", "CVE-2026-112395", "CVE-2026-112396",
+        "CVE-2026-112397", "CVE-2026-112399", "CVE-2026-112400",
+        "CVE-2026-112401", "CVE-2026-112402", "CVE-2026-112404",
+        "CVE-2026-112405", "CVE-2026-112406", "CVE-2026-112891",
+        "CVE-2026-112892", "CVE-2026-112893", "CVE-2026-112894",
+        "CVE-2026-112895", "CVE-2026-112896", "CVE-2026-112897",
+        "CVE-2026-112899", "CVE-2026-112900", "CVE-2026-112901",
+    ], ignore  # all twenty-four
 
 
 def test_t985_secret_scan_covers_model_cards_and_provenance(tmp_path):  # T985
