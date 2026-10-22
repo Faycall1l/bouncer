@@ -948,3 +948,57 @@ def test_t1009_p52_fix_box_found_no_reds():  # T1009
     assert skip_n not in own and xfail_n not in own, \
         "a P52 test went dark — the fix box's no-reds claim is void"
     assert "T1009" in own
+
+
+def test_t1010_p52_sweep_every_box_ticked_with_receipts():  # T1010
+    """T1010: the P52 sweep — all twenty boxes (T991–T1010) ticked, and
+    every ticked box's T-number appears literally in some non-TODO
+    file: its receipt. The receipt corpus excludes TODO.md itself (the
+    T990 correction — a root glob that swallows TODO.md lets every
+    number match trivially and the receipt half can never fire). This
+    is the batch's closing gate: a red here means a box was ticked
+    without doing (or citing) its work. Citation integrity closes it —
+    every T-number the batch's own surfaces carry must be a box
+    TODO.md actually knows, so an invented receipt fails both ways."""
+    todo = Path("TODO.md").read_text()
+    assert "## P52 Docs & versioned site (T991–T1010)" in todo
+    section = re.search(r"^## P52 .*?(?=^## |\Z)", todo,
+                        re.MULTILINE | re.DOTALL)
+    assert section, "P52 section missing from TODO.md"
+    pairs = re.findall(r"^- \[( |x)\] (T(?:99\d|10\d\d))",
+                       section.group(0), re.MULTILINE)
+    status = {name: tick for tick, name in pairs}
+    assert set(status) == {f"T{n}" for n in range(991, 1011)}, sorted(status)
+    unticked = sorted(n for n, t in status.items() if t != "x")
+    assert not unticked, f"boxes still open at the sweep: {unticked}"
+
+    # the receipts, TODO.md excluded from the corpus
+    corpus = ""
+    for root in ("src", "tests", "eval", "data", "kaggle", "scripts",
+                 "app", "notebooks", "docs", ".github"):
+        base = Path(root)
+        if base.exists():
+            for p in base.rglob("*"):
+                if p.is_file() and p.suffix in (".md", ".py", ".yml",
+                                                ".yaml", ".sh"):
+                    corpus += p.read_text()
+    for name in ("README.md", "BENCHMARKS.md", "CHANGELOG.md",
+                 "CONTRIBUTING.md", "mkdocs.yml", "verify.sh"):
+        corpus += Path(name).read_text()
+    for b in status:
+        assert b in corpus, f"{b} ticked without a receipt outside TODO.md"
+
+    # citation integrity over every surface this batch touched
+    touched = [Path("tests/test_p52.py"),
+               Path("scripts/build_docs_version.py"),
+               Path(".github/workflows/docs.yml"), Path("mkdocs.yml"),
+               Path("README.md"), Path("BENCHMARKS.md"),
+               Path("src/gatekeeper/adapters/README.md")] + [
+        Path("docs") / n for n in (
+            "versions.md", "api.md", "error-codes.md", "environment.md",
+            "cookbook.md", "getting-started.md", "glossary.md",
+            "ROADMAP.md", "RELEASE-CHECKLIST.md")] + list(
+        Path("docs/examples").glob("*.py"))
+    for f in touched:
+        for t in set(re.findall(r"\bT\d{3,4}\b", f.read_text())):
+            assert t in todo, (str(f), f"cites unknown box {t}")
