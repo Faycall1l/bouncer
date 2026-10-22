@@ -491,9 +491,11 @@ def test_t984_pip_audit_over_extracted_deps():  # T984
     "pip-audit clean" always means the whole declared runtime tree; and
     the pillow CVEs (blocked upstream — gradio pins pillow<13.0; eight
     at T969, twenty-four after the first 2026-10-22 advisory-DB growth,
-    thirty-four after a second growth the same day — both surfaced as
-    audit reds) are each ignored BY NAME, counted, so a blanket
-    skip can never quietly take their place."""
+    thirty-four after a second growth the same day, thirty-five after a
+    GHSA-identified advisory (GHSA-78g4-xqwv-q3g8) landed as an audit
+    red the same evening — every one surfaced as an audit red) are
+    each ignored BY NAME, counted, so a blanket skip can never quietly
+    take their place."""
     try:
         import tomllib
     except ModuleNotFoundError:  # Python < 3.11: the tomli backport (T814)
@@ -529,7 +531,8 @@ def test_t984_pip_audit_over_extracted_deps():  # T984
         "CVE-2026-96639", "CVE-2026-96640", "CVE-2026-96641",
         "CVE-2026-96642", "CVE-2026-96643", "CVE-2026-96644",
         "CVE-2026-96778",
-    ], ignore  # all thirty-four
+        "GHSA-78g4-xqwv-q3g8",
+    ], ignore  # all thirty-five
 
 
 def test_t985_secret_scan_covers_model_cards_and_provenance(tmp_path):  # T985

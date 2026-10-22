@@ -214,18 +214,22 @@ def test_t993_versions_page_resolves_every_entry_to_its_delta():  # T993
     tags = [t for t in subprocess.run(
         ["git", "tag"], check=False, capture_output=True,
         text=True).stdout.split() if t]
-    docs_era, pre_docs = [], []
-    for t in tags:
-        has_docs = subprocess.run(
-            ["git", "cat-file", "-e", f"{t}:mkdocs.yml"],
-            check=False, capture_output=True).returncode == 0
-        (docs_era if has_docs else pre_docs).append(t)
-    assert docs_era and pre_docs, "the split this page tells must exist"
-    for t in docs_era:
-        assert f"`{t}`" in text, f"{t} has no table row"
-        assert f"/{t}/" in text, f"{t} row doesn't name its snapshot dir"
-    for t in pre_docs:
-        assert f"`{t}`" in text, f"{t} missing from the no-snapshot rows"
+    # tag-derived assertions run where tags exist: CI's test job is a
+    # shallow checkout with none (the t991 precedent — it skips there
+    # by design), and the split this page tells is a full-clone truth
+    if tags:
+        docs_era, pre_docs = [], []
+        for t in tags:
+            has_docs = subprocess.run(
+                ["git", "cat-file", "-e", f"{t}:mkdocs.yml"],
+                check=False, capture_output=True).returncode == 0
+            (docs_era if has_docs else pre_docs).append(t)
+        assert docs_era and pre_docs, "the split this page tells must exist"
+        for t in docs_era:
+            assert f"`{t}`" in text, f"{t} has no table row"
+            assert f"/{t}/" in text, f"{t} row doesn't name its snapshot dir"
+        for t in pre_docs:
+            assert f"`{t}`" in text, f"{t} missing from the no-snapshot rows"
 
     # every anchor handed out on the page resolves to a real heading
     # slug (the toc rule, via _slug — material's id generator)
@@ -842,13 +846,18 @@ def test_t1007_readme_perf_claims_rechecked_against_reports():  # T1007
     text = Path("README.md").read_text()
     assert "T1007" in text
 
-    # the import row tracks the report, exactly
-    report = json.loads(Path("eval/reports/import.json").read_text())
     row = next(ln for ln in text.splitlines()
                if "import gatekeeper" in ln and ln.startswith("|"))
-    assert f"**{report['p50_ms']}ms**" in row, \
-        f"README import claim drifted from import.json ({report['p50_ms']}ms)"
     assert "T966" in row and "T762" in row, "the refresh cites both eras"
+    # the number pin needs the bench report: CI's test jobs don't run
+    # the benches and eval/reports/ is a runtime artifact (untracked by
+    # T960's design), so the pin is local/bench-job truth — the row's
+    # attribution, which is what CI can verify, stays unconditional
+    report_path = Path("eval/reports/import.json")
+    if report_path.exists():
+        report = json.loads(report_path.read_text())
+        assert f"**{report['p50_ms']}ms**" in row, \
+            f"README import claim drifted from import.json ({report['p50_ms']}ms)"
 
     # the re-check paragraph: both pool numbers, the stats scenario split
     check = text.split("Re-checked against")[1].split("\n\n")[0]
@@ -869,10 +878,13 @@ def test_t1007_readme_perf_claims_rechecked_against_reports():  # T1007
                 if "self-hosted Laya" in ln)
     assert "T4" in cost, "latency cell must name the hardware it measured on"
 
-    # the batch claim stays inside the in-tree sweep
-    sweep = json.loads(Path("eval/reports/batch-sweep.json").read_text())
-    assert any(v <= 0.5 for v in sweep["rows"].values()), \
-        "no row near the README's ~0.2ms claim — re-measure, don't round"
+    # the batch claim stays inside the in-tree sweep (when it exists —
+    # same runtime-artifact rule as import.json above)
+    sweep_path = Path("eval/reports/batch-sweep.json")
+    if sweep_path.exists():
+        sweep = json.loads(sweep_path.read_text())
+        assert any(v <= 0.5 for v in sweep["rows"].values()), \
+            "no row near the README's ~0.2ms claim — re-measure, don't round"
 
 
 def test_t1008_known_numbers_covers_every_enforced_budget(tmp_path):  # T1008
