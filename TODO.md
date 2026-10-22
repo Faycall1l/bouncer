@@ -1116,7 +1116,7 @@
 
 ## P53 Release 0.5.0 (T1011–T1030)
 - [x] T1011 pkg: version 0.5.0
-- [ ] T1012 suite: full run green + count recorded
+- [x] T1012 suite: full run green + count recorded
 - [ ] T1013 lint: ruff check green
 - [ ] T1014 ci: workflow green on the release commit (status recorded)
 - [ ] T1015 eval: gates run — reports refreshed or explicitly stale
