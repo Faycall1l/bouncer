@@ -16,3 +16,11 @@ way T812/T813/T814 built theirs as the 0.4.0 tree went green.
   secret scan) and docs run `success` on each — T1014. The commit that
   ends up tagged is pushed at T1029; this status is re-recorded as the
   remaining release boxes land.
+* `eval/gate.py --all --check-docs`: **PASS — 10 reports gated, 0
+  failed** (15–19 checks per report, including the docs-drift pass over
+  the BENCHMARKS Known-numbers table). Report dates: i18n + pool
+  2026-10-22, import 2026-10-21, metrics 2026-10-20, the other six
+  2026-10-19. The one number that cannot be re-measured in a weightless
+  env — zero_shot_rule_acc — stays marked **STALE** in the table's
+  status column with its reason (T815 row, T1008 refresh), so nothing
+  claims freshness it does not have — T1015.
