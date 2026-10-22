@@ -414,3 +414,41 @@ def test_t998_getting_started_covers_the_050_surface():  # T998
     assert '"auto"' in cli and "--lang auto" in text  # T893's surface
     for link in ("cookbook.md", "api.md"):
         assert f"]({link})" in text, f"Next lost its {link} link"
+
+
+def test_t999_release_checklist_gains_the_new_gates():  # T999
+    """T999: the release checklist gains the gates P44-P52 added —
+    the metrics report (T948) and i18n routing (T898). Pinned against
+    the sources the commands come from: both runner files exist and
+    are named verbatim, gate.py really dispatches the metrics kind and
+    the all/--ci flags it advertises, and the checklist's regeneration
+    warning names the CI job (T739) whose runner set --all actually
+    gates — a checklist naming a command that doesn't exist is worse
+    than a missing step."""
+    text = Path("docs/RELEASE-CHECKLIST.md").read_text()
+    assert "T999" in text
+    assert text.splitlines()[0] == "# Release checklist (T669, updated at T999)"
+    assert text.count("_(Last checked against v0.4.0.)_") == 1
+
+    # the commands exist, verbatim
+    for runner in ("eval/bench_metrics.py", "eval/eval_i18n.py",
+                   "eval/gate.py"):
+        assert Path(runner).exists(), runner
+        assert runner in text, f"checklist must name {runner}"
+    assert "gate.py --all --ci" in text
+
+    # gate.py really dispatches what the checklist promises it gates
+    gate = Path("eval/gate.py").read_text()
+    assert 'return "metrics"' in gate, "the metrics kind left gate.py"
+    assert '"metrics": collect_metrics' in gate
+    bench = Path("eval/bench_metrics.py").read_text()
+    assert "bench_metrics" in bench and "TestClient" in bench, \
+        "the checklist's in-process claim must stay true"
+
+    # the regeneration warning names T739's runner set
+    assert "T739" in text
+    ci = Path(".github/workflows/ci.yml").read_text()
+    for runner in ("bench_pool.py", "breaker_sim.py", "bench_stub.py",
+                   "bench_warm.py", "bench_stats.py", "bench_import.py",
+                   "bench_questions.py", "bench_batch.py"):
+        assert runner in ci and runner in text, f"{runner} drift"

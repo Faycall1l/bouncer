@@ -1101,7 +1101,7 @@
 - [x] T996 docs: environment.md refresh sweep (every new var, both directions) (sweep re-run live: 30 source vars all have rows, the 4 doc-only names are honest family/client-side rows; T979's P44-P50 note kept, re-verification note + test_t996 pinning the qualifiers)
 - [x] T997 docs: cookbook recipes — batch scoring, appeals, metrics scrape, pack signing (recipes 6-9, every bouncer command pinned against cli.py's subparsers and the batch endpoint against serve.py by test_t997; T794 count pin 5→9)
 - [x] T998 docs: getting-started updated for the 0.5.0 surface (doctor, lang auto, /stats + /metrics behind the key gate, P44 pre-auth 1MB + extra-forbid claims, cookbook/api in Next; every new claim pinned against cli.py/serve.py by test_t998)
-- [ ] T999 docs: RELEASE-CHECKLIST gains the new gates (metrics report, i18n routing)
+- [x] T999 docs: RELEASE-CHECKLIST gains the new gates (metrics report, i18n routing) (one new checkbox: bench_metrics.py + gate.py --all --ci, eval_i18n.py, T739's eight runners named verbatim; commands pinned against the eval sources by test_t999)
 - [ ] T1000 docs: ROADMAP graduation — plugin section honest about what P44-P50 did/didn't build
 - [ ] T1001 docs: glossary additions (appeal, amnesty, namespaced strike, script routing)
 - [ ] T1002 docs: example scripts re-run green after every surface change
