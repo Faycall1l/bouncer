@@ -767,3 +767,44 @@ def test_t987_audit_rotation_unharmed_by_new_fields(tmp_path):  # T987
         _au._PATH, _st._PATH = old_path, old_strike_path
         importlib.reload(_au)  # restore module defaults (budget, fsync)
         _st.reset()
+
+
+def test_t988_runbook_has_drain_and_amnesty_procedures():  # T988
+    """T988: the runbook ships both shutdown procedures — the drain
+    (re-verified against P51: ready check, T978's drain-vs-force race
+    with the SIGKILL escalation and the inference_drained_s absence tell,
+    snapshot, hand-drain of the queue) and the amnesty procedure the box
+    adds: BOTH forgiveness paths spelled out (in-row via adjudicate
+    reject T865, direct via CLI T881), the audit row's who/when/why
+    (T974's hash-only contract), the weight table (delete 2 / flag 1 /
+    escalate 0), the no-strikes exit-1 no-row behavior, and the honest
+    scope note — amnesty never touches the queue, the 0600 strikes table
+    (T783) is what drops. Each claim is a command or field an operator
+    can actually run, not a pointer to a T-number."""
+    rb = Path("docs/runbook.md").read_text()
+    drain = rb.split("## Drain", 1)[1].split("## ", 1)[0]
+    amnesty = rb.split("## Amnesty", 1)[1]
+
+    # drain: the whole procedure, including T978's race paragraph
+    for needle in ("T988", "/ready", "SIGTERM", "SIGKILL",
+                   "inference_drained_s", "T978", "snapshot save",
+                   "review --clear --yes"):
+        assert needle in drain, f"drain lost: {needle}"
+
+    # amnesty: both paths, the audit row, the weight table, the contract
+    for needle in ("T988", "adjudicate", "reject", "bouncer amnesty",
+                   "--weight", "T974", "16-hex", "exit 1",
+                   "delete → 2, flag → 1, escalate → 0", "T783"):
+        assert needle in amnesty, f"amnesty lost: {needle}"
+    # the in-row fields an operator reads back after adjudication
+    assert "`verdict`/`vt`/`after`" in amnesty
+    # never a raw-text promise the code doesn't keep: the CLI parser
+    # really exposes these two shapes (argparse, not prose)
+    cli = Path("src/gatekeeper/cli.py").read_text()
+    assert 'add_parser("amnesty")' in cli and '"--weight"' in cli
+    assert 'add_parser("adjudicate")' in cli and '"verdict"' in cli
+    # amnesty takes the user as a POSITIONAL (the runbook's `amnesty USER`)
+    assert 'am.add_argument("user"' in cli
+    # both sections are in the shipped nav (T792's coverage is nav-driven)
+    nav = Path("mkdocs.yml").read_text()
+    assert "runbook.md" in nav

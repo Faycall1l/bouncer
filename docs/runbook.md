@@ -127,6 +127,11 @@ Notes that keep these honest:
   content (T940).
 
 ## Drain
+
+The procedure below is the one an operator follows at 3am (T988
+re-verified it end-to-end against the P51 surface — ready check, forced
+exit, snapshot, hand-drain of the queue).
+
 1. Pull the instance out of the load balancer. `/ready` reports
    `{"ready": false, ...}` when the router can't load (T518) — check the
    body, not the status code.
@@ -154,3 +159,31 @@ Notes that keep these honest:
    row amnesties that user's strikes by the row's weight (T865); for an
    appeal decided off the queue entirely, `bouncer amnesty USER` clears
    the user's strikes directly (T881, `--weight N` subtracts N).
+
+## Amnesty (strikes forgiveness)
+
+The forgiveness procedure, as it stands after the P51 audit (T988).
+Two paths give strikes back — both operator-only on the CLI (no HTTP
+surface, T973/T974), both audited:
+
+1. **Off a rejected row** — `bouncer adjudicate ROW_ID reject` (T865):
+   the row's user loses exactly the weight that verdict accrued
+   (delete → 2, flag → 1, escalate → 0), recorded on the row itself as
+   `verdict`/`vt`/`after`.
+2. **Direct** — `bouncer amnesty USER [--weight N]` (T881/T974): clears
+   everything by default, subtracts exactly N with `--weight`. A
+   successful run writes one audit row — who as the 16-hex hash (the
+   audit stays hash-only, T029/T883), when = the row's `t`, why =
+   `weight=N strikes A->B`. No strikes → exit 1, nothing written.
+
+```bash
+bouncer review                 # find the row and its user (0600 file)
+bouncer adjudicate <row_id> reject   # in-row amnesty, or:
+bouncer amnesty "discord:42" --weight 2   # direct, audited (T974)
+```
+
+A plain `bouncer amnesty USER` (no `--weight`) clears the whole count —
+use it after an appeal is upheld; use `--weight` to give back only what
+one mistaken verdict added. The strikes table itself is 0600 (T783) and
+amnesty never touches the review queue: rows stay for the record, the
+table's count drops.
