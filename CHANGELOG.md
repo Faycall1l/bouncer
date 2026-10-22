@@ -4,12 +4,88 @@
 
 ## 0.5.0 — 2026-10-22 (T1016)
 
-Draft: T819's release sweep demands this dated heading the moment
-pyproject reads 0.5.0, so the T1011 bump creates it — T1016 owns the
-content review before the tag. Themes since 0.4.0: eval gates wired into
-CI (T739), the pip-audit security job with a pinned ignore list (T984),
-versioned docs snapshots per tag on the site (T991/T1000), and the
-P51–P52 docs-honesty passes (T981–T1010).
+200 boxes (T831–T1010) across server hardening, adapter depth,
+CLI/rules/storage, multilingual routing, the fine-tune pipeline,
+observability, repo-wide refactor & hygiene, a security refresh, and
+the docs site — plus the release boxes T1011–T1016 that carry this
+section (its date comes from the T1011 bump, which T819's release
+sweep forces the moment pyproject reads 0.5.0). Still no model changes:
+same zero-shot behavior, a much harder surface around it.
+
+* Server hardening (T831-T850): stream-bound body cap — chunked POST can
+  no longer bypass MAX_BODY; `/v1/systemone` gets a typed schema (unknown
+  fields 422) routed through the safe predict path (timeout/breaker/
+  retry) with decision+audit parity; `ModReq` `extra=forbid`; batch
+  lang/preset autofill and one overall batch deadline (was 32×60s worst
+  case); uvicorn `--timeout-keep-alive`/`--limit-concurrency`; graceful
+  shutdown drains in-flight predicts and flushes audit; X-Request-ID
+  correlates access and decision logs; thread-safe rate-limit buckets;
+  `/stats` gated behind `BOUNCER_KEY` like `/metrics`.
+* Adapter depth (T851-T870): shared `http_json` retry/backoff honoring
+  Retry-After (jittered ladder, 5s doubling to a 60s cap), mattermost
+  websocket reconnect, Health+RateCap parity for discord/twitch, `user=`
+  at all seven call sites with `platform:user` namespaced strikes
+  (per-user accrual from platform traffic, decision-cache isolation),
+  script-detected `lang=` (ar/zh/ru), in-thread notices on every
+  platform, the APPEAL flow linked to review-queue row ids,
+  `bouncer adjudicate` + strike amnesty, `BOUNCER_FORWARD_URL` firing
+  from platform traffic, per-adapter decision counters, and the README
+  Capabilities matrix (T868).
+* CLI, rules, storage (T871-T890): `bouncer config validate`, `pack
+  diff`, `pack sign`/`pack verify` (E_PACK_SIG), `check --file` batch
+  scoring, `completion bash|zsh` generated from the parser itself,
+  snapshot schema v2 with v1 migration + cache snapshot wiring, pack
+  lint duplicate/invisible-text guards, review and audit rows gain
+  cause/model/preset/rid, `/metrics` gains per-rule/cause/p95/strikes/
+  request-status/auth/429 families, `export` gains the review format.
+* Multilingual routing (T891-T910): checkpoint routing keys off detected
+  script — `/predict` autofills `lang` when omitted (batch parity),
+  `check`/`watch` accept `--lang auto`, `BOUNCER_ADAPTER_LANG`
+  per-platform override (explicit beats detected), lang-tagged pool
+  checkout stats, `eval_i18n.py` measures routing with a gated `i18n`
+  report kind, mixed-language pool bench (thrash measured, not
+  folklore), cookbook recipe.
+* Fine-tune pipeline (T911-T930): `train.py` import-safe on CPU with
+  `--epochs/--lr/--seed`, LoRA targets corrected for bert-style
+  encoders, resume-from-checkpoint, provenance in every log line
+  (dataset hash + git sha + config), generated model card,
+  `validate_data` refusing hash mismatch before training, ship gate on
+  gate.py's FULL thresholds, CPU smoke (`bouncer-ft smoke`) on the
+  nightly — the pipeline is receipted; the run itself is still NOT RUN
+  and the roadmap says so.
+* Observability (T931-T950): the `/metrics` surface completed and
+  pinned — coalesce/breaker, review-queue depth, per-adapter counters,
+  request/auth status classes, cardinality caps (fresh rule ids fold to
+  `_other`; labeled lines stay ≤300 under 5k adversarial ids), a strict
+  Prometheus-exposition parser test (HELP/TYPE complete), worker-scope
+  warning, scrape+alert recipe in the runbook, and a `metrics` report
+  kind gated structurally and at p50 ≤ 100ms (T948).
+* Refactor & repo hygiene (T951-T970): shared adapter plumbing deleted
+  13 copies (`api()`, command table, moderate skeleton), dead code
+  removed or demoted with receipts (no-dead-code sweep walks 178 defs),
+  adapter-parity matrix test, stricter ruff subset with 148 violations
+  fixed and zero `noqa`, help-text sweep over all 63 undocumented
+  flags, suite wall-time budget with written justifications (T967),
+  import budget re-verified at 31.9ms p50 of 200ms, CONTRIBUTING
+  rewritten around the new gates.
+* Security refresh (T971-T990): threat model / SECURITY / runbook
+  updated for this surface — adjudicate and amnesty are operator-only
+  and audited (pinned), preflight OPTIONS side-effect-free, rate-limit
+  proven under parallel threads, SIGTERM drain-vs-force race documented,
+  review queue `0600` enforced through every rewrite path, audit
+  rotation re-stormed at the 5MB budget, docker non-root re-verified
+  (`site/` added to .dockerignore), SBOM covers the new extras,
+  secret scan covers `hf_` tokens, pip-audit job with a per-advisory
+  ignore list pinned with written reasons, serializer-agnostic CI fix.
+* Docs site & versioned docs (T991-T1010): per-tag site snapshots
+  (`scripts/build_docs_version.py` — git-archive extraction + strict
+  build to `site/<tag>/`) wired into the docs workflow behind
+  DOCS_DEPLOY; versions.md resolves every tag to its delta; api route
+  table, error-code index, environment table, cookbook (now 9 recipes),
+  getting-started, release checklist, roadmap, glossary, adapters
+  README, and BENCHMARKS all refreshed for 0.5.0 with test-pinned
+  claims; example scripts re-run green; nav == file set; union link
+  checker; freshness markers track pyproject's version exactly (T1005).
 
 ## 0.4.0 — 2026-10-19 (T811)
 

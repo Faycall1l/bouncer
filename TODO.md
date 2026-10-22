@@ -1120,7 +1120,7 @@
 - [x] T1013 lint: ruff check green
 - [x] T1014 ci: workflow green on the release commit (status recorded)
 - [x] T1015 eval: gates run — reports refreshed or explicitly stale
-- [ ] T1016 docs: CHANGELOG 0.5.0 dated
+- [x] T1016 docs: CHANGELOG 0.5.0 dated (notes written at this box — the heading was dated earlier at T1011 because T819's release sweep demands it the moment pyproject reads 0.5.0; content review, themes and T-ranges corrected here: the T1011 stub's eval-gates-in-CI theme misattributed T739, which shipped in 0.4.0)
 - [ ] T1017 docs: release notes draft (drafts/release-0.5.0.md)
 - [ ] T1018 docs: README version-sensitive claims re-checked
 - [ ] T1019 test: version strings consistent (0.5.0 everywhere, extends T819)
