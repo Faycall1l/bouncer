@@ -10,6 +10,13 @@ from pathlib import Path
 import pytest
 
 
+def _slug(heading: str) -> str:
+    """python-markdown's toc slugify, as material renders heading ids:
+    strip non-word chars, then collapse dash/space runs to one dash."""
+    return re.sub(r"[-\s]+", "-",
+                  re.sub(r"[^\w\s-]", "", heading).strip().lower())
+
+
 def _load_build_script():
     spec = importlib.util.spec_from_file_location(
         "bouncer_build_docs_version", "scripts/build_docs_version.py")
@@ -220,10 +227,43 @@ def test_t993_versions_page_resolves_every_entry_to_its_delta():  # T993
         assert f"`{t}`" in text, f"{t} missing from the no-snapshot rows"
 
     # every anchor handed out on the page resolves to a real heading
-    # slug (python-markdown's toc rule: strip non-word chars, spaces
-    # to dashes — material's toc slugifier matches for these titles)
+    # slug (the toc rule, via _slug — material's id generator)
     headings = re.findall(r"^#{1,6}\s+(.+)$", text, re.MULTILINE)
-    slugs = {re.sub(r"[^\w\s-]", "", h).strip().lower().replace(" ", "-")
-             for h in headings}
+    slugs = {_slug(h) for h in headings}
     for anchor in re.findall(r"\]\(#([^)]+)\)", text):
         assert anchor in slugs, f"anchor #{anchor} resolves to nothing"
+
+
+def test_t994_api_route_table_covers_every_endpoint():  # T994
+    """T994: api.md gains the full route table — every endpoint the
+    server serves in one place, each row carrying its P44–P49-era
+    behavior. Completeness is pinned against the SOURCE, not prose: the
+    test parses serve.py's route decorators (the only place routes are
+    declared) and asserts set equality with the table's rows, so an
+    endpoint without a row — or a row without an endpoint — fails here
+    in both directions. Also pins: /ready and /presets/{name} are IN
+    the table (they used to live only in prose sections), the floor of
+    eleven routes holds, and every details-link anchor in the table
+    resolves to a real heading slug on the page."""
+    text = Path("docs/api.md").read_text()
+    assert "T994" in text
+    src = Path("src/gatekeeper/serve.py").read_text()
+    routes = {f"{m.upper()} {p}" for m, p in re.findall(
+        r'@app\.(get|post)\("([^"]+)"\)', src)}
+    assert len(routes) >= 11, f"serve.py route set changed: {sorted(routes)}"
+    for buried in ("GET /ready", "GET /presets/{name}"):
+        assert buried in routes, f"{buried} left serve.py — update this test"
+    table = {f"{m} {p}" for m, p in re.findall(
+        r"^\| (GET|POST) \| `(/[^`]+)` \|", text, re.MULTILINE)}
+    assert table == routes, (
+        f"rows missing: {sorted(routes - table)}; "
+        f"stale rows: {sorted(table - routes)}")
+
+    # the table's details links resolve to real headings on this page
+    block = text.split("## Route table (T994)")[1].split("\n## ")[0]
+    headings = re.findall(r"^#{1,6}\s+(.+)$", text, re.MULTILINE)
+    slugs = {_slug(h) for h in headings}
+    anchors = re.findall(r"\]\(#([^)]+)\)", block)
+    assert len(anchors) >= 8, "every covered row must link its details"
+    for anchor in anchors:
+        assert anchor in slugs, f"#{anchor} resolves to nothing"

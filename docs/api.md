@@ -2,6 +2,32 @@
 
 _(Last checked against v0.4.0.)_
 
+## Route table (T994)
+
+Every HTTP route the server serves, one row each — the source of truth
+is serve.py's own decorators (pinned by `test_t994` against this
+table), and each row carries what this build does on that path,
+including what P44–P49 hardened, plus where the details live:
+
+| method | path | what it does | details |
+| --- | --- | --- | --- |
+| POST | `/predict` | one message → allow/flag/delete/escalate + reason; `lang` autofills from the message's script when omitted (T892) | [Request limits](#request-limits-t844), [Presets + language](#presets-language-t595-refreshed-t907) |
+| POST | `/predict/batch` | 1–32 messages, order kept; per-row lang autofill (T902); one deadline bounds the whole batch (T837) | [Request limits](#request-limits-t844), [Presets + language](#presets-language-t595-refreshed-t907) |
+| POST | `/v1/systemone` | raw Jev passthrough — untyped contents, same timeout/retry/breaker and server-side caps as `/predict` (T833, T774–T775) | [Request limits](#request-limits-t844) |
+| GET | `/health` | process liveness: loaded/unavailable + uptime | [Reliability fields](#reliability-fields-t596) |
+| GET | `/ready` | load-balancer readiness: model truth + pool block (T518, T895) | [Reliability fields](#reliability-fields-t596) |
+| GET | `/version` | package version string | this row |
+| GET | `/models` | available checkpoint names | this row |
+| GET | `/stats` | decisions + cache + pool + uptime; key-gated like `/metrics` (T842) | [Reliability fields](#reliability-fields-t596) |
+| GET | `/presets` | list built-in packs | [Presets + language](#presets-language-t595-refreshed-t907) |
+| GET | `/presets/{name}` | one pack; an unknown name lists the valid ones | [Presets + language](#presets-language-t595-refreshed-t907) |
+| GET | `/metrics` | Prometheus text, bounded cardinality (T942–T945) | [Metrics export](#metrics-export-t945) |
+
+`/ready` and `/presets/{name}` used to live only in prose sections —
+the table is where every route is now listed. Auth, rate limits and
+the shared headers apply to all eleven rows:
+[Auth + rate limits](#auth-rate-limits-t409).
+
 * `POST /predict` `{message, rules, context?, threshold?, allow_threshold?,
   delete_threshold?, lang?}` → decision + reason. `context` ≤ 20 items, each
   ≤ 8000 chars (else 422 `E_CONTEXT`), message ≤ 8000 chars (else 413).
