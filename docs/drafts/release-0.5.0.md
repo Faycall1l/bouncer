@@ -139,3 +139,12 @@ Tag: `v0.5.0` (cut at T1030, after the final green at T1028).
   the live pyproject version on every leg
   (`test_p39::test_ci_tag_must_match_pyproject`), so the tag cut at
   T1030 cannot disagree with the version it ships.
+* Final release-tree re-run: **629 passed, 1 warning** (2026-10-22,
+  58.75s, macOS arm64) — T1028 (+10 tests over the 619 that closed
+  P52: the ten test_p53 receipts — three T1011 release pins (both
+  freshness-marker flips, the CHANGELOG gate), T1018 README claims vs
+  source, T1019 current-claim scan, T1020 matrix runnable set vs T708
+  stub sessions, T1021 link-checker re-run floor, T1023 docs-page
+  env-var sweep, T1024 golden-note chain, T1026 security-doc pins).
+  The single warning is the standing pre-existing one recorded at
+  T1012, unchanged across the batch.
