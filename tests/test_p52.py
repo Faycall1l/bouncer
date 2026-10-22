@@ -673,3 +673,49 @@ def test_t1003_mkdocs_nav_equals_the_published_file_set():  # T1003
     assert len(files) >= 20, f"file set collapsed: {sorted(files)}"
     assert files <= nav, f"published but unreachable: {sorted(files - nav)}"
     assert nav <= files, f"nav points at nothing: {sorted(nav - files)}"
+
+
+def test_t1004_link_checker_covers_every_shipped_page():  # T1004
+    """T1004: one link check over the union of everything a reader can
+    reach — root entry files (T821's set) AND every page mkdocs ships
+    (T798's set, extended to be exclusion-aware and recursive like
+    T1003: docs/**/*.md minus exclude_docs — drafts/ never ships, so
+    its draft-era links stay out of court). Same helpers as both
+    boxes (imported from test_p42 — one _LINK_RE, one slugger), so
+    dead relative links and dead anchors fail identically on either
+    surface. The T792/T1003 equality tests guarantee nav == file set;
+    this one guarantees every file IN that set actually links clean."""
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_p42 import _LINK_RE, _headings, _strip_code
+
+    raw = Path("mkdocs.yml").read_text()
+    block = raw.split("exclude_docs: |")[1]
+    patterns = []
+    for line in block.splitlines()[1:]:
+        if line and not line.startswith((" ", "\t")):
+            break
+        if line.strip():
+            patterns.append(line.strip())
+
+    shipped = [p for p in Path(".").glob("*.md")]  # root entry files
+    shipped += [p for p in Path("docs").rglob("*.md")
+                if not any(str(p.relative_to("docs")).startswith(pat)
+                           for pat in patterns)]
+    problems, checked = [], 0
+    for p in sorted(shipped):
+        text = _strip_code(p.read_text())
+        for _label, href in _LINK_RE.findall(text):
+            if href.startswith(("http://", "https://", "mailto:", "//", "/")):
+                continue
+            checked += 1
+            path, _, anchor = href.partition("#")
+            target = p if not path else Path(p.parent / path)
+            if not target.exists():
+                problems.append(f"{p}: dead link {href}")
+                continue
+            if anchor and anchor not in _headings(target.read_text()):
+                problems.append(f"{p}: dead anchor {href}")
+    assert not problems, "\n".join(problems)
+    # floor: the union links heavily (README into docs/, pages to each
+    # other) — a drop to dozens means the scanner lost its grip
+    assert checked >= 60, f"only {checked} relative links — scanner broken?"
