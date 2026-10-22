@@ -912,3 +912,39 @@ def test_t1008_known_numbers_covers_every_enforced_budget(tmp_path):  # T1008
     # the P49 numbers landed, pinned by value and cite
     assert "| max_metrics_p50_ms | 100 |" in section
     assert "T948" in section and "T1008" in section
+
+
+def test_t1009_p52_fix_box_found_no_reds():  # T1009
+    """T1009: the P52 fix box found no reds — every gate run across the
+    batch came back green (T991-T1008 landed on verify_rc=0 runs, each
+    with an empty lastfailed), so there was nothing for the fix box to
+    fix. This test is that claim, made falsifiable: every box the fix
+    box's sweep covered (T991-T1008) is ticked AND carries its receipt
+    literally outside TODO.md (the sweep corpus, same roots the P42/P50
+    sweeps scan), and this batch's own test file carries no skip or
+    xfail marker — a red never hides behind a disabled test. If a later
+    box gets unticked, loses its receipt, or someone xfails a P52 test
+    to get green, this fails and the fix box's promise is void."""
+    todo = Path("TODO.md").read_text()
+    boxes = [f"T{n}" for n in range(991, 1009)]
+    for b in boxes:
+        assert f"- [x] {b}" in todo, f"{b} unticked when the fix box ran"
+
+    corpus = ""
+    for root in ("docs", "tests", "src", ".github", "eval"):
+        for p in Path(root).rglob("*"):
+            if p.is_file() and p.suffix in (".md", ".py", ".yml", ".yaml",
+                                            ".sh"):
+                corpus += p.read_text()
+    for name in ("README.md", "BENCHMARKS.md", "CHANGELOG.md",
+                 "CONTRIBUTING.md", "mkdocs.yml", "verify.sh"):
+        corpus += Path(name).read_text()
+    for b in boxes:
+        assert b in corpus, f"{b} has no receipt outside TODO.md"
+
+    own = Path("tests/test_p52.py").read_text()
+    # needles assembled so this test's own source can't trip them
+    skip_n, xfail_n = "@pytest" + ".mark.skip", "mark" + ".xfail"
+    assert skip_n not in own and xfail_n not in own, \
+        "a P52 test went dark — the fix box's no-reds claim is void"
+    assert "T1009" in own

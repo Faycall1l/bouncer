@@ -1111,7 +1111,7 @@
 - [x] T1006 docs: adapters README final pass (every P45/P50 change reflected) (SDK column now equals common.py's 24 public names exactly — the P50 helpers were missing; matrix cell gains !bouncer appeal (T864, grounded by the shared-table delegation); discord note cites the shared command_reply table (T952); new Shared plumbing section documents T951-T953 + T958's parity enforcer; test_t1006 pins every claim as a set-equality against sources)
 - [x] T1007 docs: README perf/claims re-checked against the refreshed benches (import row refreshed to T966's re-run 31.9ms — pinned number-for-number against import.json by test_t1007; cost table's latency cell names its T4 hardware; re-check paragraph records both pool numbers (T592 5.4x, in-tree lighter-params 5.0x) and the CI-scaled stats scenario split honestly)
 - [x] T1008 docs: BENCHMARKS known-numbers refreshed (any P49 numbers landed) (the table now covers all 14 enforced gate defaults — the P49 metrics budget T948 (100ms) plus T675-T676 abstention/per-rule and T766's five perf budgets; collect_docs' pairs extended to match so --check-docs drift-checks the whole table; test_t1008 proves the equality live via gate.py --check-docs --json)
-- [ ] T1009 fix: P52 reds — any failure the sweep finds, fixed here
+- [x] T1009 fix: P52 reds — any failure the sweep finds, fixed here (none found: every gate run T991-T1008 landed on verify_rc=0 with empty lastfailed, 617 tests at T1008; the no-reds claim is falsifiable — test_t1009 re-verifies all 18 prior boxes stay ticked with receipts outside TODO.md and that no P52 test hides a red behind skip/xfail)
 - [ ] T1010 test: P52 docs sweep (every box ticked, receipts outside TODO.md)
 
 ## P53 Release 0.5.0 (T1011–T1030)
