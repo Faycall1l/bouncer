@@ -41,19 +41,37 @@ uses.
 * Today's extension points are already first-class: rule packs
   (`presets.py` / `bouncer pack init`), platform adapters, webhook
   forwarding, per-request `model=` pinning.
+* **What P44–P50 did and didn't build (honest at T1000):** those
+  batches built *no plugin surface* — zero entry points, zero hooks;
+  they hardened the server, adapters, CLI, routing, and observability
+  instead. What they left the future design to consume: signed rule
+  packs (`bouncer pack sign`/`verify`, T873) so third-party packs
+  arrive with integrity, per-adapter passthrough plus
+  `BOUNCER_ADAPTER_LANG` (T897) as the routing seam, P48's fine-tune
+  pipeline for custom checkpoints, and the bounded `/metrics` family
+  set (T945) as an observability contract. Load-bearing for plugins
+  later; none of it is API today.
 * Direction: stable plugin entry points for (a) custom rule providers,
   (b) action executors beyond allow/flag/delete/escalate, (c) explain
   hooks that can carry platform-specific formatting.
 * Nothing here is API. No plugin interface is stable until it ships with
   tests, and nothing in this repo ships without them.
 
-## Versioned docs site
+## Versioned docs site (status: shipped — builds wired, flag gates publishing)
 
-* The deploy workflow already exists behind the `DOCS_DEPLOY` flag
-  (T801): flip it once the Pages source is set to "GitHub Actions".
-* Then: versioned builds per tag, so the version switcher promised on
-  [Version notes](versions.md) actually appears — each entry resolving
-  to its delta section.
+* Per-tag snapshots are built by `scripts/build_docs_version.py` (T991):
+  git-archive extraction of a tag's `mkdocs.yml` + `docs/`, strict build
+  into `site/<tag>/`; tags from before v0.4.0 have no docs and the script
+  says so by name instead of shipping a half-site.
+* The docs workflow runs that tag loop on every main push behind the same
+  `DOCS_DEPLOY` flag as publishing (T992): root site first (mkdocs cleans
+  its own site-dir), then each docs-era tag, pre-docs tags skipped with a
+  reason in the log.
+* [Version notes](versions.md) resolves every version to its delta
+  section (T993) — the switcher story is real, not promised.
+* What remains before readers see it: flip `DOCS_DEPLOY` (T801) once the
+  Pages source is "GitHub Actions". The builds are wired; publishing is
+  still off.
 
 ## How items graduate
 

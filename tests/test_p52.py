@@ -452,3 +452,46 @@ def test_t999_release_checklist_gains_the_new_gates():  # T999
                    "bench_warm.py", "bench_stats.py", "bench_import.py",
                    "bench_questions.py", "bench_batch.py"):
         assert runner in ci and runner in text, f"{runner} drift"
+
+
+def test_t1000_roadmap_sections_honest_about_p44_p50():  # T1000
+    """T1000: two ROADMAP sections catch up with reality. The plugin
+    section keeps its T805 status string (planned — design not started;
+    P44-P50 built NO plugin surface and the page now says so instead of
+    letting the era's hardening read as progress toward plugins) and
+    names the seams the future design inherits — signed packs (T873),
+    per-adapter passthrough + BOUNCER_ADAPTER_LANG (T897), P48's
+    fine-tune pipeline, bounded /metrics families (T945). The versioned
+    docs section graduates from promised to shipped, pinned against the
+    receipts themselves: the script exists and is named, the workflow
+    wires it behind the flag, versions.md resolves entries to deltas —
+    and the honest remainder stands: DOCS_DEPLOY still gates publishing,
+    so nothing reaches readers yet. T805's pins (the exact plugin
+    status heading, DOCS_DEPLOY, the versions.md link) are restated
+    here because this commit edits the very lines they check."""
+    text = Path("docs/ROADMAP.md").read_text()
+    assert "T1000" in text
+
+    plug = text.split("## Plugins")[1].split("\n## ")[0]
+    assert "Plugins (status: planned — design not started)" in text, \
+        "T805's status heading must stand — no dishonest graduation"
+    assert "built *no plugin surface*" in plug, \
+        "the page must say plainly what the era did not build"
+    for seam in ("T873", "BOUNCER_ADAPTER_LANG", "T897", "T945"):
+        assert seam in plug, f"inherited seam {seam} unnamed"
+
+    ver = text.split("## Versioned docs site")[1].split("\n## ")[0]
+    assert "(status: shipped — builds wired, flag gates publishing)" in ver
+    for cite in ("T991", "T992", "T993"):
+        assert cite in ver, f"{cite}'s receipt missing from the section"
+    # the receipts are the graduation evidence, not prose
+    assert Path("scripts/build_docs_version.py").exists()
+    assert "scripts/build_docs_version.py" in ver
+    assert "scripts/build_docs_version.py" in Path(
+        ".github/workflows/docs.yml").read_text(), "T992 wires the script"
+    assert "T993" in Path("docs/versions.md").read_text()
+    assert "DOCS_DEPLOY" in ver and "publishing is" in ver, \
+        "the honest remainder: builds wired, publishing still off"
+
+    # T805's pins this commit edits around
+    assert "DOCS_DEPLOY" in text and "](versions.md)" in text
