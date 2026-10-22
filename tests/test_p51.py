@@ -677,3 +677,93 @@ def test_t986_review_queue_0600_and_bounded_with_new_fields(tmp_path):  # T986
     finally:
         _rv._PATH = orig
         strikes.reset()
+
+
+def test_t987_audit_rotation_unharmed_by_new_fields(tmp_path):  # T987
+    """T987: rotation still holds its original contract now that rows carry
+    the P51 fields — the amnesty row (T974: hash-only who, weight+counts
+    cause) and the context-carrying decision rows (cause/preset/model/rid,
+    T883) rotate exactly like the original T029 shape: the budget is
+    still 5MB, two generations are kept (.1 shifts to .2, never a .3), and
+    a rotation storm driven by REAL cmd_amnesty calls leaves every
+    generation parseable JSONL with the new fields intact — amnesty rows
+    survive the shift without corrupting their neighbors, the newest row
+    always lands in the live file, and the plaintext user id stays out of
+    every generation (hash-only across the whole family). The runbook's
+    backup recipe now names the budget and the rotated pair: copying only
+    the live file misses .1/.2."""
+    import importlib
+
+    from gatekeeper import audit as _au
+    from gatekeeper import strikes as _st
+    from gatekeeper.cli import main
+
+    # the budget never moved: 5MB, two generations (T030)
+    assert _au._MAX_BYTES == 5 * 1024 * 1024, _au._MAX_BYTES
+
+    old_path, old_strike_path = _au._PATH, _st._PATH
+    _st._PATH = str(tmp_path / "strikes.json")
+    _st.reset()
+    _st.add_strike("secret-user")
+    _st.add_strike("secret-user")
+    _st.add_strike("secret-user")
+    try:
+        _au._PATH = str(tmp_path / "audit.jsonl")
+        _au._MAX_BYTES = 400  # tiny budget: rotate many times, for real
+        if _au._F:  # start from the legacy open-per-write contract
+            _au._F.close()
+            _au._F = None
+
+        # a decision row with the full context shape, then amnesty rows —
+        # rotation must trigger exactly on the size check, mid-storm
+        _au.log_decision("seed msg", "ok", 0.9, "allow", 1.0,
+                         cause="c", preset="strict", model="stub", rid="r1")
+        for _ in range(6):
+            if _st.standing("secret-user")["strikes"]:
+                main(["amnesty", "secret-user"])
+            _st.add_strike("secret-user")  # keep the storm fed
+
+        live = Path(_au._PATH)
+        gens = (Path(str(live) + ".2"), Path(str(live) + ".1"), live)
+        for gen in gens:
+            assert gen.exists(), f"missing generation {gen.name}"
+        assert not Path(str(live) + ".3").exists(), "only two generations"
+
+        # every generation parses (oldest first), rows keep the new shape
+        rows = []
+        for gen in gens:
+            text = gen.read_text()
+            assert text.endswith("\n"), f"{gen.name}: partial tail"
+            parsed = [json.loads(line) for line in text.splitlines()]
+            assert parsed, f"{gen.name}: empty generation"
+            rows.extend(parsed)
+        amnesty_rows = [r for r in rows if r["action"] == "amnesty"]
+        assert amnesty_rows, "no amnesty row survived the storm"
+        for r in rows:
+            assert "cause" in r and "v" in r and "rid" in r, sorted(r)
+            assert len(r["msg"]) == 16, "who stays 16-hex in every gen"
+        assert any(r["cause"].startswith("weight=") for r in amnesty_rows)
+        blob = "\n".join(gen.read_text() for gen in gens)
+        assert "secret-user" not in blob, "plaintext user leaked a generation"
+
+        # the seed decision (the context-shaped row) round-trips — written
+        # again after the storm: it lands in the live file, while the
+        # first one proves mid-storm rows shift generations or fall off
+        # cleanly (never corrupt) — .2's tail is always valid JSONL
+        _au.log_decision("fresh ctx", "ok", 0.9, "allow", 1.0,
+                         cause="c", preset="strict", model="stub", rid="r2")
+        rows = [json.loads(line) for line in live.read_text().splitlines()]
+        assert any(r["rid"] == "r2" for r in rows), "fresh row not in live"
+
+        # the runbook's backup recipe names the budget + the rotated pair —
+        # a backup that copies only the live file misses them
+        runbook = Path("docs/runbook.md").read_text()
+        assert "5MB" in runbook and "T987" in runbook
+        assert "bouncer-audit.jsonl.1" in runbook
+    finally:
+        if _au._F:
+            _au._F.close()
+            _au._F = None
+        _au._PATH, _st._PATH = old_path, old_strike_path
+        importlib.reload(_au)  # restore module defaults (budget, fsync)
+        _st.reset()

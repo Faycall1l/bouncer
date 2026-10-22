@@ -23,6 +23,14 @@ cp -a bouncer-audit.jsonl "audit-$(date +%F-%H%M).jsonl"
 bouncer snapshot save snap-$(date +%F).json
 ```
 
+The live file is not the whole trail: at 5MB (T030) it rotates, keeping
+exactly two generations — `bouncer-audit.jsonl.1` and `.2` (T987). A
+backup that copies only the live file misses the older decisions:
+
+```bash
+cp -a bouncer-audit.jsonl* "audit-$(date +%F-%H%M)/"   # live + .1 + .2
+```
+
 Honest scope: counters, strikes and the cache live in process memory (per
 worker), so `snapshot save` sees what *that* process accumulated — with
 the default `--workers 1` (T322) that's everything; with more workers,
