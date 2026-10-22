@@ -7,6 +7,8 @@ Zero-shot: no training, no API server, no network. The printed action is
 whatever your checkpoint decides — the script claims nothing about it.
 Exit codes are the CLI contract: 0 allow, 2 delete/flag, 3 escalate
 (worst over the batch).
+
+Re-run green on the post-P44-P51 surface at T1002.
 """
 import sys
 

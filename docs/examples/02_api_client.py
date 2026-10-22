@@ -8,6 +8,8 @@ runs without a key), structured {"detail": {"code", "message"}} errors
 with a plain-string fallback for legacy 40x details, and the exit-code
 mapping scripts can rely on: 0 allow, 2 delete/flag, 3 escalate, 4 here
 means "the API could not be used at all".
+
+Re-run green on the post-P44-P51 surface at T1002.
 """
 import json
 import os

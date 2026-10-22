@@ -2,6 +2,7 @@
 # Apache-2.0. See LICENSE.
 
 import importlib.util
+import json
 import re
 import subprocess
 import sys
@@ -557,3 +558,72 @@ def test_t1001_glossary_terms_pin_what_they_define():  # T1001
     for line in (appeal, amnesty, namespaced, routing):
         for t in set(re.findall(r"\bT\d{3,4}\b", line)):
             assert t in todo, f"glossary entry cites unknown box {t}"
+
+
+def test_t1002_examples_rerun_green_on_current_surface(tmp_path,
+                                                       monkeypatch):  # T1002
+    """T1002: the three shipped example scripts re-run green against the
+    surface P44-P51 left behind. 01 and 03 run their real mains on the
+    stub-router protocol (the T806 harness) and their current-surface
+    outputs are asserted, not just their exit codes: 03 must print the
+    strikes field the T341-era accrual returns and render explain()
+    without error, 01 must keep rule attribution in its line. 02 can't
+    run without a server, so its wire contract is pinned against the
+    server itself instead: the payload keys it POSTs must be fields
+    ModReq actually declares (extra=forbid since T835 — a renamed
+    field would 422 every copy-paster), and its error-shape and
+    0/2/3/4 exit mapping must match what api.md commits to. Drift in
+    any of those is the silent-staleness this box exists to catch."""
+    repo = Path.cwd()  # pytest runs from the repo root; chdir comes below
+    ex = repo / "docs/examples"
+    sys.path.insert(0, "src")
+    import gatekeeper
+
+    class Stub:
+        def __init__(self):
+            self.a = {"rule": {"choice": "ok", "confidence": 0.95,
+                               "probabilities": {"ok": 0.95}},
+                      "harm": {"score": "safe"}, "hype": {"score": "chill"},
+                      "jailbreak": {"noul": 0.0}, "escalate": {"noul": 0.0}}
+
+        def predict(self, state, questions):
+            return {"answers": self.a}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(gatekeeper, "_router", Stub())
+
+    def load(name: str):
+        spec = importlib.util.spec_from_file_location(
+            f"bouncer_t1002_{name}", ex / f"{name}.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    m1 = load("01_in_process")
+    assert m1.main() in (0, 2, 3)
+    m3 = load("03_custom_rules")
+    assert m3.main() in (0, 2, 3)
+    pack = (tmp_path / "my-pack.json")
+    assert pack.exists(), "03 stopped writing the pack file"
+    assert json.loads(pack.read_text()) == m3.RULES
+    assert hasattr(m3, "GATES") and m3.GATES.delete_threshold is not None
+
+    # 02's wire contract vs the server's own request model
+    api = (ex / "02_api_client.py").read_text()
+    body = re.search(r"json\.dumps\((\{[^)]*\})\)", api).group(1)
+    sent = set(re.findall(r'"(\w+)":', body))
+    src = (repo / "src/gatekeeper/serve.py").read_text()
+    modreq = src.split("class ModReq(BaseModel):")[1].split("\nclass ")[0]
+    fields = set(re.findall(r"^    (\w+):", modreq, re.MULTILINE))
+    assert sent and sent <= fields, f"02 sends fields the server refuses: {sent - fields}"
+    assert '"extra": "forbid"' in modreq, "T835's contract under test"
+    assert '{"detail": {"code", "message"}}' in api
+    # the exit mapping shares getting-started's table (0/2/3 per action,
+    # 4 = the API could not be used at all — the table's "configuration
+    # error" row covers the CLI half of that class)
+    gs = (repo / "docs/getting-started.md").read_text()
+    for row in ("| 0 | allow |", "| 3 | escalate |",
+                "| 4 | configuration error"):
+        assert row in gs, row
+    assert 'EXIT = {"allow": 0, "flag": 2, "delete": 2, "escalate": 3}' in api
+    assert "return 4" in api, "02's could-not-use exit must stay"

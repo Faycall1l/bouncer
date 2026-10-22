@@ -7,6 +7,8 @@ The written my-pack.json is exactly what `bouncer check --rules
 my-pack.json` reads. Pack shape is what the API enforces (T773): 1-12
 slug keys (a-z0-9-, <=24 chars) with texts <= 280 chars — check_pack()
 mirrors those caps so a bad pack never becomes a surprise 422.
+
+Re-run green on the post-P44-P51 surface at T1002.
 """
 import json
 import re
