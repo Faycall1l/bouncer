@@ -283,3 +283,25 @@ def test_t1023_env_var_docs_coverage_still_enforced():  # T1023
     assert not missing, f"docs-mentioned vars without a row: {missing}"
     rows = set(re.findall(r"^\| `([A-Z][A-Z0-9_]*)` \|", env, re.MULTILINE))
     assert len(rows) >= 45, f"only {len(rows)} table rows — inventory shrank"
+
+
+def test_t1024_golden_note_for_050_behavior_deltas():  # T1024
+    """T1024: the golden transcript gains its 0.5.0 behavior note — the
+    per-release section chain (T427 → T625 → T824 → this) never skips a
+    release. The note's claim is the honest one for a no-model-change
+    release: verdicts on this transcript are unchanged, and every delta
+    it names is an edge the transcript doesn't exercise, each pinned to
+    its T-box (script autofill T892, batch deadline T837, systemone
+    safe path T833/T832, door-level refusals T835/T831). The freshness
+    marker stays exactly once — T809/T1005 own the version inside it."""
+    text = pathlib.Path("docs/golden.md").read_text()
+    for section in ("## 0.2.0 behavior notes (T427)",
+                    "## 0.3.0 behavior notes (T625)",
+                    "## 0.4.0 behavior notes (T824)",
+                    "## 0.5.0 behavior notes (T1024)"):
+        assert section in text, f"golden note chain broken at {section!r}"
+    assert text.count("_(Last checked against v0.5.0.)_") == 1
+    note = text.split("## 0.5.0 behavior notes (T1024)")[1]
+    assert "unchanged on 0.5.0" in note, "the verdict-preservation claim"
+    for box in ("T892", "T837", "T833", "T832", "T835", "T831"):
+        assert box in note, f"{box} delta uncited"

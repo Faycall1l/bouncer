@@ -63,4 +63,32 @@ this transcript doesn't exercise:
 New counters around the same verdicts: request coalescing and warm-pool
 hits surface in `/stats`; none of them reach the result body.
 
+## 0.5.0 behavior notes (T1024)
+
+Verdicts on this transcript are unchanged on 0.5.0 — the 200-box
+release (T831–T1010) is server, adapter, ops and docs surface around
+the ladder; no gate row, threshold, question or model moved. The deltas
+that can move verdicts, all for inputs this transcript doesn't
+exercise:
+
+* `/predict` autofills `lang` from the message's own script when
+  nothing else says (T892): ar/zh/ru rows now route like told ones —
+  latin rows (all six above) still carry no language claim, the same
+  path as 0.4.0.
+* A batch shares one deadline (T837): a straggler gets an honest
+  escalate fallback when the request budget runs out, where 0.4.0 gave
+  each message its own 60s (worst case 32×60s for one batch).
+* `/v1/systemone` runs through the safe predict path (T833) —
+  timeout/breaker/retry apply there too, so breaker-open escalates
+  with `cause=breaker-open` instead of hanging — and its request shape
+  is typed: bad shapes are 422 at the door, not forwarded into a 500
+  (T832).
+* Unknown request fields are refused as 422 (T835) and chunked bodies
+  are capped like content-length ones (T831): refused traffic never
+  reaches a verdict at all.
+
+Serve-layer only, no verdict change for valid single-turn traffic:
+namespaced per-platform strikes (T858), key-gated `/stats` (T842),
+snapshot v1→v2 migration (T876).
+
 Terms used here are defined in the [Glossary](glossary.md).
