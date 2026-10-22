@@ -615,7 +615,8 @@ def test_t970_p50_sweep_every_box_ticked_with_receipts():  # T970
              for d in keep for p in Path(d).rglob("*")
              if p.is_file() and not {"__pycache__", "build", "site"} & set(p.parts)
              and p.suffix in {".py", ".md", ".toml", ".yml", ".yaml", ".txt"}]
-    parts += [p.read_text(errors="ignore") for p in Path(".").glob("*.md")]
+    parts += [p.read_text(errors="ignore") for p in Path(".").glob("*.md")
+              if p.name != "TODO.md"]  # T990: receipts live OUTSIDE TODO
     blob = "\n".join(parts)
     missing = sorted(n for n in status if n not in blob)
     assert not missing, f"ticked but no receipt outside TODO.md: {missing}"

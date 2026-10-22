@@ -863,3 +863,45 @@ def test_t989_audit_row_assertion_is_serializer_agnostic():  # T989
     offenders = [str(p) for p in Path("tests").rglob("*.py")
                  if old_line in p.read_text()]
     assert not offenders, offenders
+
+
+def test_t990_p51_sweep_every_box_ticked_with_receipts():  # T990
+    """T990: the P51 sweep — all twenty boxes (T971–T990) are ticked, and
+    every ticked box's T-number appears literally in some non-TODO file:
+    its receipt. This is the batch's closing gate; a red here means a box
+    was ticked without doing (or citing) its work.
+
+    Two corrections over the T970 copy this derives from: the receipt
+    blob now EXCLUDES TODO.md — the old root-glob swallowed it whole, so
+    every number trivially matched and the receipt half of the sweep
+    could never fire — and this sweep immediately earned its keep: it
+    found T980's receipt claim ("T980 in docs/SECURITY.md") had never
+    landed (zero hits outside TODO.md), so the adapters-section refresh
+    was stamped at the heading in the same commit that ships this test.
+    A ticked box counts only when its number is written in the work
+    product."""
+    import re
+
+    todo = Path("TODO.md").read_text()
+    section = re.search(r"^## P51 .*?(?=^## |\Z)", todo,
+                        re.MULTILINE | re.DOTALL)
+    assert section, "P51 section missing from TODO.md"
+    pairs = re.findall(r"^- \[( |x)\] (T9[7-9]\d)", section.group(0),
+                       re.MULTILINE)
+    status = {name: tick for tick, name in pairs}
+    assert set(status) == {f"T{n}" for n in range(971, 991)}, sorted(status)
+    unticked = sorted(n for n, t in status.items() if t != "x")
+    assert not unticked, f"boxes still open at the sweep: {unticked}"
+
+    # the receipts: every cited number shows up outside TODO.md itself
+    keep = ("src", "tests", "eval", "data", "kaggle", "scripts", "app",
+            "notebooks", "docs")
+    parts = [p.read_text(errors="ignore")
+             for d in keep for p in Path(d).rglob("*")
+             if p.is_file() and not {"__pycache__", "build", "site"} & set(p.parts)
+             and p.suffix in {".py", ".md", ".toml", ".yml", ".yaml", ".txt"}]
+    parts += [p.read_text(errors="ignore") for p in Path(".").glob("*.md")
+              if p.name != "TODO.md"]
+    blob = "\n".join(parts)
+    missing = sorted(n for n in status if n not in blob)
+    assert not missing, f"ticked but no receipt outside TODO.md: {missing}"

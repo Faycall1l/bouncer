@@ -114,7 +114,7 @@ further: only those exact hosts receive events (case-insensitive; a
 subdomain of an allowed host is *not* allowed). Timeout is 10s per
 attempt; failures surface as `E_WEBHOOK`, never as a silent drop.
 
-## Platform adapters — nothing destructive by default (T826)
+## Platform adapters — nothing destructive by default (T826, refreshed at T980)
 
 The 0.4.0 adapters (Discord, Twitch, Telegram, Matrix, Mattermost, Zulip,
 webhooks) share one posture, so a bot dropped into a busy channel can't
