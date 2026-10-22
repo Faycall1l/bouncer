@@ -510,3 +510,80 @@ def test_t984_pip_audit_over_extracted_deps():  # T984
         "CVE-2026-112395", "CVE-2026-112397", "CVE-2026-112400",
         "CVE-2026-112404", "CVE-2026-112895", "CVE-2026-112896",
         "CVE-2026-112897", "CVE-2026-112899"], ignore  # T969, all eight
+
+
+def test_t985_secret_scan_covers_model_cards_and_provenance(tmp_path):  # T985
+    """T985: the model-card pipeline's credential is the HuggingFace token
+    (HF_TOKEN feeds the push, train.py T915) — the scanner's pattern table
+    had no hf_ shape, so a token pasted into a model card or provenance
+    file would have sailed through green. The pin: the scanner knows both
+    token shapes (a planted fake trips it in a throwaway repo, reported
+    LABEL-only like T746), and every model-card + provenance-bearing file
+    is git-tracked — the scan's file set is `git ls-files`, so covered
+    means tracked, and the generated card + PROVENANCE record are scanned
+    content-clean against the live pattern table (the card is generated
+    from a real fill_provenance + write_model_card run, not a fixture)."""
+    import importlib.util
+    import json as _json
+    import subprocess
+    import sys
+
+    def _load(name, path):
+        spec = importlib.util.spec_from_file_location(name, path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    scan = _load("secret_scan_t985", "scripts/secret_scan.py")
+    # both HF token shapes are known: plain hf_ user token, fine-grained PAT
+    fake_user = "hf_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7"
+    fake_pat = "hf_pat_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7"
+    assert scan.PATTERNS["huggingface token"].search(fake_user)
+    assert scan.PATTERNS["huggingface token"].search(fake_pat)
+    # ...and the prose in this very repo never trips it (T985 rationale:
+    # "hf_token"/"HF_TOKEN" env-var names are not credentials)
+    assert not scan.PATTERNS["huggingface token"].search(
+        "UserSecretsClient().get_secret(\"HF_TOKEN\")")
+    assert not scan.PATTERNS["huggingface token"].search(
+        "token_env: bool(os.environ.get(\"HF_TOKEN\"))")
+
+    # a planted fake in a throwaway repo trips the full scanner: file:line
+    # + LABEL, the credential itself never printed (T746's contract)
+    repo = tmp_path / "leak"
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    card = repo / "CARD.md"
+    card.write_text(f"# model card\ntoken = {fake_user!r}\n")
+    subprocess.run(["git", "-C", str(repo), "add", "CARD.md"], check=True)
+    r = subprocess.run(
+        [sys.executable, str(Path("scripts/secret_scan.py").resolve())],
+        check=False, capture_output=True, text=True, timeout=60,
+        cwd=str(repo))
+    assert r.returncode == 1, r.stdout
+    assert "huggingface token" in r.stdout and "CARD.md:2" in r.stdout
+    assert fake_user not in r.stdout + r.stderr, "scanner leaked the secret"
+
+    # coverage: the model-card + provenance files are TRACKED (scan = ls-files)
+    tracked = set(subprocess.run(
+        ["git", "ls-files"], check=True, capture_output=True,
+        text=True).stdout.split())
+    for name in ("data/CARD.md", "data/README.md", "README.md",
+                 "kaggle/train/train.py", "data/upload_hf.py",
+                 "scripts/secret_scan.py"):
+        assert name in tracked, f"{name} untracked -> outside the scan"
+
+    # the GENERATED artifacts are content-clean against the live patterns:
+    # real fill_provenance + real write_model_card, then every pattern run
+    # over both outputs (a future field leaking a token fails here)
+    train = _load("bouncer_train_t985", "kaggle/train/train.py")
+    data = tmp_path / "rows.jsonl"
+    data.write_text('{"state": {}, "labels": {}}\n')
+    train.fill_provenance(str(data))
+    prov_line = _json.dumps(train.PROVENANCE)
+    generated = Path(train.write_model_card(str(tmp_path), 0.517, 0.46,
+                                            True)).read_text()
+    for label, pat in scan.PATTERNS.items():
+        assert not pat.search(prov_line), f"provenance leaked: {label}"
+        assert not pat.search(generated), f"model card leaked: {label}"
+    # the provenance record stays credential-free by shape: knobs and hashes
+    # only — no token/env field exists to leak
+    assert not (set(train.PROVENANCE["config"]) & {"token", "hf_token", "api_key"})

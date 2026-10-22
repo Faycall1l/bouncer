@@ -2,7 +2,8 @@
 """T746: secret scan — grep-based, stdlib-only, zero config.
 
 Scans every git-tracked text file for unambiguous credential shapes
-(GitHub/OpenAI/Google/AWS/Slack tokens, private keys, telegram bot tokens).
+(GitHub/OpenAI/Google/AWS/Slack/HuggingFace tokens, private keys,
+telegram bot tokens).
 It never guesses: only patterns that cannot appear in clean code are
 matched, so there is no allowlist to rot and the scan runs identically
 local and in CI. Hits are reported as file:line:LABEL — the credential
@@ -26,6 +27,11 @@ PATTERNS = {
         r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |)PRIVATE KEY-----"),
     # a telegram bot token is exactly 8-10 digits, colon, 35 chars
     "telegram token": re.compile(r"\b\d{8,10}:[A-Za-z0-9_-]{35}\b"),
+    # T985: a HuggingFace token — hf_ (user tokens) or hf_pat_ (fine-grained)
+    # plus 30+ alnum. The model-card pipeline's credential (HF_TOKEN feeds
+    # the push, kaggle/train/train.py T915); "hf_token"/"hf_dry_run_plan"
+    # prose never matches: no 30-char alnum run after the prefix.
+    "huggingface token": re.compile(r"\bhf_(?:pat_)?[A-Za-z0-9]{30,}\b"),
 }
 
 
