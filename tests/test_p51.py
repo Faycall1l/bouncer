@@ -587,3 +587,93 @@ def test_t985_secret_scan_covers_model_cards_and_provenance(tmp_path):  # T985
     # the provenance record stays credential-free by shape: knobs and hashes
     # only — no token/env field exists to leak
     assert not (set(train.PROVENANCE["config"]) & {"token", "hf_token", "api_key"})
+
+
+def test_t986_review_queue_0600_and_bounded_with_new_fields(tmp_path):  # T986
+    """T986: T784's privacy contract re-verified against the row shape the
+    P51 flow actually writes — and the gap the re-verification found is
+    closed here. add() was always 0600, but adjudicate/prune/clear
+    rewrote through plain open(..., "w"), which PRESERVES the loose mode:
+    a hand-restored queue (the runbook's `cp`, which only asks operators
+    to keep 0600) stayed world-readable-with-raw-text through an
+    adjudication until the next append. All four writes now go through
+    the same fchmod, and every rewrite drops a pre-loosened 0644 back to
+    0600. The rows themselves: message still bounded to 500 with the new
+    fields present (id/user/model/preset/ms + verdict/vt after
+    adjudication), the bound survives the in-place rewrite, and a 600-char
+    message with no user (CLI escalation) still lands at 500."""
+    import json as _json
+    import os as _os
+    import stat
+
+    import gatekeeper.review as _rv
+
+    q = tmp_path / "queue.jsonl"
+    orig = _rv._PATH
+    _rv._PATH = str(q)
+    try:
+        def mode():
+            return stat.S_IMODE(_os.stat(q).st_mode)
+
+        def loose():
+            _os.chmod(q, 0o644)
+
+        # a namespaced user row carrying the full P51 field set
+        _rv.add("x" * 600, {"action": "flag", "rule": "no-spam",
+                            "confidence": 0.9, "cause": "why",
+                            "latency_ms": 1.5},
+                user="discord:42", model="stub", preset="strict")
+        row = _rv.list_queue()[-1]
+        assert mode() == 0o600, oct(mode())
+        assert len(row["message"]) == 500, "T170 bound holds with new fields"
+        for key in ("id", "user", "model", "preset", "ms", "cause"):
+            assert key in row, key
+        assert row["user"] == "discord:42" and row["model"] == "stub"
+
+        # the found gap: every rewrite drops a stale 0644 back to 0600
+        loose()
+        _rv.adjudicate(row["id"], "approve")
+        assert mode() == 0o600, f"adjudicate left {oct(mode())}"
+        hit = _rv.list_queue()[-1]
+        assert hit["verdict"] == "approve" and hit["vt"] > 0
+        assert len(hit["message"]) == 500, "bound survives the rewrite"
+
+        loose()
+        _rv.prune(10_000_000)  # nothing old enough — rewrite is a no-op pass
+        assert mode() == 0o600, f"prune left {oct(mode())}"
+
+        # reject side: amnesty-after rides the row, mode still drops back
+        _rv.add("second", {"action": "flag", "rule": "r", "confidence": 0.5},
+                user="discord:42")
+        flag = _rv.list_queue()[-1]
+        from gatekeeper import strikes
+        strikes.add_strike("discord:42", strikes.weight_for_action("flag"))
+        loose()
+        adjudicated = _rv.adjudicate(flag["id"], "reject")
+        assert mode() == 0o600, f"reject-rewrite left {oct(mode())}"
+        assert adjudicated["after"]["strikes"] == 0, adjudicated["after"]
+
+        # clear: truncate is a rewrite — drops the mode too
+        _rv.add("third", {"action": "flag", "rule": "r", "confidence": 0.5})
+        loose()
+        assert _rv.clear_queue() >= 1
+        assert mode() == 0o600, f"clear left {oct(mode())}"
+
+        # a CLI escalation (no user) still obeys the message bound
+        _rv.add("y" * 600, {"action": "escalate", "rule": "ok",
+                            "confidence": 0.0})
+        assert len(_rv.list_queue()[-1]["message"]) == 500
+
+        # the file list in the runbook still promises it out loud
+        runbook = Path("docs/runbook.md").read_text()
+        assert "0600" in runbook and "review queue" in runbook
+        # ...and the source itself cites T986 at the three rewrite paths
+        src = Path("src/gatekeeper/review.py").read_text()
+        assert src.count("T986") >= 3, "every rewrite path cites T986"
+        # rows on disk are real JSONL (the rewrites serialize faithfully)
+        rows = [_json.loads(line) for line in q.read_text().splitlines()
+                if line.strip()]
+        assert rows and all("t" in r and "id" in r for r in rows)
+    finally:
+        _rv._PATH = orig
+        strikes.reset()

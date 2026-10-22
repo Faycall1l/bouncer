@@ -103,7 +103,12 @@ def adjudicate(row_id: str, verdict: str) -> dict | None:  # T865
             break
     if hit is None:
         return None
-    with open(_PATH, "w") as f:
+    # T986: rewrites get the same 0600 treatment as the append — a stale
+    # loose file (a hand-restored backup, the runbook's `cp`) must not
+    # stay readable-with-raw-text through an adjudication.
+    fd = os.open(_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w") as f:
         f.writelines(json.dumps(r) + "\n" for r in rows)
     if verdict == "reject" and hit.get("user"):  # T865: strike amnesty path
         from gatekeeper import strikes
@@ -118,8 +123,9 @@ def clear_queue() -> int:  # T318: truncate; returns rows dropped
         return 0
     with open(_PATH) as f:
         n = sum(1 for _ in f)
-    with open(_PATH, "w"):
-        pass
+    fd = os.open(_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)  # T986: truncate is a rewrite too — mode drops back
+    os.close(fd)
     return n
 
 
@@ -130,6 +136,8 @@ def prune(max_age_s: float) -> int:  # T442: drop rows older than this; returns 
     with open(_PATH) as f:
         rows = [json.loads(line) for line in f if line.strip()]
     kept = [r for r in rows if r.get("t", cutoff) >= cutoff]
-    with open(_PATH, "w") as f:
+    fd = os.open(_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)  # T986: same contract as add/adjudicate/clear
+    with os.fdopen(fd, "w") as f:
         f.writelines(json.dumps(r) + "\n" for r in kept)
     return len(rows) - len(kept)
