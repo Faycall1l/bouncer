@@ -162,3 +162,36 @@ def test_t1019_version_strings_consistent_050_everywhere():  # T1019
     assert "[Coming from 0.4.x](#coming-from-04x)" in vnotes, \
         "the v0.4.0 row must resolve to its delta section"
     assert "T1030" in vnotes, "the v0.5.0 tag-row obligation stays named"
+
+
+def test_t1020_adapter_matrix_runnable_set_matches_stub_sessions():  # T1020
+    """T1020: re-run of T820's matrix check with the set-equality it
+    lacks — the adapters README's runnable column versus T708's
+    full-session stub coverage. T820 proves each documented `python -m`
+    fails closed with E_ADAPTER and each not-runnable row says so; this
+    extends it so the two surfaces cannot drift: every module the matrix
+    documents as runnable is driven through a complete stubbed session,
+    and every full-session test drives a module the matrix documents —
+    a new runnable row without a stub session ships unexercised, and a
+    stub test for an 'imported, never run directly' module contradicts
+    the table. The floor of six is pinned too: dropping an adapter must
+    be a deliberate edit here, not an accident."""
+    readme = pathlib.Path("src/gatekeeper/adapters/README.md").read_text()
+    runnable = set(re.findall(
+        r"python -m gatekeeper\.adapters\.(\w+)", readme))
+    assert runnable == {"discord_bot", "twitch_irc", "telegram_bot",
+                        "matrix_bot", "mattermost", "zulip_bot"}, \
+        f"matrix runnable set moved: {sorted(runnable)}"
+    src = pathlib.Path("tests/test_p37.py").read_text()
+    stubbed = set()
+    for m in re.finditer(r"def (test_\w*full_session\w*)\(.*?(?=\ndef |\Z)",
+                         src, re.DOTALL):
+        # both import forms: `gatekeeper.adapters.x` and
+        # `from gatekeeper.adapters import x` (twitch's session uses the
+        # latter)
+        stubbed.update(re.findall(r"gatekeeper\.adapters\.(\w+)", m.group(0)))
+        stubbed.update(re.findall(r"gatekeeper\.adapters import (\w+)",
+                                  m.group(0)))
+    assert stubbed == runnable, \
+        f"no stub session: {sorted(runnable - stubbed)}; " \
+        f"stub without a runnable row: {sorted(stubbed - runnable)}"
