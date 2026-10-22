@@ -39,7 +39,7 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 
 | approach | per 1k messages | latency |
 |---|---|---|
-| bouncer (self-hosted Laya) | ~$0 marginal | ~33ms, 5 questions, 1 pass |
+| bouncer (self-hosted Laya) | ~$0 marginal | ~33ms T4 (5 questions, 1 pass) |
 | LLM judge (5 calls) | ~$0.50–2.50 | seconds |
 | regex | $0 | instant, blind to phrasing |
 
@@ -263,7 +263,7 @@ Template bootstrap (6 message shapes), 3 violation types in v1, English-first,
 Base is near-blind on unseen rule-sets (Laya's own warning) — the finetune is the
 product. Full numbers: [BENCHMARKS.md](BENCHMARKS.md). Be honest — see `eval/`.
 
-## Performance (measured, dated — T767)
+## Performance (measured, dated — T767; claims re-checked T1007)
 
 Local, stub router: engine overhead only, no model weights in these numbers
 (method per row in [BENCHMARKS.md](BENCHMARKS.md)); Apple-silicon laptop.
@@ -272,12 +272,20 @@ T751's rule, no invented numbers.
 
 | what | number | measured |
 |---|---|---|
-| `import gatekeeper` (cold subprocess) | p50 **30.4ms** | 2026-10-18, T762 |
+| `import gatekeeper` (cold subprocess) | p50 **31.9ms** / p95 45.5ms | 2026-10-22, T966 re-run (was 30.4ms at T762) |
 | `bouncer --version` cold start | p50 **57.4ms** | 2026-10-18, T763 |
 | `GET /stats`, 8 threads × 100 req | p50 **8.2ms** / p95 11.3ms, ~940 rps | 2026-10-18, T760 |
 | `moderate()` end-to-end, 5q vs 3q | **1.4ms** / 1.3ms | 2026-10-18, T755 |
 | batch sweep, per message | ~**0.2ms** | 2026-10-17, T753 |
 | warm pool vs rebuild-every-time | **5.4×** faster | T592 (`bench_pool`) |
+
+Re-checked against `eval/reports/` on 2026-10-22 (T1007): the import row
+tracks T966's re-run (31.9ms — the only claim a refreshed bench moved);
+the batch row matches the in-tree sweep (~0.2ms at chunk16); the pool
+row keeps T592's 5.4× as its dated claim while the in-tree rerun under
+lighter params (10 requests, 2 devices) shows 5.0× — same shape, not a
+contradiction; `stats-load.json` is CI's 2-threads × 10-req scaled run,
+not a re-measurement of T760's 8 × 100.
 
 Regression-gated: import budget < 200ms (T764) and the per-bench latency
 budgets run in CI on every push through `eval/gate.py` (T766).

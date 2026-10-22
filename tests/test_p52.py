@@ -822,3 +822,54 @@ def test_t1006_adapters_readme_final_pass_matches_sources():  # T1006
     todo = Path("TODO.md").read_text()
     for t in set(re.findall(r"\bT\d{3,4}\b", text)):
         assert t in todo, f"adapters README cites unknown box {t}"
+
+
+def test_t1007_readme_perf_claims_rechecked_against_reports():  # T1007
+    """T1007: the README's performance claims re-checked against the
+    in-tree bench reports. The import row is pinned NUMBER-FOR-NUMBER
+    to eval/reports/import.json — the one claim a refreshed bench
+    actually moved (T966's re-run: 31.9ms, replacing T762's 30.4ms) —
+    so the next re-run that changes it fails here until the README is
+    updated with it. The re-check paragraph must name the two honest
+    findings: the pool row keeps T592's dated 5.4× while the in-tree
+    lighter-params rerun says 5.0× (both numbers on the page, neither
+    hidden), and stats-load.json is CI's scaled run, not a re-
+    measurement of T760's 8×100. Every table row keeps a date or a
+    box cite in its measured cell, the cost table's latency cell
+    names its hardware (T4 — an unattributed ~33ms invites the
+    reader to assume their laptop), and the batch claim stays inside
+    the in-tree sweep's numbers."""
+    text = Path("README.md").read_text()
+    assert "T1007" in text
+
+    # the import row tracks the report, exactly
+    report = json.loads(Path("eval/reports/import.json").read_text())
+    row = next(ln for ln in text.splitlines()
+               if "import gatekeeper" in ln and ln.startswith("|"))
+    assert f"**{report['p50_ms']}ms**" in row, \
+        f"README import claim drifted from import.json ({report['p50_ms']}ms)"
+    assert "T966" in row and "T762" in row, "the refresh cites both eras"
+
+    # the re-check paragraph: both pool numbers, the stats scenario split
+    check = text.split("Re-checked against")[1].split("\n\n")[0]
+    assert "T1007" in check or "Re-checked against" in text
+    assert "5.4" in check and "5.0" in check, "both pool numbers must stand"
+    assert "2-threads" in check and "T760" in check, \
+        "the CI-scaled stats rerun must be named as such"
+
+    # every measured cell carries an attribution
+    perf = text.split("## Performance")[1]
+    for ln in perf.splitlines():
+        if ln.startswith(("| `", "| batch", "| warm")):
+            cell = ln.rsplit("|", 2)[1]
+            assert re.search(r"\d{4}-\d{2}-\d{2}|T\d{3,4}", cell), ln
+
+    # the cost table names its hardware
+    cost = next(ln for ln in text.splitlines()
+                if "self-hosted Laya" in ln)
+    assert "T4" in cost, "latency cell must name the hardware it measured on"
+
+    # the batch claim stays inside the in-tree sweep
+    sweep = json.loads(Path("eval/reports/batch-sweep.json").read_text())
+    assert any(v <= 0.5 for v in sweep["rows"].values()), \
+        "no row near the README's ~0.2ms claim — re-measure, don't round"
