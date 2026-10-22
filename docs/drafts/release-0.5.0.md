@@ -127,3 +127,9 @@ Tag: `v0.5.0` (cut at T1030, after the final green at T1028).
   dead links, 0 dead anchors** (root entry files + mkdocs-shipped
   pages, drafts excluded; same shared scanner as T821/T1004, floor
   raised 60 → 100 at the re-run) — T1021.
+* packaging smoke (release-tree re-run, 2026-10-22): **1 passed in
+  2.58s** — one `uv build` produced exactly one wheel + one sdist, both
+  stamped `-0.5.0-`/`-0.5.0.tar.gz`, the wheel installed `--no-deps`
+  into a fresh venv, `bouncer --version` printed `bouncer 0.5.0`, and
+  an import from outside the repo agreed (T822's superset, version
+  derived from pyproject — not a literal) — T1022.
