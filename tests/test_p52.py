@@ -627,3 +627,49 @@ def test_t1002_examples_rerun_green_on_current_surface(tmp_path,
         assert row in gs, row
     assert 'EXIT = {"allow": 0, "flag": 2, "delete": 2, "escalate": 3}' in api
     assert "return 4" in api, "02's could-not-use exit must stay"
+
+
+def test_t1003_mkdocs_nav_equals_the_published_file_set():  # T1003
+    """T1003: the nav still equals the file set — the P52-hardened
+    version of T792. T792 compares nav against docs/*.md at the TOP
+    level; this one defines the file set the way mkdocs itself does:
+    every .md under docs/ recursively, minus whatever mkdocs.yml's
+    exclude_docs actually excludes (drafts/ today). A new published
+    subdirectory page — orphaned from the nav — fails here even though
+    T792's glob can't see it. Both directions hold (no orphan files,
+    no dangling nav entries), the exclusion list is parsed from the
+    config rather than hardcoded, and a floor stops a mass deletion
+    from passing the equality vacuously."""
+    raw = Path("mkdocs.yml").read_text()
+
+    # exclude_docs: block scalar — the patterns mkdocs ships without
+    block = raw.split("exclude_docs: |")[1]
+    patterns = []
+    for line in block.splitlines()[1:]:
+        if line and not line.startswith((" ", "\t")):
+            break
+        if line.strip():
+            patterns.append(line.strip())
+    assert "drafts/" in patterns, patterns
+
+    # nav: every "Title: path.md" (or bare "- path.md") until the next
+    # top-level key
+    nav_block = raw.split("\nnav:")[1]
+    nav = []
+    for line in nav_block.splitlines()[1:]:
+        if line and not line.startswith((" ", "\t")):
+            break
+        m = re.search(r":\s*(\S+\.md)\s*$", line) or \
+            re.search(r"-\s*(\S+\.md)\s*$", line)
+        if m:
+            nav.append(m.group(1))
+    nav = set(nav)
+
+    def excluded(rel: str) -> bool:
+        return any(rel.startswith(p) for p in patterns)
+
+    files = {str(p.relative_to("docs")) for p in Path("docs").rglob("*.md")
+             if not excluded(str(p.relative_to("docs")))}
+    assert len(files) >= 20, f"file set collapsed: {sorted(files)}"
+    assert files <= nav, f"published but unreachable: {sorted(files - nav)}"
+    assert nav <= files, f"nav points at nothing: {sorted(nav - files)}"

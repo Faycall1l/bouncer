@@ -1,6 +1,8 @@
 # Docs site (T791): mkdocs-material skeleton. Nav lists every published
 # doc; T792's test enforces coverage in both directions (nav ⊆ files,
-# files ⊆ nav). drafts/ is excluded — it never ships.
+# files ⊆ nav). drafts/ is excluded — it never ships. T1003 repeats the
+# equality over the RECURSIVE file set minus these exclusions, so a
+# published subdirectory page can't slip in orphaned.
 site_name: bouncer
 site_description: programmable live-chat moderation over a System One router
 site_url: https://faycall1l.github.io/bouncer/

@@ -1105,7 +1105,7 @@
 - [x] T1000 docs: ROADMAP graduation — plugin section honest about what P44-P50 did/didn't build (no plugin surface built, named seams inherited: signed packs, adapter lang, finetune, metrics families; versioned-docs section graduated to shipped-behind-the-flag with its receipts; test_t1000 pins both)
 - [x] T1001 docs: glossary additions (appeal, amnesty, namespaced strike, script routing) (each definition pinned against its source by test_t1001 — appeal linkage T864 uuids, amnesty weights re-read from strikes.weight_for_action T341, _accrue T858, detect_lang ar/ru/zh T857; T1001 note under the freshness marker)
 - [x] T1002 docs: example scripts re-run green after every surface change (live re-run: 01/03 green on the T806 stub protocol with current-surface outputs asserted, 02's payload pinned against ModReq's declared fields under extra=forbid + exit table vs getting-started; re-run stamp in each script's docstring; test_t1002)
-- [ ] T1003 test: mkdocs nav still equals the file set
+- [x] T1003 test: mkdocs nav still equals the file set (P52-hardening of T792 — recursive docs/**/*.md minus the parsed exclude_docs patterns vs nav, both directions, floor against vacuous equality; test_t1003 + contract comment in mkdocs.yml)
 - [ ] T1004 test: link checker green (root + docs, extends T821)
 - [ ] T1005 test: freshness markers all at the pre-release version (no stale v0.4.0 claims)
 - [ ] T1006 docs: adapters README final pass (every P45/P50 change reflected)
