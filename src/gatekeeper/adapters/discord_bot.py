@@ -36,7 +36,7 @@ _HELP_TEXT = ("commands: !bouncer rules | !bouncer stats | !bouncer appeal "
 
 
 def moderate_message(text: str, user_id, rules: dict, *, health,
-                     cap) -> dict:  # T854
+                     cap, msg_key=None) -> dict:  # T854
     """T854: one message in, one decision out — with the two guards every
     other adapter already had.
 
@@ -46,10 +46,22 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
     every message, and a model failure costs one redacted line plus a
     recorded error — never the bot (the per-event guard run_loop and
     areconnect give their traffic).
+
+    `msg_key` (T1034) is the message id: a repeat judgment of the same
+    message accrues no second strike — the decision carries the live
+    standing instead — and callers without a key keep accrue-per-call.
     """
     from gatekeeper import moderate
-    from gatekeeper.adapters.common import adapter_lang, as_user_id
+    from gatekeeper.adapters.common import (
+        adapter_lang,
+        as_user_id,
+        remod_mark,
+        remod_see,
+    )
 
+    user = as_user_id("discord", user_id)
+    mkey = f"discord:{msg_key}" if msg_key else None  # T1034
+    struck = remod_see(mkey, "struck")  # T1034: same message judged before
     if cap is not None and not cap.allow(user_id):  # T701+T854
         from gatekeeper.adapters.common import redact
         print(f"[rate-limited] <{redact(user_id)}> over the "
@@ -58,7 +70,7 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
     else:
         try:
             res = dict(moderate(text, rules,  # T856+T857: strikes + lang hint
-                                user_id=as_user_id("discord", user_id),
+                                user_id=None if struck else user,  # T1034
                                 lang=adapter_lang("discord", text),  # T897: env pin, else detect
                                 adapter="discord"))  # T867: per-adapter counters
             if res["action"] not in ("ignored", "command"):  # T699
@@ -69,6 +81,12 @@ def moderate_message(text: str, user_id, rules: dict, *, health,
                   flush=True)
             health.error(redact(e))
             res = {"action": "ignored", "reason": "moderate-error"}
+        if res.get("action") in ("flag", "delete"):
+            if struck and user:  # T1034: show standing, don't add to it
+                from gatekeeper.strikes import standing
+                res["strikes"] = standing(user)
+            elif user:
+                remod_mark(mkey, "struck")  # T1034: mirrors accrual exactly
     health.maybe_log()
     return res
 
@@ -127,7 +145,11 @@ def run(token: str | None = None, preset: str = "gaming"):
             or command_reply("help", rules))
 
     async def _act(msg, res):  # T1033: one action path — posts and edits share it
-        from gatekeeper.adapters.common import dry_run
+        from gatekeeper.adapters.common import (
+            dry_run,
+            remod_mark,
+            remod_see,
+        )
         if dry_run():  # T697: print the intent, never the act
             if res["action"] in ("delete", "flag", "escalate"):
                 from gatekeeper.adapters.common import redact
@@ -136,11 +158,17 @@ def run(token: str | None = None, preset: str = "gaming"):
                       f"{redact(msg.content[:80])}")  # T700: pass, not leak
             return
         if res["action"] == "delete":
+            mid = getattr(msg, "id", None)  # T1034: id-less fixtures opt out
+            akey = f"discord:{mid}" if mid is not None else None
+            if remod_see(akey, "removed"):  # T1034: no re-remove
+                res["already_removed"] = True
+                return
             try:  # T296: missing perms must not crash the bot loop
                 await msg.delete()
             except Exception:  # noqa: BLE001 — fall back to flagging in place
                 await msg.add_reaction("⚠️")
                 return
+            remod_mark(akey, "removed")  # T1034: only a real removal counts
             await send_removed_notice(msg, res)  # T859: threaded reply
         elif res["action"] in ("flag", "escalate"):
             await msg.add_reaction("⚠️")
@@ -160,7 +188,8 @@ def run(token: str | None = None, preset: str = "gaming"):
                 or command_reply("help", rules))  # T705
             return
         res = moderate_message(msg.content, msg.author.id,  # T854: cap+health
-                               rules, health=health, cap=cap)
+                               rules, health=health, cap=cap,
+                               msg_key=getattr(msg, "id", None))  # T1034
         await _act(msg, res)
 
     @client.event
@@ -179,7 +208,8 @@ def run(token: str | None = None, preset: str = "gaming"):
         if parse_command(after.content) is not None:
             return  # T1031 rule: commands fire on send, not on edit
         res = moderate_message(after.content, after.author.id,  # T854
-                               rules, health=health, cap=cap)
+                               rules, health=health, cap=cap,
+                               msg_key=getattr(after, "id", None))  # T1034
         await _act(after, res)
 
     client.run(token or require_env(

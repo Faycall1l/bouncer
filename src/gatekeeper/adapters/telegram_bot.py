@@ -88,11 +88,15 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
         api_fn(token, "deleteMessage", chat_id=chat_id,
                message_id=msg.get("message_id"))
 
+    mid = msg.get("message_id")
     return moderate_action(
         text, rules, adapter="telegram",
         uid=(msg.get("from") or {}).get("id"),
         enabled=bool(can_delete and token), effect=_delete, out=out,
-        sender=False)  # the group line already shows who sent it
+        sender=False,  # the group line already shows who sent it
+        # T1034: one chat-scoped id = one message across post and edits;
+        # the effect targets the same id, so act_key defaults to it
+        msg_key=f"{chat_id}:{mid}" if mid is not None else None)
 
 
 def run():

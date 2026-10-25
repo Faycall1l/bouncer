@@ -212,8 +212,37 @@ def parse_command(text: str, *drop):  # T952
     return words[0].lower() if words else ""
 
 
+# T1034: re-moderation ledger — one logical message accrues at most one
+# strike and suffers at most one removal, however often its judgments
+# come back around (edits, redeliveries). Bounded and insertion-ordered
+# like the decision cache: a poller runs for weeks, a set per message
+# would grow forever. In-process by design — the STRIKE TABLE is the
+# durable record (strikes.py persists it); this ledger only stops a live
+# repeat from doubling work already done. Opt-in per call: no key, no
+# ledger, and unkeyed callers keep accrue-per-call semantics verbatim.
+_REMOD: dict = {}
+_REMOD_MAX = 2048
+
+
+def remod_see(key, flag) -> bool:  # T1034
+    """True when `flag` already happened for `key`; unkeyed is always False."""
+    return bool(key) and flag in _REMOD.get(key, ())
+
+
+def remod_mark(key, flag) -> None:  # T1034
+    """Record `flag` for `key`; past the cap the oldest key evicts first."""
+    if not key:
+        return
+    flags = _REMOD.setdefault(key, set())
+    if not flags:  # brand-new key — make room before it counts as seen
+        while len(_REMOD) > _REMOD_MAX:
+            _REMOD.pop(next(iter(_REMOD)))
+    flags.add(flag)
+
+
 def moderate_action(text, rules, *, adapter, uid, enabled, effect, out,
-                    sender: bool = True, flag: str = "deleted"):  # T953
+                    sender: bool = True, flag: str = "deleted",
+                    msg_key=None, act_key=None):  # T953
     """The moderate+action skeleton behind telegram/matrix/mattermost/
     zulip's four handle_* copies (T953): platform identity + language
     plumbing, the decision, the delete effect, the announce line.
@@ -229,20 +258,45 @@ def moderate_action(text, rules, *, adapter, uid, enabled, effect, out,
     controls the `<...>` prefix on the announce line — telegram groups
     carry the sender in the chat itself, so it passes False. `flag` keys
     the effect result: "deleted", or "redacted" for matrix.
+
+    T1034: `msg_key` names the LOGICAL message — matrix edits pass the
+    ORIGINAL event id, so however often one message is re-moderated it
+    accrues at most one strike (the decision then carries the live
+    standing instead of a fresh increment). `act_key` defaults to it and
+    names the payload the effect would remove — matrix edits pass the
+    EDIT event, since its text is what must disappear — and a second act
+    on an already-removed key is a no-op (`already_removed`), never a
+    duplicate removal or a platform 404. No keys passed = no ledger at
+    all: unkeyed callers keep accrue-per-call T340/T858 semantics verbatim.
     """
     from gatekeeper import moderate
+    mkey = f"{adapter}:{msg_key}" if msg_key else None
+    akey = f"{adapter}:{(act_key if act_key is not None else msg_key)}" \
+        if (msg_key is not None or act_key is not None) else None
+    user = as_user_id(adapter, uid)
+    struck = remod_see(mkey, "struck")  # T1034: same message judged before
     res = dict(moderate(text, rules,  # T856+T857: strikes + detected lang
-                        user_id=as_user_id(adapter, uid),
+                        user_id=None if struck else user,  # T1034: once
                         lang=adapter_lang(adapter, text),  # T897: env pin, else detect
                         adapter=adapter))  # T867: per-adapter counters
     res[flag] = False
-    if res["action"] == "delete" and enabled:
-        if dry_run():  # T697: print the intent, never the act
-            effect(dry=True, res=res)
-            res["dry_run"] = True
-        else:
-            effect(dry=False, res=res)
-            res[flag] = True
+    if struck and user and res.get("action") in ("flag", "delete"):
+        from gatekeeper.strikes import standing
+        res["strikes"] = standing(user)  # T1034: live standing, not new one
+    if res["action"] == "delete":
+        if remod_see(akey, "removed"):  # T1034: no re-remove
+            res["already_removed"] = True
+        elif enabled:
+            if dry_run():  # T697: print the intent, never the act
+                effect(dry=True, res=res)
+                res["dry_run"] = True
+            else:
+                effect(dry=False, res=res)
+                res[flag] = True
+                remod_mark(akey, "removed")  # T1034: only real removals count
+    if (mkey and not struck and user
+            and res.get("action") in ("flag", "delete")):
+        remod_mark(mkey, "struck")  # T1034: mirrors _accrue's own condition
     if res["action"] in ("delete", "flag", "escalate"):
         who = f"<{redact(uid)}> " if sender else ""
         out(f"[{res['action']}] {who}{redact(text[:120])} "

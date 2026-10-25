@@ -1140,7 +1140,7 @@
 - [x] T1031 adp: telegram re-moderates `edited_message` (edits are never judged today)
 - [x] T1032 adp: matrix `m.replace` edits re-moderate the replacement text (ignored today)
 - [x] T1033 adp: discord `MESSAGE_UPDATE` re-moderates (on_message judges first posts only)
-- [ ] T1034 adp: re-moderation is idempotent — no double-strike, no re-remove of an already-removed message
+- [x] T1034 adp: re-moderation is idempotent — no double-strike, no re-remove of an already-removed message
 - [ ] T1035 adp: duplicate edit deliveries judge once (dedupe by message id + edit timestamp)
 - [ ] T1036 audit: edit decisions carry `cause=edit` so they are separable from first posts
 - [ ] T1037 adp: edit re-moderation honors dry-run (print-only) on every platform

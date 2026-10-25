@@ -98,6 +98,17 @@ SLOW_JUSTIFIED: dict[str, str] = {
         "load (T991: 1.43s at load 2-3)",
 }
 
+@pytest.fixture(autouse=True)
+def _fresh_remod_ledger():  # T1034: the re-moderation ledger is per-test
+    # cleared directly, not via a helper: T710's sweep forbids test-only
+    # surface in common.py (every public SDK helper must back an adapter),
+    # and tests reaching private module state is the _router precedent
+    from gatekeeper.adapters import common
+    common._REMOD.clear()
+    yield
+    common._REMOD.clear()
+
+
 _overshoot: list[tuple[str, float]] = []
 _justified_seen: list[tuple[str, float]] = []
 

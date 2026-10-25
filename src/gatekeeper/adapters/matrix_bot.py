@@ -93,10 +93,15 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
                {"redacts": event["event_id"],
                 "reason": f"bouncer:{res.get('rule')}"})
 
+    ev_id = event.get("event_id")
     return moderate_action(
         body, rules, adapter="matrix", uid=event.get("sender"),
         enabled=bool(can_redact and token and homeserver),
-        effect=_delete, out=out, flag="redacted")
+        effect=_delete, out=out, flag="redacted",
+        # T1034: one logical message = one strike (edits key on the
+        # original event), while the EDIT event is the payload to remove
+        msg_key=(rel.get("event_id") or ev_id) if is_edit else ev_id,
+        act_key=ev_id)
 
 
 def _flatten_page(page: dict) -> list:
