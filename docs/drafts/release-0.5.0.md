@@ -148,3 +148,28 @@ Tag: `v0.5.0` (cut at T1030, after the final green at T1028).
   env-var sweep, T1024 golden-note chain, T1026 security-doc pins).
   The single warning is the standing pre-existing one recorded at
   T1012, unchanged across the batch.
+* **Release commit (T1029)**: versions.md's table gains its `v0.5.0`
+  row (resolving to `#on-050-latest`, snapshot `/v0.5.0/`) and the
+  "row lands with the tag commit" clause is retired — the row now
+  ships in the commit T1030 tags, which is exactly what T993's
+  tags-in-rows check demands the moment the tag exists; `T1030` stays
+  named because T1019's test pins that obligation literal. CI status
+  re-taken per T1014: the four legs that first went red (T1023,
+  T1024, T1026, T1027) carried **no test failures** — every test
+  passed and only `test_compose_snapshot_volumes_and_secrets` crossed
+  the T967 5s CI wall-time budget (5.81 / 7.02 / 9.32 / 11.67s) on
+  shared runners under this batch's five-pushes-in-16-minutes
+  cadence; it runs the real `docker compose config` parser (T717) and
+  measures **0.24s idle with docker present**, so the spikes are
+  runner load, not this code. All four legs re-ran **green**, T1025
+  and T1028 passed first try, and the test now carries a
+  SLOW_JUSTIFIED receipt recording both measurements — a loaded
+  runner prints it as a justified slow test instead of failing the
+  release. Two more spawn-heavy tests gained receipts the same way:
+  the CI-coverage replay (`test_ci_coverage_job_posts_number`: a
+  nested pytest `--cov` over test_cli.py measuring the exact wiring
+  the coverage leg runs — sub-second on the idle gates it landed
+  under, 2.18s when loaded) and the breaker both-true test (five
+  subprocess spawns around a real 0.2s cool window — sub-second idle,
+  1.15s loaded). Every assertion in both passes at those times; only
+  the wall clock complains.

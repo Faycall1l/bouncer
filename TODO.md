@@ -1133,7 +1133,7 @@
 - [x] T1026 sec: SECURITY.md updated for the 0.5.0 surface
 - [x] T1027 docs: BENCHMARKS honest-limits refreshed for this release
 - [x] T1028 suite: final full green + stats line
-- [ ] T1029 final: push release commit
+- [x] T1029 final: push release commit
 - [ ] T1030 final: tag v0.5.0 + release notes published
 
 ## P54 Edited-message re-moderation (T1031–T1050)

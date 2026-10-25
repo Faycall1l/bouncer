@@ -23,6 +23,7 @@ resolves to its delta section here:
 
 | You are reading docs as of | Start here | Versioned snapshot |
 | --- | --- | --- |
+| `v0.5.0` | [On 0.5.0](#on-050-latest) | yes — `/v0.5.0/` |
 | `v0.4.0` | [Coming from 0.4.x](#coming-from-04x) | yes — `/v0.4.0/` |
 | `v0.3.0` | [Coming from 0.3.x](#coming-from-03x) | no — docs didn't exist yet |
 | `v0.2.0` | [Coming from 0.2.0](#coming-from-020) | no — docs didn't exist yet |
@@ -142,7 +143,8 @@ where a refusal is called out.
 You're current — nothing above applies. This same page is what the
 `/v0.5.0/` snapshot serves once the tag cuts (T1030) and the docs
 workflow builds it, so the table at the top lands you in the right
-place either way. Until then `main` is 0.5.0 with no snapshot
-directory to serve: the row lands with the tag commit.
+place either way. The `v0.5.0` row itself landed with the release
+commit (T1029); until the tag cuts, `main` is 0.5.0 with no snapshot
+directory yet to serve.
 
 Terms used here are defined in the [Glossary](glossary.md).

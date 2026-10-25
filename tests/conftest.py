@@ -55,6 +55,20 @@ SLOW_JUSTIFIED: dict[str, str] = {
         "exercises the shell entrypoint as real subprocesses (sh -n syntax "
         "check plus six stubbed runs handing off to CMD) — spawn-heavy: "
         "sub-second idle, but shared machine load has measured it to 3s",
+    "test_compose_snapshot_volumes_and_secrets":
+        "validates compose.yaml through the real docker compose parser when "
+        "the CLI is present (T717) — 0.24s idle with docker, but shared "
+        "runner load has measured 5.8–11.7s (four CI legs, release push "
+        "window 2026-10-22)",
+    "test_ci_coverage_job_posts_number":
+        "replays the CI coverage job as a subprocess — pytest --cov over "
+        "test_cli.py, the same wiring the coverage leg runs; sub-second on "
+        "the idle gates it landed under 2026-10-22, 2.18s when loaded",
+    "test_gate_breaker_trips_and_closes":
+        "spawns a real breaker sim with a 0.2s cool window plus four gate "
+        "subprocesses for T682's both-true-or-broken checks — spawn-heavy "
+        "like the entrypoint test: sub-second on the gates it landed "
+        "under, 1.15s when the machine is loaded",
     "test_graceful_shutdown_drains_and_flushes":
         "drives the FastAPI lifespan directly; the drain/flush logic under "
         "test is sub-second, but startup warmup is environment-dependent "
