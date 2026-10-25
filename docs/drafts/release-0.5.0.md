@@ -194,3 +194,22 @@ Tag: `v0.5.0` (cut at T1030, after the final green at T1028).
   the body is pure generate-notes with no manual edits, v0.4.0
   parity. docs.yml then builds `/v0.5.0/` from the tag's own tree
   (T991's per-tag snapshot; publishing stays flag-gated per T992).
+
+* **Post-tag record (T1030)**: publish.yml ran clean end to end —
+  guards and build succeeded, wheel + sbom.json attached (v0.4.0's
+  exact asset set), and the body is an 80-character pure
+  generate-notes one-liner, identical in shape to v0.4.0's. One
+  discovery: the tag-ref ci run failed on T993's split assertion,
+  because a tag-push checkout carries only the pushed tag — `v0.5.0`
+  alone has no pre-docs half to split against. Reproduced in a local
+  single-tag shallow clone before fixing. Both main legs for this
+  tree are green (ci and docs), the full-clone local gates validate
+  the real seven-tag split, and the published artifact is
+  unaffected; the tag's run is immutable and stands as the record of
+  the discovery. The fix lands in this commit: the split is demanded
+  only where a multi-tag view exists, while rows for every tag the
+  checkout can see still assert. And the correction this note owed:
+  docs.yml's snapshot step sits behind the same `DOCS_DEPLOY` flag
+  as publishing — the variable is unset in this repo, so the step
+  was skipped on the release-day docs run, and `/v0.5.0/` is built
+  only the first time a main docs run finds the flag on.

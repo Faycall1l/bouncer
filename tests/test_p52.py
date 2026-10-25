@@ -238,7 +238,13 @@ def test_t993_versions_page_resolves_every_entry_to_its_delta():  # T993
                 ["git", "cat-file", "-e", f"{t}:mkdocs.yml"],
                 check=False, capture_output=True).returncode == 0
             (docs_era if has_docs else pre_docs).append(t)
-        assert docs_era and pre_docs, "the split this page tells must exist"
+        # T1030: a tag-push checkout carries only the pushed tag — v0.5.0
+        # alone has no pre-docs half — so the split this page tells is
+        # demanded only where a multi-tag view exists; rows for every tag
+        # the checkout CAN see still assert below
+        if len(tags) > 1:
+            assert docs_era and pre_docs, \
+                "the split this page tells must exist"
         for t in docs_era:
             assert f"`{t}`" in text, f"{t} has no table row"
             assert f"/{t}/" in text, f"{t} row doesn't name its snapshot dir"
