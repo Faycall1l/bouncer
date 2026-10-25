@@ -51,13 +51,24 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
                   can_delete: bool = False, api_fn=api, out=print,
                   cap=None) -> dict:
     """One update in, zero or one reaction out. `api_fn`/`out` are injectable
-    so tests never touch the network. `cap` (T701) limits model calls per chat."""
-    msg = update.get("message") or {}
+    so tests never touch the network. `cap` (T701) limits model calls per chat.
+
+    T1031: `edited_message` arrives as its own update kind and is judged
+    exactly like a fresh post — the poll asks for it (run's allowed_updates),
+    so an edit is never a blind spot. Only `/` commands are exempt: they
+    fire on send, not on edit (re-answering an edited command would reply
+    twice to one intent)."""
+    msg = update.get("message")
+    is_edit = False
+    if not msg:  # T1031: an edit is content too
+        msg, is_edit = update.get("edited_message") or {}, True
     text = (msg.get("text") or "").strip()
     chat_id = msg.get("chat", {}).get("id")
     if not text or chat_id is None:
         return {"action": "ignored", "reason": "no-text"}  # stickers/embeds
     if text.startswith("/"):
+        if is_edit:
+            return {"action": "ignored", "reason": "edit-command"}  # T1031
         from gatekeeper.adapters.common import as_user_id
         return _command(text, rules, chat_id, token, api_fn, out,
                         reply_to=msg.get("message_id"),  # T860: in-thread
@@ -107,8 +118,10 @@ def run():
 
     def fetch():  # ack the whole page up front: at-most-once, never re-read
         nonlocal offset
+        # T1031: without "edited_message" Telegram never delivers edits —
+        # this list was the whole reason edits were invisible
         page = api(token, "getUpdates", offset=offset, timeout=50,
-                   allowed_updates=["message"])
+                   allowed_updates=["message", "edited_message"])
         result = page.get("result", [])
         if result:
             offset = result[-1]["update_id"] + 1
@@ -120,7 +133,9 @@ def run():
 
     run_loop(fetch, handle, name="telegram",  # T696 loop, T699 health line
              health=Health("telegram"), stopping=stopping,  # T702
-             message_of=lambda u: (u.get("message") or {}).get("text", ""))  # T866
+             message_of=lambda u: (u.get("message") or  # T866
+                                   u.get("edited_message")  # T1031: edits
+                                   or {}).get("text", ""))
 
 
 if __name__ == "__main__":

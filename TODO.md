@@ -1137,7 +1137,7 @@
 - [x] T1030 final: tag v0.5.0 + release notes published
 
 ## P54 Edited-message re-moderation (T1031–T1050)
-- [ ] T1031 adp: telegram re-moderates `edited_message` (edits are never judged today)
+- [x] T1031 adp: telegram re-moderates `edited_message` (edits are never judged today)
 - [ ] T1032 adp: matrix `m.replace` edits re-moderate the replacement text (ignored today)
 - [ ] T1033 adp: discord `MESSAGE_UPDATE` re-moderates (on_message judges first posts only)
 - [ ] T1034 adp: re-moderation is idempotent — no double-strike, no re-remove of an already-removed message
