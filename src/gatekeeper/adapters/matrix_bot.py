@@ -54,14 +54,27 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
                  cap=None) -> dict:
     """One timeline event in, zero or one reaction out (T693). `api_fn`/`out`
     are injectable so tests never touch a homeserver. `cap` (T701) limits
-    model calls per sender."""
+    model calls per sender.
+
+    T1032: an `m.replace` relation (MSC2676 edit) is content too — the
+    REPLACEMENT text is judged, not the `* `-decorated top-level body it
+    ships with, so editing a message into a violation cannot dodge the
+    gate. Only `!bouncer` commands are exempt on edit (T1031's rule:
+    commands fire on send, not on edit)."""
     if event.get("type") != "m.room.message":
         return {"action": "ignored", "reason": "not-message"}
     content = event.get("content") or {}
+    is_edit = False
+    rel = content.get("m.relates_to") or {}
+    new = content.get("m.new_content")
+    if rel.get("rel_type") == "m.replace" and isinstance(new, dict):
+        content, is_edit = new, True  # T1032: judge the replacement itself
     body = (content.get("body") or "").strip()
     if content.get("msgtype") not in ("m.text", "m.notice") or not body:
         return {"action": "ignored", "reason": "no-text"}  # images, empties
     if body.startswith("!bouncer"):
+        if is_edit:
+            return {"action": "ignored", "reason": "edit-command"}  # T1031 rule
         return _command(body, rules, event, token, homeserver, api_fn, out)
     if cap is not None and not cap.allow(event.get("sender")):  # T701
         from gatekeeper.adapters.common import redact
@@ -150,7 +163,9 @@ def run():
 
     run_loop(fetch, handle, name="matrix",  # T696 loop, T699 health line
              health=Health("matrix"), stopping=stopping,  # T702
-             message_of=lambda e: ((e.get("content") or {}).get("body") or ""))  # T866
+             message_of=lambda e: ((  # T866; T1032: edits read clean
+                 (e.get("content") or {}).get("m.new_content")
+                 or e.get("content") or {}).get("body") or ""))
 
 
 if __name__ == "__main__":
