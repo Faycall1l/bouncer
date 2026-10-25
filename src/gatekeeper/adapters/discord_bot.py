@@ -126,22 +126,7 @@ def run(token: str | None = None, preset: str = "gaming"):
             command_reply(command, rules, user=uid)
             or command_reply("help", rules))
 
-    @client.event
-    async def on_message(msg):  # T073
-        if msg.author.bot:
-            return
-        if not msg.content.strip():  # T298: embeds/stickers carry no text
-            return
-        cmd = parse_command(msg.content)  # T705: prefix surface
-        if cmd is not None:
-            from gatekeeper.adapters.common import as_user_id
-            await msg.channel.send(
-                command_reply(cmd, rules,
-                              user=as_user_id("discord", msg.author.id))  # T864
-                or command_reply("help", rules))  # T705
-            return
-        res = moderate_message(msg.content, msg.author.id,  # T854: cap+health
-                               rules, health=health, cap=cap)
+    async def _act(msg, res):  # T1033: one action path — posts and edits share it
         from gatekeeper.adapters.common import dry_run
         if dry_run():  # T697: print the intent, never the act
             if res["action"] in ("delete", "flag", "escalate"):
@@ -159,6 +144,43 @@ def run(token: str | None = None, preset: str = "gaming"):
             await send_removed_notice(msg, res)  # T859: threaded reply
         elif res["action"] in ("flag", "escalate"):
             await msg.add_reaction("⚠️")
+
+    @client.event
+    async def on_message(msg):  # T073
+        if msg.author.bot:
+            return
+        if not msg.content.strip():  # T298: embeds/stickers carry no text
+            return
+        cmd = parse_command(msg.content)  # T705: prefix surface
+        if cmd is not None:
+            from gatekeeper.adapters.common import as_user_id
+            await msg.channel.send(
+                command_reply(cmd, rules,
+                              user=as_user_id("discord", msg.author.id))  # T864
+                or command_reply("help", rules))  # T705
+            return
+        res = moderate_message(msg.content, msg.author.id,  # T854: cap+health
+                               rules, health=health, cap=cap)
+        await _act(msg, res)
+
+    @client.event
+    async def on_message_edit(before, after):  # T1033: MESSAGE_UPDATE judges
+        """discord.py routes MESSAGE_UPDATE here; on_message judged first
+        posts only. The same moderate_message path runs (RateCap and Health
+        ride along, T854), so an edit into a violation cannot walk past the
+        gate — and embed/title churn, which fires this event with identical
+        text, never burns a model call."""
+        if after.author.bot:
+            return
+        if not after.content.strip():  # T298: no text, nothing to judge
+            return
+        if before.content == after.content:
+            return  # T1033: churn, not an edit — no text change, no re-judge
+        if parse_command(after.content) is not None:
+            return  # T1031 rule: commands fire on send, not on edit
+        res = moderate_message(after.content, after.author.id,  # T854
+                               rules, health=health, cap=cap)
+        await _act(after, res)
 
     client.run(token or require_env(
         "DISCORD_TOKEN", cfg_get(cfg, "adapter", "discord", "token")))  # T691+T709
