@@ -493,7 +493,9 @@ def test_t984_pip_audit_over_extracted_deps():  # T984
     at T969, twenty-four after the first 2026-10-22 advisory-DB growth,
     thirty-four after a second growth the same day, thirty-five after a
     GHSA-identified advisory (GHSA-78g4-xqwv-q3g8) landed as an audit
-    red the same evening — every one surfaced as an audit red) are
+    red the same evening, thirty-seven after a third growth on
+    2026-10-25 put two more (112398 + 114501) on the T1029 release leg
+    — every one surfaced as an audit red) are
     each ignored BY NAME, counted, so a blanket skip can never quietly
     take their place."""
     try:
@@ -516,23 +518,24 @@ def test_t984_pip_audit_over_extracted_deps():  # T984
     ignore = re.findall(r"--ignore-vuln (\S+)", ci)
     assert sorted(ignore) == [  # T969's eight + 16 from the first
         # 2026-10-22 advisory-DB growth + 10 more the SAME day
-        # (966xx + 96778, the second audit red; all 34 are pillow
-        # 12.3.0 blocked behind gradio's cap; string-sorted, so the
-        # 966xx block trails the 112xxx block)
+        # (966xx + 96778, the second audit red; +2 more on 2026-10-25
+        # on the T1029 release leg — all 36 CVE are pillow 12.3.0
+        # blocked behind gradio's cap; string-sorted, so the 966xx
+        # block trails the 112xxx block)
         "CVE-2026-112390", "CVE-2026-112391", "CVE-2026-112392",
         "CVE-2026-112393", "CVE-2026-112395", "CVE-2026-112396",
-        "CVE-2026-112397", "CVE-2026-112399", "CVE-2026-112400",
-        "CVE-2026-112401", "CVE-2026-112402", "CVE-2026-112404",
-        "CVE-2026-112405", "CVE-2026-112406", "CVE-2026-112891",
-        "CVE-2026-112892", "CVE-2026-112893", "CVE-2026-112894",
-        "CVE-2026-112895", "CVE-2026-112896", "CVE-2026-112897",
-        "CVE-2026-112899", "CVE-2026-112900", "CVE-2026-112901",
-        "CVE-2026-96636", "CVE-2026-96637", "CVE-2026-96638",
-        "CVE-2026-96639", "CVE-2026-96640", "CVE-2026-96641",
-        "CVE-2026-96642", "CVE-2026-96643", "CVE-2026-96644",
-        "CVE-2026-96778",
+        "CVE-2026-112397", "CVE-2026-112398", "CVE-2026-112399",
+        "CVE-2026-112400", "CVE-2026-112401", "CVE-2026-112402",
+        "CVE-2026-112404", "CVE-2026-112405", "CVE-2026-112406",
+        "CVE-2026-112891", "CVE-2026-112892", "CVE-2026-112893",
+        "CVE-2026-112894", "CVE-2026-112895", "CVE-2026-112896",
+        "CVE-2026-112897", "CVE-2026-112899", "CVE-2026-112900",
+        "CVE-2026-112901", "CVE-2026-114501", "CVE-2026-96636",
+        "CVE-2026-96637", "CVE-2026-96638", "CVE-2026-96639",
+        "CVE-2026-96640", "CVE-2026-96641", "CVE-2026-96642",
+        "CVE-2026-96643", "CVE-2026-96644", "CVE-2026-96778",
         "GHSA-78g4-xqwv-q3g8",
-    ], ignore  # all thirty-five
+    ], ignore  # all thirty-seven
 
 
 def test_t985_secret_scan_covers_model_cards_and_provenance(tmp_path):  # T985

@@ -173,3 +173,24 @@ Tag: `v0.5.0` (cut at T1030, after the final green at T1028).
   subprocess spawns around a real 0.2s cool window — sub-second idle,
   1.15s loaded). Every assertion in both passes at those times; only
   the wall clock complains.
+
+* **Release tag (T1030)**: T1029's ci leg went red the moment the
+  advisory DB grew again on 2026-10-25 — two fresh pillow CVEs
+  (112398 + 114501, both fixed only in 13.0.0, which gradio's
+  `pillow<13.0` cap cannot reach). Every other leg was green:
+  weightless, secret-scan, lint, smoke, eval-gate, tests 3.10–3.13,
+  coverage and bench on ci, docs on its own workflow. This box fixes
+  the audit by the standing rule — each CVE listed BY NAME in the
+  workflow, never silenced wholesale (36 pillow CVEs + 1 GHSA now) —
+  and test_t984's pinned set grows to the same thirty-seven; a local
+  pip-audit replay over the extracted core deps reads "No known
+  vulnerabilities found, 37 ignored". This commit is the final CI
+  record re-promised at T1014: the tag `v0.5.0` is cut on this very
+  commit once its ci and docs legs turn green, so publish.yml's
+  guards check exactly what the release ships — check_tag.py matches
+  the tag to pyproject's 0.5.0 (pre-verified T1025), check_changelog
+  requires the 0.5.0 section (pre-verified T1016) — then wheel,
+  sdist, SBOM, and `gh release create --generate-notes --verify-tag`:
+  the body is pure generate-notes with no manual edits, v0.4.0
+  parity. docs.yml then builds `/v0.5.0/` from the tag's own tree
+  (T991's per-tag snapshot; publishing stays flag-gated per T992).

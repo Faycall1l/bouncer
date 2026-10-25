@@ -131,6 +131,8 @@ jobs:
           # T969; +16 more on 2026-10-22 when the advisory DB grew (the
           # audit job caught it as a red — all 24 are the same gradio-cap
           # block); +10 more later the SAME day (966xx + 96778), 34 now.
+          # Two more on 2026-10-25 after a third DB growth (112398 +
+          # 114501) — a red on the T1029 release leg — 36 now.
           # Each CVE is listed, never silenced wholesale; drop entries
           # the day gradio lifts the cap and the resolver picks up 13.x.
           pip-audit -r reqs.txt \
@@ -168,4 +170,6 @@ jobs:
             --ignore-vuln CVE-2026-96643 \
             --ignore-vuln CVE-2026-96644 \
             --ignore-vuln CVE-2026-96778 \
+            --ignore-vuln CVE-2026-112398 \
+            --ignore-vuln CVE-2026-114501 \
             --ignore-vuln GHSA-78g4-xqwv-q3g8

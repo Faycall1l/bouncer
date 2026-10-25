@@ -69,6 +69,11 @@ SLOW_JUSTIFIED: dict[str, str] = {
         "subprocesses for T682's both-true-or-broken checks — spawn-heavy "
         "like the entrypoint test: sub-second on the gates it landed "
         "under, 1.15s when the machine is loaded",
+    "test_gate_fails_loudly_on_bad_reports":
+        "launches the gate CLI eleven times — T687's ten malformed reports "
+        "plus the NaN-metric case — asserting every one fails loudly: "
+        "eleven subprocesses make it spawn-heavy like the entrypoint test, "
+        "sub-second on the idle gates it landed under, 1.36s when loaded",
     "test_graceful_shutdown_drains_and_flushes":
         "drives the FastAPI lifespan directly; the drain/flush logic under "
         "test is sub-second, but startup warmup is environment-dependent "
