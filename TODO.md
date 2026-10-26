@@ -1142,7 +1142,7 @@
 - [x] T1033 adp: discord `MESSAGE_UPDATE` re-moderates (on_message judges first posts only)
 - [x] T1034 adp: re-moderation is idempotent — no double-strike, no re-remove of an already-removed message
 - [x] T1035 adp: duplicate edit deliveries judge once (dedupe by message id + edit timestamp)
-- [ ] T1036 audit: edit decisions carry `cause=edit` so they are separable from first posts
+- [x] T1036 audit: edit decisions carry `cause=edit` so they are separable from first posts
 - [ ] T1037 adp: edit re-moderation honors dry-run (print-only) on every platform
 - [ ] T1038 sec: edit floods hit the shared RateCap — N edits cannot amplify model calls
 - [ ] T1039 adp: edit notices link the original `message_of` (the operator sees what was re-judged)

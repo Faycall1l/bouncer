@@ -242,7 +242,7 @@ def remod_mark(key, flag) -> None:  # T1034
 
 def moderate_action(text, rules, *, adapter, uid, enabled, effect, out,
                     sender: bool = True, flag: str = "deleted",
-                    msg_key=None, act_key=None):  # T953
+                    msg_key=None, act_key=None, is_edit: bool = False):  # T953
     """The moderate+action skeleton behind telegram/matrix/mattermost/
     zulip's four handle_* copies (T953): platform identity + language
     plumbing, the decision, the delete effect, the announce line.
@@ -279,6 +279,8 @@ def moderate_action(text, rules, *, adapter, uid, enabled, effect, out,
                         user_id=None if struck else user,  # T1034: once
                         lang=adapter_lang(adapter, text),  # T897: env pin, else detect
                         adapter=adapter))  # T867: per-adapter counters
+    if is_edit:
+        res["cause"] = "edit"  # T1036
     res[flag] = False
     if struck and user and res.get("action") in ("flag", "delete"):
         from gatekeeper.strikes import standing

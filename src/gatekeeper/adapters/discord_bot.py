@@ -221,6 +221,7 @@ def run(token: str | None = None, preset: str = "gaming"):
         res = moderate_message(after.content, after.author.id,  # T854
                                rules, health=health, cap=cap,
                                msg_key=mkey)  # T1034+T1035
+        res["cause"] = res.get("cause") or "edit"  # T1036
         await _act(after, res)
 
     client.run(token or require_env(

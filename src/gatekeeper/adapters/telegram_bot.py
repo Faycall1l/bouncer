@@ -101,7 +101,7 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
         # T1034: one chat-scoped id = one message across post and edits;
         # the effect targets the same id, so act_key defaults to it
         # T1035: dedupe duplicate edit deliveries by message id + edit timestamp
-        msg_key=mkey)
+        msg_key=mkey, is_edit=is_edit)
 
 
 def run():

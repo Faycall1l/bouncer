@@ -109,7 +109,7 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
         # original event), while the EDIT event is the payload to remove
         # T1035: dedupe duplicate edit deliveries by message id + edit timestamp
         msg_key=mkey,
-        act_key=ev_id)
+        act_key=ev_id, is_edit=is_edit)
 
 
 def _flatten_page(page: dict) -> list:
