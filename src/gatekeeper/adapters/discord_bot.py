@@ -207,9 +207,20 @@ def run(token: str | None = None, preset: str = "gaming"):
             return  # T1033: churn, not an edit — no text change, no re-judge
         if parse_command(after.content) is not None:
             return  # T1031 rule: commands fire on send, not on edit
+        mid = getattr(after, "id", None)
+        mkey = mid
+        if mid is not None:
+            edit_ts = getattr(after, "edited_at", None)
+            if edit_ts is not None:
+                # normalize to timestamp string
+                try:
+                    ts = edit_ts.timestamp()
+                    mkey = f"{mid}:{ts}"
+                except Exception:  # noqa: BLE001
+                    mkey = f"{mid}:{edit_ts}"
         res = moderate_message(after.content, after.author.id,  # T854
                                rules, health=health, cap=cap,
-                               msg_key=getattr(after, "id", None))  # T1034
+                               msg_key=mkey)  # T1034+T1035
         await _act(after, res)
 
     client.run(token or require_env(

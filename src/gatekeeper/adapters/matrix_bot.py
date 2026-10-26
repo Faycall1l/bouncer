@@ -94,13 +94,21 @@ def handle_event(event: dict, rules: dict, *, token=None, homeserver=None,
                 "reason": f"bouncer:{res.get('rule')}"})
 
     ev_id = event.get("event_id")
+    mkey = (rel.get("event_id") or ev_id) if is_edit else ev_id
+    if is_edit and mkey is not None:
+        edit_ts = (event.get("origin_server_ts")
+                   or (event.get("unsigned") or {}).get("age")
+                   or (content.get("origin_server_ts")))
+        if edit_ts is not None:
+            mkey = f"{mkey}:{edit_ts}"
     return moderate_action(
         body, rules, adapter="matrix", uid=event.get("sender"),
         enabled=bool(can_redact and token and homeserver),
         effect=_delete, out=out, flag="redacted",
         # T1034: one logical message = one strike (edits key on the
         # original event), while the EDIT event is the payload to remove
-        msg_key=(rel.get("event_id") or ev_id) if is_edit else ev_id,
+        # T1035: dedupe duplicate edit deliveries by message id + edit timestamp
+        msg_key=mkey,
         act_key=ev_id)
 
 

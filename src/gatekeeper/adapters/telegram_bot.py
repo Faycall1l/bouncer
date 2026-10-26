@@ -89,6 +89,10 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
                message_id=msg.get("message_id"))
 
     mid = msg.get("message_id")
+    edit_ts = msg.get("edit_date") if is_edit else None
+    mkey = f"{chat_id}:{mid}" if mid is not None else None
+    if mkey and is_edit and edit_ts is not None:
+        mkey = f"{mkey}:{edit_ts}"
     return moderate_action(
         text, rules, adapter="telegram",
         uid=(msg.get("from") or {}).get("id"),
@@ -96,7 +100,8 @@ def handle_update(update: dict, rules: dict, *, token: str | None = None,
         sender=False,  # the group line already shows who sent it
         # T1034: one chat-scoped id = one message across post and edits;
         # the effect targets the same id, so act_key defaults to it
-        msg_key=f"{chat_id}:{mid}" if mid is not None else None)
+        # T1035: dedupe duplicate edit deliveries by message id + edit timestamp
+        msg_key=mkey)
 
 
 def run():
