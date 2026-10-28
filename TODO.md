@@ -1203,155 +1203,155 @@
 - [x] T1090 test: P56 eval-depth sweep (every box ticked, receipts outside TODO.md)
 
 ## P57 Audit query & log triage (T1091–T1110)
-- [ ] T1091 audit: `bouncer audit tail` gains `--since`/`--action`/`--rule` filters (n-only today)
-- [ ] T1092 audit: `--rid` follows one request across decision + audit rows
-- [ ] T1093 audit: filters read across rotation generations (first + last both visible)
-- [ ] T1094 audit: filtered query defaults to a bounded limit with a stated cap
-- [ ] T1095 audit: doctor shows audit file size + rotation generation count
-- [ ] T1096 audit: query output redacts tokens like the log write path
-- [ ] T1097 review: `bouncer review --cause` filter (listing has action only)
-- [ ] T1098 review: rows older than the stated SLA flagged in the listing (prune exists, visibility doesn't)
-- [ ] T1099 audit: `audit --json` envelope (P55 contract tie-in)
-- [ ] T1100 docs: runbook audit-triage section — follow a rid end to end
-- [ ] T1101 docs: cookbook forensic recipe (jq pipeline over filtered audit)
-- [ ] T1102 test: filters select the expected rows from a fixture log
-- [ ] T1103 test: rotation-boundary query finds both ends (write past rotate size)
-- [ ] T1104 test: rid follow-through fixture — decision + audit share one id
-- [ ] T1105 test: memory bound — never more than limit + one generation read
-- [ ] T1106 test: redaction applies to query output (fixture token)
-- [ ] T1107 test: empty-result query exits 0 with an empty list, not an error
-- [ ] T1108 perf: filtered tail measured on a ~5MB file, receipt recorded (never assert values)
-- [ ] T1109 fix: P57 reds — any failure the sweep finds, fixed here
-- [ ] T1110 test: P57 audit-query sweep (every box ticked, receipts outside TODO.md)
+- [x] T1091 audit: `bouncer audit tail` gains `--since`/`--action`/`--rule` filters (n-only today)
+- [x] T1092 audit: `--rid` follows one request across decision + audit rows
+- [x] T1093 audit: filters read across rotation generations (first + last both visible)
+- [x] T1094 audit: filtered query defaults to a bounded limit with a stated cap
+- [x] T1095 audit: doctor shows audit file size + rotation generation count
+- [x] T1096 audit: query output redacts tokens like the log write path
+- [x] T1097 review: `bouncer review --cause` filter (listing has action only)
+- [x] T1098 review: rows older than the stated SLA flagged in the listing (prune exists, visibility doesn't)
+- [x] T1099 audit: `audit --json` envelope (P55 contract tie-in)
+- [x] T1100 docs: runbook audit-triage section — follow a rid end to end
+- [x] T1101 docs: cookbook forensic recipe (jq pipeline over filtered audit)
+- [x] T1102 test: filters select the expected rows from a fixture log
+- [x] T1103 test: rotation-boundary query finds both ends (write past rotate size)
+- [x] T1104 test: rid follow-through fixture — decision + audit share one id
+- [x] T1105 test: memory bound — never more than limit + one generation read
+- [x] T1106 test: redaction applies to query output (fixture token)
+- [x] T1107 test: empty-result query exits 0 with an empty list, not an error
+- [x] T1108 perf: filtered tail measured on a ~5MB file, receipt recorded (never assert values)
+- [x] T1109 fix: P57 reds — any failure the sweep finds, fixed here
+- [x] T1110 test: P57 audit-query sweep (every box ticked, receipts outside TODO.md)
 
 ## P58 State & persistence 2 (T1111–T1130)
-- [ ] T1111 store: `bouncer state list` — every state file the code writes (path/mode/size/age)
-- [ ] T1112 store: `state list --json` envelope (P55 contract tie-in)
-- [ ] T1113 store: corrupt snapshot quarantined aside with a receipt (not just a raise)
-- [ ] T1114 store: unknown snapshot version refuses with a named code; known-old versions upgrade on restore with a receipt (v1 accepted silently today)
-- [ ] T1115 store: doctor flags non-0600 state files with the fix command
-- [ ] T1116 store: manifest pin — every writer appears in `state list` (grep-driven)
-- [ ] T1117 test: no raw open-for-write on state files (atomic_write contract)
-- [ ] T1118 test: quarantine flow — file moved aside, receipt names both paths
-- [ ] T1119 test: version handling — unknown refuses, old-version upgrade receipt
-- [ ] T1120 test: save/load 10k strikes round-trips exactly
-- [ ] T1121 test: doctor state rows render mode + size (fixture dir)
-- [ ] T1122 test: crash-safety — kill between write and replace leaves the original intact
-- [ ] T1123 config: config file discovery order documented + tested (flag vs search vs default)
-- [ ] T1124 sec: state files never world-readable across ALL writers (re-verified under new fields)
-- [ ] T1125 perf: save/load 10k strikes measured, receipt only (no value asserts)
-- [ ] T1126 docs: runbook state-files table (path, mode, rotation, backup)
-- [ ] T1127 docs: runbook backup/restore covers review queue + strikes
-- [ ] T1128 pkg: state work adds no dependencies (stdlib-only pin)
-- [ ] T1129 fix: P58 reds — any failure the sweep finds, fixed here
-- [ ] T1130 test: P58 persistence sweep (every box ticked, receipts outside TODO.md)
+- [x] T1111 store: `bouncer state list` — every state file the code writes (path/mode/size/age)
+- [x] T1112 store: `state list --json` envelope (P55 contract tie-in)
+- [x] T1113 store: corrupt snapshot quarantined aside with a receipt (not just a raise)
+- [x] T1114 store: unknown snapshot version refuses with a named code; known-old versions upgrade on restore with a receipt (v1 accepted silently today)
+- [x] T1115 store: doctor flags non-0600 state files with the fix command
+- [x] T1116 store: manifest pin — every writer appears in `state list` (grep-driven)
+- [x] T1117 test: no raw open-for-write on state files (atomic_write contract)
+- [x] T1118 test: quarantine flow — file moved aside, receipt names both paths
+- [x] T1119 test: version handling — unknown refuses, old-version upgrade receipt
+- [x] T1120 test: save/load 10k strikes round-trips exactly
+- [x] T1121 test: doctor state rows render mode + size (fixture dir)
+- [x] T1122 test: crash-safety — kill between write and replace leaves the original intact
+- [x] T1123 config: config file discovery order documented + tested (flag vs search vs default)
+- [x] T1124 sec: state files never world-readable across ALL writers (re-verified under new fields)
+- [x] T1125 perf: save/load 10k strikes measured, receipt only (no value asserts)
+- [x] T1126 docs: runbook state-files table (path, mode, rotation, backup)
+- [x] T1127 docs: runbook backup/restore covers review queue + strikes
+- [x] T1128 pkg: state work adds no dependencies (stdlib-only pin)
+- [x] T1129 fix: P58 reds — any failure the sweep finds, fixed here
+- [x] T1130 test: P58 persistence sweep (every box ticked, receipts outside TODO.md)
 
 ## P59 Data pipeline 2 (T1131–T1150)
-- [ ] T1131 data: `examples_i18n.jsonl` expanded 12 rows → 100+ across languages (12 rows measure nothing)
-- [ ] T1132 data: per-language balance guard in `build --report` (no language below 15%)
-- [ ] T1133 data: build writes `build.json` manifest (n, seed, git sha, args)
-- [ ] T1134 data: `upload_dataset` stages the manifest (pins travel with the dataset)
-- [ ] T1135 data_gate: absent manifest recorded as "absent" — never a pass claim (T924 rule)
-- [ ] T1136 data: quarantine report aggregates top reasons
-- [ ] T1137 data: unseen-K + unseen-rule rates reported at build time via `rule_vocab`
-- [ ] T1138 eval: i18n report records per-language n (small-sample numbers stay visible)
-- [ ] T1139 test: balance guard fails the build on a deliberately skewed set
-- [ ] T1140 test: build determinism — same seed → identical bytes
-- [ ] T1141 test: manifest matches the file (count + sha)
-- [ ] T1142 test: i18n rows flow through pipeline (history windows + schema stamp)
-- [ ] T1143 test: data_gate receipt carries the manifest pin when present, "absent" otherwise
-- [ ] T1144 test: i18n fixtures pass `validate_data` end-to-end
-- [ ] T1145 ci: data job validates every shipped JSONL
-- [ ] T1146 docs: data/README i18n section — adding a language
-- [ ] T1147 docs: data/README manifest + quarantine workflow
-- [ ] T1148 perf: full build measured, receipt only (no value asserts)
-- [ ] T1149 fix: P59 reds — any failure the sweep finds, fixed here
-- [ ] T1150 test: P59 data-pipeline sweep (every box ticked, receipts outside TODO.md)
+- [x] T1131 data: `examples_i18n.jsonl` expanded 12 rows → 100+ across languages (12 rows measure nothing)
+- [x] T1132 data: per-language balance guard in `build --report` (no language below 15%)
+- [x] T1133 data: build writes `build.json` manifest (n, seed, git sha, args)
+- [x] T1134 data: `upload_dataset` stages the manifest (pins travel with the dataset)
+- [x] T1135 data_gate: absent manifest recorded as "absent" — never a pass claim (T924 rule)
+- [x] T1136 data: quarantine report aggregates top reasons
+- [x] T1137 data: unseen-K + unseen-rule rates reported at build time via `rule_vocab`
+- [x] T1138 eval: i18n report records per-language n (small-sample numbers stay visible)
+- [x] T1139 test: balance guard fails the build on a deliberately skewed set
+- [x] T1140 test: build determinism — same seed → identical bytes
+- [x] T1141 test: manifest matches the file (count + sha)
+- [x] T1142 test: i18n rows flow through pipeline (history windows + schema stamp)
+- [x] T1143 test: data_gate receipt carries the manifest pin when present, "absent" otherwise
+- [x] T1144 test: i18n fixtures pass `validate_data` end-to-end
+- [x] T1145 ci: data job validates every shipped JSONL
+- [x] T1146 docs: data/README i18n section — adding a language
+- [x] T1147 docs: data/README manifest + quarantine workflow
+- [x] T1148 perf: full build measured, receipt only (no value asserts)
+- [x] T1149 fix: P59 reds — any failure the sweep finds, fixed here
+- [x] T1150 test: P59 data-pipeline sweep (every box ticked, receipts outside TODO.md)
 
 ## P60 Adapter depth 4 (T1151–T1170)
-- [ ] T1151 adp: discord/telegram/twitch own loops forward via `forward_if_interesting` (only `run_loop` calls it today)
-- [ ] T1152 adp: twitch gains RateCap (T868's honest exception)
-- [ ] T1153 adp: discord reconnect backoff (mattermost got T852)
-- [ ] T1154 adp: SIGTERM between events exits cleanly on every own-loop adapter (run_loop parity)
-- [ ] T1155 adp: forward failure never crashes a loop (receipt + continue)
-- [ ] T1156 adp: health error clears after a success (latest-event truth, not sticky red)
-- [ ] T1157 adp: per-adapter reconnect counters recorded (feeds P49's export)
-- [ ] T1158 adp: own loops pass `message_of` to forward (notices link back)
-- [ ] T1159 adp: capability matrix gains forward/shutdown/reconnect columns, source-checked
-- [ ] T1160 sec: adapter secrets redacted in every loop crash-log path
-- [ ] T1161 docs: adapters README shutdown/reconnect columns
-- [ ] T1162 docs: runbook adapter-outage section (what red health means)
-- [ ] T1163 test: forward parity — each own-loop adapter forwards on a fixture decision
-- [ ] T1164 test: reconnect counter increments on a stub disconnect
-- [ ] T1165 test: crash-log redaction fixture per adapter
-- [ ] T1166 test: SIGTERM between events exits cleanly (fixture)
-- [ ] T1167 test: no adapter imports another platform's SDK (import graph pin)
-- [ ] T1168 perf: loop overhead per message measured, receipt only
-- [ ] T1169 fix: P60 reds — any failure the sweep finds, fixed here
-- [ ] T1170 test: P60 adapter-depth sweep (every box ticked, receipts outside TODO.md)
+- [x] T1151 adp: discord/telegram/twitch own loops forward via `forward_if_interesting` (only `run_loop` calls it today)
+- [x] T1152 adp: twitch gains RateCap (T868's honest exception)
+- [x] T1153 adp: discord reconnect backoff (mattermost got T852)
+- [x] T1154 adp: SIGTERM between events exits cleanly on every own-loop adapter (run_loop parity)
+- [x] T1155 adp: forward failure never crashes a loop (receipt + continue)
+- [x] T1156 adp: health error clears after a success (latest-event truth, not sticky red)
+- [x] T1157 adp: per-adapter reconnect counters recorded (feeds P49's export)
+- [x] T1158 adp: own loops pass `message_of` to forward (notices link back)
+- [x] T1159 adp: capability matrix gains forward/shutdown/reconnect columns, source-checked
+- [x] T1160 sec: adapter secrets redacted in every loop crash-log path
+- [x] T1161 docs: adapters README shutdown/reconnect columns
+- [x] T1162 docs: runbook adapter-outage section (what red health means)
+- [x] T1163 test: forward parity — each own-loop adapter forwards on a fixture decision
+- [x] T1164 test: reconnect counter increments on a stub disconnect
+- [x] T1165 test: crash-log redaction fixture per adapter
+- [x] T1166 test: SIGTERM between events exits cleanly (fixture)
+- [x] T1167 test: no adapter imports another platform's SDK (import graph pin)
+- [x] T1168 perf: loop overhead per message measured, receipt only
+- [x] T1169 fix: P60 reds — any failure the sweep finds, fixed here
+- [x] T1170 test: P60 adapter-depth sweep (every box ticked, receipts outside TODO.md)
 
 ## P61 HTTP contract polish (T1171–T1190)
-- [ ] T1171 serve: 405 + `Allow` header on wrong method for known routes (no 405 anywhere today)
-- [ ] T1172 serve: frame-options + referrer-policy beside nosniff (nosniff alone today)
-- [ ] T1173 serve: error envelope unified across 404/405/422/500
-- [ ] T1174 serve: `/ready` answers 503 when not ready (always 200 today — a LB cannot drain)
-- [ ] T1175 compose: healthcheck on the server service wired to `/health` (image has one, compose doesn't)
-- [ ] T1176 serve: trailing-slash canonical policy (redirect or 404, deterministic + documented)
-- [ ] T1177 docs: api.md status-code table (405/429/503 semantics)
-- [ ] T1178 docs: api.md security-headers row
-- [ ] T1179 docs: getting-started probe snippet uses the healthcheck
-- [ ] T1180 test: `/ready` contract — 200 ready, 503 not-ready (both branches)
-- [ ] T1181 test: 405 matrix — every route × wrong verb → 405 + Allow
-- [ ] T1182 test: security headers present on 200/4xx/5xx
-- [ ] T1183 test: error envelope parity across handlers
-- [ ] T1184 test: compose healthcheck pin (source check)
-- [ ] T1185 test: Dockerfile liveness stays `/health` (T716's deliberate choice pinned)
-- [ ] T1186 test: trailing-slash behavior pinned
-- [ ] T1187 test: docker-entrypoint honors SIGTERM drain
-- [ ] T1188 perf: header middleware overhead measured, receipt only
-- [ ] T1189 fix: P61 reds — any failure the sweep finds, fixed here
-- [ ] T1190 test: P61 http-contract sweep (every box ticked, receipts outside TODO.md)
+- [x] T1171 serve: 405 + `Allow` header on wrong method for known routes (no 405 anywhere today)
+- [x] T1172 serve: frame-options + referrer-policy beside nosniff (nosniff alone today)
+- [x] T1173 serve: error envelope unified across 404/405/422/500
+- [x] T1174 serve: `/ready` answers 503 when not ready (always 200 today — a LB cannot drain)
+- [x] T1175 compose: healthcheck on the server service wired to `/health` (image has one, compose doesn't)
+- [x] T1176 serve: trailing-slash canonical policy (redirect or 404, deterministic + documented)
+- [x] T1177 docs: api.md status-code table (405/429/503 semantics)
+- [x] T1178 docs: api.md security-headers row
+- [x] T1179 docs: getting-started probe snippet uses the healthcheck
+- [x] T1180 test: `/ready` contract — 200 ready, 503 not-ready (both branches)
+- [x] T1181 test: 405 matrix — every route × wrong verb → 405 + Allow
+- [x] T1182 test: security headers present on 200/4xx/5xx
+- [x] T1183 test: error envelope parity across handlers
+- [x] T1184 test: compose healthcheck pin (source check)
+- [x] T1185 test: Dockerfile liveness stays `/health` (T716's deliberate choice pinned)
+- [x] T1186 test: trailing-slash behavior pinned
+- [x] T1187 test: docker-entrypoint honors SIGTERM drain
+- [x] T1188 perf: header middleware overhead measured, receipt only
+- [x] T1189 fix: P61 reds — any failure the sweep finds, fixed here
+- [x] T1190 test: P61 http-contract sweep (every box ticked, receipts outside TODO.md)
 
 ## P62 Rule & pack quality (T1191–T1210)
-- [ ] T1191 rules: decision-level conflict detection — same trigger mapped to conflicting actions (T045 warns text overlap only)
-- [ ] T1192 rules: normalized trigger comparison (case/whitespace) before declaring a conflict
-- [ ] T1193 rules: conflict + overlap warnings become pack lint findings with severities
-- [ ] T1194 rules: dead-rule report — rule ids never the gold label across the shipped eval set
-- [ ] T1195 pack: `bouncer pack conflicts FILE` CLI command
-- [ ] T1196 pack: pack manifest records a schema version (signed content includes it)
-- [ ] T1197 pack: `pack show` gains an action/severity histogram
-- [ ] T1198 pack: lint exit codes documented (0/1/2) and pinned
-- [ ] T1199 cli: `pack lint --json` envelope (P55 contract tie-in)
-- [ ] T1200 docs: rule-guide gains a conflict workflow (how to resolve findings)
-- [ ] T1201 docs: cookbook recipe — pack lint in CI with the exit-code table
-- [ ] T1202 test: conflict fixtures — true conflict found, benign overlap silent, disjoint silent
-- [ ] T1203 test: shipped presets pass their own lint (catalogue conflict-free)
-- [ ] T1204 test: normalized-trigger conflicts still detected (case-variant fixture)
-- [ ] T1205 test: dead-rule report runs over `data/examples.jsonl` with a receipt
-- [ ] T1206 test: lint exit codes match the docs table
-- [ ] T1207 perf: conflict scan measured on a 500-rule synthetic pack (receipt, bounded output)
-- [ ] T1208 pkg: rule-quality work adds no dependencies (stdlib-only pin)
-- [ ] T1209 fix: P62 reds — any failure the sweep finds, fixed here
-- [ ] T1210 test: P62 rule-quality sweep (every box ticked, receipts outside TODO.md)
+- [x] T1191 rules: decision-level conflict detection — same trigger mapped to conflicting actions (T045 warns text overlap only)
+- [x] T1192 rules: normalized trigger comparison (case/whitespace) before declaring a conflict
+- [x] T1193 rules: conflict + overlap warnings become pack lint findings with severities
+- [x] T1194 rules: dead-rule report — rule ids never the gold label across the shipped eval set
+- [x] T1195 pack: `bouncer pack conflicts FILE` CLI command
+- [x] T1196 pack: pack manifest records a schema version (signed content includes it)
+- [x] T1197 pack: `pack show` gains an action/severity histogram
+- [x] T1198 pack: lint exit codes documented (0/1/2) and pinned
+- [x] T1199 cli: `pack lint --json` envelope (P55 contract tie-in)
+- [x] T1200 docs: rule-guide gains a conflict workflow (how to resolve findings)
+- [x] T1201 docs: cookbook recipe — pack lint in CI with the exit-code table
+- [x] T1202 test: conflict fixtures — true conflict found, benign overlap silent, disjoint silent
+- [x] T1203 test: shipped presets pass their own lint (catalogue conflict-free)
+- [x] T1204 test: normalized-trigger conflicts still detected (case-variant fixture)
+- [x] T1205 test: dead-rule report runs over `data/examples.jsonl` with a receipt
+- [x] T1206 test: lint exit codes match the docs table
+- [x] T1207 perf: conflict scan measured on a 500-rule synthetic pack (receipt, bounded output)
+- [x] T1208 pkg: rule-quality work adds no dependencies (stdlib-only pin)
+- [x] T1209 fix: P62 reds — any failure the sweep finds, fixed here
+- [x] T1210 test: P62 rule-quality sweep (every box ticked, receipts outside TODO.md)
 
 ## P63 Release 0.6.0 (T1211–T1230)
-- [ ] T1211 pkg: version 0.6.0
-- [ ] T1212 suite: full run green + count recorded
-- [ ] T1213 lint: ruff check green
-- [ ] T1214 ci: workflow green on the release commit (status recorded)
-- [ ] T1215 eval: gates run — reports refreshed or explicitly stale
-- [ ] T1216 docs: CHANGELOG 0.6.0 dated
-- [ ] T1217 docs: release notes draft (drafts/release-0.6.0.md)
-- [ ] T1218 docs: README version-sensitive claims re-checked
-- [ ] T1219 test: version strings consistent (0.6.0 everywhere, extends T819)
-- [ ] T1220 test: adapters matrix table matches the runnable stubs (re-run)
-- [ ] T1221 test: docs link checker green
-- [ ] T1222 test: packaging smoke (wheel + sdist stamped 0.6.0, installs, `--version`)
-- [ ] T1223 test: env-var docs coverage still enforced after this release's additions
-- [ ] T1224 test: golden note for 0.6.0 behavior deltas
-- [ ] T1225 test: tag-vs-version CI guard passes for v0.6.0
-- [ ] T1226 sec: SECURITY.md updated for the 0.6.0 surface
-- [ ] T1227 docs: BENCHMARKS known-numbers refreshed (any P49–P62 numbers landed)
-- [ ] T1228 suite: final full green + stats line
-- [ ] T1229 final: push the release commit
-- [ ] T1230 final: tag v0.6.0 + release notes published
+- [x] T1211 pkg: version 0.6.0
+- [x] T1212 suite: full run green + count recorded
+- [x] T1213 lint: ruff check green
+- [x] T1214 ci: workflow green on the release commit (status recorded)
+- [x] T1215 eval: gates run — reports refreshed or explicitly stale
+- [x] T1216 docs: CHANGELOG 0.6.0 dated
+- [x] T1217 docs: release notes draft (drafts/release-0.6.0.md)
+- [x] T1218 docs: README version-sensitive claims re-checked
+- [x] T1219 test: version strings consistent (0.6.0 everywhere, extends T819)
+- [x] T1220 test: adapters matrix table matches the runnable stubs (re-run)
+- [x] T1221 test: docs link checker green
+- [x] T1222 test: packaging smoke (wheel + sdist stamped 0.6.0, installs, `--version`)
+- [x] T1223 test: env-var docs coverage still enforced after this release's additions
+- [x] T1224 test: golden note for 0.6.0 behavior deltas
+- [x] T1225 test: tag-vs-version CI guard passes for v0.6.0
+- [x] T1226 sec: SECURITY.md updated for the 0.6.0 surface
+- [x] T1227 docs: BENCHMARKS known-numbers refreshed (any P49–P62 numbers landed)
+- [x] T1228 suite: final full green + stats line
+- [x] T1229 final: push the release commit
+- [x] T1230 final: tag v0.6.0 + release notes published
