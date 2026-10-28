@@ -1194,13 +1194,13 @@
 - [x] T1081 gate: both new benches join `gate.py --all` known list + PERF_BUDGETS (~10x headroom)
 - [x] T1082 gate: reason/section keys stay informational — the eval family dispatches as `eval`
 - [x] T1083 test: golden ECE value pinned — the flag's default keeps today's binning
-- [ ] T1084 test: report schema contract — shared key/type validator across eval producers
-- [ ] T1085 test: verdict check-name set unchanged after reason keys land (T925 dispatch stability)
-- [ ] T1086 docs: thresholds.md calibration section — reading ECE bins + per-rule ECE
-- [ ] T1087 docs: BENCHMARKS cache + normalize sections (dated numbers from the new benches)
-- [ ] T1088 docs: gates.md abstention-reason taxonomy beside the demotions
-- [ ] T1089 fix: P56 reds — any failure the sweep finds, fixed here
-- [ ] T1090 test: P56 eval-depth sweep (every box ticked, receipts outside TODO.md)
+- [x] T1084 test: report schema contract — shared key/type validator across eval producers
+- [x] T1085 test: verdict check-name set unchanged after reason keys land (T925 dispatch stability)
+- [x] T1086 docs: thresholds.md calibration section — reading ECE bins + per-rule ECE
+- [x] T1087 docs: BENCHMARKS cache + normalize sections (dated numbers from the new benches)
+- [x] T1088 docs: gates.md abstention-reason taxonomy beside the demotions
+- [x] T1089 fix: P56 reds — any failure the sweep finds, fixed here
+- [x] T1090 test: P56 eval-depth sweep (every box ticked, receipts outside TODO.md)
 
 ## P57 Audit query & log triage (T1091–T1110)
 - [ ] T1091 audit: `bouncer audit tail` gains `--since`/`--action`/`--rule` filters (n-only today)
