@@ -1159,26 +1159,26 @@
 - [x] T1050 test: P54 edit re-moderation sweep (every box ticked, receipts outside TODO.md)
 
 ## P55 CLI machine output (T1051–T1070)
-- [ ] T1051 cli: `--json` on `models` + `presets` (read commands are human-only today)
-- [ ] T1052 cli: `--json` on `review` (queue dump machine-readable for triage scripts)
-- [ ] T1053 cli: `--json` on `adjudicate` + `amnesty` (operator actions get a machine receipt)
-- [ ] T1054 cli: `--json` on `export` + `snapshot` (state dumps as one JSON value)
-- [ ] T1055 cli: `--json` on `pack lint` + `pack show` (lint findings consumable)
-- [ ] T1056 cli: `--json` on `doctor` (structured diagnosis for CI)
-- [ ] T1057 cli: `--json` on `watch` (one JSON line per event, pipeable into jq)
-- [ ] T1058 cli: every `--json` writes exactly one JSON value to stdout, diagnostics to stderr
-- [ ] T1059 cli: `--json` exit codes match human mode (parity table, one test)
-- [ ] T1060 cli: `E_*` failures in `--json` mode carry `{code, detail}` envelopes
-- [ ] T1061 stats: `stats --json` gains `as_of` + snapshot version fields (self-describing dump)
-- [ ] T1062 config: `config validate --json` always emits an envelope (partial today)
-- [ ] T1063 sec: `--json` redacts tokens exactly like human mode (parity test)
-- [ ] T1064 docs: README operator block documents the machine-output contract
-- [ ] T1065 docs: cookbook — jq over bouncer `--json` (review triage pipeline)
-- [ ] T1066 test: `--json` parity sweep — every flag-bearing subcommand parses in both modes
-- [ ] T1067 test: strict single-JSON-value stdout (json.loads over the whole stream)
-- [ ] T1068 test: human-mode output is never JSON (no drift the other way)
-- [ ] T1069 fix: P55 reds — any failure the sweep finds, fixed here
-- [ ] T1070 test: P55 machine-output sweep (every box ticked, receipts outside TODO.md)
+- [x] T1051 cli: `--json` on `models` + `presets` (read commands are human-only today)
+- [x] T1052 cli: `--json` on `review` (queue dump machine-readable for triage scripts)
+- [x] T1053 cli: `--json` on `adjudicate` + `amnesty` (operator actions get a machine receipt)
+- [x] T1054 cli: `--json` on `export` + `snapshot` (state dumps as one JSON value)
+- [x] T1055 cli: `--json` on `pack lint` + `pack show` (lint findings consumable)
+- [x] T1056 cli: `--json` on `doctor` (structured diagnosis for CI)
+- [x] T1057 cli: `--json` on `watch` (one JSON line per event, pipeable into jq)
+- [x] T1058 cli: every `--json` writes exactly one JSON value to stdout, diagnostics to stderr
+- [x] T1059 cli: `--json` exit codes match human mode (parity table, one test)
+- [x] T1060 cli: `E_*` failures in `--json` mode carry `{code, detail}` envelopes
+- [x] T1061 stats: `stats --json` gains `as_of` + snapshot version fields (self-describing dump)
+- [x] T1062 config: `config validate --json` always emits an envelope (partial today)
+- [x] T1063 sec: `--json` redacts tokens exactly like human mode (parity test)
+- [x] T1064 docs: README operator block documents the machine-output contract
+- [x] T1065 docs: cookbook — jq over bouncer `--json` (review triage pipeline)
+- [x] T1066 test: `--json` parity sweep — every flag-bearing subcommand parses in both modes
+- [x] T1067 test: strict single-JSON-value stdout (json.loads over the whole stream)
+- [x] T1068 test: human-mode output is never JSON (no drift the other way)
+- [x] T1069 fix: P55 reds — any failure the sweep finds, fixed here
+- [x] T1070 test: P55 machine-output sweep (every box ticked, receipts outside TODO.md)
 
 ## P56 Eval depth 2 (T1071–T1090)
 - [ ] T1071 eval: `eval_gatekeeper --ece-bins` (bin count hardcoded at `n=10`)
