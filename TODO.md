@@ -1144,7 +1144,7 @@
 - [x] T1035 adp: duplicate edit deliveries judge once (dedupe by message id + edit timestamp)
 - [x] T1036 audit: edit decisions carry `cause=edit` so they are separable from first posts
 - [x] T1037 adp: edit re-moderation honors dry-run (print-only) on every platform
-- [ ] T1038 sec: edit floods hit the shared RateCap — N edits cannot amplify model calls
+- [x] T1038 sec: edit floods hit the shared RateCap — N edits cannot amplify model calls
 - [ ] T1039 adp: edit notices link the original `message_of` (the operator sees what was re-judged)
 - [ ] T1040 adp: an edit that becomes clean does NOT silently undelete — the rule is explicit and tested
 - [ ] T1041 docs: adapters README gains an "edits" capability column, source-checked like T868
