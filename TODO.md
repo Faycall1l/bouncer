@@ -1145,18 +1145,18 @@
 - [x] T1036 audit: edit decisions carry `cause=edit` so they are separable from first posts
 - [x] T1037 adp: edit re-moderation honors dry-run (print-only) on every platform
 - [x] T1038 sec: edit floods hit the shared RateCap — N edits cannot amplify model calls
-- [ ] T1039 adp: edit notices link the original `message_of` (the operator sees what was re-judged)
-- [ ] T1040 adp: an edit that becomes clean does NOT silently undelete — the rule is explicit and tested
-- [ ] T1041 docs: adapters README gains an "edits" capability column, source-checked like T868
-- [ ] T1042 docs: runbook — re-moderation policy: what an operator sees after an edit escalates
-- [ ] T1043 test: telegram `edited_message` fixture → one decision, one notice, dry-run never removes
-- [ ] T1044 test: matrix `m.replace` fixture judges the replacement, not the original
-- [ ] T1045 test: discord `MESSAGE_UPDATE` fixture parity with the first-post decision
-- [ ] T1046 test: duplicate edit delivery judges once (dedupe receipt)
-- [ ] T1047 test: edit flood exhausts RateCap with a receipt, never unbounded calls
-- [ ] T1048 test: `cause=edit` rows stay separable in a fixture decision log
-- [ ] T1049 fix: P54 reds — any failure the sweep finds, fixed here
-- [ ] T1050 test: P54 edit re-moderation sweep (every box ticked, receipts outside TODO.md)
+- [x] T1039 adp: edit notices link the original `message_of` (the operator sees what was re-judged)
+- [x] T1040 adp: an edit that becomes clean does NOT silently undelete — the rule is explicit and tested
+- [x] T1041 docs: adapters README gains an "edits" capability column, source-checked like T868
+- [x] T1042 docs: runbook — re-moderation policy: what an operator sees after an edit escalates
+- [x] T1043 test: telegram `edited_message` fixture → one decision, one notice, dry-run never removes
+- [x] T1044 test: matrix `m.replace` fixture judges the replacement, not the original
+- [x] T1045 test: discord `MESSAGE_UPDATE` fixture parity with the first-post decision
+- [x] T1046 test: duplicate edit delivery judges once (dedupe receipt)
+- [x] T1047 test: edit flood exhausts RateCap with a receipt, never unbounded calls
+- [x] T1048 test: `cause=edit` rows stay separable in a fixture decision log
+- [x] T1049 fix: P54 reds — any failure the sweep finds, fixed here
+- [x] T1050 test: P54 edit re-moderation sweep (every box ticked, receipts outside TODO.md)
 
 ## P55 CLI machine output (T1051–T1070)
 - [ ] T1051 cli: `--json` on `models` + `presets` (read commands are human-only today)
