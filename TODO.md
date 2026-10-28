@@ -1181,19 +1181,19 @@
 - [x] T1070 test: P55 machine-output sweep (every box ticked, receipts outside TODO.md)
 
 ## P56 Eval depth 2 (T1071–T1090)
-- [ ] T1071 eval: `eval_gatekeeper --ece-bins` (bin count hardcoded at `n=10`)
-- [ ] T1072 eval: report records `ece_bins` so the number is interpretable downstream
-- [ ] T1073 eval: abstention reason breakdown (margin/quiet/low-conf/breaker counts)
-- [ ] T1074 eval: reasons sum to abstained rows — validated inside the report itself
-- [ ] T1075 eval: per-rule ECE in the report (global ECE hides one miscalibrated rule)
-- [ ] T1076 eval: report stamps git sha (provenance parity with T916's trail)
-- [ ] T1077 eval: `n_target` vs evaluated recorded when `--limit` truncates
-- [ ] T1078 eval: `rule_vocab` unseen-rule rate attached to the eval report
-- [ ] T1079 bench: `bench_cache` — TTL cache under a spam-wave workload (no cache bench exists)
-- [ ] T1080 bench: `bench_normalize` — normalize pipeline per-message cost (no bench exists)
-- [ ] T1081 gate: both new benches join `gate.py --all` known list + PERF_BUDGETS (~10x headroom)
-- [ ] T1082 gate: reason/section keys stay informational — the eval family dispatches as `eval`
-- [ ] T1083 test: golden ECE value pinned — the flag's default keeps today's binning
+- [x] T1071 eval: `eval_gatekeeper --ece-bins` (bin count hardcoded at `n=10`)
+- [x] T1072 eval: report records `ece_bins` so the number is interpretable downstream
+- [x] T1073 eval: abstention reason breakdown (margin/quiet/low-conf/breaker counts)
+- [x] T1074 eval: reasons sum to abstained rows — validated inside the report itself
+- [x] T1075 eval: per-rule ECE in the report (global ECE hides one miscalibrated rule)
+- [x] T1076 eval: report stamps git sha (provenance parity with T916's trail)
+- [x] T1077 eval: `n_target` vs evaluated recorded when `--limit` truncates
+- [x] T1078 eval: `rule_vocab` unseen-rule rate attached to the eval report
+- [x] T1079 bench: `bench_cache` — TTL cache under a spam-wave workload (no cache bench exists)
+- [x] T1080 bench: `bench_normalize` — normalize pipeline per-message cost (no bench exists)
+- [x] T1081 gate: both new benches join `gate.py --all` known list + PERF_BUDGETS (~10x headroom)
+- [x] T1082 gate: reason/section keys stay informational — the eval family dispatches as `eval`
+- [x] T1083 test: golden ECE value pinned — the flag's default keeps today's binning
 - [ ] T1084 test: report schema contract — shared key/type validator across eval producers
 - [ ] T1085 test: verdict check-name set unchanged after reason keys land (T925 dispatch stability)
 - [ ] T1086 docs: thresholds.md calibration section — reading ECE bins + per-rule ECE
