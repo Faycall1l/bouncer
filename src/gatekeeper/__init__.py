@@ -411,7 +411,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         res = {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
                "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
                "escalate_p": 0.0, "abstained": False, "reason": "empty message",
-               "latency_ms": 0.0}
+               "cause": "empty message", "source": "empty", "latency_ms": 0.0}
         _observe(msg, "allow", "ok", 1.0, "empty",
                  adapter=adapter, preset=preset, rid=rid)  # T222+T867+T883
         return res
@@ -424,11 +424,16 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                     model=model)  # T1236: paired routers never share a cached answer
     hit = CACHE.get(key)
     if hit is not None:
-        return _accrue(dict(hit, cached=True), user_id)  # T858: own strikes
+        cached = dict(hit, cached=True)
+        if "source" not in cached:  # T1242: every cached outcome is traceable
+            cached["source"] = "cache"
+        return _accrue(cached, user_id)  # T858: own strikes
     fp = _fastpath_allow(msg, rules)  # T017
     if fp is not None:
         fp["latency_ms"] = 0.0
         fp["cached"] = False
+        fp["source"] = "fastpath"
+        fp["cause"] = "fastpath: no links"
         _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath",
                  adapter=adapter, preset=preset, rid=rid)  # T222+T867+T883
         CACHE.set(key, dict(fp))  # T287: repeats serve from cache
@@ -485,6 +490,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         if not tripped:  # T512: open-state short-circuits don't extend the trip
             _breaker_fail(cfg.breaker_n, cfg.breaker_cool_s)
         fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
+        fb["source"] = "breaker"
         if tripped:  # T513
             fb["cause"] = "breaker-open"
             fb["reason"] = "escalate: breaker open (model failing, cooling down)"
@@ -511,6 +517,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
     if "hype" not in a:  # informational only; never gated on
         a["hype"] = {"score": "chill", "probabilities": []}
     res = _decide(a, cfg)
+    res["source"] = "model"
     res["harm_dist"] = a["harm"].get("probabilities", [])
     # T203: float->label (already in _decide)
     res["harm"] = _level(a["harm"]["score"], DEFAULT_HARM)

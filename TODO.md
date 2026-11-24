@@ -1367,10 +1367,10 @@
 - [x] T1238 eval: paired bootstrap intervals + sign test on the same rows
 - [x] T1239 gate: parity gate refuses pass claims for incomplete or mismatched pairs
 - [x] T1240 gate: self-stability gate records repeat-run drift, never silently retries
-- [ ] T1241 harness: closed outcome enum + explicit decision config (no hidden modes)
-- [ ] T1242 harness: structured trace on every decision, including fallback paths
-- [ ] T1243 harness: scenario runner for order flips, quiet hours, jailbreak, injection
-- [ ] T1244 harness: policy comparison report written from traces, not hand-authored
+- [x] T1241 harness: closed outcome enum + explicit decision config (no hidden modes)
+- [x] T1242 harness: structured trace on every decision, including fallback paths
+- [x] T1243 harness: scenario runner for order flips, quiet hours, jailbreak, injection
+- [x] T1244 harness: policy comparison report written from traces, not hand-authored
 - [ ] T1245 fallback: fastpath decision typed, counted, and traceable
 - [ ] T1246 fallback: cache hit/miss/expiry typed, counted, and traceable
 - [ ] T1247 fallback: breaker open/half-open typed, counted, and traceable

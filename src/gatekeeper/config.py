@@ -89,3 +89,8 @@ class GateConfig:
         if extra:
             raise ConfigError(f"E_CONFIG: unknown keys {extra}")
         return cls(**{k: v for k, v in d.items() if k in known})
+
+    def to_dict(self) -> dict:
+        """JSON-friendly snapshot of every declared knob (no inferred defaults)."""
+        return {k: getattr(self, k) for k in self.__dataclass_fields__
+                if getattr(self, k) is not None}
