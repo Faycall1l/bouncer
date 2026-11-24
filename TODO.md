@@ -1364,8 +1364,8 @@
 - [x] T1235 eval: dataset manifest with content hashes and split provenance
 - [x] T1236 eval: paired runner executes stub and configured real routers on one spec
 - [x] T1237 eval: metrics cover accuracy, gated precision, abstention, ECE, and latency
-- [ ] T1238 eval: paired bootstrap intervals + sign test on the same rows
-- [ ] T1239 gate: parity gate refuses pass claims for incomplete or mismatched pairs
+- [x] T1238 eval: paired bootstrap intervals + sign test on the same rows
+- [x] T1239 gate: parity gate refuses pass claims for incomplete or mismatched pairs
 - [ ] T1240 gate: self-stability gate records repeat-run drift, never silently retries
 - [ ] T1241 harness: closed outcome enum + explicit decision config (no hidden modes)
 - [ ] T1242 harness: structured trace on every decision, including fallback paths

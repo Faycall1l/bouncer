@@ -30,6 +30,8 @@ _METRIC_KEYS = (
 )
 _DELTA_KEYS = ("rule_acc", "action_acc", "gate_precision", "abstention_rate",
                "ece", "p50_ms", "p95_ms")
+_SERIES_KEYS = ("rule_correct", "action_correct", "abstained", "confidence",
+                "latency_ms")
 
 
 @dataclass(frozen=True)
@@ -82,12 +84,15 @@ class MetricsReport:
         if not self.variants or any(v not in VARIANTS for v in self.variants):
             raise SchemaError("MetricsReport.variants: expected declared variants")
         metrics = _dict(self.metrics, "MetricsReport.metrics")
-        _keys(metrics, "MetricsReport.metrics", ("base", "candidate", "delta"))
+        _keys(metrics, "MetricsReport.metrics",
+              ("base", "candidate", "delta", "delta_series"))
         for side in ("base", "candidate"):
             _keys(_dict(metrics[side], f"MetricsReport.metrics.{side}"),
                   f"MetricsReport.metrics.{side}", _METRIC_KEYS)
         _keys(_dict(metrics["delta"], "MetricsReport.metrics.delta"),
               "MetricsReport.metrics.delta", _DELTA_KEYS)
+        _keys(_dict(metrics["delta_series"], "MetricsReport.metrics.delta_series"),
+              "MetricsReport.metrics.delta_series", _SERIES_KEYS)
 
     def to_dict(self) -> dict[str, Any]:
         return {"schema": self.schema, "mode": self.mode,
@@ -204,15 +209,28 @@ def compute_metrics(batch: RunBatch, specs: list[TaskSpec],
     base = _side(batch, by_id, "base", cfg)
     candidate = _side(batch, by_id, "candidate", cfg)
     deltas: dict[str, float | None] = {}
-    for name in ("rule_acc", "action_acc", "gate_precision", "abstention_rate",
-                 "ece", "p50_ms", "p95_ms"):
+    for name in _DELTA_KEYS:
         left, right = base[name], candidate[name]
         deltas[name] = None if left is None or right is None else right - left
+    series: dict[str, list[float]] = {
+        name: [] for name in _SERIES_KEYS
+    }
+    for pair in batch.pairs:
+        gold = by_id[pair.instance_id]
+        left, right = pair.base, pair.candidate
+        series["rule_correct"].append(
+            float(right.rule == gold.gold_rule) - float(left.rule == gold.gold_rule))
+        series["action_correct"].append(
+            float(right.action == gold.gold_action) - float(left.action == gold.gold_action))
+        series["abstained"].append(float(right.abstained) - float(left.abstained))
+        series["confidence"].append(right.confidence - left.confidence)
+        series["latency_ms"].append(right.latency_ms - left.latency_ms)
     return MetricsReport(
         schema=1, mode="paired", manifest_hash=batch.manifest_hash, n=len(batch.pairs),
         base=batch.base, candidate=batch.candidate, variants=batch.variants,
         ece_bins=cfg.ece_bins, gate_min_n=cfg.gate_min_n,
-        metrics={"base": base, "candidate": candidate, "delta": deltas},
+        metrics={"base": base, "candidate": candidate, "delta": deltas,
+                 "delta_series": series},
     )
 
 
