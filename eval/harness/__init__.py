@@ -21,6 +21,7 @@ from .schema import (
     TaskSpec,
     digest,
 )
+from .stability import StabilityReport, run_twice, stability_gate
 
 __all__ = [
     "ACTION_NAMES",
@@ -38,6 +39,7 @@ __all__ = [
     "RunBatch",
     "SchemaError",
     "SplitPin",
+    "StabilityReport",
     "TaskSpec",
     "Verdict",
     "build_manifest",
@@ -48,4 +50,6 @@ __all__ = [
     "parity_gate",
     "path_for_cause",
     "run_pairs",
+    "run_twice",
+    "stability_gate",
 ]
