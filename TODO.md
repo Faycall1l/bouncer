@@ -1360,8 +1360,8 @@
 - [x] T1231 research: primary-source Jev/System One synthesis + redesign findings
 - [x] T1232 docs: README rewritten around measured scope, emojis removed
 - [x] T1233 docs: GIF/SVG figures generated from engine traces with a reproducibility pin
-- [ ] T1234 eval: typed task-spec + outcome schema for paired model comparison
-- [ ] T1235 eval: dataset manifest with content hashes and split provenance
+- [x] T1234 eval: typed task-spec + outcome schema for paired model comparison
+- [x] T1235 eval: dataset manifest with content hashes and split provenance
 - [ ] T1236 eval: paired runner executes stub and configured real routers on one spec
 - [ ] T1237 eval: metrics cover accuracy, gated precision, abstention, ECE, and latency
 - [ ] T1238 eval: paired bootstrap intervals + sign test on the same rows
