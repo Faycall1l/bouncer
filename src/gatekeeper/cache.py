@@ -20,6 +20,7 @@ class TTLCache:
         self._d: OrderedDict = OrderedDict()
         self._lock = threading.Lock()
         self.hits = self.misses = 0
+        self._ttl_expired = 0  # T1246: typed TTL expiry counter
 
     @staticmethod
     def key(message: str, rules: dict, allow_threshold: float, delete_threshold: float,
@@ -50,6 +51,7 @@ class TTLCache:
                     self._d[k] = (exp, v)
                     self.hits += 1
                     return v
+                self._ttl_expired += 1
             self.misses += 1
             return None
 
@@ -69,6 +71,7 @@ class TTLCache:
         with self._lock:
             tot = self.hits + self.misses
             return {"hits": self.hits, "misses": self.misses, "size": len(self._d),
+                    "ttl_expired": self._ttl_expired,
                     "hit_rate": round(self.hits / tot, 3) if tot else 0.0}  # T245
 
     def dump(self) -> dict:  # T877: live entries as a snapshot section

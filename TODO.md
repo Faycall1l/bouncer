@@ -1371,9 +1371,9 @@
 - [x] T1242 harness: structured trace on every decision, including fallback paths
 - [x] T1243 harness: scenario runner for order flips, quiet hours, jailbreak, injection
 - [x] T1244 harness: policy comparison report written from traces, not hand-authored
-- [ ] T1245 fallback: fastpath decision typed, counted, and traceable
-- [ ] T1246 fallback: cache hit/miss/expiry typed, counted, and traceable
-- [ ] T1247 fallback: breaker open/half-open typed, counted, and traceable
-- [ ] T1248 config: environment defaults promoted to explicit named config objects
+- [x] T1245 fallback: fastpath decision typed, counted, and traceable
+- [x] T1246 fallback: cache hit/miss/expiry typed, counted, and traceable
+- [x] T1247 fallback: breaker open/half-open typed, counted, and traceable
+- [x] T1248 config: environment defaults promoted to explicit named config objects
 - [ ] T1249 docs+test: harness contract, fallback taxonomy, and receipts
 - [ ] T1250 final: P64 sweep, full green, every commit pushed

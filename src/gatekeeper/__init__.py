@@ -37,7 +37,7 @@ from .pool import model_for_lang, model_for_script, release_memory  # T458+T891+
 from .presets import get_preset, list_presets
 from .review import add as _qadd  # T273
 from .rules import RuleError, validate_rules
-from .stats import record  # T273
+from .stats import record, record_breaker, record_source  # T273/T1245/T1247
 from .strikes import add_strike, weight_for_action  # T340
 
 _INFLIGHT: dict = {}  # T180: key -> [event, result]
@@ -59,6 +59,7 @@ def _breaker_tripped() -> bool:
             return False
         if _BREAKER["fails"] > 0 and _t.time() >= _BREAKER["open_until"]:
             _BREAKER["half_open"] = True  # T521: cooldown over, one trial call
+            record_breaker("half_open")  # T1247
             return False
         return _t.time() < _BREAKER["open_until"]
 
@@ -71,14 +72,18 @@ def _breaker_fail(n: int, cool_s: float) -> None:
         if _BREAKER["fails"] >= n:
             _BREAKER["open_until"] = _t.time() + cool_s
             _BREAKER["half_open"] = False
+            record_breaker("open")  # T1247
 
 
 def _breaker_ok() -> None:
     """T514: success closes the circuit."""
     with _BREAKER_LOCK:
+        was_open = _BREAKER["half_open"] or _BREAKER["fails"] > 0
         _BREAKER["fails"] = 0
         _BREAKER["open_until"] = 0.0
         _BREAKER["half_open"] = False
+        if was_open:
+            record_breaker("closed")  # T1247
 
 
 def _supports_model(router: Router) -> bool:
@@ -281,10 +286,11 @@ class ModelError(BouncerError):
 
 
 def _fallback(action_note: str) -> dict:
+    record_source("fallback")  # T1245
     return {"action": "escalate", "rule": "ok", "confidence": 0.0, "harm": "suspicious",
             "harm_dist": [], "rule_dist": {}, "jailbreak_p": 0.0, "escalate_p": 1.0,
             "abstained": True, "reason": action_note, "cause": "fallback",  # T234
-            "cached": False}
+            "source": "fallback", "cached": False}
 
 
 def _level(score_val: float, levels: list) -> str:
@@ -412,7 +418,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
                "escalate_p": 0.0, "abstained": False, "reason": "empty message",
                "cause": "empty message", "source": "empty", "latency_ms": 0.0}
-        _observe(msg, "allow", "ok", 1.0, "empty",
+        record_source("empty")  # T1245
+        _observe(msg, "allow", "ok", 1.0, res["cause"],
                  adapter=adapter, preset=preset, rid=rid)  # T222+T867+T883
         return res
     key = CACHE.key(msg, rules, cfg.allow_threshold, cfg.delete_threshold,  # T221
@@ -427,6 +434,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         cached = dict(hit, cached=True)
         if "source" not in cached:  # T1242: every cached outcome is traceable
             cached["source"] = "cache"
+        record_source("cache")  # T1245
         return _accrue(cached, user_id)  # T858: own strikes
     fp = _fastpath_allow(msg, rules)  # T017
     if fp is not None:
@@ -434,7 +442,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         fp["cached"] = False
         fp["source"] = "fastpath"
         fp["cause"] = "fastpath: no links"
-        _observe(msg, fp["action"], fp["rule"], fp["confidence"], "fastpath",
+        record_source("fastpath")  # T1245
+        _observe(msg, fp["action"], fp["rule"], fp["confidence"], fp["cause"],
                  adapter=adapter, preset=preset, rid=rid)  # T222+T867+T883
         CACHE.set(key, dict(fp))  # T287: repeats serve from cache
         return fp
@@ -491,6 +500,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
             _breaker_fail(cfg.breaker_n, cfg.breaker_cool_s)
         fb = _fallback(f"{e}")  # T257: str already carries E_MODEL
         fb["source"] = "breaker"
+        record_source("breaker")  # T1245/T1247
         if tripped:  # T513
             fb["cause"] = "breaker-open"
             fb["reason"] = "escalate: breaker open (model failing, cooling down)"
@@ -518,6 +528,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         a["hype"] = {"score": "chill", "probabilities": []}
     res = _decide(a, cfg)
     res["source"] = "model"
+    record_source("model")  # T1245
     res["harm_dist"] = a["harm"].get("probabilities", [])
     # T203: float->label (already in _decide)
     res["harm"] = _level(a["harm"]["score"], DEFAULT_HARM)

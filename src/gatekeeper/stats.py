@@ -9,7 +9,7 @@ from .persist import atomic_write, read_json  # T435: json/os only, no cycle
 
 _PATH = os.environ.get("BOUNCER_STATS", "bouncer-stats.json")  # T435
 
-_lock = threading.Lock()
+_lock = threading.RLock()  # RLock: get_stats snapshots nested counters while held (T1245/T1247)
 _counts = {"allow": 0, "flag": 0, "delete": 0, "escalate": 0}
 _by_rule: dict = {}
 _joint: dict = {}  # T231: (action, rule) -> n
@@ -17,6 +17,8 @@ _lat: list = []  # T232: ring buffer of recent latency_ms (cap 200)
 _cheap = 0  # T233: decisions served without a model call (empty/fastpath)
 _causes: dict = {}  # T234: cause -> n (margin, needs-human, quiet, low-conf, ...)
 _adapt: dict = {}  # T867: (adapter, action) -> n — which platform is loud
+_source_counts: dict = {}  # T1245: decision source -> n (model, fastpath, ...)
+_breaker_counts: dict = {}  # T1247: breaker outcome -> n (open, half_open, closed)
 
 # T942: rule ids arrive from client request bodies (`rules: {"id": "text"}`),
 # so the label set is client-controlled. Past this many distinct ids the
@@ -56,6 +58,38 @@ def record(action: str, rule: str, latency_ms: float | None = None,
             del _lat[:-200]
 
 
+def record_source(source: str, n: int = 1) -> None:
+    """T1245: typed, closed decision-source counter."""
+    if not isinstance(source, str) or source not in (
+            "model", "cache", "fastpath", "empty", "breaker", "fallback",
+            "coalesced"):
+        raise ValueError(f"E_STATS: unknown decision source {source!r}")
+    if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise ValueError("E_STATS: n must be a positive int")
+    with _lock:
+        _source_counts[source] = _source_counts.get(source, 0) + n
+
+
+def record_breaker(outcome: str, n: int = 1) -> None:
+    """T1247: typed breaker-state counter."""
+    if outcome not in ("open", "half_open", "closed"):
+        raise ValueError(f"E_STATS: unknown breaker outcome {outcome!r}")
+    if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise ValueError("E_STATS: n must be a positive int")
+    with _lock:
+        _breaker_counts[outcome] = _breaker_counts.get(outcome, 0) + n
+
+
+def source_counts() -> dict:
+    with _lock:
+        return dict(sorted(_source_counts.items()))
+
+
+def breaker_counts() -> dict:
+    with _lock:
+        return dict(sorted(_breaker_counts.items()))
+
+
 def get_stats() -> dict:
     """T028: snapshot for /stats and CLI."""
     with _lock:
@@ -72,6 +106,8 @@ def get_stats() -> dict:
                             "p95_ms": _pct(_lat, 0.95)},
                 "cheap_paths": _cheap,  # T233
                 "causes": dict(sorted(_causes.items())),  # T234
+                "source_counts": source_counts(),  # T1245
+                "breaker_counts": breaker_counts(),  # T1247
                 "total": sum(_counts.values())}
 
 
@@ -86,6 +122,8 @@ def reset_stats() -> None:
         del _lat[:]  # T232
         _cheap = 0  # T233
         _causes.clear()  # T234
+        _source_counts.clear()  # T1245
+        _breaker_counts.clear()  # T1247
 
 
 def snapshot() -> dict:  # T434
