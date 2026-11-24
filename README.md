@@ -1,12 +1,10 @@
-# 🛡️ bouncer — programmable live-chat mod in one 30ms pass
+# bouncer — typed moderation decisions over per-server rules
 
 [![ci](https://github.com/Faycall1l/bouncer/actions/workflows/ci.yml/badge.svg)](https://github.com/Faycall1l/bouncer/actions/workflows/ci.yml)
 ![license](https://img.shields.io/badge/license-Apache--2.0-green)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 
-Per-server rules in, typed decisions out. No retrain per community.
-
-Built on [Laya](https://github.com/NandhaKishorM/laya) (Apache-2.0 System One model, Jev-compatible). Classical classifiers die here: rule-sets change every server, every message.
+A research prototype for one-pass typed decision models applied to live-chat moderation. Rules are supplied per request; the system returns a typed decision together with the gate path that produced it. This README reports measured scope first. No model-inclusive accuracy or latency claim is made here: see [BENCHMARKS.md](BENCHMARKS.md#honest-limits) for the current evidence and its limits.
 
 ```python
 from gatekeeper import moderate
@@ -17,11 +15,11 @@ res = moderate(
 # -> {'action': 'delete', 'rule': 'no-spam', 'confidence': 0.94}
 ```
 
-One `Router.predict()` answers 5 questions in parallel:
+One `Router.predict()` answers five questions in a single readout:
 
 | qid | type | what |
 |---|---|---|
-| `rule` | `choice` | which rule violated? criteria = YOUR rules + `ok` (dynamic K=3-12) |
+| `rule` | `choice` | which rule violated? criteria = supplied rules + `ok` (dynamic K=3-12) |
 | `harm` | `score` | `[safe, sus, harmful]` |
 | `hype` | `score` | `[dead, chill, hyped]` |
 | `jailbreak` | `noul` | prompt-injection / ignore-instructions? |
@@ -29,19 +27,19 @@ One `Router.predict()` answers 5 questions in parallel:
 
 Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, else `escalate` to human/LLM.
 
-## Why not classical
+## Hypothesis and scope
 
-* Fixed-class BERT needs retrain per rule-set. Here K and rule text vary per row — shared scorer head, zero retrain.
-* 3 tasks, 1 forward pass (~33ms T4). Classical = 3 models.
-* Calibrated confidence → automate top-50% @ 90%+ precision, escalate rest. Classical softmax lies.
+The design being tested is an interface, not a new learning rule. A typed schema lets rule text and option count change per request without producing a new checkpoint. Whether that trade is worth its accuracy cost is an empirical question: on the template bootstrap in this repository, the regex baseline (0.403) beats zero-shot Laya (0.305), and neither result speaks to open chat. A fine-tuned encoder baseline, adjudicated held-out rules, and out-of-sample thresholds are required before claiming superiority.
 
-## Cost (T148)
+`Jev` is a hosted typed-decision API; the one-pass property comes from scoring fixed labels at one readout. It is not a fast-weight or test-time-weight-update model, and no source links it to those methods. Laya's cheap "learning" path fits a small readout over frozen features. The research notes behind that distinction are in `reports/Jev System One research.md`.
 
-| approach | per 1k messages | latency |
+## Cost model (T148)
+
+| approach | cost basis | latency basis |
 |---|---|---|
-| bouncer (self-hosted Laya) | ~$0 marginal | ~33ms T4 (5 questions, 1 pass) |
-| LLM judge (5 calls) | ~$0.50–2.50 | seconds |
-| regex | $0 | instant, blind to phrasing |
+| bouncer (self-hosted Laya) | local compute; no per-request API fee | ~33ms T4 vendor reference, not measured here |
+| hosted typed judge (Jev-style) | metered API; include fallback and pre-screen calls in totals | vendor 70–500ms; independent CPU measurement 314/387ms p50/p95 |
+| regex | no model call | no model call; measured 0.403 on the template set, blind to paraphrase |
 
 ## Error codes (T198)
 
@@ -171,7 +169,7 @@ A "preset" is just a named rule-pack (`bouncer presets` lists them with
 language tags; `bouncer pack init FILE --preset gaming` writes one out to edit).
 Anywhere bouncer takes `rules`, it also takes `preset` — **never both**:
 
-* `bouncer check "msg" --preset study` · `POST /predict {"message": …, "preset": "es"}`
+* `bouncer check "msg" --preset study` · `POST /predict {"message": "...", "preset": "es"}`
 * `GET /presets/{name}` returns the pack for inspection.
 * Passing both exits 4 (CLI) / `422 E_PRESET` (API) — packs are single-sourced,
   mixing silently merges nothing.
@@ -224,7 +222,7 @@ Nothing persists by default — bouncer is in-memory per process. Two opt-in fil
   per-call open+close behavior.
 * **Review queue** (`BOUNCER_REVIEW`, default `review-queue.jsonl`): flag/escalate
   rows queued for a human; `bouncer review --since/--rule/--action/--prune` filters
-  it, `--clear --yes` empties it. The demo's 🚩 button writes here too.
+  it, `--clear --yes` empties it. The demo's flag button writes here too.
 * **Snapshots**: `bouncer snapshot save snap.json` freezes decision counters +
   per-user strikes; `bouncer snapshot load snap.json` restores them (version-mismatch
   warns, never fails; corrupt files raise `E_SNAPSHOT`). Programmatic equivalent:
@@ -238,6 +236,25 @@ Nothing persists by default — bouncer is in-memory per process. Two opt-in fil
 3. Pushes to `YOUR_HF/gatekeeper-laya-421m` + eval table in README
 
 See `data/README.md` for dataset spec, `notebooks/README.md` for RLCD loop.
+
+## What this does not measure
+
+* Model-inclusive quality. The rule-accuracy row comes from 200 template rows with a base checkpoint; it is not an estimate of live-chat precision or recall.
+* Calibration. Laya's published ECE is 0.466 before out-of-sample temperature fitting. This repository has no held-out calibration split, so its probabilities are not claimed to be calibrated.
+* Hosted Jev accuracy or cost. No Jev API receipt is committed here. Vendor latency and savings figures are external claims, not measurements from this project.
+* Multilingual quality. The i18n harness checks routing only, not translation quality or held-out accuracy in non-English traffic.
+* A comparison against a fine-tuned encoder. The regex floor is the only baseline with a committed number; it is a floor, not evidence that typed readout wins.
+
+## Reproduce
+
+```bash
+uv run --extra dev pytest -q
+python eval/gate.py --all --ci
+python eval/bench_stub.py 200
+python eval/bench_pool.py --json
+```
+
+The gate runner skips a metric that is absent from a report; a skip is not a pass. Every report carries a `bench`, `schema`, and `mode` envelope so a stub number cannot be read as a real-model result.
 
 ## Docs
 
@@ -257,18 +274,14 @@ Template bootstrap (6 message shapes), 3 violation types in v1, English-first,
 
 | split | acc(rule) | gate@0.85 | p50 |
 |---|---|---|---|
-| gatekeeper 200-row, CPU zero-shot | **0.305** (≈ chance) | 0 gated (honest abstention) | 1004ms CPU / ~33ms T4 ref |
-| gatekeeper-test fine-tuned | **target 0.80+** | — | — |
+| gatekeeper 200-row, CPU zero-shot | **0.305** (approximately chance) | 0 gated (abstention) | 1004ms CPU / ~33ms T4 ref |
+| gatekeeper-test fine-tuned | **not measured** | — | — |
 
-Base is near-blind on unseen rule-sets (Laya's own warning) — the finetune is the
-product. Full numbers: [BENCHMARKS.md](BENCHMARKS.md). Be honest — see `eval/`.
+These are template-bootstrap numbers from a 200-row CPU kernel, not live-chat results. The zero-shot row is marked STALE in [BENCHMARKS.md](BENCHMARKS.md#honest-limits) because reproducing it needs a checkpoint and dataset that are not present in a weightless checkout. The fine-tuned row stays empty until a run produces a receipt; a target is not a measurement.
 
 ## Performance (measured, dated — T767; claims re-checked T1007)
 
-Local, stub router: engine overhead only, no model weights in these numbers
-(method per row in [BENCHMARKS.md](BENCHMARKS.md)); Apple-silicon laptop.
-Model-inclusive latency is **not claimed** until measured with weights —
-T751's rule, no invented numbers.
+These are engine-only measurements on an Apple-silicon laptop using a stub router. No model weights were loaded, so none of these rows includes inference time. Method details and the no-invented-numbers rule are in [BENCHMARKS.md](BENCHMARKS.md). Model-inclusive latency is **not claimed** until a run produces a `mode:"real"` receipt.
 
 | what | number | measured |
 |---|---|---|
