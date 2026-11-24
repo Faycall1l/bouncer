@@ -420,7 +420,8 @@ def moderate(message: str, rules: dict[str, str] | None = None,
                     _quiet_active(cfg), (cfg.jailbreak_threshold, cfg.escalate_threshold,
                                          cfg.margin_abstain, cfg.flag_margin,
                                          cfg.severity_offset, cfg.require_calm,
-                                         cfg.questions))  # T755: 3q/5q never share
+                                         cfg.questions),  # T755: 3q/5q never share
+                    model=model)  # T1236: paired routers never share a cached answer
     hit = CACHE.get(key)
     if hit is not None:
         return _accrue(dict(hit, cached=True), user_id)  # T858: own strikes

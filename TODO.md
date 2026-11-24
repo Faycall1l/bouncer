@@ -1362,8 +1362,8 @@
 - [x] T1233 docs: GIF/SVG figures generated from engine traces with a reproducibility pin
 - [x] T1234 eval: typed task-spec + outcome schema for paired model comparison
 - [x] T1235 eval: dataset manifest with content hashes and split provenance
-- [ ] T1236 eval: paired runner executes stub and configured real routers on one spec
-- [ ] T1237 eval: metrics cover accuracy, gated precision, abstention, ECE, and latency
+- [x] T1236 eval: paired runner executes stub and configured real routers on one spec
+- [x] T1237 eval: metrics cover accuracy, gated precision, abstention, ECE, and latency
 - [ ] T1238 eval: paired bootstrap intervals + sign test on the same rows
 - [ ] T1239 gate: parity gate refuses pass claims for incomplete or mismatched pairs
 - [ ] T1240 gate: self-stability gate records repeat-run drift, never silently retries
