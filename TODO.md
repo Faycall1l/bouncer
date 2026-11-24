@@ -1375,5 +1375,5 @@
 - [x] T1246 fallback: cache hit/miss/expiry typed, counted, and traceable
 - [x] T1247 fallback: breaker open/half-open typed, counted, and traceable
 - [x] T1248 config: environment defaults promoted to explicit named config objects
-- [ ] T1249 docs+test: harness contract, fallback taxonomy, and receipts
+- [x] T1249 docs+test: harness contract, fallback taxonomy, and receipts
 - [ ] T1250 final: P64 sweep, full green, every commit pushed

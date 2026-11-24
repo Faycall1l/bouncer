@@ -1,0 +1,5 @@
+{
+  "allow_threshold": 0.85,
+  "delete_threshold": 0.85,
+  "questions": 5
+}

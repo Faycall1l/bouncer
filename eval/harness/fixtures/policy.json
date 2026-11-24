@@ -1,0 +1,8 @@
+{
+  "name": "prod",
+  "outcomes": ["allow", "delete", "flag", "escalate", "abstain"],
+  "sources": ["model", "cache", "fastpath", "empty", "breaker", "fallback", "coalesced"],
+  "require_cause": true,
+  "require_reason": true,
+  "require_source": true
+}
