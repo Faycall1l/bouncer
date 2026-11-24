@@ -4,6 +4,8 @@
 ![license](https://img.shields.io/badge/license-Apache--2.0-green)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 
+<!-- T1232 receipt: claims rewritten around measured scope; emojis removed. -->
+
 A research prototype for one-pass typed decision models applied to live-chat moderation. Rules are supplied per request; the system returns a typed decision together with the gate path that produced it. This README reports measured scope first. No model-inclusive accuracy or latency claim is made here: see [BENCHMARKS.md](BENCHMARKS.md#honest-limits) for the current evidence and its limits.
 
 ```python
@@ -32,6 +34,14 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 The design being tested is an interface, not a new learning rule. A typed schema lets rule text and option count change per request without producing a new checkpoint. Whether that trade is worth its accuracy cost is an empirical question: on the template bootstrap in this repository, the regex baseline (0.403) beats zero-shot Laya (0.305), and neither result speaks to open chat. A fine-tuned encoder baseline, adjudicated held-out rules, and out-of-sample thresholds are required before claiming superiority.
 
 `Jev` is a hosted typed-decision API; the one-pass property comes from scoring fixed labels at one readout. It is not a fast-weight or test-time-weight-update model, and no source links it to those methods. Laya's cheap "learning" path fits a small readout over frozen features. The research notes behind that distinction are in `reports/Jev System One research.md`.
+
+![Gate precedence](docs/assets/gate-precedence.svg)
+
+*Gate precedence is a fixed order of checks. A terminal outcome is final; margin abstention and quiet hours are post-checks that can only demote allow/delete.*
+
+![Engine decision trace](docs/assets/decision-trace.gif)
+
+*Decision trace produced by `scripts/make_readme_visuals.py` from four deterministic synthetic-router calls through `moderate()`. The router scores fixed labels, so the figure shows engine control flow, not model quality or latency. The frame count, input hashes, and SHA-256 are recorded in `docs/assets/decision-trace.json`.*
 
 ## Cost model (T148)
 
@@ -252,6 +262,7 @@ uv run --extra dev pytest -q
 python eval/gate.py --all --ci
 python eval/bench_stub.py 200
 python eval/bench_pool.py --json
+python scripts/make_readme_visuals.py
 ```
 
 The gate runner skips a metric that is absent from a report; a skip is not a pass. Every report carries a `bench`, `schema`, and `mode` envelope so a stub number cannot be read as a real-model result.

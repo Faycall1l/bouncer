@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="270" viewBox="0 0 760 270" role="img" aria-label="Gate precedence order">
+  <rect width="760" height="270" fill="#121620"/>
+  <text x="24" y="32" fill="#eaf0f6" font-family="sans-serif" font-size="15">Gate precedence, evaluated in order</text>
+  <text x="24" y="52" fill="#8892a4" font-family="sans-serif" font-size="12">A later rule cannot override an earlier terminal outcome; margin and quiet hours are post-checks.</text>
+
+  <g font-family="sans-serif" font-size="12" text-anchor="middle">
+    <g><rect x="20" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="74" y="100" fill="#eaf0f6">jailbreak</text><text x="74" y="116" fill="#8892a4">delete</text></g>
+    <g><rect x="142" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="196" y="100" fill="#eaf0f6">needs-human</text><text x="196" y="116" fill="#8892a4">escalate</text></g>
+    <g><rect x="264" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="318" y="100" fill="#eaf0f6">violation</text><text x="318" y="116" fill="#8892a4">delete</text></g>
+    <g><rect x="386" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="440" y="100" fill="#eaf0f6">suspected</text><text x="440" y="116" fill="#8892a4">flag</text></g>
+    <g><rect x="508" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="562" y="100" fill="#eaf0f6">calm-ok</text><text x="562" y="116" fill="#8892a4">allow</text></g>
+    <g><rect x="630" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="684" y="100" fill="#eaf0f6">low-conf</text><text x="684" y="116" fill="#8892a4">escalate</text></g>
+  </g>
+
+  <path d="M74 136 H684" stroke="#60b4f0" stroke-width="3" fill="none" stroke-dasharray="12 10">
+    <animate attributeName="stroke-dashoffset" from="44" to="0" dur="4s" repeatCount="indefinite"/>
+  </path>
+  <circle r="6" fill="#60b4f0">
+    <animateMotion dur="4s" repeatCount="indefinite" path="M74 136 H684"/>
+  </circle>
+
+  <g font-family="sans-serif" font-size="12" fill="#8892a4">
+    <text x="24" y="190">post-check: margin abstention demotes allow/delete to escalate</text>
+    <text x="24" y="216">post-check: quiet hours demote delete to escalate</text>
+    <text x="24" y="248">every terminal outcome carries a cause code in the audit row</text>
+  </g>
+</svg>

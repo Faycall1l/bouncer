@@ -1355,3 +1355,25 @@
 - [x] T1228 suite: final full green + stats line
 - [x] T1229 final: push the release commit
 - [x] T1230 final: tag v0.6.0 + release notes published
+
+## P64 Honest research project (T1231–T1250)
+- [x] T1231 research: primary-source Jev/System One synthesis + redesign findings
+- [x] T1232 docs: README rewritten around measured scope, emojis removed
+- [x] T1233 docs: GIF/SVG figures generated from engine traces with a reproducibility pin
+- [ ] T1234 eval: typed task-spec + outcome schema for paired model comparison
+- [ ] T1235 eval: dataset manifest with content hashes and split provenance
+- [ ] T1236 eval: paired runner executes stub and configured real routers on one spec
+- [ ] T1237 eval: metrics cover accuracy, gated precision, abstention, ECE, and latency
+- [ ] T1238 eval: paired bootstrap intervals + sign test on the same rows
+- [ ] T1239 gate: parity gate refuses pass claims for incomplete or mismatched pairs
+- [ ] T1240 gate: self-stability gate records repeat-run drift, never silently retries
+- [ ] T1241 harness: closed outcome enum + explicit decision config (no hidden modes)
+- [ ] T1242 harness: structured trace on every decision, including fallback paths
+- [ ] T1243 harness: scenario runner for order flips, quiet hours, jailbreak, injection
+- [ ] T1244 harness: policy comparison report written from traces, not hand-authored
+- [ ] T1245 fallback: fastpath decision typed, counted, and traceable
+- [ ] T1246 fallback: cache hit/miss/expiry typed, counted, and traceable
+- [ ] T1247 fallback: breaker open/half-open typed, counted, and traceable
+- [ ] T1248 config: environment defaults promoted to explicit named config objects
+- [ ] T1249 docs+test: harness contract, fallback taxonomy, and receipts
+- [ ] T1250 final: P64 sweep, full green, every commit pushed
