@@ -115,17 +115,18 @@ def test_real_binding_is_explicit_and_cause_paths_are_closed():  # T1236
         path_for_cause("vibes")
 
 
-def test_runner_refuses_an_engine_result_without_a_cause(tmp_path):  # T1236
+def test_runner_refuses_an_engine_result_without_a_cause(tmp_path, monkeypatch):  # T1236
     spec = _specs(tmp_path)[0]
-    # Rules mention links and the message has none: the engine's fastpath
-    # currently omits `cause`. The harness must surface that, not guess.
-    fast = spec.__class__.from_dict({**spec.to_dict(),
-                                     "message": "plain chat",
-                                     "rules": {"no-spam": "no link"},
-                                     "gold_rule": "ok", "gold_action": "allow",
-                                     "variant": "identity"})
+    # The runner surfaces an engine result that omits `cause` instead of
+    # inventing one (T1242). Engine paths now add cause, so this simulates
+    # a broken router/harness boundary directly.
+    def fake_moderate(*args, **kwargs):
+        return {"action": "allow", "rule": "ok", "confidence": 0.9,
+                "abstained": False, "latency_ms": 0.1}
+
+    monkeypatch.setattr("gatekeeper.moderate", fake_moderate)
     with pytest.raises(SchemaError, match="no cause"):
-        run_pairs([fast], base=_binding("base", "ok", 0.9),
+        run_pairs([spec], base=_binding("base", "ok", 0.9),
                   candidate=_binding("candidate", "ok", 0.9),
                   manifest_hash=MANIFEST, variants=("identity",))
 

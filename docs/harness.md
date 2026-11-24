@@ -1,7 +1,10 @@
 # Decision and evaluation harness
 
-This is a real, strict harness. It does not publish model accuracy or latency
-evidence; it publishes decisions, policies, and traces.
+_(Last checked against v0.5.0.)_
+
+See the [glossary](glossary.md). This is a real, strict harness. It does not
+publish model accuracy or latency evidence; it publishes decisions, policies,
+and traces.
 
 ## Eval API (T1234-T1240)
 

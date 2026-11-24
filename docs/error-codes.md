@@ -40,6 +40,7 @@ Codes are stable; messages may gain detail between releases.
 |---|---|---|---|
 | `E_MODEL` | `200` + `action=escalate` on the scored routes; `503` on the `/v1/systemone` passthrough (T833) | inference failed twice (T197) — on `/predict` that's served but escalated, never allowed; the passthrough refuses to fabricate an answer, so a dead model is an honest coded 503, breaker counted | check the checkpoint/device in server logs; `GET /ready` probes this |
 | `E_BOUNCER` | logs / CLI stderr | base code of every `BouncerError` without a more specific subclass | the text after the code names the failing stage |
+| `E_STATS` | ValueError | typed source/breaker counters rejected a non-closed value or bad increment | pass a closed source string or fix the caller |
 | `E_INTERNAL` | 500 | unexpected failure, detail deliberately not leaked | read server logs; the rid in the log line matches the response |
 
 ## Persistence (CLI)

@@ -417,7 +417,7 @@ def moderate(message: str, rules: dict[str, str] | None = None,
         res = {"action": "allow", "rule": "ok", "confidence": 1.0, "harm": "safe",
                "harm_dist": [], "rule_dist": {"ok": 1.0}, "jailbreak_p": 0.0,
                "escalate_p": 0.0, "abstained": False, "reason": "empty message",
-               "cause": "empty message", "source": "empty", "latency_ms": 0.0}
+               "cause": "empty", "source": "empty", "latency_ms": 0.0}
         record_source("empty")  # T1245
         _observe(msg, "allow", "ok", 1.0, res["cause"],
                  adapter=adapter, preset=preset, rid=rid)  # T222+T867+T883

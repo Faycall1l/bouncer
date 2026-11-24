@@ -394,8 +394,9 @@ def test_t959_stricter_ruff_config_enabled_and_fixed_not_suppressed():  # T959
     # anywhere in the Python sources (BLE001/F401/SIM115 predate T959)
     bad = re.compile(r"#\s*noqa:\s*[A-Z]*\d*\b.*\b[EW]\d{3,4}\b")
     for path in Path(".").rglob("*.py"):
-        if ".git" in path.parts or "p13env" in path.parts:
-            continue
+        if (".git" in path.parts or "p13env" in path.parts
+                or ".venv" in path.parts):
+            continue  # clean CI trees have no .venv; local has this checkout's
         for lineno, line in enumerate(path.read_text().splitlines(), 1):
             assert not bad.search(line), f"{path}:{lineno}: {line.strip()}"
 
