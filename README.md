@@ -33,7 +33,11 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 
 The design being tested is an interface, not a new learning rule. A typed schema lets rule text and option count change per request without producing a new checkpoint. Whether that trade is worth its accuracy cost is an empirical question: on the template bootstrap in this repository, the regex baseline (0.403) beats zero-shot Laya (0.305), and neither result speaks to open chat. A fine-tuned encoder baseline, adjudicated held-out rules, and out-of-sample thresholds are required before claiming superiority.
 
-`Jev` is a hosted typed-decision API; the one-pass property comes from scoring fixed labels at one readout. It is not a fast-weight or test-time-weight-update model, and no source links it to those methods. Laya's cheap "learning" path fits a small readout over frozen features. The research notes behind that distinction are in `reports/Jev System One research.md`.
+`Jev` is a hosted typed-decision API; the one-pass property comes from scoring fixed labels at one readout. It is not a fast-weight or test-time-weight-update model, and no source links it to those methods. Laya's cheap "learning" path fits a small readout over frozen features. This report has been modernized toward an evidence-hierarchy style: public speed/architecture shape is listed, but our own receipts are marked separately, and missing receipts are not allowed to look like results. See `reports/Jev System One research.md` and the modernization agenda in section 8.
+
+![System architecture](docs/assets/system-architecture.svg)
+
+*High-level flow: typed request to cache/fastpath, typed decision core, counted audit/stats, and terminal action. The trace animation in `docs/assets/decision-trace.gif` shows the same engine control flow; the system diagram is static and generated from the code contracts.*
 
 ![Gate precedence](docs/assets/gate-precedence.svg)
 

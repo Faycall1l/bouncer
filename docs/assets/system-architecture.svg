@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320"
+     viewBox="0 0 760 320" role="img" aria-label="Bouncer decision system">
+  <rect width="760" height="320" fill="#0d1219"/>
+  <text x="24" y="30" fill="#eaf0f6" font-size="17">System flow</text>
+  <text x="24" y="48" fill="#8892a4" font-size="11">
+    Typed decisions carry causes and counted sources; no silent path owns a terminal outcome.
+  </text>
+
+  <g font-size="12" text-anchor="middle">
+    <rect x="20" y="80" width="140" height="45" rx="8" fill="#243046">
+      <text x="90" y="98">User / HTTP</text>
+      <text x="90" y="112" fill="#8892a4">message, rules, history</text>
+    </rect>
+    <rect x="200" y="80" width="210" height="45" rx="8" fill="#2a384f">
+      <text x="305" y="98">Cache + fastpath</text>
+      <text x="305" y="112" fill="#8892a4">typed miss/hit/TTL</text>
+    </rect>
+    <rect x="450" y="80" width="270" height="45" rx="8" fill="#1f3a2e">
+      <text x="585" y="98">Decision core</text>
+      <text x="585" y="112" fill="#8892a4">closed causes and action enum</text>
+    </rect>
+    <rect x="20" y="210" width="700" height="35" rx="8" fill="#243046">
+      <text x="370" y="230">Audit + stats + appeal</text>
+    </rect>
+    <rect x="20" y="260" width="700" height="35" rx="8" fill="#243046">
+      <text x="370" y="280">Terminal: allow / delete / flag / escalate</text>
+    </rect>
+  </g>
+
+  <g fill="none" stroke="#60b4f0" stroke-width="2.5">
+    <path d="M90 125 L305 125 L585 125"/>
+    <path d="M730 125 L450 125"/>
+    <path d="M585 125 V140 L370 210"/>
+    <path d="M370 210 V245 L370 260"/>
+    <path d="M585 125 V300"/>
+  </g>
+
+  <circle r="4" fill="#60b4f0">
+    <animate attributeName="cx"
+             values="90;585;370;300;585"
+             dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="cy"
+             values="125;125;210;300;125"
+             dur="6s" repeatCount="indefinite"/>
+  </circle>
+
+  <text x="370" y="170" fill="#60b4f0" font-size="10">typed cause</text>
+  <text x="430" y="58" fill="#8892a4" font-size="10">
+    Post-checks: quiet hours and margin demote terminal decisions.
+  </text>
+</svg>
