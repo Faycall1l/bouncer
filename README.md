@@ -31,7 +31,7 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 
 ## Hypothesis and scope
 
-The design being tested is an interface, not a new learning rule. A typed schema lets rule text and option count change per request without producing a new checkpoint. Whether that trade is worth its accuracy cost is an empirical question: on the template bootstrap in this repository, the regex baseline (0.403) beats zero-shot Laya (0.305), and neither result speaks to open chat. A fine-tuned encoder baseline, adjudicated held-out rules, and out-of-sample thresholds are required before claiming superiority.
+The design being tested is an interface, not a new learning rule. A typed schema lets rule text and option count change per request without producing a new checkpoint. Whether that trade is worth its accuracy cost is an empirical question: on the template bootstrap in this repository, the regex baseline (0.403) beats zero-shot Laya (0.305), and neither result speaks to open chat. The 0.403 baseline is a template measurement; the 0.305 zero-shot row is marked stale in `BENCHMARKS.md`; a fine-tuned encoder baseline, adjudicated held-out rules, and out-of-sample thresholds are required before claiming superiority.
 
 `Jev` is a hosted typed-decision API; the one-pass property comes from scoring fixed labels at one readout. It is not a fast-weight or test-time-weight-update model, and no source links it to those methods. Laya's cheap "learning" path fits a small readout over frozen features. This report has been modernized toward an evidence-hierarchy style: public speed/architecture shape is listed, but our own receipts are marked separately, and missing receipts are not allowed to look like results. See `reports/Jev System One research.md` and the modernization agenda in section 8.
 
@@ -289,7 +289,7 @@ Template bootstrap (6 message shapes), 3 violation types in v1, English-first,
 
 | split | acc(rule) | gate@0.85 | p50 |
 |---|---|---|---|
-| gatekeeper 200-row, CPU zero-shot | **0.305** (approximately chance) | 0 gated (abstention) | 1004ms CPU / ~33ms T4 ref |
+| gatekeeper 200-row, CPU zero-shot (TEMPLATE/STALE) | **0.305** (approximately chance, pinned stale) | 0 gated (abstention) | 1004ms CPU / ~33ms T4 ref |
 | gatekeeper-test fine-tuned | **not measured** | — | — |
 
 These are template-bootstrap numbers from a 200-row CPU kernel, not live-chat results. The zero-shot row is marked STALE in [BENCHMARKS.md](BENCHMARKS.md#honest-limits) because reproducing it needs a checkpoint and dataset that are not present in a weightless checkout. The fine-tuned row stays empty until a run produces a receipt; a target is not a measurement.

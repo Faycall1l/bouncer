@@ -1385,3 +1385,6 @@
 - [x] T1254 test: research modernization pins claims, limits, and provenance strings used by README/docs
 - [x] T1255 test: system diagram/research/readme sweep passes locally and in CI
 - [x] T1256 final: P65 sweep, full green, every commit pushed
+
+## P66 README modernization proof (T1257)
+- [x] T1257 docs+test: README scope/stale-template strings are modernized and pinned
