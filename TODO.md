@@ -1398,3 +1398,6 @@
 
 ## P67 Direct writing, no use of undeclared readers (T1263)
 - [x] T1263 docs: rewrite key README/harness/research prose to be direct and low-filler; preserve pinned strings
+
+## P68 Test sync after style rewording (T1264)
+- [ ] T1264 test: update modernization tests after removing the word "modernized" from README

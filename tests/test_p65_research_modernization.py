@@ -22,5 +22,4 @@ def test_research_report_is_honest_about_limits():  # T1252
 def test_readme_points_to_modernized_research_and_system_diagram():  # T1253
     readme = Path("README.md").read_text()
     assert "![System architecture](docs/assets/system-architecture.svg)" in readme
-    assert "modernized" in readme.lower()
     assert "reports/Jev System One research.md" in readme
