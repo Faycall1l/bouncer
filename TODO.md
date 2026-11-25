@@ -1380,7 +1380,7 @@
 
 ## P65 Modernize visuals and research honesty (T1251–T1256)
 - [x] T1251 test: system-architecture.svg is present, linked, animated, and test-pinned
-- [ ] T1252 research: replace junky Jev report with a cleaner provenance + limits structure and explicit uncertainty
+- [x] T1252 research: replace junky Jev report with a cleaner provenance + limits structure and explicit uncertainty
 - [ ] T1253 docs: modernize gate-precedence.svg to the system flow and keep it in sync with README
 - [ ] T1254 test: research modernization pins claims, limits, and provenance strings used by README/docs
 - [ ] T1255 test: system diagram/research/readme sweep passes locally and in CI
