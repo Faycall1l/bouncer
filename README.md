@@ -6,7 +6,7 @@
 
 <!-- T1232 receipt: claims rewritten around measured scope; emojis removed. -->
 
-A research prototype for one-pass typed decision models applied to live-chat moderation. Rules are supplied per request; the system returns a typed decision together with the gate path that produced it. This README reports measured scope first. No model-inclusive accuracy or latency claim is made here: see [BENCHMARKS.md](BENCHMARKS.md#honest-limits) for the current evidence and its limits.
+A research prototype for one-pass typed decision models applied to live-chat moderation. Rules are supplied per request; decisions are returned with a gate path. Claims below are scoped to repo measurements unless marked vendor; see [BENCHMARKS.md](BENCHMARKS.md#honest-limits) for the current evidence and its limits.
 
 ```python
 from gatekeeper import moderate
@@ -33,11 +33,11 @@ Gate: `auto-delete` if harm≥sus @ conf≥0.85, `allow` if ok @ conf≥0.85, el
 
 The design being tested is an interface, not a new learning rule. A typed schema lets rule text and option count change per request without producing a new checkpoint. Whether that trade is worth its accuracy cost is an empirical question: on the template bootstrap in this repository, the regex baseline (0.403) beats zero-shot Laya (0.305), and neither result speaks to open chat. The 0.403 baseline is a template measurement; the 0.305 zero-shot row is marked stale in `BENCHMARKS.md`; a fine-tuned encoder baseline, adjudicated held-out rules, and out-of-sample thresholds are required before claiming superiority.
 
-`Jev` is a hosted typed-decision API; the one-pass property comes from scoring fixed labels at one readout. It is not a fast-weight or test-time-weight-update model, and no source links it to those methods. Laya's cheap "learning" path fits a small readout over frozen features. This report has been modernized toward an evidence-hierarchy style: public speed/architecture shape is listed, but our own receipts are marked separately, and missing receipts are not allowed to look like results. See `reports/Jev System One research.md` and the modernization agenda in section 8.
+`Jev` is a hosted typed-decision API; the one-pass property comes from scoring fixed labels at one readout. It is not a fast-weight or test-time-weight-update model, and no source links it to those methods. Laya's cheap "learning" path fits a small readout over frozen features. Public speed/architecture shape is listed separately; our receipts are marked separately and missing receipts are not results. See `reports/Jev System One research.md` and the modernization agenda in section 8.
 
 ![System architecture](docs/assets/system-architecture.svg)
 
-*High-level flow: typed request to cache/fastpath, typed decision core, counted audit/stats, and terminal action. The trace animation in `docs/assets/decision-trace.gif` shows the same engine control flow; the system diagram is static and generated from the code contracts.*
+*Flow: typed request, cache/fastpath, typed decision core, counted audit/stats, terminal action. See `docs/assets/decision-trace.gif` for the engine control flow.*
 
 ![Gate precedence](docs/assets/gate-precedence.svg)
 

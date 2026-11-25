@@ -1395,3 +1395,6 @@
 - [x] T1260 assets: update gate-precedence.svg to loop-with-hold template and indefinite repeat
 - [x] T1261 test: animation docs/assets are smooth, template-based, and test-pinned
 - [x] T1262 final: P66 sweep, full green, every commit pushed
+
+## P67 Direct writing, no use of undeclared readers (T1263)
+- [ ] T1263 docs: rewrite key README/harness/research prose to be direct and low-filler; preserve pinned strings

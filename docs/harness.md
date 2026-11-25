@@ -2,9 +2,9 @@
 
 _(Last checked against v0.5.0.)_
 
-See the [glossary](glossary.md). This is a real, strict harness. It does not
-publish model accuracy or latency evidence; it publishes decisions, policies,
-and traces.
+See the [glossary](glossary.md). This harness is explicit and fail-closed. It
+does not publish model accuracy or latency evidence; it publishes decisions,
+policies, and traces.
 
 ## Eval API (T1234-T1240)
 
