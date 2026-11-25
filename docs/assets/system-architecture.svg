@@ -36,12 +36,9 @@
   </g>
 
   <circle r="4" fill="#60b4f0">
-    <animate attributeName="cx"
-             values="90;585;370;300;585"
-             dur="6s" repeatCount="indefinite"/>
-    <animate attributeName="cy"
-             values="125;125;210;300;125"
-             dur="6s" repeatCount="indefinite"/>
+    <animateMotion
+      path="M90 125 L585 125 L730 125 L450 125 L585 125 V300"
+      dur="9s" repeatCount="indefinite"/>
   </circle>
 
   <text x="370" y="170" fill="#60b4f0" font-size="10">typed cause</text>

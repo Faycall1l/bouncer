@@ -47,6 +47,7 @@ nav:
       - Environment variables: environment.md
       - API: api.md
       - Harness contract: harness.md
+      - Animation guidelines: animation.md
       - Error codes: error-codes.md
       - Architecture: architecture.md
       - Glossary: glossary.md

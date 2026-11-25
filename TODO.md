@@ -1388,3 +1388,10 @@
 
 ## P66 README modernization proof (T1257)
 - [x] T1257 docs+test: README scope/stale-template strings are modernized and pinned
+
+## P66 Animated assets, not one-shot (T1258–T1262)
+- [x] T1258 docs: add `docs/animation.md` with online guidelines/templates and receipts
+- [x] T1259 assets: update system-architecture.svg to SMIL animateMotion and indefinite loop
+- [x] T1260 assets: update gate-precedence.svg to loop-with-hold template and indefinite repeat
+- [x] T1261 test: animation docs/assets are smooth, template-based, and test-pinned
+- [x] T1262 final: P66 sweep, full green, every commit pushed

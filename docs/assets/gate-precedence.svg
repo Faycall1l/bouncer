@@ -24,6 +24,16 @@
   <circle r="4" fill="#60b4f0" cx="392" cy="73"/>
   <circle r="4" fill="#60b4f0" cx="499" cy="73"/>
   <circle r="4" fill="#60b4f0" cx="606" cy="73"/>
+  <circle r="4" fill="#60b4f0">
+    <animate attributeName="cx"
+             values="72;600;600;72"
+             keyTimes="0;0.45;0.85;1"
+             dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="cy"
+             values="73;73;73;73"
+             keyTimes="0;0.45;0.85;1"
+             dur="8s" repeatCount="indefinite"/>
+  </circle>
   <g font-size="10" fill="#8892a4" text-anchor="middle">
     <text x="22" y="108">first terminal outcome wins</text>
     <text x="22" y="126">margin abstention and quiet hours are post-checks</text>
