@@ -1400,4 +1400,4 @@
 - [x] T1263 docs: rewrite key README/harness/research prose to be direct and low-filler; preserve pinned strings
 
 ## P68 Test sync after style rewording (T1264)
-- [ ] T1264 test: update modernization tests after removing the word "modernized" from README
+- [x] T1264 test: update modernization tests after removing the word "modernized" from README
