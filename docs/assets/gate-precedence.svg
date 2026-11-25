@@ -1,27 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="270" viewBox="0 0 760 270" role="img" aria-label="Gate precedence order">
-  <rect width="760" height="270" fill="#121620"/>
-  <text x="24" y="32" fill="#eaf0f6" font-family="sans-serif" font-size="15">Gate precedence, evaluated in order</text>
-  <text x="24" y="52" fill="#8892a4" font-family="sans-serif" font-size="12">A later rule cannot override an earlier terminal outcome; margin and quiet hours are post-checks.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="190" viewBox="0 0 760 190" role="img" aria-label="Gate precedence order">
+  <rect width="760" height="190" fill="#0d1219"/>
+  <text x="24" y="22" fill="#eaf0f6" font-family="sans-serif" font-size="16">Gate precedence, in order</text>
 
-  <g font-family="sans-serif" font-size="12" text-anchor="middle">
-    <g><rect x="20" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="74" y="100" fill="#eaf0f6">jailbreak</text><text x="74" y="116" fill="#8892a4">delete</text></g>
-    <g><rect x="142" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="196" y="100" fill="#eaf0f6">needs-human</text><text x="196" y="116" fill="#8892a4">escalate</text></g>
-    <g><rect x="264" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="318" y="100" fill="#eaf0f6">violation</text><text x="318" y="116" fill="#8892a4">delete</text></g>
-    <g><rect x="386" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="440" y="100" fill="#eaf0f6">suspected</text><text x="440" y="116" fill="#8892a4">flag</text></g>
-    <g><rect x="508" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="562" y="100" fill="#eaf0f6">calm-ok</text><text x="562" y="116" fill="#8892a4">allow</text></g>
-    <g><rect x="630" y="82" width="108" height="42" rx="8" fill="#243046"/><text x="684" y="100" fill="#eaf0f6">low-conf</text><text x="684" y="116" fill="#8892a4">escalate</text></g>
+  <g font-family="sans-serif" font-size="11" text-anchor="middle">
+    <g><rect x="14" y="50" width="95" height="46" rx="7" fill="#243046"/><text x="61" y="71">jailbreak</text><text x="61" y="84" fill="#60b4f0">delete</text></g>
+    <g><rect x="121" y="50" width="95" height="46" rx="7" fill="#243046"/><text x="168" y="71">needs-human</text><text x="168" y="84" fill="#60b4f0">escalate</text></g>
+    <g><rect x="228" y="50" width="95" height="46" rx="7" fill="#243046"/><text x="275" y="71">violation</text><text x="275" y="84" fill="#60b4f0">delete</text></g>
+    <g><rect x="335" y="50" width="95" height="46" rx="7" fill="#243046"/><text x="382" y="71">suspected</text><text x="382" y="84" fill="#60b4f0">flag</text></g>
+    <g><rect x="442" y="50" width="95" height="46" rx="7" fill="#243046"/><text x="489" y="71">calm-ok</text><text x="489" y="84" fill="#60b4f0">allow</text></g>
+    <g><rect x="549" y="50" width="95" height="46" rx="7" fill="#243046"/><text x="596" y="71">low-conf</text><text x="596" y="84" fill="#60b4f0">escalate</text></g>
   </g>
 
-  <path d="M74 136 H684" stroke="#60b4f0" stroke-width="3" fill="none" stroke-dasharray="12 10">
-    <animate attributeName="stroke-dashoffset" from="44" to="0" dur="4s" repeatCount="indefinite"/>
-  </path>
-  <circle r="6" fill="#60b4f0">
-    <animateMotion dur="4s" repeatCount="indefinite" path="M74 136 H684"/>
-  </circle>
-
-  <g font-family="sans-serif" font-size="12" fill="#8892a4">
-    <text x="24" y="190">post-check: margin abstention demotes allow/delete to escalate</text>
-    <text x="24" y="216">post-check: quiet hours demote delete to escalate</text>
-    <text x="24" y="248">every terminal outcome carries a cause code in the audit row</text>
+  <g stroke="#60b4f0" stroke-width="2" fill="none">
+    <path d="M109 73 L123 73" stroke-width="3"/>
+    <path d="M216 73 L230 73" stroke-width="3"/>
+    <path d="M323 73 L337 73" stroke-width="3"/>
+    <path d="M430 73 L444 73" stroke-width="3"/>
+    <path d="M537 73 L551 73" stroke-width="3"/>
+  </g>
+  <circle r="4" fill="#60b4f0" cx="73" cy="73"/>
+  <circle r="4" fill="#60b4f0" cx="178" cy="73"/>
+  <circle r="4" fill="#60b4f0" cx="285" cy="73"/>
+  <circle r="4" fill="#60b4f0" cx="392" cy="73"/>
+  <circle r="4" fill="#60b4f0" cx="499" cy="73"/>
+  <circle r="4" fill="#60b4f0" cx="606" cy="73"/>
+  <g font-size="10" fill="#8892a4" text-anchor="middle">
+    <text x="22" y="108">first terminal outcome wins</text>
+    <text x="22" y="126">margin abstention and quiet hours are post-checks</text>
+    <text x="22" y="144">margin can demote allow/delete; quiet hours demote delete</text>
   </g>
 </svg>
