@@ -1384,4 +1384,4 @@
 - [x] T1253 docs: modernize gate-precedence.svg to the system flow and keep it in sync with README
 - [x] T1254 test: research modernization pins claims, limits, and provenance strings used by README/docs
 - [x] T1255 test: system diagram/research/readme sweep passes locally and in CI
-- [ ] T1256 final: P65 sweep, full green, every commit pushed
+- [x] T1256 final: P65 sweep, full green, every commit pushed
