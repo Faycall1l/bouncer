@@ -1397,4 +1397,4 @@
 - [x] T1262 final: P66 sweep, full green, every commit pushed
 
 ## P67 Direct writing, no use of undeclared readers (T1263)
-- [ ] T1263 docs: rewrite key README/harness/research prose to be direct and low-filler; preserve pinned strings
+- [x] T1263 docs: rewrite key README/harness/research prose to be direct and low-filler; preserve pinned strings
